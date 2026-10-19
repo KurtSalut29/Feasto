@@ -1,7 +1,6 @@
 "use client";
 
 import { ArrowLeft, Bike, ShoppingBag, Store, type LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ function checkAccountFields(values: typeof emptyValues): FieldErrors {
 }
 
 export function RegisterForm() {
-  const router = useRouter();
   const [role, setRole] = useState<SignupRole>("RESIDENT");
   // Vendors fill in their account first, then their store, so each step fits on screen.
   const [step, setStep] = useState<"account" | "store">("account");
@@ -78,8 +76,10 @@ export function RegisterForm() {
       setSubmitting(false);
       return;
     }
-    router.replace(ROLE_HOME[result.data.user.role]);
-    router.refresh();
+    // A full page load (not router.replace) after signing in: Next.js keeps visited pages
+    // alive in the background, so this clears the old form, its loading state and the
+    // typed password, and makes the next visit to /login or /register check the new session.
+    window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 
   const fieldError = (name: string) => fieldErrors[name]?.[0];

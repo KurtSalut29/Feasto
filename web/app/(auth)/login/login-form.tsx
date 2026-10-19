@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,6 @@ import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 
 export function LoginForm() {
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -33,8 +31,10 @@ export function LoginForm() {
       setSubmitting(false);
       return;
     }
-    router.replace(ROLE_HOME[result.data.user.role]);
-    router.refresh();
+    // A full page load (not router.replace) after signing in: Next.js keeps visited pages
+    // alive in the background, so this clears the old form, its loading state and the
+    // typed password, and makes the next visit to /login or /register check the new session.
+    window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 
   return (

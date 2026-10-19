@@ -1,19 +1,17 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function logOut() {
     setPending(true);
     await apiRequest("/auth/logout", { method: "POST" });
-    router.replace("/login");
-    router.refresh();
+    // Full page load so no signed-in pages stay alive in the background after logout
+    window.location.replace("/login");
   }
 
   return (
