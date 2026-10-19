@@ -27,6 +27,19 @@ enum ApprovalStatus {
   SUSPENDED
 }
 
+/// The kind of food business. Residents filter stores by it.
+enum StoreType {
+  RESTAURANT
+  FAST_FOOD
+  CARINDERIA
+  CAFE
+  BAKERY
+  MILK_TEA_DRINKS
+  SNACKS_STREET_FOOD
+  DESSERTS
+  HOME_KITCHEN
+}
+
 enum VehicleType {
   MOTORCYCLE
   BICYCLE
@@ -75,19 +88,22 @@ model User {
 }
 
 model Vendor {
-  id          String         @id @default(cuid())
-  ownerId     String         @unique
-  owner       User           @relation(fields: [ownerId], references: [id])
-  name        String
-  description String?
-  address     String
-  imageUrl    String?
-  status      ApprovalStatus @default(PENDING)
-  reviewNote  String? // admin's reason when rejecting or suspending
-  reviewedAt  DateTime?
-  opensAt     String // "08:00"
-  closesAt    String // "21:00"
-  createdAt   DateTime       @default(now())
+  id                  String         @id @default(cuid())
+  ownerId             String         @unique
+  owner               User           @relation(fields: [ownerId], references: [id])
+  name                String
+  storeType           StoreType
+  /// Only stores with this on appear under "Book a table"
+  acceptsReservations Boolean        @default(false)
+  description         String?
+  address             String
+  imageUrl            String?
+  status              ApprovalStatus @default(PENDING)
+  reviewNote          String? // admin's reason when rejecting or suspending
+  reviewedAt          DateTime?
+  opensAt             String // "08:00"
+  closesAt            String // "21:00"
+  createdAt           DateTime       @default(now())
 
   menuItems MenuItem[]
   orders    Order[]

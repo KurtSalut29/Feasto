@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/dashboard/approval-notice";
 import { DashboardShell, DashboardSkeleton, Greeting, UpcomingCard } from "@/components/dashboard/dashboard-shell";
 import { requireRole } from "@/lib/auth";
+import { STORE_TYPE_LABEL } from "@/lib/store-types";
 
 export const metadata: Metadata = { title: "Store" };
 
@@ -20,7 +21,10 @@ async function VendorDashboard() {
 
   return (
     <DashboardShell user={user}>
-      <Greeting user={user} subtitle={store ? `Managing ${store.name}` : "Manage your store"} />
+      <Greeting
+        user={user}
+        subtitle={store ? `Managing ${store.name} · ${STORE_TYPE_LABEL[store.storeType]}` : "Manage your store"}
+      />
 
       {store && store.status !== "APPROVED" && (
         <div className="mt-6">

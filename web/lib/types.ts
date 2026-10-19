@@ -5,6 +5,17 @@ export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
 
 export type VehicleType = "MOTORCYCLE" | "BICYCLE" | "E_BIKE";
 
+export type StoreType =
+  | "RESTAURANT"
+  | "FAST_FOOD"
+  | "CARINDERIA"
+  | "CAFE"
+  | "BAKERY"
+  | "MILK_TEA_DRINKS"
+  | "SNACKS_STREET_FOOD"
+  | "DESSERTS"
+  | "HOME_KITCHEN";
+
 /** The signed-in user, as returned by GET /api/auth/me. */
 export type User = {
   id: string;
@@ -12,7 +23,14 @@ export type User = {
   email: string;
   phone: string | null;
   role: Role;
-  vendor: { id: string; name: string; status: ApprovalStatus; reviewNote: string | null } | null;
+  vendor: {
+    id: string;
+    name: string;
+    storeType: StoreType;
+    acceptsReservations: boolean;
+    status: ApprovalStatus;
+    reviewNote: string | null;
+  } | null;
   riderProfile: {
     vehicleType: VehicleType;
     plateNumber: string | null;

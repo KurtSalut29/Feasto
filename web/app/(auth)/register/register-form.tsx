@@ -5,10 +5,13 @@ import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "reac
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl, type SegmentOption } from "@/components/ui/segmented-control";
+import { SelectField } from "@/components/ui/select-field";
+import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
 import { ROLE_HOME } from "@/lib/roles";
-import type { Role, User, VehicleType } from "@/lib/types";
+import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
+import type { Role, StoreType, User, VehicleType } from "@/lib/types";
 
 type SignupRole = Exclude<Role, "ADMIN">;
 
@@ -56,6 +59,8 @@ export function RegisterForm() {
   const [step, setStep] = useState<"account" | "details">("account");
   const [values, setValues] = useState(emptyValues);
   const [vehicleType, setVehicleType] = useState<VehicleType | "">("");
+  const [storeType, setStoreType] = useState<StoreType | "">("");
+  const [acceptsReservations, setAcceptsReservations] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -77,10 +82,17 @@ export function RegisterForm() {
     clearError("vehicleType");
   }
 
+  // Picking a store type also sets the usual reservations choice for it; the vendor can still flip it.
+  function chooseStoreType(type: StoreType) {
+    setStoreType(type);
+    setAcceptsReservations(acceptsReservationsByDefault(type));
+    clearError("storeType");
+  }
+
   function requestBody() {
     const { name, email, phone, password, storeName, storeAddress, plateNumber, licenseNumber } = values;
     const account = { role, name, email, phone, password };
-    if (role === "VENDOR") return { ...account, storeName, storeAddress };
+    if (role === "VENDOR") return { ...account, storeName, storeAddress, storeType, acceptsReservations };
     if (role === "RIDER") return { ...account, vehicleType, plateNumber, licenseNumber };
     return account;
   }
@@ -123,8 +135,8 @@ export function RegisterForm() {
         title={role === "VENDOR" ? "Your store" : "Your vehicle"}
         subtitle={
           role === "VENDOR"
-            ? "An admin reviews new stores before residents can see them."
-            : "An admin checks your details before you can start delivering."
+            ? "An admin reviews new stores first."
+            : "An admin checks your details first."
         }
         error={error}
         submitting={submitting}
@@ -152,6 +164,22 @@ export function RegisterForm() {
               placeholder="Street, barangay, city"
               required
               error={fieldError("storeAddress")}
+            />
+            <SelectField
+              label="Store type"
+              name="storeType"
+              placeholder="Choose the closest match"
+              options={STORE_TYPE_OPTIONS}
+              value={storeType}
+              onChange={(event) => chooseStoreType(event.target.value as StoreType)}
+              required
+              error={fieldError("storeType")}
+            />
+            <SwitchField
+              label="Accepts table reservations"
+              description="Residents can book a table here."
+              checked={acceptsReservations}
+              onChange={setAcceptsReservations}
             />
           </>
         ) : (

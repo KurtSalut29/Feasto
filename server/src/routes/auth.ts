@@ -11,6 +11,7 @@ import {
 } from "../lib/auth.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
+import { acceptsReservationsByDefault, STORE_TYPES } from "../lib/storeTypes.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const authRouter = Router();
@@ -64,6 +65,9 @@ const registerSchema = z
       ...accountFields,
       storeName: z.string().trim().min(2, "Enter your store's name.").max(80),
       storeAddress: z.string().trim().min(5, "Enter your store's address.").max(200),
+      storeType: z.enum(STORE_TYPES, "Choose your store type."),
+      // Optional: when left out, it follows the store type (on for dine-in places)
+      acceptsReservations: z.boolean().optional(),
     }),
   ])
   // Motorcycle riders must give a plate and license number; bicycles and e-bikes don't need them.
@@ -85,7 +89,9 @@ const publicUser = {
   email: true,
   phone: true,
   role: true,
-  vendor: { select: { id: true, name: true, status: true, reviewNote: true } },
+  vendor: {
+    select: { id: true, name: true, storeType: true, acceptsReservations: true, status: true, reviewNote: true },
+  },
   riderProfile: { select: { vehicleType: true, plateNumber: true, status: true, reviewNote: true, isOnline: true } },
 } satisfies Prisma.UserSelect;
 
@@ -119,7 +125,16 @@ authRouter.post("/register", async (req, res) => {
         // A vendor account and its store are created together in one transaction.
         // New stores start as PENDING until an admin approves them.
         ...(input.role === "VENDOR" && {
-          vendor: { create: { name: input.storeName, address: input.storeAddress, opensAt: "08:00", closesAt: "21:00" } },
+          vendor: {
+            create: {
+              name: input.storeName,
+              address: input.storeAddress,
+              storeType: input.storeType,
+              acceptsReservations: input.acceptsReservations ?? acceptsReservationsByDefault(input.storeType),
+              opensAt: "08:00",
+              closesAt: "21:00",
+            },
+          },
         }),
         // Riders also start as PENDING and can't take jobs until an admin approves them.
         ...(input.role === "RIDER" && {
