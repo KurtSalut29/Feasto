@@ -18,6 +18,9 @@ export const config = {
   databaseUrl: required("DATABASE_URL"),
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
   rabbitmqUrl: process.env.RABBITMQ_URL ?? "amqp://feasto:feasto@localhost:5672",
+  // Every API copy signs and checks sessions with the same secret, so any copy can serve any user.
+  jwtSecret: new TextEncoder().encode(required("JWT_SECRET")),
+  cookieSecure: process.env.COOKIE_SECURE === "true",
   // Name shown in responses and logs so you can see which copy handled the work.
   instanceId: process.env.INSTANCE_ID ?? os.hostname(),
 };

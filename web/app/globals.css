@@ -1,26 +1,26 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  /* Feasto orange. 500 is the logo color, used for accents and focus rings.
+     600 and 700 are deeper so white text on buttons and orange links stay readable (WCAG AA). */
+  --color-brand-50: #fff5ee;
+  --color-brand-100: #ffe6d5;
+  --color-brand-500: #fe5502;
+  --color-brand-600: #d24600;
+  --color-brand-700: #b23a00;
+
+  /* Text and surfaces */
+  --color-ink: #1f2d3d;
+  --color-muted: #5b6472;
+  --color-line: #e4e7ec;
+  --color-canvas: #f7f8fa;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: var(--color-ink);
 }

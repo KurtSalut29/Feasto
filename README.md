@@ -27,6 +27,25 @@ Browser ──► Nginx :8080 ──► api-1 ┐
 - Node.js 24+
 - Docker Desktop (it must show "Engine running")
 
+## First-time setup
+
+Secrets live in `.env` files that are never committed. Create them from the examples:
+
+```bash
+cp .env.example .env                  # used by docker compose
+cp server/.env.example server/.env    # used when running the server outside Docker
+cp web/.env.example web/.env.local    # used by the Next.js app
+```
+
+Generate one secret and put the **same value** in `JWT_SECRET` in all three files:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+Also set `ADMIN_PASSWORD` in `.env`. The admin account (`ADMIN_EMAIL`) is created automatically
+the first time the backend starts. Residents, riders and vendors sign up at `/register`.
+
 ## Running the backend
 
 ```bash
@@ -71,3 +90,9 @@ npm run db:migrate -- --name describe_the_change
 
 - **Load balancing:** refresh `/api/health` and watch `instance` rotate.
 - **Fault tolerance:** `docker compose stop api-2`, keep refreshing (it still works), then `docker compose start api-2`.
+- **Stateless sessions:** log in, then keep using the app. Each request may be answered by a different API copy
+  (see the `X-Served-By` response header), and all of them accept the same login cookie because they share `JWT_SECRET`.
+- **Shared rate limiting:** enter a wrong password 5 times. The attempts land on different API copies,
+  but the counter lives in Redis, so the 6th attempt is blocked for 15 minutes.
+- **No duplicate accounts under concurrency:** 20 simultaneous sign-ups with the same email create exactly one
+  account, because PostgreSQL's unique index rejects the rest.

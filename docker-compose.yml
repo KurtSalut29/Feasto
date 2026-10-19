@@ -7,6 +7,8 @@ x-server-env: &server-env
   REDIS_URL: redis://redis:6379
   RABBITMQ_URL: amqp://feasto:feasto@rabbitmq:5672
   PORT: "4000"
+  # Read from the .env file next to this one (copy .env.example to create it)
+  JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
 
 # Settings shared by the three API copies.
 x-api: &api
@@ -63,13 +65,16 @@ services:
       timeout: 5s
       retries: 10
 
-  # Runs once: applies database migrations, then exits.
+  # Runs once: applies database migrations, creates the admin account, then exits.
   migrate:
     build:
       context: ./server
       target: build
-    command: ["npx", "prisma", "migrate", "deploy"]
-    environment: *server-env
+    command: ["sh", "-c", "npx prisma migrate deploy && node dist/seed.js"]
+    environment:
+      <<: *server-env
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@feasto.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     depends_on:
       postgres:
         condition: service_healthy
