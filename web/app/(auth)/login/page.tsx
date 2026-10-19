@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { AuthSwitch } from "../auth-ui";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = { title: "Log in" };
@@ -12,12 +12,7 @@ export default function LoginPage() {
 
       <LoginForm />
 
-      <p className="mt-4 text-center text-sm text-muted">
-        New to Feasto?{" "}
-        <Link href="/register" className="font-semibold text-brand-700 hover:underline">
-          Create an account
-        </Link>
-      </p>
+      <AuthSwitch question="New to Feasto?" href="/register" action="Create an account" />
     </>
   );
 }

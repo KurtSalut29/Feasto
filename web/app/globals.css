@@ -21,6 +21,22 @@
   --color-muted: #5b6472;
   --color-line: #e4e7ec;
   --color-canvas: #f7f8fa;
+
+  /* Login and register: the card rises in, the food stickers drift */
+  --animate-rise-in: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-drift: drift 7s ease-in-out infinite;
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+  @keyframes drift {
+    50% {
+      transform: translateY(-10px);
+    }
+  }
 }
 
 body {

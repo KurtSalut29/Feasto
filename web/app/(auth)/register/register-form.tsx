@@ -1,6 +1,22 @@
 "use client";
 
-import { ArrowLeft, Bike, Motorbike, ShoppingBag, Store, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bike,
+  IdCard,
+  LockKeyhole,
+  Mail,
+  MapPin,
+  Motorbike,
+  RectangleEllipsis,
+  ShoppingBag,
+  Smartphone,
+  Store,
+  UserRound,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,11 +27,12 @@ import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
+import { AUTH_BUTTON } from "../auth-ui";
 import type { Role, StoreType, User, VehicleType } from "@/lib/types";
 
 type SignupRole = Exclude<Role, "ADMIN">;
 
-const roleOptions: SegmentOption<SignupRole>[] = [
+const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon }[] = [
   { value: "RESIDENT", label: "Resident", Icon: ShoppingBag },
   { value: "RIDER", label: "Rider", Icon: Bike },
   { value: "VENDOR", label: "Vendor", Icon: Store },
@@ -39,6 +56,79 @@ const emptyValues = {
   plateNumber: "",
   licenseNumber: "",
 };
+
+const STRENGTH = [
+  { label: "Too weak", bar: "bg-red-500", text: "text-red-600" },
+  { label: "Fair", bar: "bg-amber-500", text: "text-amber-700" },
+  { label: "Good", bar: "bg-emerald-500", text: "text-emerald-700" },
+  { label: "Strong", bar: "bg-emerald-600", text: "text-emerald-700" },
+];
+
+/** 4 bars that fill as the password gets stronger. "Too weak" until it meets the rules. */
+function PasswordStrength({ password }: { password: string }) {
+  const meetsRules = password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+  const extras =
+    Number(password.length >= 12) +
+    Number(/[^A-Za-z0-9]/.test(password) || (/[a-z]/.test(password) && /[A-Z]/.test(password)));
+  const level = STRENGTH[meetsRules ? 1 + extras : 0];
+  const filled = meetsRules ? 2 + extras : 1;
+  return (
+    <div className="flex items-center gap-3">
+      <div aria-hidden className="flex flex-1 gap-1">
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i} className={`h-1 flex-1 rounded-full transition-colors ${i < filled ? level.bar : "bg-line"}`} />
+        ))}
+      </div>
+      <span aria-live="polite" className={`text-xs font-semibold ${level.text}`}>
+        {level.label}
+      </span>
+    </div>
+  );
+}
+
+/** "Step 1 of 2" with a two-part progress bar, for riders and vendors. */
+function StepIndicator({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="mb-1.5 flex items-center justify-center gap-2.5">
+      <span aria-hidden className="flex gap-1">
+        {[1, 2].map((n) => (
+          <span key={n} className={`h-1 w-6 rounded-full transition-colors ${n <= step ? "bg-brand-600" : "bg-line"}`} />
+        ))}
+      </span>
+      <span className="text-xs font-semibold tracking-[0.12em] text-brand-700 uppercase">Step {step} of 2</span>
+    </div>
+  );
+}
+
+/** The three account types as tiles. Built from radio buttons so it works with the keyboard. */
+function RolePicker({ value, onChange }: { value: SignupRole; onChange: (role: SignupRole) => void }) {
+  return (
+    <fieldset>
+      <legend className="sr-only">Account type</legend>
+      <div className="grid grid-cols-3 gap-2">
+        {roleOptions.map(({ value: option, label, Icon }) => (
+          <label
+            key={option}
+            className="group flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line bg-white text-sm font-medium text-muted transition hover:border-gray-300 hover:text-ink has-checked:border-brand-500 has-checked:bg-brand-50/70 has-checked:font-semibold has-checked:text-brand-700 has-checked:ring-4 has-checked:ring-brand-500/10 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500 sm:gap-2"
+          >
+            <input
+              type="radio"
+              name="role-choice"
+              value={option}
+              checked={value === option}
+              onChange={() => onChange(option)}
+              className="sr-only"
+            />
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-canvas transition group-has-checked:bg-brand-600 group-has-checked:text-white sm:size-7">
+              <Icon className="size-4" aria-hidden />
+            </span>
+            {label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 /** Quick checks before moving on to step 2. The API still validates everything. */
 function checkAccountFields(values: typeof emptyValues): FieldErrors {
@@ -151,6 +241,7 @@ export function RegisterForm() {
               value={values.storeName}
               onChange={update}
               placeholder="Aling Nena's Carinderia"
+              icon={Store}
               required
               autoFocus
               error={fieldError("storeName")}
@@ -162,6 +253,7 @@ export function RegisterForm() {
               onChange={update}
               autoComplete="street-address"
               placeholder="Street, barangay, city"
+              icon={MapPin}
               required
               error={fieldError("storeAddress")}
             />
@@ -200,6 +292,7 @@ export function RegisterForm() {
                   value={values.plateNumber}
                   onChange={update}
                   placeholder="ABC 1234"
+                  icon={RectangleEllipsis}
                   autoCapitalize="characters"
                   required
                   error={fieldError("plateNumber")}
@@ -210,6 +303,7 @@ export function RegisterForm() {
                   value={values.licenseNumber}
                   onChange={update}
                   placeholder="N01-23-456789"
+                  icon={IdCard}
                   autoCapitalize="characters"
                   required
                   error={fieldError("licenseNumber")}
@@ -229,10 +323,11 @@ export function RegisterForm() {
 
   return (
     <>
+      {hasDetailsStep && <StepIndicator step={1} />}
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">Create your account</h1>
 
       <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
-        <SegmentedControl name="role-choice" legend="Account type" options={roleOptions} value={role} onChange={setRole} />
+        <RolePicker value={role} onChange={setRole} />
 
         {error && <Alert tone="error">{error}</Alert>}
 
@@ -243,6 +338,7 @@ export function RegisterForm() {
           onChange={update}
           autoComplete="name"
           placeholder="Juan Dela Cruz"
+          icon={UserRound}
           required
           error={fieldError("name")}
         />
@@ -254,6 +350,7 @@ export function RegisterForm() {
           onChange={update}
           autoComplete="email"
           placeholder="you@example.com"
+          icon={Mail}
           required
           error={fieldError("email")}
         />
@@ -266,6 +363,7 @@ export function RegisterForm() {
           autoComplete="tel"
           inputMode="tel"
           placeholder="09171234567"
+          icon={Smartphone}
           required
           error={fieldError("phone")}
         />
@@ -276,13 +374,15 @@ export function RegisterForm() {
           value={values.password}
           onChange={update}
           autoComplete="new-password"
-          placeholder="8+ characters, letters and numbers"
+          placeholder="8+ letters and numbers"
+          icon={LockKeyhole}
           required
           error={fieldError("password")}
+          hint={values.password && <PasswordStrength password={values.password} />}
         />
 
         <div className="pt-1">
-          <Button type="submit" loading={submitting} className="w-full">
+          <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
             {role === "VENDOR"
               ? "Continue to store details"
               : role === "RIDER"
@@ -290,6 +390,7 @@ export function RegisterForm() {
                 : submitting
                   ? "Creating account…"
                   : "Create account"}
+            {hasDetailsStep && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
           </Button>
         </div>
       </form>
@@ -316,8 +417,8 @@ function DetailsStep({
 }) {
   return (
     <>
-      <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">Step 2 of 2</p>
-      <h1 className="mt-1 text-center text-2xl font-bold tracking-tight text-ink">{title}</h1>
+      <StepIndicator step={2} />
+      <h1 className="text-center text-2xl font-bold tracking-tight text-ink">{title}</h1>
       <p className="mt-1 text-balance text-center text-[15px] text-muted">{subtitle}</p>
 
       <form onSubmit={onSubmit} noValidate className="mt-5 space-y-3">
@@ -327,7 +428,7 @@ function DetailsStep({
           <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to account details">
             <ArrowLeft className="size-5" aria-hidden />
           </Button>
-          <Button type="submit" loading={submitting} className="flex-1">
+          <Button type="submit" loading={submitting} className={`flex-1 ${AUTH_BUTTON}`}>
             {submitting ? "Creating account…" : "Create account"}
           </Button>
         </div>

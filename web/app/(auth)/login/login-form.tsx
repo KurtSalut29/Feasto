@@ -1,9 +1,11 @@
 "use client";
 
+import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
+import { AUTH_BUTTON } from "../auth-ui";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
@@ -38,7 +40,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-3">
+    <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-3.5">
       {error && <Alert tone="error">{error}</Alert>}
 
       <TextField
@@ -47,6 +49,8 @@ export function LoginForm() {
         type="email"
         autoComplete="email"
         placeholder="you@example.com"
+        icon={Mail}
+        autoFocus
         required
         error={fieldErrors.email?.[0]}
       />
@@ -56,13 +60,17 @@ export function LoginForm() {
         type="password"
         autoComplete="current-password"
         placeholder="Your password"
+        icon={LockKeyhole}
         required
         error={fieldErrors.password?.[0]}
       />
 
-      <Button type="submit" loading={submitting} className="w-full">
-        {submitting ? "Logging in…" : "Log in"}
-      </Button>
+      <div className="pt-1">
+        <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
+          {submitting ? "Logging in…" : "Log in"}
+          {!submitting && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
+        </Button>
+      </div>
     </form>
   );
 }
