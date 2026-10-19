@@ -19,10 +19,18 @@ enum Role {
   ADMIN
 }
 
-enum VendorStatus {
+/// Review state of a vendor's store or a rider's account. Admins move it out of PENDING.
+enum ApprovalStatus {
   PENDING
   APPROVED
+  REJECTED
   SUSPENDED
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  BICYCLE
+  E_BIKE
 }
 
 enum PaymentStatus {
@@ -59,28 +67,46 @@ model User {
   role         Role     @default(RESIDENT)
   createdAt    DateTime @default(now())
 
-  vendor     Vendor? // set when role = VENDOR
-  checkouts  Checkout[]
-  deliveries Order[]    @relation("RiderDeliveries")
-  bookings   Booking[]
+  vendor       Vendor? // set when role = VENDOR
+  riderProfile RiderProfile? // set when role = RIDER
+  checkouts    Checkout[]
+  deliveries   Order[]       @relation("RiderDeliveries")
+  bookings     Booking[]
 }
 
 model Vendor {
-  id          String       @id @default(cuid())
-  ownerId     String       @unique
-  owner       User         @relation(fields: [ownerId], references: [id])
+  id          String         @id @default(cuid())
+  ownerId     String         @unique
+  owner       User           @relation(fields: [ownerId], references: [id])
   name        String
   description String?
   address     String
   imageUrl    String?
-  status      VendorStatus @default(PENDING)
+  status      ApprovalStatus @default(PENDING)
+  reviewNote  String? // admin's reason when rejecting or suspending
+  reviewedAt  DateTime?
   opensAt     String // "08:00"
   closesAt    String // "21:00"
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime       @default(now())
 
   menuItems MenuItem[]
   orders    Order[]
   tables    DiningTable[]
+}
+
+/// A rider's vehicle details. Riders can't go online or take jobs until an admin approves them.
+model RiderProfile {
+  id            String         @id @default(cuid())
+  userId        String         @unique
+  user          User           @relation(fields: [userId], references: [id])
+  vehicleType   VehicleType
+  plateNumber   String? // required for motorcycles
+  licenseNumber String?        @unique // driver's license, required for motorcycles
+  status        ApprovalStatus @default(PENDING)
+  reviewNote    String?
+  reviewedAt    DateTime?
+  isOnline      Boolean        @default(false)
+  createdAt     DateTime       @default(now())
 }
 
 model MenuItem {
@@ -161,19 +187,19 @@ model DiningTable {
 
 /// Reservations use fixed one-hour slots, so two bookings conflict only when they share a start time.
 model Booking {
-  id         String        @id @default(cuid())
-  tableId    String
-  table      DiningTable   @relation(fields: [tableId], references: [id])
-  residentId String
-  resident   User          @relation(fields: [residentId], references: [id])
-  startsAt   DateTime
-  partySize  Int
-  status     BookingStatus @default(CONFIRMED)
+  id            String        @id @default(cuid())
+  tableId       String
+  table         DiningTable   @relation(fields: [tableId], references: [id])
+  residentId    String
+  resident      User          @relation(fields: [residentId], references: [id])
+  startsAt      DateTime
+  partySize     Int
+  status        BookingStatus @default(CONFIRMED)
   /// "<tableId>|<startsAt ISO>" while the booking is active, null once cancelled.
   /// The unique index lets the database reject a double-booking even when
   /// hundreds of requests for the same slot arrive at the same moment.
-  activeSlotKey String?    @unique
-  createdAt  DateTime      @default(now())
+  activeSlotKey String?       @unique
+  createdAt     DateTime      @default(now())
 
   @@index([tableId, startsAt])
 }

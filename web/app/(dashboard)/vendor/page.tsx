@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { ApprovalNotice } from "@/components/dashboard/approval-notice";
 import { DashboardShell, DashboardSkeleton, Greeting, UpcomingCard } from "@/components/dashboard/dashboard-shell";
-import { Alert } from "@/components/ui/alert";
 import { requireRole } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Store" };
@@ -22,19 +22,14 @@ async function VendorDashboard() {
     <DashboardShell user={user}>
       <Greeting user={user} subtitle={store ? `Managing ${store.name}` : "Manage your store"} />
 
-      {store?.status === "PENDING" && (
+      {store && store.status !== "APPROVED" && (
         <div className="mt-6">
-          <Alert tone="pending" title="Your store is waiting for approval">
-            An admin will review {store.name} soon. You can prepare your menu in the meantime; residents will see your
-            store once it&apos;s approved.
-          </Alert>
-        </div>
-      )}
-      {store?.status === "SUSPENDED" && (
-        <div className="mt-6">
-          <Alert tone="error" title="Your store is suspended">
-            Residents can&apos;t see {store.name} right now. Please contact the Feasto admin.
-          </Alert>
+          <ApprovalNotice
+            status={store.status}
+            reviewNote={store.reviewNote}
+            pendingText={`An admin will review ${store.name} soon. You can prepare your menu in the meantime; residents will see your store once it's approved.`}
+            blockedText={`Residents can't see ${store.name} right now. Please contact the Feasto admin.`}
+          />
         </div>
       )}
 

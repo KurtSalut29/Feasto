@@ -38,17 +38,40 @@ const accountFields = {
     .regex(/\d/, "Include at least one number."),
 };
 
+// Optional text: blank becomes undefined, everything else is trimmed and uppercased
+const optionalCode = (pattern: RegExp, message: string) =>
+  z
+    .string()
+    .trim()
+    .transform((value) => value.toUpperCase())
+    .pipe(z.union([z.literal(""), z.string().regex(pattern, message)]))
+    .transform((value) => value || undefined)
+    .optional();
+
+const riderFields = {
+  vehicleType: z.enum(["MOTORCYCLE", "BICYCLE", "E_BIKE"], "Choose your vehicle."),
+  plateNumber: optionalCode(/^[A-Z0-9][A-Z0-9 -]{3,9}$/, "Enter a plate number like ABC 1234."),
+  licenseNumber: optionalCode(/^[A-Z0-9][A-Z0-9-]{5,19}$/, "Enter a license number like N01-23-456789."),
+};
+
 // Admin accounts are never self-registered; they come from the seed step.
-const registerSchema = z.discriminatedUnion("role", [
-  z.object({ role: z.literal("RESIDENT"), ...accountFields }),
-  z.object({ role: z.literal("RIDER"), ...accountFields }),
-  z.object({
-    role: z.literal("VENDOR"),
-    ...accountFields,
-    storeName: z.string().trim().min(2, "Enter your store's name.").max(80),
-    storeAddress: z.string().trim().min(5, "Enter your store's address.").max(200),
-  }),
-]);
+const registerSchema = z
+  .discriminatedUnion("role", [
+    z.object({ role: z.literal("RESIDENT"), ...accountFields }),
+    z.object({ role: z.literal("RIDER"), ...accountFields, ...riderFields }),
+    z.object({
+      role: z.literal("VENDOR"),
+      ...accountFields,
+      storeName: z.string().trim().min(2, "Enter your store's name.").max(80),
+      storeAddress: z.string().trim().min(5, "Enter your store's address.").max(200),
+    }),
+  ])
+  // Motorcycle riders must give a plate and license number; bicycles and e-bikes don't need them.
+  .superRefine((input, ctx) => {
+    if (input.role !== "RIDER" || input.vehicleType !== "MOTORCYCLE") return;
+    if (!input.plateNumber) ctx.addIssue({ code: "custom", path: ["plateNumber"], message: "Enter your plate number." });
+    if (!input.licenseNumber) ctx.addIssue({ code: "custom", path: ["licenseNumber"], message: "Enter your driver's license number." });
+  });
 
 const loginSchema = z.object({
   email,
@@ -62,8 +85,25 @@ const publicUser = {
   email: true,
   phone: true,
   role: true,
-  vendor: { select: { id: true, name: true, status: true } },
+  vendor: { select: { id: true, name: true, status: true, reviewNote: true } },
+  riderProfile: { select: { vehicleType: true, plateNumber: true, status: true, reviewNote: true, isOnline: true } },
 } satisfies Prisma.UserSelect;
+
+/**
+ * Which unique index a P2002 error was about, e.g. "RiderProfile_licenseNumber_key".
+ * With Prisma's Postgres driver adapter the details sit under meta.driverAdapterError.
+ */
+function uniqueViolationField(error: Prisma.PrismaClientKnownRequestError): string {
+  const meta = error.meta as
+    | {
+        target?: string[] | string;
+        driverAdapterError?: { cause?: { constraint?: { index?: string; fields?: string[] } } };
+      }
+    | undefined;
+  const constraint = meta?.driverAdapterError?.cause?.constraint;
+  const found = constraint?.index ?? constraint?.fields ?? meta?.target ?? [];
+  return Array.isArray(found) ? found.join(",") : found;
+}
 
 authRouter.post("/register", async (req, res) => {
   const input = parseBody(registerSchema, req.body);
@@ -81,6 +121,17 @@ authRouter.post("/register", async (req, res) => {
         ...(input.role === "VENDOR" && {
           vendor: { create: { name: input.storeName, address: input.storeAddress, opensAt: "08:00", closesAt: "21:00" } },
         }),
+        // Riders also start as PENDING and can't take jobs until an admin approves them.
+        ...(input.role === "RIDER" && {
+          riderProfile: {
+            create: {
+              vehicleType: input.vehicleType,
+              // Only motorcycles carry a plate and license
+              plateNumber: input.vehicleType === "MOTORCYCLE" ? input.plateNumber : null,
+              licenseNumber: input.vehicleType === "MOTORCYCLE" ? input.licenseNumber : null,
+            },
+          },
+        }),
       },
       select: publicUser,
     });
@@ -91,6 +142,9 @@ authRouter.post("/register", async (req, res) => {
     // The unique index on email also stops two simultaneous sign-ups with the same
     // email that reach different API copies.
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      if (uniqueViolationField(error).includes("licenseNumber")) {
+        throw new ValidationError({ licenseNumber: ["This license number is already registered to another rider."] });
+      }
       throw new ValidationError({ email: ["An account with this email already exists."] });
     }
     throw error;

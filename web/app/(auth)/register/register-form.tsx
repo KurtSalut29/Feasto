@@ -1,27 +1,43 @@
 "use client";
 
-import { ArrowLeft, Bike, ShoppingBag, Store, type LucideIcon } from "lucide-react";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { ArrowLeft, Bike, Motorbike, ShoppingBag, Store, Zap } from "lucide-react";
+import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl, type SegmentOption } from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
 import { ROLE_HOME } from "@/lib/roles";
-import type { Role, User } from "@/lib/types";
+import type { Role, User, VehicleType } from "@/lib/types";
 
 type SignupRole = Exclude<Role, "ADMIN">;
 
-const roleOptions: { role: SignupRole; label: string; Icon: LucideIcon }[] = [
-  { role: "RESIDENT", label: "Resident", Icon: ShoppingBag },
-  { role: "RIDER", label: "Rider", Icon: Bike },
-  { role: "VENDOR", label: "Vendor", Icon: Store },
+const roleOptions: SegmentOption<SignupRole>[] = [
+  { value: "RESIDENT", label: "Resident", Icon: ShoppingBag },
+  { value: "RIDER", label: "Rider", Icon: Bike },
+  { value: "VENDOR", label: "Vendor", Icon: Store },
+];
+
+const vehicleOptions: SegmentOption<VehicleType>[] = [
+  { value: "MOTORCYCLE", label: "Motorcycle", Icon: Motorbike },
+  { value: "BICYCLE", label: "Bicycle", Icon: Bike },
+  { value: "E_BIKE", label: "E-bike", Icon: Zap },
 ];
 
 const ACCOUNT_FIELDS = ["name", "email", "phone", "password"] as const;
 
-const emptyValues = { name: "", email: "", phone: "", password: "", storeName: "", storeAddress: "" };
+const emptyValues = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  storeName: "",
+  storeAddress: "",
+  plateNumber: "",
+  licenseNumber: "",
+};
 
-/** Quick checks before a vendor moves on to step 2. The API still validates everything. */
+/** Quick checks before moving on to step 2. The API still validates everything. */
 function checkAccountFields(values: typeof emptyValues): FieldErrors {
   const errors: FieldErrors = {};
   if (values.name.trim().length < 2) errors.name = ["Enter your full name."];
@@ -35,43 +51,60 @@ function checkAccountFields(values: typeof emptyValues): FieldErrors {
 
 export function RegisterForm() {
   const [role, setRole] = useState<SignupRole>("RESIDENT");
-  // Vendors fill in their account first, then their store, so each step fits on screen.
-  const [step, setStep] = useState<"account" | "store">("account");
+  // Vendors and riders fill in their account first, then their store or vehicle,
+  // so each step fits on one screen.
+  const [step, setStep] = useState<"account" | "details">("account");
   const [values, setValues] = useState(emptyValues);
+  const [vehicleType, setVehicleType] = useState<VehicleType | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const isVendor = role === "VENDOR";
+  const hasDetailsStep = role === "VENDOR" || role === "RIDER";
+
+  // Editing a field clears its error message
+  function clearError(name: string) {
+    setFieldErrors((current) => (current[name] ? { ...current, [name]: undefined } : current));
+  }
 
   function update(event: ChangeEvent<HTMLInputElement>) {
     setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
+    clearError(event.target.name);
+  }
+
+  function chooseVehicle(type: VehicleType) {
+    setVehicleType(type);
+    clearError("vehicleType");
+  }
+
+  function requestBody() {
+    const { name, email, phone, password, storeName, storeAddress, plateNumber, licenseNumber } = values;
+    const account = { role, name, email, phone, password };
+    if (role === "VENDOR") return { ...account, storeName, storeAddress };
+    if (role === "RIDER") return { ...account, vehicleType, plateNumber, licenseNumber };
+    return account;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
 
-    if (isVendor && step === "account") {
+    if (hasDetailsStep && step === "account") {
       const errors = checkAccountFields(values);
       setFieldErrors(errors);
-      if (Object.keys(errors).length === 0) setStep("store");
+      if (Object.keys(errors).length === 0) setStep("details");
       return;
     }
 
     setSubmitting(true);
     setFieldErrors({});
-    const { storeName, storeAddress, ...account } = values;
-    const result = await apiRequest<{ user: User }>("/auth/register", {
-      method: "POST",
-      body: isVendor ? { role, ...account, storeName, storeAddress } : { role, ...account },
-    });
+    const result = await apiRequest<{ user: User }>("/auth/register", { method: "POST", body: requestBody() });
 
     if (!result.ok) {
       // Field problems are shown under each field, so only show the banner for other errors
       setError(result.fieldErrors ? undefined : result.error);
       setFieldErrors(result.fieldErrors ?? {});
-      // Send the vendor back to step 1 if the problem is there (e.g. email already used)
+      // Go back to step 1 if the problem is there (e.g. email already used)
       if (ACCOUNT_FIELDS.some((field) => result.fieldErrors?.[field])) setStep("account");
       setSubmitting(false);
       return;
@@ -84,47 +117,85 @@ export function RegisterForm() {
 
   const fieldError = (name: string) => fieldErrors[name]?.[0];
 
-  if (step === "store") {
+  if (step === "details") {
     return (
-      <>
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">Step 2 of 2</p>
-        <h1 className="mt-1 text-center text-2xl font-bold tracking-tight text-ink">Your store</h1>
-        <p className="mt-1 text-balance text-center text-[15px] text-muted">
-          An admin reviews new stores before residents can see them.
-        </p>
-
-        <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-3">
-          {error && <Alert tone="error">{error}</Alert>}
-          <TextField
-            label="Store name"
-            name="storeName"
-            value={values.storeName}
-            onChange={update}
-            placeholder="Aling Nena's Carinderia"
-            required
-            autoFocus
-            error={fieldError("storeName")}
-          />
-          <TextField
-            label="Store address"
-            name="storeAddress"
-            value={values.storeAddress}
-            onChange={update}
-            autoComplete="street-address"
-            placeholder="Street, barangay, city"
-            required
-            error={fieldError("storeAddress")}
-          />
-          <div className="flex gap-3 pt-1">
-            <Button type="button" variant="secondary" onClick={() => setStep("account")} aria-label="Back to account details">
-              <ArrowLeft className="size-5" aria-hidden />
-            </Button>
-            <Button type="submit" loading={submitting} className="flex-1">
-              {submitting ? "Creating account…" : "Create account"}
-            </Button>
-          </div>
-        </form>
-      </>
+      <DetailsStep
+        title={role === "VENDOR" ? "Your store" : "Your vehicle"}
+        subtitle={
+          role === "VENDOR"
+            ? "An admin reviews new stores before residents can see them."
+            : "An admin checks your details before you can start delivering."
+        }
+        error={error}
+        submitting={submitting}
+        onBack={() => setStep("account")}
+        onSubmit={handleSubmit}
+      >
+        {role === "VENDOR" ? (
+          <>
+            <TextField
+              label="Store name"
+              name="storeName"
+              value={values.storeName}
+              onChange={update}
+              placeholder="Aling Nena's Carinderia"
+              required
+              autoFocus
+              error={fieldError("storeName")}
+            />
+            <TextField
+              label="Store address"
+              name="storeAddress"
+              value={values.storeAddress}
+              onChange={update}
+              autoComplete="street-address"
+              placeholder="Street, barangay, city"
+              required
+              error={fieldError("storeAddress")}
+            />
+          </>
+        ) : (
+          <>
+            <SegmentedControl
+              name="vehicleType"
+              legend="Vehicle type"
+              options={vehicleOptions}
+              value={vehicleType}
+              onChange={chooseVehicle}
+              error={fieldError("vehicleType")}
+            />
+            {vehicleType === "MOTORCYCLE" && (
+              <>
+                <TextField
+                  label="Plate number"
+                  name="plateNumber"
+                  value={values.plateNumber}
+                  onChange={update}
+                  placeholder="ABC 1234"
+                  autoCapitalize="characters"
+                  required
+                  error={fieldError("plateNumber")}
+                />
+                <TextField
+                  label="Driver's license number"
+                  name="licenseNumber"
+                  value={values.licenseNumber}
+                  onChange={update}
+                  placeholder="N01-23-456789"
+                  autoCapitalize="characters"
+                  required
+                  error={fieldError("licenseNumber")}
+                />
+              </>
+            )}
+            {(vehicleType === "BICYCLE" || vehicleType === "E_BIKE") && (
+              <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-muted">
+                No plate or license needed for {vehicleType === "BICYCLE" ? "bicycles" : "e-bikes"}.
+              </p>
+            )}
+          </>
+        )}
+      </DetailsStep>
     );
   }
 
@@ -133,30 +204,7 @@ export function RegisterForm() {
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">Create your account</h1>
 
       <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
-        <fieldset>
-          <legend className="sr-only">Account type</legend>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-canvas p-1">
-            {roleOptions.map(({ role: value, label, Icon }) => (
-              <label
-                key={value}
-                className="flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg text-sm font-medium text-muted transition
-                  hover:text-ink has-checked:bg-white has-checked:font-semibold has-checked:text-ink has-checked:shadow-sm has-checked:ring-1 has-checked:ring-line
-                  has-focus-visible:outline-2 has-focus-visible:outline-brand-500"
-              >
-                <input
-                  type="radio"
-                  name="role-choice"
-                  value={value}
-                  checked={role === value}
-                  onChange={() => setRole(value)}
-                  className="sr-only"
-                />
-                <Icon className={`size-4 ${role === value ? "text-brand-600" : ""}`} aria-hidden />
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        <SegmentedControl name="role-choice" legend="Account type" options={roleOptions} value={role} onChange={setRole} />
 
         {error && <Alert tone="error">{error}</Alert>}
 
@@ -207,7 +255,52 @@ export function RegisterForm() {
 
         <div className="pt-1">
           <Button type="submit" loading={submitting} className="w-full">
-            {isVendor ? "Continue to store details" : submitting ? "Creating account…" : "Create account"}
+            {role === "VENDOR"
+              ? "Continue to store details"
+              : role === "RIDER"
+                ? "Continue to vehicle details"
+                : submitting
+                  ? "Creating account…"
+                  : "Create account"}
+          </Button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+function DetailsStep({
+  title,
+  subtitle,
+  error,
+  submitting,
+  onBack,
+  onSubmit,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  error?: string;
+  submitting: boolean;
+  onBack: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <p className="text-center text-xs font-semibold uppercase tracking-[0.12em] text-brand-700">Step 2 of 2</p>
+      <h1 className="mt-1 text-center text-2xl font-bold tracking-tight text-ink">{title}</h1>
+      <p className="mt-1 text-balance text-center text-[15px] text-muted">{subtitle}</p>
+
+      <form onSubmit={onSubmit} noValidate className="mt-5 space-y-3">
+        {error && <Alert tone="error">{error}</Alert>}
+        {children}
+        <div className="flex gap-3 pt-1">
+          <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to account details">
+            <ArrowLeft className="size-5" aria-hidden />
+          </Button>
+          <Button type="submit" loading={submitting} className="flex-1">
+            {submitting ? "Creating account…" : "Create account"}
           </Button>
         </div>
       </form>

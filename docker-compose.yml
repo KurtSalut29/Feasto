@@ -1,5 +1,7 @@
 # Start everything:   docker compose up -d --build
 # Stop everything:    docker compose down
+# Every long-running service has "restart: unless-stopped", so after quitting and
+# reopening Docker Desktop the whole stack comes back on its own.
 name: feasto
 
 x-server-env: &server-env
@@ -27,6 +29,7 @@ x-api: &api
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: feasto
       POSTGRES_PASSWORD: feasto
@@ -43,6 +46,7 @@ services:
 
   redis:
     image: redis:8-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -53,6 +57,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:4-management-alpine
+    restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: feasto
       RABBITMQ_DEFAULT_PASS: feasto
@@ -106,6 +111,7 @@ services:
 
   nginx:
     image: nginx:1.29-alpine
+    restart: unless-stopped
     ports:
       - "8080:80" # http://localhost:8080/api/health
     volumes:
