@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Styles for when the dashboard sidebar is folded into an icon rail (set on <html> by lib/sidebar.ts) */
+@custom-variant collapsed (&:where([data-sidebar="collapsed"] *));
+
 @theme inline {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }

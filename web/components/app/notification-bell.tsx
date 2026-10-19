@@ -9,8 +9,11 @@ import { useLiveEvent } from "./live-updates";
 
 type Notification = { id: string; title: string; body: string; link: string | null; readAt: string | null; createdAt: string };
 
-/** Bell with an unread count; opens a panel with recent notifications. */
-export function NotificationBell({ align = "right" }: { align?: "left" | "right" }) {
+/**
+ * Bell with an unread count; opens a panel with recent notifications.
+ * "icon" sits inside a top bar; "floating" is a round white button on the page background.
+ */
+export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "floating" }) {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<{ notifications: Notification[]; unread: number }>({ notifications: [], unread: 0 });
   const panel = useRef<HTMLDivElement>(null);
@@ -49,26 +52,36 @@ export function NotificationBell({ align = "right" }: { align?: "left" | "right"
     }
   }
 
+  const label = data.unread ? `Notifications, ${data.unread} unread` : "Notifications";
+
   return (
     <div className="relative" ref={panel}>
       <button
         type="button"
         onClick={toggle}
-        aria-label={data.unread ? `Notifications, ${data.unread} unread` : "Notifications"}
+        aria-label={label}
         aria-expanded={open}
-        className="relative flex size-10 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+        className={`relative flex items-center justify-center rounded-full text-ink transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+          variant === "floating"
+            ? "size-11 border border-line/80 bg-white shadow-[0_8px_24px_-14px_rgba(31,45,61,0.35)] hover:text-brand-600"
+            : "size-10 hover:bg-canvas"
+        }`}
       >
         <Bell className="size-[22px]" aria-hidden />
         {data.unread > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-4 text-white">
+          <span
+            className={`absolute flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-4 text-white ${
+              variant === "floating" ? "-top-0.5 -right-0.5 ring-2 ring-white" : "top-1.5 right-1.5"
+            }`}
+          >
             {data.unread > 9 ? "9+" : data.unread}
           </span>
         )}
       </button>
       {open && (
         <div
-          className={`absolute top-12 z-40 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-line bg-white shadow-xl ${
-            align === "right" ? "right-0" : "left-0"
+          className={`absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-line bg-white shadow-xl ${
+            variant === "floating" ? "top-14" : "top-12"
           }`}
         >
           <p className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">Notifications</p>

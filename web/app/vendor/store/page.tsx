@@ -7,7 +7,7 @@ import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus } from "@/lib/types";
 import { StoreForm, type StoreSettings } from "./store-form";
 
-export const metadata: Metadata = { title: "Store" };
+export const metadata: Metadata = { title: "Store settings" };
 
 export default function VendorStorePage() {
   return (
@@ -24,7 +24,7 @@ async function VendorStore() {
 
   return (
     <>
-      <PageHeader title="Store" description="How your store appears to residents." actions={<ApprovalBadge status={status} />} />
+      <PageHeader title="Store settings" description="How your store appears to residents." actions={<ApprovalBadge status={status} />} />
       <StoreForm
         initial={{
           name: settings.name,

@@ -18,8 +18,11 @@ import {
 } from "lucide-react";
 import type { Role } from "./types";
 
-/** `also` lists other pages that belong to this tab (e.g. Addresses is part of Account). */
-export type NavItem = { href: string; label: string; Icon: LucideIcon; also?: string[] };
+/**
+ * `also` lists other pages that belong to this tab (e.g. Addresses is part of Account).
+ * `group` is the sidebar heading the link sits under (dashboard roles only).
+ */
+export type NavItem = { href: string; label: string; Icon: LucideIcon; also?: string[]; group?: string };
 
 /** Bottom tabs for the mobile roles and sidebar links for the dashboard roles. */
 export const NAVIGATION: Record<Role, NavItem[]> = {
@@ -36,19 +39,19 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile"] },
   ],
   VENDOR: [
-    { href: "/vendor", label: "Overview", Icon: LayoutDashboard },
-    { href: "/vendor/orders", label: "Orders", Icon: ClipboardList },
-    { href: "/vendor/menu", label: "Menu", Icon: UtensilsCrossed },
-    { href: "/vendor/reservations", label: "Reservations", Icon: CalendarDays },
-    { href: "/vendor/store", label: "Store", Icon: Store },
+    { href: "/vendor", label: "Overview", Icon: LayoutDashboard, group: "Today" },
+    { href: "/vendor/orders", label: "Orders", Icon: ClipboardList, group: "Today" },
+    { href: "/vendor/reservations", label: "Reservations", Icon: CalendarDays, group: "Today" },
+    { href: "/vendor/menu", label: "Menu", Icon: UtensilsCrossed, group: "Your store" },
+    { href: "/vendor/store", label: "Store settings", Icon: Store, group: "Your store" },
   ],
   ADMIN: [
-    { href: "/admin", label: "Overview", Icon: LayoutDashboard },
-    { href: "/admin/approvals", label: "Approvals", Icon: ShieldCheck },
-    { href: "/admin/users", label: "Users", Icon: Users },
-    { href: "/admin/orders", label: "Orders", Icon: ClipboardList },
-    { href: "/admin/reports", label: "Reports", Icon: BarChart3 },
-    { href: "/admin/system", label: "System", Icon: Server },
+    { href: "/admin", label: "Overview", Icon: LayoutDashboard, group: "Manage" },
+    { href: "/admin/approvals", label: "Approvals", Icon: ShieldCheck, group: "Manage" },
+    { href: "/admin/users", label: "Users", Icon: Users, group: "Manage" },
+    { href: "/admin/orders", label: "Orders", Icon: ClipboardList, group: "Manage" },
+    { href: "/admin/reports", label: "Reports", Icon: BarChart3, group: "Insights" },
+    { href: "/admin/system", label: "System", Icon: Server, group: "Insights" },
   ],
 };
 

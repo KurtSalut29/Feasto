@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { SIDEBAR_INIT_SCRIPT } from "@/lib/sidebar";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -15,7 +16,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${poppins.variable} h-full antialiased`}>
+    // The sidebar script below may add data-sidebar to <html> before React loads
+    <html lang="en" className={`${poppins.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full font-sans">{children}</body>
     </html>
   );
