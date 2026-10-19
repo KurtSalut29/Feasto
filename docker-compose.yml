@@ -1,0 +1,114 @@
+# Start everything:   docker compose up -d --build
+# Stop everything:    docker compose down
+name: feasto
+
+x-server-env: &server-env
+  DATABASE_URL: postgresql://feasto:feasto@postgres:5432/feasto
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://feasto:feasto@rabbitmq:5672
+  PORT: "4000"
+
+# Settings shared by the three API copies.
+x-api: &api
+  image: feasto-server:dev
+  build: ./server
+  restart: unless-stopped
+  mem_limit: 256m
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: feasto
+      POSTGRES_PASSWORD: feasto
+      POSTGRES_DB: feasto
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feasto -d feasto"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: feasto
+      RABBITMQ_DEFAULT_PASS: feasto
+    ports:
+      - "5672:5672"   # used by the API and worker
+      - "15672:15672" # web dashboard: http://localhost:15672 (feasto / feasto)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Runs once: applies database migrations, then exits.
+  migrate:
+    build:
+      context: ./server
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment: *server-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-1:
+    <<: *api
+    environment:
+      <<: *server-env
+      INSTANCE_ID: api-1
+
+  api-2:
+    <<: *api
+    environment:
+      <<: *server-env
+      INSTANCE_ID: api-2
+
+  api-3:
+    <<: *api
+    environment:
+      <<: *server-env
+      INSTANCE_ID: api-3
+
+  worker:
+    <<: *api
+    command: ["node", "dist/worker.js"]
+    environment:
+      <<: *server-env
+      INSTANCE_ID: worker-1
+
+  nginx:
+    image: nginx:1.29-alpine
+    ports:
+      - "8080:80" # http://localhost:8080/api/health
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api-1
+      - api-2
+      - api-3
+
+volumes:
+  pgdata:

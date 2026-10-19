@@ -1,0 +1,179 @@
+// Feasto database schema.
+// After editing this file run `npm run db:migrate` to create a migration.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  RESIDENT
+  RIDER
+  VENDOR
+  ADMIN
+}
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum OrderStatus {
+  PLACED
+  ACCEPTED
+  PREPARING
+  READY
+  PICKED_UP
+  DELIVERED
+  REJECTED
+  CANCELLED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         Role     @default(RESIDENT)
+  createdAt    DateTime @default(now())
+
+  vendor     Vendor? // set when role = VENDOR
+  checkouts  Checkout[]
+  deliveries Order[]    @relation("RiderDeliveries")
+  bookings   Booking[]
+}
+
+model Vendor {
+  id          String       @id @default(cuid())
+  ownerId     String       @unique
+  owner       User         @relation(fields: [ownerId], references: [id])
+  name        String
+  description String?
+  address     String
+  imageUrl    String?
+  status      VendorStatus @default(PENDING)
+  opensAt     String // "08:00"
+  closesAt    String // "21:00"
+  createdAt   DateTime     @default(now())
+
+  menuItems MenuItem[]
+  orders    Order[]
+  tables    DiningTable[]
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  imageUrl    String?
+  stock       Int? // null = unlimited
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  orderItems OrderItem[]
+
+  @@index([vendorId])
+}
+
+/// One payment for a cart that may contain items from several vendors.
+/// It is split into one Order per vendor, and those orders are processed in parallel.
+model Checkout {
+  id              String        @id @default(cuid())
+  residentId      String
+  resident        User          @relation(fields: [residentId], references: [id])
+  total           Decimal       @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(PENDING)
+  /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.
+  idempotencyKey  String        @unique
+  deliveryAddress String
+  createdAt       DateTime      @default(now())
+
+  orders Order[]
+}
+
+/// The part of a checkout that belongs to a single vendor.
+model Order {
+  id         String      @id @default(cuid())
+  checkoutId String
+  checkout   Checkout    @relation(fields: [checkoutId], references: [id])
+  vendorId   String
+  vendor     Vendor      @relation(fields: [vendorId], references: [id])
+  riderId    String?
+  rider      User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
+  status     OrderStatus @default(PLACED)
+  subtotal   Decimal     @db.Decimal(10, 2)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  items OrderItem[]
+
+  @@index([vendorId, status])
+  @@index([riderId])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  name       String // copied at order time so later menu edits don't change past orders
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  quantity   Int
+}
+
+model DiningTable {
+  id       String @id @default(cuid())
+  vendorId String
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  label    String // "Table 4"
+  seats    Int
+
+  bookings Booking[]
+
+  @@unique([vendorId, label])
+}
+
+/// Reservations use fixed one-hour slots, so two bookings conflict only when they share a start time.
+model Booking {
+  id         String        @id @default(cuid())
+  tableId    String
+  table      DiningTable   @relation(fields: [tableId], references: [id])
+  residentId String
+  resident   User          @relation(fields: [residentId], references: [id])
+  startsAt   DateTime
+  partySize  Int
+  status     BookingStatus @default(CONFIRMED)
+  /// "<tableId>|<startsAt ISO>" while the booking is active, null once cancelled.
+  /// The unique index lets the database reject a double-booking even when
+  /// hundreds of requests for the same slot arrive at the same moment.
+  activeSlotKey String?    @unique
+  createdAt  DateTime      @default(now())
+
+  @@index([tableId, startsAt])
+}
