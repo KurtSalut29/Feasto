@@ -90,7 +90,20 @@ const publicUser = {
   phone: true,
   role: true,
   vendor: {
-    select: { id: true, name: true, storeType: true, acceptsReservations: true, status: true, reviewNote: true },
+    select: {
+      id: true,
+      name: true,
+      storeType: true,
+      acceptsReservations: true,
+      address: true,
+      description: true,
+      opensAt: true,
+      closesAt: true,
+      imageUrl: true,
+      isTemporarilyClosed: true,
+      status: true,
+      reviewNote: true,
+    },
   },
   riderProfile: { select: { vehicleType: true, plateNumber: true, status: true, reviewNote: true, isOnline: true } },
 } satisfies Prisma.UserSelect;

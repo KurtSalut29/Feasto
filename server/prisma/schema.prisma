@@ -54,14 +54,26 @@ enum PaymentStatus {
 }
 
 enum OrderStatus {
+  AWAITING_PAYMENT // online payment not confirmed yet; vendors don't see it
   PLACED
   ACCEPTED
   PREPARING
   READY
-  PICKED_UP
-  DELIVERED
+  PICKED_UP // delivery: the rider collected it
+  DELIVERED // delivery: handed to the resident
+  COMPLETED // pickup: the resident collected it
   REJECTED
   CANCELLED
+}
+
+enum Fulfillment {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
 }
 
 enum BookingStatus {
@@ -80,11 +92,27 @@ model User {
   role         Role     @default(RESIDENT)
   createdAt    DateTime @default(now())
 
-  vendor       Vendor? // set when role = VENDOR
-  riderProfile RiderProfile? // set when role = RIDER
-  checkouts    Checkout[]
-  deliveries   Order[]       @relation("RiderDeliveries")
-  bookings     Booking[]
+  vendor        Vendor? // set when role = VENDOR
+  riderProfile  RiderProfile? // set when role = RIDER
+  checkouts     Checkout[]
+  deliveries    Order[]        @relation("RiderDeliveries")
+  bookings      Booking[]
+  addresses     Address[]
+  notifications Notification[]
+}
+
+/// A resident's saved delivery address.
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  label     String // "Home", "Office"
+  details   String // street, barangay, city
+  landmark  String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Vendor {
@@ -103,6 +131,8 @@ model Vendor {
   reviewedAt          DateTime?
   opensAt             String // "08:00"
   closesAt            String // "21:00"
+  /// The vendor's manual "closed for now" switch, on top of the opening hours
+  isTemporarilyClosed Boolean        @default(false)
   createdAt           DateTime       @default(now())
 
   menuItems MenuItem[]
@@ -126,16 +156,19 @@ model RiderProfile {
 }
 
 model MenuItem {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   vendorId    String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  vendor      Vendor    @relation(fields: [vendorId], references: [id])
   name        String
+  category    String    @default("Others") // the vendor's own menu section, e.g. "Rice Meals"
   description String?
-  price       Decimal  @db.Decimal(10, 2)
+  price       Decimal   @db.Decimal(10, 2)
   imageUrl    String?
   stock       Int? // null = unlimited
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  isAvailable Boolean   @default(true)
+  /// Deleted dishes are hidden but kept, because past orders point to them
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
 
   orderItems OrderItem[]
 
@@ -148,11 +181,14 @@ model Checkout {
   id              String        @id @default(cuid())
   residentId      String
   resident        User          @relation(fields: [residentId], references: [id])
+  fulfillment     Fulfillment
+  paymentMethod   PaymentMethod
   total           Decimal       @db.Decimal(10, 2)
   paymentStatus   PaymentStatus @default(PENDING)
   /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.
   idempotencyKey  String        @unique
-  deliveryAddress String
+  deliveryAddress String? // empty for pickup
+  notes           String?
   createdAt       DateTime      @default(now())
 
   orders Order[]
@@ -160,22 +196,30 @@ model Checkout {
 
 /// The part of a checkout that belongs to a single vendor.
 model Order {
-  id         String      @id @default(cuid())
-  checkoutId String
-  checkout   Checkout    @relation(fields: [checkoutId], references: [id])
-  vendorId   String
-  vendor     Vendor      @relation(fields: [vendorId], references: [id])
-  riderId    String?
-  rider      User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
-  status     OrderStatus @default(PLACED)
-  subtotal   Decimal     @db.Decimal(10, 2)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  checkoutId   String
+  checkout     Checkout    @relation(fields: [checkoutId], references: [id])
+  vendorId     String
+  vendor       Vendor      @relation(fields: [vendorId], references: [id])
+  riderId      String?
+  rider        User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
+  status       OrderStatus @default(PLACED)
+  fulfillment  Fulfillment
+  subtotal     Decimal     @db.Decimal(10, 2)
+  deliveryFee  Decimal     @default(0) @db.Decimal(10, 2)
+  rejectReason String?
+  acceptedAt   DateTime?
+  readyAt      DateTime?
+  pickedUpAt   DateTime?
+  finishedAt   DateTime? // delivered, collected, rejected or cancelled
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   items OrderItem[]
 
   @@index([vendorId, status])
   @@index([riderId])
+  @@index([checkoutId])
 }
 
 model OrderItem {
@@ -190,15 +234,17 @@ model OrderItem {
 }
 
 model DiningTable {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   vendorId String
-  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendor   Vendor  @relation(fields: [vendorId], references: [id])
   label    String // "Table 4"
   seats    Int
+  /// Removed tables are hidden but kept, because past bookings point to them
+  isActive Boolean @default(true)
 
   bookings Booking[]
 
-  @@unique([vendorId, label])
+  @@index([vendorId])
 }
 
 /// Reservations use fixed one-hour slots, so two bookings conflict only when they share a start time.
@@ -210,6 +256,7 @@ model Booking {
   resident      User          @relation(fields: [residentId], references: [id])
   startsAt      DateTime
   partySize     Int
+  notes         String?
   status        BookingStatus @default(CONFIRMED)
   /// "<tableId>|<startsAt ISO>" while the booking is active, null once cancelled.
   /// The unique index lets the database reject a double-booking even when
@@ -218,4 +265,31 @@ model Booking {
   createdAt     DateTime      @default(now())
 
   @@index([tableId, startsAt])
+}
+
+/// In-app notification. New ones are also pushed live to the user's open pages.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Transactional outbox: events are saved in the same database transaction as the
+/// change they describe, then relayed to RabbitMQ. If RabbitMQ or an API copy is down
+/// at that moment, the worker's relay publishes them later, so no event is lost.
+model OutboxEvent {
+  id          String    @id @default(cuid())
+  topic       String
+  payload     Json
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt, createdAt])
 }

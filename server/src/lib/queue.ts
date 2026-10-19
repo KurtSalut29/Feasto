@@ -2,7 +2,14 @@ import amqp from "amqplib";
 import { config } from "../config.js";
 
 export const QUEUES = {
+  /** One message per store order; the worker notifies the store (processed in parallel) */
   ordersPlaced: "orders.placed",
+  /** One message per online checkout; the worker charges it (simulated) and runs the saga */
+  paymentRequested: "payment.requested",
+  /** A sales report request; the worker splits it into one job per store */
+  reportRequested: "report.requested",
+  /** One store's part of a report, computed by any worker in parallel */
+  reportPart: "report.part",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
