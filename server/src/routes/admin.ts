@@ -3,14 +3,16 @@ import { Router } from "express";
 import { z } from "zod";
 import { config } from "../config.js";
 import type { ApprovalStatus, OrderStatus, Prisma, Role } from "../generated/prisma/client.js";
+import { markDisabled } from "../lib/accounts.js";
 import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { readHeartbeats } from "../lib/heartbeat.js";
 import { QUEUES } from "../lib/queue.js";
-import { notify } from "../lib/realtime.js";
+import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { redis } from "../lib/redis.js";
 import { readReport, REPORT_LIST, reportKey } from "../lib/reports.js";
+import { dailySales } from "../lib/sales.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const adminRouter = Router();
@@ -153,6 +155,13 @@ adminRouter.post("/riders/:id/review", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Sales chart ----------
+
+adminRouter.get("/sales", async (req, res) => {
+  const { days } = z.object({ days: z.coerce.number().int().min(7).max(90).default(14) }).parse(req.query);
+  res.json({ days: await dailySales(days) });
+});
+
 // ---------- Users ----------
 
 const usersQuery = z.object({
@@ -190,7 +199,8 @@ adminRouter.get("/users", async (req, res) => {
         phone: true,
         role: true,
         createdAt: true,
-        vendor: { select: { name: true, status: true } },
+        disabledAt: true,
+        vendor: { select: { id: true, name: true, status: true } },
         riderProfile: { select: { vehicleType: true, status: true } },
       },
     }),
@@ -365,4 +375,29 @@ adminRouter.get("/system", async (_req, res) => {
     redis: { up: cache.up, ms: cache.ms, ...(cache.value ?? {}) },
     outboxWaiting: outbox,
   });
+});
+
+// ---------- Disable / enable accounts ----------
+
+const disableSchema = z.object({ disabled: z.boolean() });
+
+/** Blocks or unblocks an account. A disabled user is logged out of every device right away. */
+adminRouter.post("/users/:id/status", async (req, res) => {
+  const { disabled } = parseBody(disableSchema, req.body);
+  const id = String(req.params.id);
+  const user = await prisma.user.findUnique({ where: { id }, select: { role: true, vendor: { select: { id: true } } } });
+  if (!user) throw new HttpError(404, "User not found.");
+  if (user.role === "ADMIN") throw new HttpError(400, "Admin accounts can't be disabled.");
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id }, data: { disabledAt: disabled ? new Date() : null } }),
+    // A disabled rider stops receiving jobs
+    ...(disabled && user.role === "RIDER" ? [prisma.riderProfile.updateMany({ where: { userId: id }, data: { isOnline: false } })] : []),
+  ]);
+  await markDisabled(id, disabled);
+  // A disabled vendor's store disappears for residents (and comes back when enabled)
+  if (user.vendor) await invalidateStore(user.vendor.id);
+  // Close their open pages right away instead of waiting for the next click
+  if (disabled) await publish(CHANNELS.user(id), { type: "session.ended" });
+  res.json({ ok: true });
 });

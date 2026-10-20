@@ -73,13 +73,23 @@ export type StoreSummary = {
   dishCount: number;
   categories: string[];
   matchedDishes: string[];
+  /** Average stars rounded to one decimal; null before the first rating */
+  rating: number | null;
+  ratingCount: number;
+  isFavorite: boolean;
 };
+
+export type StoreReview = { id: string; rating: number; comment: string | null; createdAt: string; author: string };
 
 export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "matchedDishes"> & {
   canBook: boolean;
   maxPartySize: number;
   menuItems: MenuItem[];
+  reviews: StoreReview[];
 };
+
+/** Orders and sales on one day (Philippine date "YYYY-MM-DD"). */
+export type SalesDay = { date: string; orders: number; sales: number };
 
 export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STORE_CLOSED" | "STORE_UNAVAILABLE";
 
@@ -142,6 +152,8 @@ export type ResidentOrder = OrderBase & {
     total: string;
     createdAt: string;
   };
+  /** The resident's rating, once they've given one */
+  review: { rating: number; comment: string | null; createdAt: string } | null;
 };
 
 /** An order as the store sees it. */

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { ACTIVE_STORE } from "../lib/accounts.js";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
@@ -42,7 +43,7 @@ function checkDate(date: string) {
 
 async function bookableStore(vendorId: string) {
   const store = await prisma.vendor.findFirst({
-    where: { id: vendorId, status: "APPROVED", acceptsReservations: true },
+    where: { id: vendorId, ...ACTIVE_STORE, acceptsReservations: true },
     select: { id: true, name: true, ownerId: true, opensAt: true, closesAt: true, tables: { where: { isActive: true }, select: { id: true, label: true, seats: true } } },
   });
   if (!store || store.tables.length === 0) throw new HttpError(404, "This store doesn't take table bookings.");

@@ -11,7 +11,8 @@ export type LiveEvent =
   | { type: "jobs.changed" }
   | { type: "rider.location"; orderId: string; lat: number; lng: number; at: string }
   | { type: "booking.updated"; bookingId: string; status: string }
-  | { type: "report.ready"; reportId: string };
+  | { type: "report.ready"; reportId: string }
+  | { type: "session.ended" };
 
 type Listener = (event: LiveEvent) => void;
 const LiveContext = createContext<((listener: Listener) => () => void) | null>(null);
@@ -57,6 +58,12 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
     source.onmessage = (message) => {
       const event = JSON.parse(message.data) as LiveEvent;
       listeners.current.forEach((listener) => listener(event));
+      if (event.type === "session.ended") {
+        // An admin disabled this account: leave right away
+        source.close();
+        window.location.replace("/logout?reason=disabled");
+        return;
+      }
       if (event.type === "rider.location") return; // too frequent to refresh the whole page
       if (event.type === "notification") {
         const { id, title, body, link } = event.notification;

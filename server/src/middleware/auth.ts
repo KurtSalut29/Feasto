@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import { isDisabled } from "../lib/accounts.js";
 import { SESSION_COOKIE, verifySession, type Session } from "../lib/auth.js";
 import { HttpError } from "../lib/http.js";
 import type { Role } from "../generated/prisma/enums.js";
@@ -11,11 +12,12 @@ declare global {
   }
 }
 
-/** Rejects the request with 401 unless it carries a valid session cookie. */
+/** Rejects the request with 401 unless it carries a valid session cookie of an account that isn't disabled. */
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   const token = req.cookies?.[SESSION_COOKIE];
   const session = token ? await verifySession(token) : null;
   if (!session) throw new HttpError(401, "Please log in to continue.");
+  if (await isDisabled(session.userId)) throw new HttpError(401, "This account has been disabled.");
   req.session = session;
   next();
 };

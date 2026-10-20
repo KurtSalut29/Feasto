@@ -1,5 +1,4 @@
 import { ShieldCheck, Store } from "lucide-react";
-import Image from "next/image";
 import { cache, Suspense, type ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { initials } from "@/lib/format";
@@ -85,7 +84,9 @@ async function SidebarContext() {
     >
       <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 text-brand-600">
         {store?.imageUrl ? (
-          <Image src={store.imageUrl} alt="" fill unoptimized className="object-cover" />
+          // A plain <img>: next/image here makes Next.js warn about Date.now() while it prerenders the dashboard
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={store.imageUrl} alt="" className="size-full object-cover" />
         ) : store ? (
           <Store className="size-5" aria-hidden />
         ) : (

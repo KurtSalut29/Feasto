@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import { config } from "./config.js";
 import { prisma } from "./lib/db.js";
+import { syncDisabledAccounts } from "./lib/accounts.js";
 import { countRequest, startHeartbeat } from "./lib/heartbeat.js";
 import { errorHandler } from "./lib/http.js";
 import { redis } from "./lib/redis.js";
@@ -59,6 +60,7 @@ app.use("/api/orders", ordersRouter);
 
 app.use(errorHandler);
 
+await syncDisabledAccounts();
 const server = app.listen(config.port, () => {
   console.log(`[${config.instanceId}] API listening on port ${config.port}`);
 });

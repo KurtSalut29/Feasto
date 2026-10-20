@@ -4,18 +4,43 @@ import type { ReactNode } from "react";
 import { initials } from "@/lib/format";
 import type { User } from "@/lib/types";
 
-/** Avatar, name and contact details at the top of the mobile Account tab. */
-export function ProfileCard({ user }: { user: User }) {
+/** Avatar, name and contact details at the top of the mobile Account tab, with optional numbers below. */
+export function ProfileCard({ user, stats }: { user: User; stats?: { label: string; value: ReactNode; href?: string }[] }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-line p-4">
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-brand-100 text-lg font-semibold text-brand-700">
-        {initials(user.name)}
-      </span>
-      <div className="min-w-0">
-        <p className="truncate font-semibold text-ink">{user.name}</p>
-        <p className="truncate text-sm text-muted">{user.email}</p>
-        {user.phone && <p className="text-sm text-muted">{user.phone}</p>}
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-5 text-white shadow-[0_16px_32px_-18px_rgba(178,58,0,0.7)]">
+      <div aria-hidden className="absolute -top-10 -right-10 size-40 rounded-full bg-white/10" />
+      <div aria-hidden className="absolute -right-4 -bottom-16 size-32 rounded-full bg-white/5" />
+      <div className="relative flex items-center gap-4">
+        <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/20 text-lg font-semibold ring-2 ring-white/30">
+          {initials(user.name)}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-lg font-semibold">{user.name}</p>
+          <p className="truncate text-sm text-white/80">{user.email}</p>
+          {user.phone && <p className="text-sm text-white/80">{user.phone}</p>}
+        </div>
       </div>
+      {stats && stats.length > 0 && (
+        <dl className="relative mt-4 grid divide-x divide-white/15 rounded-2xl bg-white/10" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+          {stats.map((stat) => {
+            const body = (
+              <>
+                <dd className="text-lg font-bold">{stat.value}</dd>
+                <dt className="text-xs text-white/80">{stat.label}</dt>
+              </>
+            );
+            return stat.href ? (
+              <Link key={stat.label} href={stat.href} className="flex flex-col-reverse items-center rounded-2xl px-2 py-2.5 transition hover:bg-white/10">
+                {body}
+              </Link>
+            ) : (
+              <div key={stat.label} className="flex flex-col-reverse items-center px-2 py-2.5">
+                {body}
+              </div>
+            );
+          })}
+        </dl>
+      )}
     </div>
   );
 }

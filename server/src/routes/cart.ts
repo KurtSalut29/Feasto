@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { ACTIVE_STORE } from "../lib/accounts.js";
 import { buildCart, clearCart, readCartQuantities, setCartQuantity } from "../lib/cart.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
@@ -29,7 +30,7 @@ cartRouter.put("/items", async (req, res) => {
 
   if (quantity > 0) {
     const item = await prisma.menuItem.findFirst({
-      where: { id: menuItemId, deletedAt: null, vendor: { status: "APPROVED" } },
+      where: { id: menuItemId, deletedAt: null, vendor: ACTIVE_STORE },
       select: { isAvailable: true, stock: true, name: true },
     });
     if (!item) throw new HttpError(404, "This dish isn't available anymore.");

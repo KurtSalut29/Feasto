@@ -19,7 +19,9 @@ export type RealtimeEvent =
   | { type: "jobs.changed" }
   | { type: "rider.location"; orderId: string; lat: number; lng: number; at: string }
   | { type: "booking.updated"; bookingId: string; status: string }
-  | { type: "report.ready"; reportId: string };
+  | { type: "report.ready"; reportId: string }
+  /** The account was disabled: open pages should log out */
+  | { type: "session.ended" };
 
 export function publish(channel: string, event: RealtimeEvent) {
   return redis.publish(channel, JSON.stringify(event));

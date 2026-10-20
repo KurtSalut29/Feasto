@@ -1,9 +1,8 @@
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
-import { StoreCover } from "@/components/app/store-card";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -30,40 +29,47 @@ export default function ResidentBookingsPage() {
   );
 }
 
+const manilaPart = (iso: string, part: "day" | "month") =>
+  new Date(iso).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", ...(part === "day" ? { day: "numeric" } : { month: "short" }) });
+
+/** A reservation shown like a ticket: the date on the left, the details on the right. */
 function BookingCard({ booking, upcoming }: { booking: ResidentBooking; upcoming: boolean }) {
   const store = booking.table.vendor;
   return (
-    <li className="rounded-2xl border border-line p-3">
-      <div className="flex gap-3">
-        <StoreCover imageUrl={store.imageUrl} className="size-14 shrink-0 rounded-xl" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <Link href={`/resident/stores/${store.id}`} className="truncate font-semibold text-ink hover:underline">
-              {store.name}
-            </Link>
-            <Badge tone={STATUS[booking.status].tone}>{STATUS[booking.status].label}</Badge>
-          </div>
-          <p className="mt-0.5 flex items-center gap-1.5 text-sm text-ink">
-            <CalendarDays className="size-4 text-muted" aria-hidden />
-            {formatDay(booking.startsAt)}, {formatClock(booking.startsAt)}
-          </p>
-          <p className="flex items-center gap-1.5 text-sm text-muted">
-            <Users className="size-4" aria-hidden />
-            {booking.partySize} {booking.partySize === 1 ? "person" : "people"} · {booking.table.label}
-          </p>
-          {upcoming && (
-            <p className="flex items-start gap-1.5 text-sm text-muted">
-              <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-              {store.address}
-            </p>
-          )}
-        </div>
+    <li className={`flex overflow-hidden rounded-2xl border ${upcoming ? "border-line bg-white" : "border-line/70 bg-canvas/60"}`}>
+      <div
+        className={`flex w-[68px] shrink-0 flex-col items-center justify-center border-r border-dashed ${
+          upcoming ? "border-brand-100 bg-brand-50 text-brand-700" : "border-line text-muted"
+        }`}
+      >
+        <span className="text-xs font-semibold tracking-wider uppercase">{manilaPart(booking.startsAt, "month")}</span>
+        <span className="text-2xl leading-none font-bold">{manilaPart(booking.startsAt, "day")}</span>
       </div>
-      {upcoming && booking.status === "CONFIRMED" && (
-        <div className="mt-3">
-          <CancelBookingButton bookingId={booking.id} />
+      <div className="min-w-0 flex-1 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <Link href={`/resident/stores/${store.id}`} className="truncate font-semibold text-ink hover:underline">
+            {store.name}
+          </Link>
+          <Badge tone={STATUS[booking.status].tone}>{STATUS[booking.status].label}</Badge>
         </div>
-      )}
+        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-ink">
+          <Clock className="size-4 text-muted" aria-hidden />
+          {formatDay(booking.startsAt)}, {formatClock(booking.startsAt)}
+        </p>
+        <p className="flex items-center gap-1.5 text-sm text-muted">
+          <Users className="size-4" aria-hidden />
+          {booking.partySize} {booking.partySize === 1 ? "person" : "people"} · {booking.table.label}
+        </p>
+        {upcoming && (
+          <div className="mt-1 flex items-end justify-between gap-2">
+            <p className="flex min-w-0 items-start gap-1.5 text-sm text-muted">
+              <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <span className="line-clamp-1">{store.address}</span>
+            </p>
+            {booking.status === "CONFIRMED" && <CancelBookingButton bookingId={booking.id} />}
+          </div>
+        )}
+      </div>
     </li>
   );
 }

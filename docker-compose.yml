@@ -89,6 +89,26 @@ services:
       postgres:
         condition: service_healthy
 
+  # Wipes everything and loads the demo stores, accounts and orders. Not started by
+  # "docker compose up"; run it on purpose with:  docker compose run --rm demo
+  demo:
+    profiles: ["tools"]
+    build:
+      context: ./server
+      target: build
+    command: ["node", "dist/demo.js"]
+    environment:
+      <<: *server-env
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@feasto.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   api-1:
     <<: *api
     environment:

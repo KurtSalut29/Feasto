@@ -37,6 +37,8 @@ Browser ─► Next.js ─► Nginx ──► api-2 ├────────�
 | Live order tracking with rider map | Pickup → delivered, live GPS sharing | Table setup and daily bookings | Sales reports computed in parallel |
 | Table booking by date, time and party size | Earnings history | Today's orders and sales | System monitor (API copies, workers, queues) |
 | Saved addresses, profile, notifications | Profile, notifications | Notifications | Notifications |
+| Ratings & reviews, saved stores, order again | 7-day earnings chart | 14-day sales chart, ratings & reviews | 14-day sales chart, top-rated stores |
+| | | | Disable / enable accounts (logged out everywhere instantly) |
 
 ## Requirements
 
@@ -80,6 +82,33 @@ docker compose down              # stop everything (data is kept)
 Every long-running service restarts by itself when Docker Desktop starts.
 RabbitMQ's own dashboard: http://localhost:15672 (user `feasto`, password `feasto`).
 
+## Demo data (before a presentation)
+
+One command wipes **everything** (all accounts, stores, orders, photos, carts) and loads a clean
+demo: 10 stores in Brgy. Malaya with real food photos and menus, 2 stores waiting for approval,
+riders, residents, two weeks of orders with ratings, live orders waiting right now, and table bookings.
+
+```bash
+docker compose --profile tools run --rm --build demo
+```
+
+Every demo account uses the password **`demo1234`** (the admin keeps the password from `.env`).
+
+| Role | Email | What to show |
+|---|---|---|
+| Admin | `admin@feasto.com` | 3 approvals waiting, sales chart, reports, system monitor, disable a user |
+| Resident | `juan@feasto.com` | Saved stores, an order being prepared, past orders to rate and order again, a table booking |
+| Vendor | `nena@feasto.com` | Aling Nena's Carinderia: 2 new orders waiting, sales chart, ratings |
+| Vendor | `remy@feasto.com` | Lola Remy's Kitchen: tables and bookings, a ready order waiting for a rider |
+| Rider | `pedro@feasto.com` | Online, 2 ready jobs waiting, earnings history |
+
+Other demo accounts: vendors `marco@`, `bea@`, `ramon@`, `kim@`, `ben@`, `sofia@`, `lorna@`, `carlos@`;
+riders `jessa@`, `mark@`, `leo@` (and `rico@`, pending); residents `maria@`, `carlo@`, `andrea@`,
+`miguel@`, `patricia@` (all `@feasto.com`). Pending stores: `tonyo@`, `grace@`.
+
+Food photos come from [TheMealDB](https://www.themealdb.com) and [TheCocktailDB](https://www.thecocktaildb.com),
+used for this school project (`server/demo/photos`).
+
 ## Working on the backend without Docker rebuilds
 
 Keep `postgres`, `redis` and `rabbitmq` running in Docker and run the API on your machine with live reload:
@@ -110,4 +139,6 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Shared cache** | Store list and menus cached in Redis, cleared on change | Edit a price as a vendor; every API copy shows the new price immediately |
 | **Real-time over pub/sub** | Server-Sent Events + Redis pub/sub across API copies | Keep the resident's order page open while the vendor accepts; it updates without refreshing |
 | **Shared state** | Cart and login lockout counter in Redis | 5 wrong passwords across different copies still lock the account |
+| **Session revocation** | Logins are stateless signed cookies, so disabled accounts are kept in a Redis set that all 3 API copies check on every request | Admin → Users → Disable a resident who is logged in elsewhere: their open page logs out within a second |
+| **Atomic counters** | Each rating updates the store's rating total in the same transaction; a unique index allows one rating per order | Rate an order from two tabs at once: only one rating is saved |
 | **Shared file storage** | Photos on a Docker volume used by all copies, served by Nginx | Upload a dish photo; it loads no matter which copy serves the page |

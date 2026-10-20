@@ -35,7 +35,11 @@ export async function buildCart(userId: string) {
 
   const items = await prisma.menuItem.findMany({
     where: { id: { in: lines.map((l) => l.menuItemId) } },
-    include: { vendor: { select: { id: true, name: true, imageUrl: true, status: true, opensAt: true, closesAt: true, isTemporarilyClosed: true } } },
+    include: {
+      vendor: {
+        select: { id: true, name: true, imageUrl: true, status: true, opensAt: true, closesAt: true, isTemporarilyClosed: true, owner: { select: { disabledAt: true } } },
+      },
+    },
   });
 
   // Dishes that were deleted since they were added are dropped quietly
@@ -59,7 +63,7 @@ export async function buildCart(userId: string) {
         store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, isOpen: open },
         items: [],
         subtotal: 0,
-        problem: item.vendor.status !== "APPROVED" ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
+        problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
       };
       groups.set(item.vendorId, group);
     }

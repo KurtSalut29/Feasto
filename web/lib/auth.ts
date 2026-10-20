@@ -21,7 +21,10 @@ export const getCurrentUser = cache(async (): Promise<User> => {
     cache: "no-store",
   });
   // The cookie is no longer valid (expired, or the account was removed): clear it.
-  if (response.status === 401) redirect("/logout");
+  if (response.status === 401) {
+    const { error } = (await response.json().catch(() => ({}))) as { error?: string };
+    redirect(error?.includes("disabled") ? "/logout?reason=disabled" : "/logout");
+  }
   if (!response.ok) throw new Error(`Could not load your account (status ${response.status}).`);
 
   const { user } = (await response.json()) as { user: User };

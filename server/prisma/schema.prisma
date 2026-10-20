@@ -84,13 +84,15 @@ enum BookingStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   name         String
   phone        String?
-  role         Role     @default(RESIDENT)
-  createdAt    DateTime @default(now())
+  role         Role      @default(RESIDENT)
+  /// Set by an admin to block the account; the user is logged out everywhere at once
+  disabledAt   DateTime?
+  createdAt    DateTime  @default(now())
 
   vendor        Vendor? // set when role = VENDOR
   riderProfile  RiderProfile? // set when role = RIDER
@@ -99,6 +101,8 @@ model User {
   bookings      Booking[]
   addresses     Address[]
   notifications Notification[]
+  reviews       Review[]
+  favorites     Favorite[]
 }
 
 /// A resident's saved delivery address.
@@ -133,11 +137,17 @@ model Vendor {
   closesAt            String // "21:00"
   /// The vendor's manual "closed for now" switch, on top of the opening hours
   isTemporarilyClosed Boolean        @default(false)
+  /// Running totals of all ratings, updated in the same transaction as each new review,
+  /// so store lists can show the average without adding up every review
+  ratingSum           Int            @default(0)
+  ratingCount         Int            @default(0)
   createdAt           DateTime       @default(now())
 
   menuItems MenuItem[]
   orders    Order[]
   tables    DiningTable[]
+  reviews   Review[]
+  favoredBy Favorite[]
 }
 
 /// A rider's vehicle details. Riders can't go online or take jobs until an admin approves them.
@@ -215,7 +225,8 @@ model Order {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  items OrderItem[]
+  items  OrderItem[]
+  review Review?
 
   @@index([vendorId, status])
   @@index([riderId])
@@ -265,6 +276,34 @@ model Booking {
   createdAt     DateTime      @default(now())
 
   @@index([tableId, startsAt])
+}
+
+/// A resident's rating of a finished order. One per order.
+model Review {
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id])
+  vendorId   String
+  vendor     Vendor   @relation(fields: [vendorId], references: [id])
+  residentId String
+  resident   User     @relation(fields: [residentId], references: [id])
+  rating     Int // 1 to 5 stars
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@index([vendorId, createdAt])
+}
+
+/// A store a resident saved to find again quickly.
+model Favorite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([userId, vendorId])
+  @@index([vendorId])
 }
 
 /// In-app notification. New ones are also pushed live to the user's open pages.

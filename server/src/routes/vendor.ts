@@ -5,6 +5,7 @@ import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, restoreStock, settlePayment, transition } from "../lib/orders.js";
+import { dailySales } from "../lib/sales.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -216,10 +217,36 @@ vendorRouter.post("/orders/:id/complete", async (req, res) => {
 
 // ---------- Dashboard numbers ----------
 
+const daysQuery = z.object({ days: z.coerce.number().int().min(7).max(90).default(14) });
+
+vendorRouter.get("/sales", async (req, res) => {
+  const { days } = daysQuery.parse(req.query);
+  res.json({ days: await dailySales(days, await myVendorId(req.session!.userId)) });
+});
+
+/** The latest ratings, with the store's average. */
+vendorRouter.get("/reviews", async (req, res) => {
+  const vendorId = await myVendorId(req.session!.userId);
+  const [store, reviews] = await Promise.all([
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { ratingSum: true, ratingCount: true } }),
+    prisma.review.findMany({
+      where: { vendorId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, rating: true, comment: true, createdAt: true, orderId: true, resident: { select: { name: true } } },
+    }),
+  ]);
+  res.json({
+    rating: store.ratingCount ? Math.round((store.ratingSum / store.ratingCount) * 10) / 10 : null,
+    ratingCount: store.ratingCount,
+    reviews,
+  });
+});
+
 vendorRouter.get("/overview", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   const startOfDay = manilaStartOfDay();
-  const [today, pending, inKitchen, dishes, tables, upcomingBookings] = await Promise.all([
+  const [today, pending, inKitchen, dishes, tables, upcomingBookings, ratings] = await Promise.all([
     prisma.order.findMany({
       where: { vendorId, createdAt: { gte: startOfDay }, status: { notIn: ["AWAITING_PAYMENT", "REJECTED", "CANCELLED"] } },
       select: { subtotal: true },
@@ -229,6 +256,7 @@ vendorRouter.get("/overview", async (req, res) => {
     prisma.menuItem.count({ where: { vendorId, deletedAt: null } }),
     prisma.diningTable.count({ where: { vendorId, isActive: true } }),
     prisma.booking.count({ where: { table: { vendorId }, status: "CONFIRMED", startsAt: { gte: new Date() } } }),
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { ratingSum: true, ratingCount: true } }),
   ]);
   res.json({
     ordersToday: today.length,
@@ -238,5 +266,7 @@ vendorRouter.get("/overview", async (req, res) => {
     dishes,
     tables,
     upcomingBookings,
+    rating: ratings.ratingCount ? Math.round((ratings.ratingSum / ratings.ratingCount) * 10) / 10 : null,
+    ratingCount: ratings.ratingCount,
   });
 });

@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, MapPin, Search, SearchX, Store } from "lucide-react";
+import { CalendarDays, ChevronRight, Heart, MapPin, Search, SearchX, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -26,17 +26,32 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
   const type = STORE_TYPE_OPTIONS.find((o) => o.value === params.type)?.value as StoreType | undefined;
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const bookable = params.reservations === "1";
+  const saved = params.favorites === "1";
 
-  const query = new URLSearchParams({ ...(type && { type }), ...(q && { q }), ...(bookable && { reservations: "1" }) });
+  const query = new URLSearchParams({
+    ...(type && { type }),
+    ...(q && { q }),
+    ...(bookable && { reservations: "1" }),
+    ...(saved && { favorites: "1" }),
+  });
   const [{ stores }, { addresses }] = await Promise.all([
     serverApi<{ stores: StoreSummary[] }>(`/stores?${query}`),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
   const address = addresses.find((a) => a.isDefault);
-  const chipHref = (value?: string, reservations = bookable) => {
-    const next = new URLSearchParams({ ...(value && { type: value }), ...(q && { q }), ...(reservations && { reservations: "1" }) }).toString();
+  const chipHref = (value?: string, reservations = bookable, favorites = saved) => {
+    const next = new URLSearchParams({
+      ...(value && { type: value }),
+      ...(q && { q }),
+      ...(reservations && { reservations: "1" }),
+      ...(favorites && { favorites: "1" }),
+    }).toString();
     return next ? `/resident?${next}` : "/resident";
   };
+  const toggleChip = (on: boolean) =>
+    `flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
+      on ? "border-brand-600 bg-brand-600 text-white" : "border-brand-500/40 bg-brand-50 text-brand-700 hover:border-brand-500"
+    }`;
 
   return (
     <>
@@ -59,6 +74,8 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
 
       <form action="/resident" className="relative mt-4" role="search">
         {type && <input type="hidden" name="type" value={type} />}
+        {bookable && <input type="hidden" name="reservations" value="1" />}
+        {saved && <input type="hidden" name="favorites" value="1" />}
         <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
         <input
           type="search"
@@ -73,13 +90,13 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
       <nav aria-label="Store types" className="-mx-4 mt-4 overflow-x-auto px-4 [scrollbar-width:none]">
         <ul className="flex w-max gap-2">
           <li>
-            <Link
-              href={chipHref(type, !bookable)}
-              aria-pressed={bookable}
-              className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-                bookable ? "border-brand-600 bg-brand-600 text-white" : "border-brand-500/40 bg-brand-50 text-brand-700"
-              }`}
-            >
+            <Link href={chipHref(type, bookable, !saved)} aria-pressed={saved} className={toggleChip(saved)}>
+              <Heart className={`size-4 ${saved ? "fill-white" : ""}`} aria-hidden />
+              Saved
+            </Link>
+          </li>
+          <li>
+            <Link href={chipHref(type, !bookable)} aria-pressed={bookable} className={toggleChip(bookable)}>
               <CalendarDays className="size-4" aria-hidden />
               Book a table
             </Link>
@@ -106,14 +123,18 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
       <h2 className="mt-7 mb-3 text-lg font-semibold text-ink">
         {q
           ? `Results for “${q}”`
-          : bookable
+          : saved
+            ? "Your saved stores"
+            : bookable
             ? "Stores that take bookings"
             : type
               ? STORE_TYPE_OPTIONS.find((o) => o.value === type)!.label
               : "Stores near you"}
       </h2>
       {stores.length === 0 ? (
-        q || type || bookable ? (
+        saved && !q && !type && !bookable ? (
+          <EmptyState Icon={Heart} title="No saved stores yet" text="Tap the heart on any store to keep it here for quick ordering." />
+        ) : q || type || bookable || saved ? (
           <EmptyState Icon={SearchX} title="Nothing found" text="Try another word or store type." />
         ) : (
           <EmptyState Icon={Store} title="No stores yet" text="Stores appear here once an admin approves them. Check back soon!" />

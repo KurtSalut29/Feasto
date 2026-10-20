@@ -14,6 +14,7 @@ import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel 
 import { serverApi } from "@/lib/server-api";
 import type { ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
+import { RateOrder, ReorderButton } from "./order-feedback";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -42,6 +43,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
   const { order, riderLocation } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation }>(`/orders/${id}`);
   const total = Number(order.subtotal) + Number(order.deliveryFee);
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
+  const received = order.status === "DELIVERED" || order.status === "COMPLETED";
 
   return (
     <>
@@ -86,6 +88,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             />
           </Section>
         )}
+
+        {received && <RateOrder orderId={order.id} storeName={order.vendor.name} review={order.review} />}
 
         {order.status === "PICKED_UP" && <RiderTracking orderId={order.id} initial={riderLocation} />}
 
@@ -167,6 +171,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         </Section>
 
         {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT") && <CancelOrderButton orderId={order.id} />}
+        {(received || dropped) && <ReorderButton orderId={order.id} />}
       </div>
     </>
   );

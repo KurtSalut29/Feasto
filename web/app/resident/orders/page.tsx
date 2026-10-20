@@ -1,8 +1,9 @@
-import { ChevronRight, ReceiptText } from "lucide-react";
+import { ChevronRight, ReceiptText, Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
+import { Stars } from "@/components/app/rating";
 import { StoreCover } from "@/components/app/store-card";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -25,11 +26,15 @@ export default function ResidentOrdersPage() {
 
 function OrderRow({ order }: { order: ResidentOrder }) {
   const items = order.items.reduce((n, i) => n + i.quantity, 0);
+  const live = !isFinished(order.status);
+  const received = order.status === "DELIVERED" || order.status === "COMPLETED";
   return (
     <li>
       <Link
         href={`/resident/orders/${order.id}`}
-        className="flex items-center gap-3 rounded-2xl border border-line p-3 transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+        className={`flex items-center gap-3 rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+          live ? "border-brand-100 bg-brand-50/50 hover:bg-brand-50" : "border-line hover:bg-canvas"
+        }`}
       >
         <StoreCover imageUrl={order.vendor.imageUrl} className="size-14 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1">
@@ -41,8 +46,23 @@ function OrderRow({ order }: { order: ResidentOrder }) {
             {orderCode(order.id)} · {items} {items === 1 ? "item" : "items"} ·{" "}
             {formatPeso(Number(order.subtotal) + Number(order.deliveryFee))}
           </p>
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-2">
+            {live && (
+              <span className="relative flex size-2" aria-hidden>
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-brand-600" />
+              </span>
+            )}
             <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
+            {received &&
+              (order.review ? (
+                <Stars value={order.review.rating} size="size-3" />
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
+                  <Star className="size-3.5" aria-hidden />
+                  Rate it
+                </span>
+              ))}
           </div>
         </div>
         <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />

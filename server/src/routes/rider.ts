@@ -181,6 +181,7 @@ riderRouter.get("/history", async (req, res) => {
   ]);
   res.json({
     deliveries,
+    today: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     totals: {
       today: { count: today._count, earnings: Number(today._sum.deliveryFee ?? 0) },
       allTime: { count: all._count, earnings: Number(all._sum.deliveryFee ?? 0) },

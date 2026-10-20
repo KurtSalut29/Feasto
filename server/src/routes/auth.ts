@@ -197,6 +197,8 @@ authRouter.post("/login", async (req, res) => {
   }
 
   await clearFailedLogins(email);
+  // Only someone with the right password learns the account is disabled
+  if (user.disabledAt) throw new HttpError(403, "This account has been disabled. Please contact Feasto support.");
   res.cookie(SESSION_COOKIE, await signSession({ userId: user.id, role: user.role, name: user.name }), sessionCookieOptions);
 
   const profile = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });

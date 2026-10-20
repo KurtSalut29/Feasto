@@ -14,6 +14,7 @@ import { VEHICLE_LABEL } from "@/lib/labels";
 import { ROLE_LABEL } from "@/lib/roles";
 import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus, Role, VehicleType } from "@/lib/types";
+import { AccountStatusButton } from "./account-status-button";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -24,6 +25,7 @@ type UserRow = {
   phone: string | null;
   role: Role;
   createdAt: string;
+  disabledAt: string | null;
   vendor: { name: string; status: ApprovalStatus } | null;
   riderProfile: { vehicleType: VehicleType; status: ApprovalStatus } | null;
 };
@@ -105,18 +107,24 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
                   <th className="px-5 py-3 font-semibold">Role</th>
                   <th className="px-5 py-3 font-semibold">Store / vehicle</th>
                   <th className="px-5 py-3 font-semibold">Joined</th>
+                  <th className="px-5 py-3 font-semibold">
+                    <span className="sr-only">Account</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {data.users.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.id} className={user.disabledAt ? "bg-canvas/70" : "transition hover:bg-canvas/50"}>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-canvas text-xs font-semibold text-muted">
                           {initials(user.name)}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate font-medium text-ink">{user.name}</p>
+                          <p className={`flex items-center gap-2 truncate font-medium ${user.disabledAt ? "text-muted" : "text-ink"}`}>
+                            {user.name}
+                            {user.disabledAt && <Badge tone="danger">Disabled</Badge>}
+                          </p>
                           <p className="truncate text-muted">{user.email}</p>
                         </div>
                       </div>
@@ -141,6 +149,9 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
                       )}
                     </td>
                     <td className="px-5 py-3 text-muted">{formatDate(user.createdAt)}</td>
+                    <td className="px-5 py-3 text-right">
+                      {user.role !== "ADMIN" && <AccountStatusButton userId={user.id} name={user.name} disabled={Boolean(user.disabledAt)} />}
+                    </td>
                   </tr>
                 ))}
               </tbody>

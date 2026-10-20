@@ -15,7 +15,10 @@ export async function serverApi<T>(path: string): Promise<T> {
     headers: { cookie: `${SESSION_COOKIE}=${token}` },
     cache: "no-store",
   });
-  if (response.status === 401) redirect("/logout");
+  if (response.status === 401) {
+    const { error } = (await response.json().catch(() => ({}))) as { error?: string };
+    redirect(error?.includes("disabled") ? "/logout?reason=disabled" : "/logout");
+  }
   if (response.status === 404) notFound();
   if (!response.ok) throw new Error(`Feasto API ${path} failed with status ${response.status}.`);
   return (await response.json()) as T;

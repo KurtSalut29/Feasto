@@ -1,4 +1,4 @@
-import { ArrowDown, Bike, MapPin, Package, Power, Store } from "lucide-react";
+import { Bike, MapPin, Package, Power, Store } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
@@ -78,30 +78,43 @@ async function RiderJobs() {
           {jobs.map((job) => {
             const items = job.items.reduce((n, i) => n + i.quantity, 0);
             return (
-              <li key={job.id} className="rounded-2xl border border-line p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-lg font-bold text-ink">{formatPeso(job.deliveryFee)}</p>
+              <li key={job.id} className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_8px_24px_-20px_rgba(31,45,61,0.5)]">
+                <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas/60 px-4 py-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted">You earn</p>
+                    <p className="text-xl leading-tight font-bold text-ink">{formatPeso(job.deliveryFee)}</p>
+                  </div>
                   <Badge tone={job.status === "READY" ? "success" : "neutral"}>{job.status === "READY" ? "Ready now" : "Being prepared"}</Badge>
                 </div>
-                <div className="mt-3 space-y-1 text-sm">
-                  <p className="flex gap-2 text-ink">
-                    <Store className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
-                    <span>
-                      <span className="font-semibold">{job.vendor.name}</span>
-                      <span className="block text-muted">{job.vendor.address}</span>
-                    </span>
+                <div className="px-4 py-3">
+                  {/* The route: store at the top, customer at the bottom, joined by a dashed line */}
+                  <ol className="relative space-y-3 text-sm before:absolute before:top-5 before:bottom-5 before:left-[13px] before:border-l-2 before:border-dashed before:border-line">
+                    <li className="relative flex gap-3">
+                      <span className="z-10 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 ring-4 ring-white">
+                        <Store className="size-3.5" aria-hidden />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs text-muted">Pick up at</span>
+                        <span className="block font-semibold text-ink">{job.vendor.name}</span>
+                        <span className="block text-muted">{job.vendor.address}</span>
+                      </span>
+                    </li>
+                    <li className="relative flex gap-3">
+                      <span className="z-10 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white ring-4 ring-white">
+                        <MapPin className="size-3.5" aria-hidden />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs text-muted">Deliver to</span>
+                        <span className="block text-ink">{job.checkout.deliveryAddress}</span>
+                      </span>
+                    </li>
+                  </ol>
+                  <p className="mt-3 text-xs text-gray-500">
+                    {items} {items === 1 ? "item" : "items"} · ordered {timeAgo(job.createdAt)}
                   </p>
-                  <ArrowDown className="ml-0.5 size-3.5 text-gray-300" aria-hidden />
-                  <p className="flex gap-2 text-ink">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
-                    {job.checkout.deliveryAddress}
-                  </p>
-                </div>
-                <p className="mt-2 text-xs text-gray-400">
-                  {items} {items === 1 ? "item" : "items"} · ordered {timeAgo(job.createdAt)}
-                </p>
-                <div className="mt-3">
-                  {active ? <p className="text-center text-sm text-muted">Finish your current delivery first.</p> : <AcceptJobButton orderId={job.id} />}
+                  <div className="mt-3">
+                    {active ? <p className="text-center text-sm text-muted">Finish your current delivery first.</p> : <AcceptJobButton orderId={job.id} />}
+                  </div>
                 </div>
               </li>
             );
