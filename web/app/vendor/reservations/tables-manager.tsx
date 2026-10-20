@@ -54,7 +54,16 @@ function TableDialog({ table, nextLabel, onClose, onSaved }: { table?: DiningTab
   );
 }
 
-export function TablesManager({ tables }: { tables: DiningTable[] }) {
+/** The store's tables as a small floor plan: seats per table and when each is booked on the chosen day. */
+export function TablesManager({
+  tables,
+  bookedTimes = {},
+  dayLabel = "today",
+}: {
+  tables: DiningTable[];
+  bookedTimes?: Record<string, string[]>;
+  dayLabel?: string;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<DiningTable | "new" | null>(null);
   const [error, setError] = useState<string>();
@@ -64,6 +73,7 @@ export function TablesManager({ tables }: { tables: DiningTable[] }) {
     <Card
       title="Tables"
       description={tables.length ? `${tables.length} tables · ${seats} seats` : "Residents can only book once you add tables."}
+      Icon={Armchair}
       actions={
         <Button className="h-9 px-3 text-sm" onClick={() => setEditing("new")}>
           <Plus className="size-4" aria-hidden />
@@ -79,31 +89,56 @@ export function TablesManager({ tables }: { tables: DiningTable[] }) {
       {tables.length === 0 ? (
         <EmptyState Icon={Armchair} title="No tables yet" text="Add each table with how many people it seats." />
       ) : (
-        <ul className="divide-y divide-line">
-          {tables.map((table) => (
-            <li key={table.id} className="flex items-center gap-3 px-5 py-3">
-              <Armchair className="size-5 text-muted" aria-hidden />
-              <span className="flex-1 font-medium text-ink">{table.label}</span>
-              <span className="text-sm text-muted">{table.seats} seats</span>
-              <button type="button" onClick={() => setEditing(table)} aria-label={`Edit ${table.label}`} className="rounded-lg p-2 text-muted hover:bg-canvas hover:text-ink">
-                <Pencil className="size-4" aria-hidden />
-              </button>
-              <button
-                type="button"
-                aria-label={`Remove ${table.label}`}
-                className="rounded-lg p-2 text-muted hover:bg-red-50 hover:text-red-600"
-                onClick={async () => {
-                  setError(undefined);
-                  const result = await apiRequest(`/vendor/tables/${table.id}`, { method: "DELETE" });
-                  if (!result.ok) return setError(result.error);
-                  router.refresh();
-                }}
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="grid grid-cols-2 gap-3 p-4">
+            {tables.map((table) => {
+              const times = bookedTimes[table.label] ?? [];
+              return (
+                <li
+                  key={table.id}
+                  className={`group relative rounded-2xl border p-3 transition ${times.length ? "border-brand-100 bg-brand-50/60" : "border-line bg-white"}`}
+                >
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="font-semibold text-ink">{table.label}</p>
+                    <div className="-mt-1 -mr-1 flex">
+                      <button
+                        type="button"
+                        onClick={() => setEditing(table)}
+                        aria-label={`Edit ${table.label}`}
+                        className="rounded-lg p-1.5 text-gray-400 hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+                      >
+                        <Pencil className="size-3.5" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${table.label}`}
+                        className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-brand-500"
+                        onClick={async () => {
+                          setError(undefined);
+                          const result = await apiRequest(`/vendor/tables/${table.id}`, { method: "DELETE" });
+                          if (!result.ok) return setError(result.error);
+                          router.refresh();
+                        }}
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                  {/* One small mark per seat, so the size reads at a glance */}
+                  <div className="mt-1.5 flex flex-wrap gap-1" aria-hidden>
+                    {Array.from({ length: Math.min(table.seats, 12) }, (_, i) => (
+                      <span key={i} className={`size-2 rounded-full ${times.length ? "bg-brand-500/70" : "bg-gray-300"}`} />
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted">{table.seats} seats</p>
+                  <p className={`mt-1 text-xs font-medium ${times.length ? "text-brand-700" : "text-emerald-700"}`}>
+                    {times.length ? `Booked ${times.join(", ")}` : `Free ${dayLabel}`}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       {editing && (
         <TableDialog

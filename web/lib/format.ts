@@ -54,3 +54,20 @@ export function formatDay(iso: string) {
 export function manilaDate(addDays = 0) {
   return new Date(Date.now() + 8 * 3600_000 + addDays * 86400_000).toISOString().slice(0, 10);
 }
+
+/** "Wednesday, October 21" in Manila */
+export function todayLabel() {
+  return new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "long", month: "long", day: "numeric" });
+}
+
+/** "Good morning" / "Good afternoon" / "Good evening" by the hour in Manila */
+export function greeting() {
+  const hour = Number(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", hour: "numeric", hourCycle: "h23" }));
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** 1250 -> "₱1.3K", 980 -> "₱980" for tight spaces */
+export function compactPeso(value: number) {
+  if (value >= 1000) return `₱${(value / 1000).toFixed(value >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;
+  return `₱${Math.round(value)}`;
+}

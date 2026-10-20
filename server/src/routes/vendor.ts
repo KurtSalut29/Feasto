@@ -227,7 +227,7 @@ vendorRouter.get("/sales", async (req, res) => {
 /** The latest ratings, with the store's average. */
 vendorRouter.get("/reviews", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
-  const [store, reviews] = await Promise.all([
+  const [store, reviews, stars] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { ratingSum: true, ratingCount: true } }),
     prisma.review.findMany({
       where: { vendorId },
@@ -235,10 +235,13 @@ vendorRouter.get("/reviews", async (req, res) => {
       take: 20,
       select: { id: true, rating: true, comment: true, createdAt: true, orderId: true, resident: { select: { name: true } } },
     }),
+    prisma.review.groupBy({ by: ["rating"], where: { vendorId }, _count: true }),
   ]);
   res.json({
     rating: store.ratingCount ? Math.round((store.ratingSum / store.ratingCount) * 10) / 10 : null,
     ratingCount: store.ratingCount,
+    // How many 5-star, 4-star ... 1-star ratings, in that order
+    distribution: [5, 4, 3, 2, 1].map((n) => stars.find((s) => s.rating === n)?._count ?? 0),
     reviews,
   });
 });
@@ -246,7 +249,8 @@ vendorRouter.get("/reviews", async (req, res) => {
 vendorRouter.get("/overview", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   const startOfDay = manilaStartOfDay();
-  const [today, pending, inKitchen, dishes, tables, upcomingBookings, ratings] = await Promise.all([
+  const since = new Date(startOfDay.getTime() - 13 * 86400_000);
+  const [today, pending, inKitchen, dishes, tables, upcomingBookings, ratings, best] = await Promise.all([
     prisma.order.findMany({
       where: { vendorId, createdAt: { gte: startOfDay }, status: { notIn: ["AWAITING_PAYMENT", "REJECTED", "CANCELLED"] } },
       select: { subtotal: true },
@@ -257,6 +261,13 @@ vendorRouter.get("/overview", async (req, res) => {
     prisma.diningTable.count({ where: { vendorId, isActive: true } }),
     prisma.booking.count({ where: { table: { vendorId }, status: "CONFIRMED", startsAt: { gte: new Date() } } }),
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { ratingSum: true, ratingCount: true } }),
+    // Best sellers over the same 14 days as the sales chart
+    prisma.$queryRaw<{ name: string; quantity: bigint; sales: string }[]>`
+      SELECT i.name, sum(i.quantity) AS quantity, sum(i.quantity * i."unitPrice")::text AS sales
+      FROM "OrderItem" i JOIN "Order" o ON o.id = i."orderId"
+      WHERE o."vendorId" = ${vendorId} AND o."createdAt" >= ${since}
+        AND o.status NOT IN ('AWAITING_PAYMENT', 'REJECTED', 'CANCELLED')
+      GROUP BY i.name ORDER BY quantity DESC, i.name LIMIT 5`,
   ]);
   res.json({
     ordersToday: today.length,
@@ -268,5 +279,6 @@ vendorRouter.get("/overview", async (req, res) => {
     upcomingBookings,
     rating: ratings.ratingCount ? Math.round((ratings.ratingSum / ratings.ratingCount) * 10) / 10 : null,
     ratingCount: ratings.ratingCount,
+    bestSellers: best.map((b) => ({ name: b.name, quantity: Number(b.quantity), sales: Number(b.sales) })),
   });
 });

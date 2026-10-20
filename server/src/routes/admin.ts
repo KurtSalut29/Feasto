@@ -22,14 +22,16 @@ const STATUSES = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"] as const;
 
 adminRouter.get("/overview", async (_req, res) => {
   // The counts are independent, so they run in parallel instead of one after another
-  const [pendingStores, pendingRiders, activeStores, activeRiders, residents] = await Promise.all([
+  const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress] = await Promise.all([
     prisma.vendor.count({ where: { status: "PENDING" } }),
     prisma.riderProfile.count({ where: { status: "PENDING" } }),
     prisma.vendor.count({ where: { status: "APPROVED" } }),
     prisma.riderProfile.count({ where: { status: "APPROVED" } }),
+    prisma.riderProfile.count({ where: { status: "APPROVED", isOnline: true, user: { disabledAt: null } } }),
     prisma.user.count({ where: { role: "RESIDENT" } }),
+    prisma.order.count({ where: { status: { in: ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"] } } }),
   ]);
-  res.json({ pendingStores, pendingRiders, activeStores, activeRiders, residents });
+  res.json({ pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress });
 });
 
 // ---------- Approvals ----------

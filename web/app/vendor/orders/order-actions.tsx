@@ -41,12 +41,14 @@ export function OrderActions({
     return true;
   }
 
-  const small = "h-9 px-4 text-sm";
+  // The main step stretches; the secondary one keeps its natural width
+  const small = "h-9 flex-1 px-3 text-sm whitespace-nowrap";
+  const side = "h-9 px-3.5 text-sm whitespace-nowrap";
   let actions: React.ReactNode = null;
   if (status === "PLACED")
     actions = (
       <>
-        <Button variant="secondary" className={small} onClick={() => setRejecting(true)}>
+        <Button variant="secondary" className={side} onClick={() => setRejecting(true)}>
           Decline
         </Button>
         <Button className={small} loading={busy === "accept"} onClick={() => run("accept")}>
@@ -57,7 +59,7 @@ export function OrderActions({
   else if (status === "ACCEPTED")
     actions = (
       <>
-        <Button variant="secondary" className={small} loading={busy === "ready"} onClick={() => run("ready")}>
+        <Button variant="secondary" className={side} loading={busy === "ready"} onClick={() => run("ready")}>
           Mark ready
         </Button>
         <Button className={small} loading={busy === "preparing"} onClick={() => run("preparing")}>
@@ -82,9 +84,9 @@ export function OrderActions({
   else if (status === "PICKED_UP") actions = <p className="text-sm text-muted">Out for delivery with {riderName}</p>;
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {actions}
-      {error && !rejecting && <p className="w-full text-right text-xs text-red-600">{error}</p>}
+      {error && !rejecting && <p className="w-full text-xs text-red-600">{error}</p>}
       <Dialog open={rejecting} onClose={() => setRejecting(false)} title="Decline this order?" description="The resident sees your reason. Any reserved stock goes back to your menu.">
         <form
           className="space-y-4"

@@ -152,20 +152,24 @@ async function NavCount({ role, meaning }: { role: DashboardRole; meaning: strin
 export function PageHeader({
   title,
   description,
+  eyebrow,
   actions,
 }: {
   title: string;
-  description?: string;
+  description?: ReactNode;
+  /** Small line above the title, e.g. today's date */
+  eyebrow?: string;
   actions?: ReactNode;
 }) {
   return (
     // Right padding keeps the actions clear of the notification bell in the corner
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4 lg:pr-16">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">{title}</h1>
+      <div className="min-w-0">
+        {eyebrow && <p className="mb-1 text-xs font-semibold tracking-wider text-brand-700 uppercase">{eyebrow}</p>}
+        <h1 className="text-[26px] leading-tight font-bold tracking-tight text-ink">{title}</h1>
         {description && <p className="mt-1 text-[15px] text-muted">{description}</p>}
       </div>
-      {actions && <div className="flex items-center gap-3">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </div>
   );
 }
@@ -178,10 +182,13 @@ export function DashboardSkeleton() {
       <div className="mt-2 h-5 w-80 max-w-full animate-pulse rounded-lg bg-gray-200" />
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl bg-gray-200" />
+          <div key={i} className="h-40 animate-pulse rounded-2xl bg-gray-200/70" />
         ))}
       </div>
-      <div className="mt-6 h-64 animate-pulse rounded-2xl bg-gray-200" />
+      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+        <div className="h-72 animate-pulse rounded-2xl bg-gray-200/70 xl:col-span-2" />
+        <div className="h-72 animate-pulse rounded-2xl bg-gray-200/70" />
+      </div>
     </div>
   );
 }

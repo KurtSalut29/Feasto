@@ -219,9 +219,23 @@ vendorBookingsRouter.get("/bookings", async (req, res) => {
     orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }],
     include: { table: { select: { label: true, seats: true } }, resident: { select: { name: true, phone: true } } },
   });
+  // Confirmed bookings per day for the next 7 days, for the date strip
+  const today = todayInManila();
+  const weekStart = manilaMoment(today, "00:00");
+  const week = await prisma.$queryRaw<{ day: string; count: bigint }[]>`
+    SELECT to_char((b."startsAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS day, count(*) AS count
+    FROM "Booking" b JOIN "DiningTable" t ON t.id = b."tableId"
+    WHERE t."vendorId" = ${vendorId} AND b.status = 'CONFIRMED'
+      AND b."startsAt" >= ${weekStart} AND b."startsAt" < ${new Date(weekStart.getTime() + 7 * 86400_000)}
+    GROUP BY day`;
   const now = Date.now();
   // "started": the table time has come, so the store marks arrived / no-show instead of cancelling
-  res.json({ date, now: manilaTime(), bookings: bookings.map((b) => ({ ...b, started: b.startsAt.getTime() <= now })) });
+  res.json({
+    date,
+    now: manilaTime(),
+    week: Object.fromEntries(week.map((w) => [w.day, Number(w.count)])),
+    bookings: bookings.map((b) => ({ ...b, started: b.startsAt.getTime() <= now })),
+  });
 });
 
 const bookingStatusSchema = z.object({ status: z.enum(["COMPLETED", "NO_SHOW", "CANCELLED"]) });

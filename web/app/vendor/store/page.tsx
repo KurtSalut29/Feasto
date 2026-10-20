@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { ApprovalBadge } from "@/components/app/status-badges";
+import { StoreStatusPill } from "@/components/app/store-status";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus } from "@/lib/types";
@@ -24,7 +25,11 @@ async function VendorStore() {
 
   return (
     <>
-      <PageHeader title="Store settings" description="How your store appears to residents." actions={<ApprovalBadge status={status} />} />
+      <PageHeader
+        title="Store settings"
+        description="How your store appears to residents."
+        actions={status === "APPROVED" ? <StoreStatusPill store={settings} /> : <ApprovalBadge status={status} />}
+      />
       <StoreForm
         initial={{
           name: settings.name,

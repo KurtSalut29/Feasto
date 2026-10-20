@@ -52,12 +52,12 @@ export function ImageUpload({
     }
   }
 
-  const box = shape === "wide" ? "aspect-[16/7] w-full" : "size-28";
+  const box = shape === "wide" ? "aspect-[16/6] w-full" : "size-28";
 
   return (
     <div>
       <p className="mb-1 text-sm font-medium text-ink">{label}</p>
-      <div className="flex items-end gap-3">
+      <div className={shape === "wide" ? "space-y-2" : "flex items-end gap-3"}>
         <button
           type="button"
           onClick={() => input.current?.click()}
@@ -78,7 +78,7 @@ export function ImageUpload({
           )}
         </button>
         {value && !uploading && (
-          <div className="flex flex-col gap-2">
+          <div className={`flex gap-2 ${shape === "wide" ? "items-center gap-x-5" : "flex-col"}`}>
             <button type="button" onClick={() => input.current?.click()} className="text-sm font-semibold text-brand-700 hover:underline">
               Change
             </button>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Ban, Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,19 +50,22 @@ export function ReviewActions({
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      {(status === "PENDING" || status === "REJECTED" || status === "SUSPENDED") && (
-        <Button className="h-9 px-4 text-sm" loading={pending === "APPROVED"} onClick={() => review("APPROVED")}>
-          {status === "SUSPENDED" ? "Reinstate" : "Approve"}
-        </Button>
-      )}
       {status === "PENDING" && (
         <Button variant="secondary" className="h-9 px-4 text-sm" onClick={() => setAsking("REJECTED")}>
+          <X className="size-4" aria-hidden />
           Reject
         </Button>
       )}
       {status === "APPROVED" && (
-        <Button variant="secondary" className="h-9 px-4 text-sm" onClick={() => setAsking("SUSPENDED")}>
+        <Button variant="secondary" className="h-9 px-4 text-sm text-red-600" onClick={() => setAsking("SUSPENDED")}>
+          <Ban className="size-4" aria-hidden />
           Suspend
+        </Button>
+      )}
+      {(status === "PENDING" || status === "REJECTED" || status === "SUSPENDED") && (
+        <Button className="h-9 px-4 text-sm" loading={pending === "APPROVED"} onClick={() => review("APPROVED")}>
+          {pending !== "APPROVED" && (status === "SUSPENDED" ? <RotateCcw className="size-4" aria-hidden /> : <Check className="size-4" aria-hidden />)}
+          {status === "SUSPENDED" ? "Reinstate" : "Approve"}
         </Button>
       )}
       {error && !asking && <p className="w-full text-right text-xs text-red-600">{error}</p>}

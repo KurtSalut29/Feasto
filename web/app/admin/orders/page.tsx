@@ -1,15 +1,16 @@
-import { ClipboardList, Search } from "lucide-react";
+import { Bike, CircleCheck, CircleX, ClipboardList, Clock, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { LinkTabs } from "@/components/ui/link-tabs";
+import { Pagination } from "@/components/ui/pagination";
+import { SearchBox } from "@/components/ui/search-box";
+import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
-import { formatDateTime, formatPeso } from "@/lib/format";
-import { orderCode, PAYMENT_LABEL, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { formatDateTime, formatPeso, timeAgo } from "@/lib/format";
+import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { Fulfillment, OrderStatus, PaymentMethod, PaymentStatus } from "@/lib/types";
 
@@ -28,12 +29,18 @@ type Row = {
 };
 type Response = { orders: Row[]; page: number; pageSize: number; total: number; counts: Record<Group, number> };
 const GROUPS = [
-  { key: "all", label: "All" },
-  { key: "active", label: "In progress" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled / declined" },
+  { key: "all", label: "All orders", Icon: ClipboardList, tone: "bg-canvas text-muted ring-line" },
+  { key: "active", label: "In progress", Icon: Clock, tone: "bg-brand-50 text-brand-600 ring-brand-100" },
+  { key: "completed", label: "Completed", Icon: CircleCheck, tone: "bg-emerald-50 text-emerald-600 ring-emerald-100" },
+  { key: "cancelled", label: "Cancelled / declined", Icon: CircleX, tone: "bg-red-50 text-red-600 ring-red-100" },
 ] as const;
 type Group = (typeof GROUPS)[number]["key"];
+
+/** "12 min ago" for today's orders, the date and time for older ones. */
+function recent(iso: string) {
+  const ago = timeAgo(iso);
+  return ago.endsWith("ago") || ago === "Just now" ? ago : formatDateTime(iso);
+}
 
 export default function AdminOrdersPage({ searchParams }: PageProps<"/admin/orders">) {
   return (
@@ -59,61 +66,105 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
     }
     return `/admin/orders?${next}`;
   };
-  const lastPage = Math.max(1, Math.ceil(data.total / data.pageSize));
+  const current = GROUPS.find((g) => g.key === group)!;
 
   return (
     <>
       <PageHeader title="Orders" description="Every order across all stores. This page updates live." />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <LinkTabs
-          variant="pills"
-          tabs={GROUPS.map((g) => ({ href: href({ group: g.key, page: undefined }), label: g.label, count: data.counts[g.key], active: g.key === group }))}
-        />
-        <form action="/admin/orders" className="relative w-full sm:w-72">
-          <input type="hidden" name="group" value={group} />
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
+
+      {/* The totals double as the filter */}
+      <nav aria-label="Order status" className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {GROUPS.map(({ key, label, Icon, tone }) => {
+          const active = key === group;
+          return (
+            <Link
+              key={key}
+              href={href({ group: key, page: undefined })}
+              aria-current={active ? "page" : undefined}
+              className={`flex items-center gap-3 rounded-2xl border bg-white px-4 py-3.5 transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+                active ? "border-brand-500 shadow-[0_0_0_3px_rgba(254,85,2,0.12)]" : "border-line hover:border-gray-300"
+              }`}
+            >
+              <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ring-1 ${tone}`}>
+                <Icon className="size-5" aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm text-muted">{label}</span>
+                <span className="block text-xl font-semibold text-ink tabular-nums">{data.counts[key]}</span>
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+          <div>
+            <h2 className="font-semibold text-ink">{current.label}</h2>
+            <p className="text-sm text-muted">{q ? `Matching “${q}”` : "Newest first"}</p>
+          </div>
+          <SearchBox
+            action="/admin/orders"
+            value={q}
             placeholder="Order code, store or resident"
-            aria-label="Search orders"
-            className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-10 text-sm outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+            label="Search orders"
+            keep={{ group }}
+            clearHref={href({ q: undefined, page: undefined })}
           />
-        </form>
-      </div>
-      <Card>
+        </div>
+
         {data.orders.length === 0 ? (
           <EmptyState Icon={ClipboardList} title="No orders found" text={q ? `Nothing matches “${q}”.` : "Orders will appear here as residents check out."} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-wider text-gray-400">
+            <table className={`${TABLE} min-w-[960px]`}>
+              <thead className={THEAD}>
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Order</th>
-                  <th className="px-5 py-3 font-semibold">Store</th>
-                  <th className="px-5 py-3 font-semibold">Resident</th>
-                  <th className="px-5 py-3 font-semibold">Rider</th>
-                  <th className="px-5 py-3 font-semibold">Total</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
+                  <th className={TH}>Order</th>
+                  <th className={TH}>Store</th>
+                  <th className={TH}>Resident</th>
+                  <th className={TH}>Fulfillment</th>
+                  <th className={TH}>Payment</th>
+                  <th className={`${TH} text-right`}>Total</th>
+                  <th className={TH}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className={TBODY}>
                 {data.orders.map((o) => (
-                  <tr key={o.id}>
-                    <td className="px-5 py-3">
+                  <tr key={o.id} className={TR}>
+                    <td className={TD}>
                       <p className="font-semibold text-ink">{orderCode(o.id)}</p>
-                      <p className="text-xs text-muted">{formatDateTime(o.createdAt)}</p>
+                      <p className="text-xs whitespace-nowrap text-muted" title={new Date(o.createdAt).toLocaleString("en-PH")}>
+                        {recent(o.createdAt)}
+                      </p>
                     </td>
-                    <td className="px-5 py-3 text-ink">{o.vendor.name}</td>
-                    <td className="px-5 py-3 text-ink">{o.checkout.resident.name}</td>
-                    <td className="px-5 py-3 text-muted">{o.fulfillment === "PICKUP" ? "Pickup" : (o.rider?.name ?? "—")}</td>
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-ink">{formatPeso(Number(o.subtotal) + Number(o.deliveryFee))}</p>
-                      <p className="text-xs text-muted">{PAYMENT_LABEL[o.checkout.paymentMethod]}</p>
+                    <td className={`${TD} font-medium text-ink`}>{o.vendor.name}</td>
+                    <td className={`${TD} text-ink`}>{o.checkout.resident.name}</td>
+                    <td className={TD}>
+                      {o.fulfillment === "PICKUP" ? (
+                        <span className="inline-flex items-center gap-1.5 text-muted">
+                          <Store className="size-4" aria-hidden /> Pickup
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-ink">
+                          <Bike className="size-4 text-muted" aria-hidden />
+                          {o.rider?.name ?? <span className="text-muted">No rider yet</span>}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-5 py-3">
-                      <Badge tone={STATUS_TONE[o.status]}>{statusLabel(o.status, o.fulfillment)}</Badge>
+                    <td className={TD}>
+                      <p className="text-ink">{PAYMENT_LABEL[o.checkout.paymentMethod]}</p>
+                      <p className={`text-xs ${o.checkout.paymentStatus === "PAID" ? "text-emerald-700" : "text-muted"}`}>
+                        {o.checkout.paymentMethod === "COD" && o.checkout.paymentStatus === "PENDING"
+                          ? "Due on handover"
+                          : paymentStatusLabel(o.checkout.paymentMethod, o.checkout.paymentStatus)}
+                      </p>
+                    </td>
+                    <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(Number(o.subtotal) + Number(o.deliveryFee))}</td>
+                    <td className={TD}>
+                      <Badge tone={STATUS_TONE[o.status]} dot>
+                        {statusLabel(o.status, o.fulfillment)}
+                      </Badge>
                     </td>
                   </tr>
                 ))}
@@ -121,26 +172,8 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
             </table>
           </div>
         )}
-        {data.total > data.pageSize && (
-          <div className="flex items-center justify-between border-t border-line px-5 py-3 text-sm">
-            <p className="text-muted">
-              Page {page} of {lastPage} · {data.total} orders
-            </p>
-            <div className="flex gap-2">
-              {page > 1 && (
-                <Link href={href({ page: String(page - 1) })} className="rounded-lg border border-line px-3 py-1.5 hover:bg-canvas">
-                  Previous
-                </Link>
-              )}
-              {page < lastPage && (
-                <Link href={href({ page: String(page + 1) })} className="rounded-lg border border-line px-3 py-1.5 hover:bg-canvas">
-                  Next
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
-      </Card>
+        <Pagination page={page} pageSize={data.pageSize} total={data.total} noun="orders" href={(n) => href({ page: n > 1 ? String(n) : undefined })} />
+      </section>
     </>
   );
 }

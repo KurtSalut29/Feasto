@@ -1,5 +1,6 @@
 "use client";
 
+import { Ban, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -29,8 +30,9 @@ export function AccountStatusButton({ userId, name, disabled }: { userId: string
         type="button"
         onClick={() => change(false)}
         disabled={busy}
-        className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-60"
       >
+        <RotateCcw className="size-3.5" aria-hidden />
         {busy ? "Enabling…" : "Enable"}
       </button>
     );
@@ -41,8 +43,9 @@ export function AccountStatusButton({ userId, name, disabled }: { userId: string
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-lg px-3 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-brand-500"
+        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-500 transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-brand-500"
       >
+        <Ban className="size-3.5" aria-hidden />
         Disable
       </button>
       <Dialog
