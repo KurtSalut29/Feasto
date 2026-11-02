@@ -82,11 +82,34 @@ docker compose down              # stop everything (data is kept)
 Every long-running service restarts by itself when Docker Desktop starts.
 RabbitMQ's own dashboard: http://localhost:15672 (user `feasto`, password `feasto`).
 
+## Using Feasto on a phone (as an app)
+
+Residents and riders can install Feasto on their phone's home screen. It then opens full screen,
+like a normal app, and goes straight to their own area (stores for residents, jobs for riders).
+
+Phones only allow installing, the camera (proof-of-delivery photo) and GPS (live rider location)
+on an `https://` address, so `http://192.168.x.x:3000` is not enough. A free Cloudflare quick tunnel
+gives the laptop a temporary HTTPS address any phone can open, on any network:
+
+```bash
+winget install Cloudflare.cloudflared   # once
+cd web && npm run tunnel                # prints https://<random-words>.trycloudflare.com
+```
+
+Keep the web app (`npm run dev`) and Docker running. On the phone, open the printed address and log in:
+
+- **Android (Chrome):** tap **Install** on the "Get the Feasto app" card, or Account → Install the Feasto app.
+- **iPhone (Safari):** Share → **Add to Home Screen** (Account → Install the Feasto app shows the steps).
+
+The address changes every time the tunnel restarts, so install the app again on demo day.
+Anyone with the address can open the site while the tunnel runs; stop it with Ctrl+C when done.
+
 ## Demo data (before a presentation)
 
 One command wipes **everything** (all accounts, stores, orders, photos, carts) and loads a clean
-demo: 10 stores in Brgy. Malaya with real food photos and menus, 2 stores waiting for approval,
-riders, residents, two weeks of orders with ratings, live orders waiting right now, and table bookings.
+demo: 10 stores in Naval, Biliran (on real streets, with map pins) with real food photos and menus,
+2 stores waiting for approval, riders, residents, two weeks of orders with ratings, live orders
+waiting right now, and table bookings.
 
 ```bash
 docker compose --profile tools run --rm --build demo
@@ -136,6 +159,7 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Idempotency** | Each checkout carries a one-time key | Double-clicking "Place order" never creates two orders |
 | **Concurrency control** | Conditional updates and unique indexes | 10 buyers for the last item → 1 order; 5 riders accept one job → 1 gets it; 100 bookings for one table → 1 (`loadtest/booking-race.js`) |
 | **Distributed lock** | Redis `SET NX` per rider | A rider can't grab two jobs with quick double taps |
+| **Paging and spatial queries** | Rider jobs are filtered, sorted by distance and paged inside PostgreSQL; the store list is paged from the Redis cache; both maps load only what's on screen | Rider → Home shows the 3 nearest jobs, "See all" → sort/"Within 2 km"/"Show more"; pan the Map and watch it load only that area |
 | **Shared cache** | Store list and menus cached in Redis, cleared on change | Edit a price as a vendor; every API copy shows the new price immediately |
 | **Real-time over pub/sub** | Server-Sent Events + Redis pub/sub across API copies | Keep the resident's order page open while the vendor accepts; it updates without refreshing |
 | **Shared state** | Cart and login lockout counter in Redis | 5 wrong passwords across different copies still lock the account |
