@@ -1,4 +1,5 @@
-import { ShieldCheck, Store } from "lucide-react";
+import { KeyRound, ShieldCheck, Store } from "lucide-react";
+import Link from "next/link";
 import { cache, Suspense, type ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth";
 import { initials } from "@/lib/format";
@@ -104,7 +105,7 @@ async function SidebarContext() {
   );
 }
 
-/** The signed-in person, with the log out button. */
+/** The signed-in person, with buttons to change the password and log out. */
 async function SidebarUser() {
   const user = await getCurrentUser();
 
@@ -120,7 +121,17 @@ async function SidebarUser() {
         <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
         <p className="truncate text-xs text-muted">{user.email}</p>
       </div>
-      <LogoutButton />
+      <div className="flex shrink-0 items-center lg:collapsed:flex-col lg:collapsed:gap-1.5">
+        <Link
+          href={user.role === "VENDOR" ? "/vendor/password" : "/admin/password"}
+          aria-label="Change password"
+          title="Change password"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+        >
+          <KeyRound className="size-[18px]" aria-hidden />
+        </Link>
+        <LogoutButton />
+      </div>
     </div>
   );
 }

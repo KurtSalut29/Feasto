@@ -1,4 +1,4 @@
-import { Bike, IdCard, UserPen } from "lucide-react";
+import { Bike, IdCard, KeyRound, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/app/logout-button";
@@ -46,6 +46,7 @@ async function RiderAccount() {
         )}
         <RowGroup title="Settings">
           <Row Icon={UserPen} label="Edit profile" href="/rider/profile" />
+          <Row Icon={KeyRound} label="Change password" href="/rider/password" />
         </RowGroup>
         <LogoutButton variant="row" />
       </div>

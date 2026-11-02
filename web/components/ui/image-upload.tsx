@@ -19,6 +19,16 @@ async function resize(file: File): Promise<Blob> {
   );
 }
 
+/** Shrinks and uploads a photo, returning its /uploads/... URL. Throws with a message to show on failure. */
+export async function uploadPhoto(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new Error("Choose a photo (JPG, PNG or WebP).");
+  const body = await resize(file);
+  const response = await fetch("/api/uploads", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error ?? "Upload failed. Try another photo.");
+  return data.url;
+}
+
 /** Upload a photo and get back its /uploads/... URL. */
 export function ImageUpload({
   label,
@@ -37,14 +47,9 @@ export function ImageUpload({
 
   async function upload(file: File) {
     setError(undefined);
-    if (!file.type.startsWith("image/")) return setError("Choose a photo (JPG, PNG or WebP).");
     setUploading(true);
     try {
-      const body = await resize(file);
-      const response = await fetch("/api/uploads", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body });
-      const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(data?.error ?? "Upload failed. Try another photo.");
-      onChange(data.url);
+      onChange(await uploadPhoto(file));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try another photo.");
     } finally {

@@ -1,9 +1,11 @@
-import { CircleAlert, Clock } from "lucide-react";
+import { CircleAlert, CircleCheck, Clock, Info } from "lucide-react";
 import type { ReactNode } from "react";
 
 const tones = {
   error: { box: "border-red-200 bg-red-50 text-red-800", Icon: CircleAlert },
   pending: { box: "border-amber-200 bg-amber-50 text-amber-900", Icon: Clock },
+  success: { box: "border-emerald-200 bg-emerald-50 text-emerald-900", Icon: CircleCheck },
+  info: { box: "border-sky-200 bg-sky-50 text-sky-900", Icon: Info },
 };
 
 export function Alert({ tone, title, children }: { tone: keyof typeof tones; title?: string; children: ReactNode }) {

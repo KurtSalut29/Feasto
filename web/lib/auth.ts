@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { ROLE_HOME, SESSION_COOKIE } from "./roles";
+import { logoutPath } from "./server-api";
 import type { Role, User } from "./types";
 
 /**
@@ -20,11 +21,8 @@ export const getCurrentUser = cache(async (): Promise<User> => {
     headers: { cookie: `${SESSION_COOKIE}=${token}` },
     cache: "no-store",
   });
-  // The cookie is no longer valid (expired, or the account was removed): clear it.
-  if (response.status === 401) {
-    const { error } = (await response.json().catch(() => ({}))) as { error?: string };
-    redirect(error?.includes("disabled") ? "/logout?reason=disabled" : "/logout");
-  }
+  // The cookie is no longer valid (expired, account disabled, or password changed elsewhere): clear it.
+  if (response.status === 401) redirect(await logoutPath(response));
   if (!response.ok) throw new Error(`Could not load your account (status ${response.status}).`);
 
   const { user } = (await response.json()) as { user: User };

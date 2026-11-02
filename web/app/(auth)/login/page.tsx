@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthSwitch } from "../auth-ui";
-import { DisabledNotice } from "./disabled-notice";
 import { LoginForm } from "./login-form";
+import { LogoutNotice } from "./logout-notice";
 
 export const metadata: Metadata = { title: "Log in" };
 
@@ -13,7 +13,7 @@ export default function LoginPage() {
       <p className="mt-1 text-balance text-center text-[15px] text-muted">Log in to order, deliver or manage your store.</p>
 
       <Suspense fallback={null}>
-        <DisabledNotice />
+        <LogoutNotice />
       </Suspense>
       <LoginForm />
 

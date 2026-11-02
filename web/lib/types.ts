@@ -131,6 +131,8 @@ type OrderBase = {
   subtotal: string;
   deliveryFee: string;
   rejectReason: string | null;
+  /** Photo the rider took when handing over a delivery */
+  deliveryPhotoUrl: string | null;
   acceptedAt: string | null;
   readyAt: string | null;
   pickedUpAt: string | null;

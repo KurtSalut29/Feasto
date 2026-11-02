@@ -1,5 +1,6 @@
 import { ArrowLeft, Bike, LoaderCircle, MapPin, Phone, Store } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
@@ -8,7 +9,7 @@ import { RiderTracking } from "@/components/app/rider-tracking";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
-import { formatPeso } from "@/lib/format";
+import { formatDateTime, formatPeso } from "@/lib/format";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
@@ -90,6 +91,18 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         )}
 
         {received && <RateOrder orderId={order.id} storeName={order.vendor.name} review={order.review} />}
+
+        {order.deliveryPhotoUrl && (
+          <Section title="Proof of delivery">
+            <a href={order.deliveryPhotoUrl} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden rounded-xl bg-canvas">
+              <Image src={order.deliveryPhotoUrl} alt={`Photo of your order taken by ${order.rider?.name ?? "the rider"}`} fill unoptimized className="object-cover" />
+            </a>
+            <p className="mt-2 text-sm text-muted">
+              Taken by {order.rider?.name ?? "your rider"}
+              {order.finishedAt && ` · ${formatDateTime(order.finishedAt)}`}
+            </p>
+          </Section>
+        )}
 
         {order.status === "PICKED_UP" && <RiderTracking orderId={order.id} initial={riderLocation} />}
 

@@ -1,4 +1,4 @@
-import { Bike, ClipboardList, History, LayoutGrid, MapPin, MessageSquareText, Phone, Store } from "lucide-react";
+import { Bike, Camera, ClipboardList, History, LayoutGrid, MapPin, MessageSquareText, Phone, Store } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
@@ -169,6 +169,17 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
                           {statusLabel(order.status, order.fulfillment)}
                         </Badge>
                         {order.rejectReason && <p className="mt-1 max-w-48 truncate text-xs text-muted">“{order.rejectReason}”</p>}
+                        {order.deliveryPhotoUrl && (
+                          <a
+                            href={order.deliveryPhotoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 hover:underline"
+                          >
+                            <Camera className="size-3.5" aria-hidden />
+                            Delivery photo
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))}

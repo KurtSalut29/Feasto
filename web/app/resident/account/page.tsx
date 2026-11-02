@@ -1,4 +1,4 @@
-import { CalendarDays, Heart, MapPin, ReceiptText, UserPen } from "lucide-react";
+import { CalendarDays, Heart, KeyRound, MapPin, ReceiptText, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LogoutButton } from "@/components/app/logout-button";
@@ -45,6 +45,7 @@ async function ResidentAccount() {
         <RowGroup title="Settings">
           <Row Icon={MapPin} label="Delivery addresses" href="/resident/addresses" />
           <Row Icon={UserPen} label="Edit profile" href="/resident/profile" />
+          <Row Icon={KeyRound} label="Change password" href="/resident/password" />
         </RowGroup>
         <LogoutButton variant="row" />
       </div>
