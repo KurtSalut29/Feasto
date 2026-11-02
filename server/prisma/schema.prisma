@@ -84,15 +84,17 @@ enum BookingStatus {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  phone        String?
-  role         Role      @default(RESIDENT)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  passwordHash      String
+  name              String
+  phone             String?
+  role              Role      @default(RESIDENT)
   /// Set by an admin to block the account; the user is logged out everywhere at once
-  disabledAt   DateTime?
-  createdAt    DateTime  @default(now())
+  disabledAt        DateTime?
+  /// Sessions signed before this moment stop working, so a new password logs out other devices
+  passwordChangedAt DateTime?
+  createdAt         DateTime  @default(now())
 
   vendor        Vendor? // set when role = VENDOR
   riderProfile  RiderProfile? // set when role = RIDER
@@ -113,6 +115,9 @@ model Address {
   label     String // "Home", "Office"
   details   String // street, barangay, city
   landmark  String?
+  /// Pin on the map, set by the resident (GPS or dragging the pin)
+  latitude  Float?
+  longitude Float?
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -129,6 +134,9 @@ model Vendor {
   acceptsReservations Boolean        @default(false)
   description         String?
   address             String
+  /// Pin on the map, set by the vendor in Store settings
+  latitude            Float?
+  longitude           Float?
   imageUrl            String?
   status              ApprovalStatus @default(PENDING)
   reviewNote          String? // admin's reason when rejecting or suspending
@@ -198,6 +206,9 @@ model Checkout {
   /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.
   idempotencyKey  String        @unique
   deliveryAddress String? // empty for pickup
+  /// The address pin, copied at order time like the address text
+  deliveryLat     Float?
+  deliveryLng     Float?
   notes           String?
   createdAt       DateTime      @default(now())
 
@@ -206,24 +217,26 @@ model Checkout {
 
 /// The part of a checkout that belongs to a single vendor.
 model Order {
-  id           String      @id @default(cuid())
-  checkoutId   String
-  checkout     Checkout    @relation(fields: [checkoutId], references: [id])
-  vendorId     String
-  vendor       Vendor      @relation(fields: [vendorId], references: [id])
-  riderId      String?
-  rider        User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
-  status       OrderStatus @default(PLACED)
-  fulfillment  Fulfillment
-  subtotal     Decimal     @db.Decimal(10, 2)
-  deliveryFee  Decimal     @default(0) @db.Decimal(10, 2)
-  rejectReason String?
-  acceptedAt   DateTime?
-  readyAt      DateTime?
-  pickedUpAt   DateTime?
-  finishedAt   DateTime? // delivered, collected, rejected or cancelled
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  checkoutId       String
+  checkout         Checkout    @relation(fields: [checkoutId], references: [id])
+  vendorId         String
+  vendor           Vendor      @relation(fields: [vendorId], references: [id])
+  riderId          String?
+  rider            User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
+  status           OrderStatus @default(PLACED)
+  fulfillment      Fulfillment
+  subtotal         Decimal     @db.Decimal(10, 2)
+  deliveryFee      Decimal     @default(0) @db.Decimal(10, 2)
+  rejectReason     String?
+  /// Photo the rider took at the door, under /uploads/
+  deliveryPhotoUrl String?
+  acceptedAt       DateTime?
+  readyAt          DateTime?
+  pickedUpAt       DateTime?
+  finishedAt       DateTime? // delivered, collected, rejected or cancelled
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   items  OrderItem[]
   review Review?

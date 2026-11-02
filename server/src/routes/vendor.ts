@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
 import type { OrderStatus, Prisma } from "../generated/prisma/client.js";
 import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
@@ -46,8 +47,10 @@ const storeSchema = z
     closesAt: time,
     isTemporarilyClosed: z.boolean(),
     imageUrl: photo,
+    ...pinFields,
   })
-  .refine((v) => v.closesAt > v.opensAt, { path: ["closesAt"], message: "Closing time must be after opening time." });
+  .refine((v) => v.closesAt > v.opensAt, { path: ["closesAt"], message: "Closing time must be after opening time." })
+  .refine(pinIsWhole, PIN_MESSAGE);
 
 vendorRouter.get("/store", async (req, res) => {
   const store = await prisma.vendor.findUniqueOrThrow({ where: { ownerId: req.session!.userId } });

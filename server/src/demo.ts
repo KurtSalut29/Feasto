@@ -47,13 +47,42 @@ type StoreSeed = {
   menu: Dish[];
 };
 
+/**
+ * Map pins in Naval, Biliran, keyed by the owner's or resident's email. Each sits on the street in
+ * its address (street names and positions from OpenStreetMap). Kept apart from the long store
+ * list so each entry there stays readable.
+ */
+const PINS: Record<string, [lat: number, lng: number]> = {
+  "nena@feasto.com": [11.55822, 124.39602], // Castin St, near the provincial hospital
+  "remy@feasto.com": [11.56087, 124.39556], // Corvera St
+  "marco@feasto.com": [11.57006, 124.39463], // Circumferential Rd, Atipolo
+  "bea@feasto.com": [11.56424, 124.40139], // Padre Innocentes St, by BiPSU
+  "ramon@feasto.com": [11.5594, 124.3925], // Abad St, at the public market
+  "kim@feasto.com": [11.56379, 124.39864], // Vicentillo Extension
+  "ben@feasto.com": [11.55546, 124.39695], // Santo Niño Rd
+  "sofia@feasto.com": [11.56095, 124.39853], // Fatima Village
+  "lorna@feasto.com": [11.56106, 124.39264], // Ballesteros St
+  "carlos@feasto.com": [11.55882, 124.39232], // near Naval Port
+  "tonyo@feasto.com": [11.56379, 124.39515], // Adobo Compound Rd
+  "grace@feasto.com": [11.57064, 124.40171], // Calumpang
+  "juan@feasto.com": [11.55842, 124.39682],
+  "maria@feasto.com": [11.57133, 124.39132],
+  "carlo@feasto.com": [11.57146, 124.39867],
+  "andrea@feasto.com": [11.56035, 124.39299],
+  "miguel@feasto.com": [11.55516, 124.39841],
+  "patricia@feasto.com": [11.56677, 124.4015],
+};
+/** Juan's office at the municipal hall */
+const JUAN_OFFICE: [number, number] = [11.56496, 124.4014];
+const pin = (email: string) => ({ latitude: PINS[email][0], longitude: PINS[email][1] });
+
 const STORES: StoreSeed[] = [
   {
     owner: { name: "Nena Santos", email: "nena@feasto.com" },
     name: "Aling Nena's Carinderia",
     storeType: "CARINDERIA",
     description: "Lutong bahay since 1998. Fresh ulam every morning, sulit for the whole family.",
-    address: "12 Mabini St, Brgy. Malaya, Quezon City",
+    address: "Castin Street, Naval, Biliran",
     opensAt: "06:00",
     closesAt: "20:00",
     cover: "beef-caldereta",
@@ -73,7 +102,7 @@ const STORES: StoreSeed[] = [
     name: "Lola Remy's Kitchen",
     storeType: "RESTAURANT",
     description: "Filipino family favorites in a cozy dining room. Perfect for celebrations.",
-    address: "45 Kalayaan Ave, Brgy. Malaya, Quezon City",
+    address: "Corvera Street, Naval, Biliran",
     opensAt: "10:00",
     closesAt: "22:00",
     cover: "beef-asado",
@@ -94,7 +123,7 @@ const STORES: StoreSeed[] = [
     name: "Burger Barn",
     storeType: "FAST_FOOD",
     description: "Big burgers, crispy chicken and Pinoy-style spaghetti. Fast and hot.",
-    address: "88 Commonwealth Ave, Brgy. Malaya, Quezon City",
+    address: "Biliran Circumferential Road, Brgy. Atipolo, Naval, Biliran",
     opensAt: "09:00",
     closesAt: "23:00",
     cover: "double-burger",
@@ -114,7 +143,7 @@ const STORES: StoreSeed[] = [
     name: "Kape Kanto",
     storeType: "CAFE",
     description: "Neighborhood coffee bar with all-day breakfast and quiet tables for work.",
-    address: "7 Maginhawa St, Brgy. Malaya, Quezon City",
+    address: "Padre Innocentes Street, Naval, Biliran",
     opensAt: "07:00",
     closesAt: "21:00",
     cover: "spanish-latte",
@@ -132,10 +161,10 @@ const STORES: StoreSeed[] = [
   },
   {
     owner: { name: "Ramon Cruz", email: "ramon@feasto.com" },
-    name: "Panaderia de Malaya",
+    name: "Panaderia de Naval",
     storeType: "BAKERY",
     description: "Freshly baked pandesal from 5 AM, plus merienda favorites all day.",
-    address: "3 Rizal St, Brgy. Malaya, Quezon City",
+    address: "Abad Street, Naval, Biliran",
     opensAt: "05:00",
     closesAt: "19:00",
     cover: "ensaymada",
@@ -155,7 +184,7 @@ const STORES: StoreSeed[] = [
     name: "Tea Time PH",
     storeType: "MILK_TEA_DRINKS",
     description: "Milk tea, shakes and smoothies. Choose your sugar level in the notes.",
-    address: "21 Matatag St, Brgy. Malaya, Quezon City",
+    address: "Vicentillo Extension, Naval, Biliran",
     opensAt: "10:00",
     closesAt: "22:00",
     cover: "thai-milk-tea",
@@ -173,7 +202,7 @@ const STORES: StoreSeed[] = [
     name: "Kuya Ben's Street Eats",
     storeType: "SNACKS_STREET_FOOD",
     description: "Afternoon street food fix: BBQ sticks, lumpia, siomai and more.",
-    address: "Corner Masikap & Mabini St, Brgy. Malaya, Quezon City",
+    address: "Santo Niño Road, Naval, Biliran",
     opensAt: "14:00",
     closesAt: "23:00",
     cover: "chicken-bbq",
@@ -192,7 +221,7 @@ const STORES: StoreSeed[] = [
     name: "Sweet Spot Desserts",
     storeType: "DESSERTS",
     description: "Homemade cakes, flan and chilled treats for every sweet tooth.",
-    address: "16 Malakas St, Brgy. Malaya, Quezon City",
+    address: "Fatima Village, Naval, Biliran",
     opensAt: "11:00",
     closesAt: "22:00",
     cover: "mango-float",
@@ -212,7 +241,7 @@ const STORES: StoreSeed[] = [
     name: "Tita Lorna's Home Kitchen",
     storeType: "HOME_KITCHEN",
     description: "Small-batch home cooking. Limited servings daily, so order early!",
-    address: "9 Pag-asa St, Brgy. Malaya, Quezon City",
+    address: "Ballesteros Street, Naval, Biliran",
     opensAt: "10:00",
     closesAt: "20:00",
     cover: "arroz-caldo",
@@ -230,7 +259,7 @@ const STORES: StoreSeed[] = [
     name: "Isla Grill & Seafood",
     storeType: "RESTAURANT",
     description: "Grilled seafood and liempo, island style. Group tables available.",
-    address: "101 Tandang Sora Ave, Brgy. Malaya, Quezon City",
+    address: "Near Naval Port, Naval, Biliran",
     opensAt: "11:00",
     closesAt: "22:00",
     cover: "seafood-paella",
@@ -249,8 +278,8 @@ const STORES: StoreSeed[] = [
 
 /** Stores still waiting for the admin, so the Approvals page has something to review. */
 const PENDING_STORES = [
-  { owner: { name: "Antonio Garcia", email: "tonyo@feasto.com" }, name: "Mang Tonyo's Lechon", storeType: "RESTAURANT" as const, address: "5 Bayani St, Brgy. Malaya, Quezon City" },
-  { owner: { name: "Grace Tan", email: "grace@feasto.com" }, name: "Brew & Bloom Café", storeType: "CAFE" as const, address: "30 Maginhawa St, Brgy. Malaya, Quezon City" },
+  { owner: { name: "Antonio Garcia", email: "tonyo@feasto.com" }, name: "Mang Tonyo's Lechon", storeType: "RESTAURANT" as const, address: "Adobo Compound Road, Naval, Biliran" },
+  { owner: { name: "Grace Tan", email: "grace@feasto.com" }, name: "Brew & Bloom Café", storeType: "CAFE" as const, address: "Brgy. Calumpang, Naval, Biliran" },
 ];
 
 const RIDERS: { name: string; email: string; vehicleType: VehicleType; plateNumber?: string; licenseNumber?: string; pending?: boolean }[] = [
@@ -262,12 +291,12 @@ const RIDERS: { name: string; email: string; vehicleType: VehicleType; plateNumb
 ];
 
 const RESIDENTS = [
-  { name: "Juan Dela Cruz", email: "juan@feasto.com", address: "24 Mabini St, Brgy. Malaya, Quezon City", landmark: "Blue gate beside the sari-sari store" },
-  { name: "Maria Clara Santos", email: "maria@feasto.com", address: "8 Kalayaan Ave, Brgy. Malaya, Quezon City", landmark: "Near the barangay hall" },
-  { name: "Carlo Mendoza", email: "carlo@feasto.com", address: "15 Masikap St, Brgy. Malaya, Quezon City" },
-  { name: "Andrea Lopez", email: "andrea@feasto.com", address: "33 Maginhawa St, Brgy. Malaya, Quezon City", landmark: "Unit 3B" },
-  { name: "Miguel Rivera", email: "miguel@feasto.com", address: "2 Pag-asa St, Brgy. Malaya, Quezon City" },
-  { name: "Patricia Gomez", email: "patricia@feasto.com", address: "61 Tandang Sora Ave, Brgy. Malaya, Quezon City" },
+  { name: "Juan Dela Cruz", email: "juan@feasto.com", address: "Purok 3, Castin Street, Naval, Biliran", landmark: "Blue gate beside the sari-sari store" },
+  { name: "Maria Clara Santos", email: "maria@feasto.com", address: "Brgy. Atipolo, Naval, Biliran", landmark: "Near the barangay hall" },
+  { name: "Carlo Mendoza", email: "carlo@feasto.com", address: "Brgy. Calumpang, Naval, Biliran" },
+  { name: "Andrea Lopez", email: "andrea@feasto.com", address: "Brgy. Santissimo Rosario, Naval, Biliran", landmark: "Unit 3B" },
+  { name: "Miguel Rivera", email: "miguel@feasto.com", address: "Brgy. Santo Niño, Naval, Biliran" },
+  { name: "Patricia Gomez", email: "patricia@feasto.com", address: "Near the Provincial Capitol, Brgy. Calumpang, Naval, Biliran" },
 ];
 
 const COMMENTS: Record<number, string[]> = {
@@ -348,6 +377,7 @@ async function main() {
             acceptsReservations: Boolean(s.tables),
             description: s.description,
             address: s.address,
+            ...pin(s.owner.email),
             imageUrl,
             status: "APPROVED",
             reviewedAt: new Date(accountsSince.getTime() + index * 86400_000 + 3600_000),
@@ -399,6 +429,7 @@ async function main() {
             storeType: s.storeType,
             acceptsReservations: s.storeType === "RESTAURANT" || s.storeType === "CAFE",
             address: s.address,
+            ...pin(s.owner.email),
             opensAt: "09:00",
             closesAt: "21:00",
             createdAt: manilaAt(1 - index, "08:30"),
@@ -437,7 +468,7 @@ async function main() {
   }
   const activeRiders = riders.filter((_, i) => !RIDERS[i].pending);
 
-  const residents: { user: User; address: string }[] = [];
+  const residents: { user: User; address: string; latitude: number; longitude: number }[] = [];
   for (const [index, r] of RESIDENTS.entries()) {
     const user = await prisma.user.create({
       data: {
@@ -449,13 +480,23 @@ async function main() {
         createdAt: new Date(accountsSince.getTime() + index * 20000_000),
         addresses: {
           create: [
-            { label: "Home", details: r.address, landmark: r.landmark ?? null, isDefault: true },
-            ...(index === 0 ? [{ label: "Office", details: "Unit 1204, Malaya Tech Hub, Commonwealth Ave, Quezon City", landmark: "Lobby guard" }] : []),
+            { label: "Home", details: r.address, landmark: r.landmark ?? null, isDefault: true, ...pin(r.email) },
+            ...(index === 0
+              ? [
+                  {
+                    label: "Office",
+                    details: "2F, Naval Municipal Hall, Vicentillo Extension, Naval, Biliran",
+                    landmark: "Ask at the information desk",
+                    latitude: JUAN_OFFICE[0],
+                    longitude: JUAN_OFFICE[1],
+                  },
+                ]
+              : []),
           ],
         },
       },
     });
-    residents.push({ user, address: r.address });
+    residents.push({ user, address: r.address, ...pin(r.email) });
   }
   const juan = residents[0];
 
@@ -503,6 +544,8 @@ async function main() {
         paymentStatus: paymentMethod === "ONLINE" ? (failed ? "REFUNDED" : "PAID") : status === "DELIVERED" || status === "COMPLETED" ? "PAID" : "PENDING",
         idempotencyKey: `demo-${++orderCount}`,
         deliveryAddress: fulfillment === "DELIVERY" ? resident.address : null,
+        deliveryLat: fulfillment === "DELIVERY" ? resident.latitude : null,
+        deliveryLng: fulfillment === "DELIVERY" ? resident.longitude : null,
         notes: chance(0.15) ? pick(["Less spicy please.", "Pakidagdagan ng sauce.", "No onions.", "Please call when outside."]) : null,
         createdAt,
       },

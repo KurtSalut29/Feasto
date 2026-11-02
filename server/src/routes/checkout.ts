@@ -50,10 +50,12 @@ checkoutRouter.post("/", async (req, res) => {
   if (cart.hasProblems) throw new HttpError(409, "Some items in your cart changed. Check your cart and try again.");
 
   let deliveryAddress: string | null = null;
+  let deliveryPin: { deliveryLat: number | null; deliveryLng: number | null } = { deliveryLat: null, deliveryLng: null };
   if (input.fulfillment === "DELIVERY") {
     const address = await prisma.address.findFirst({ where: { id: input.addressId, userId } });
     if (!address) throw new HttpError(400, "Choose where to deliver.");
     deliveryAddress = [address.details, address.landmark].filter(Boolean).join(" · ");
+    deliveryPin = { deliveryLat: address.latitude, deliveryLng: address.longitude };
   }
 
   const deliveryFee = input.fulfillment === "DELIVERY" ? DELIVERY_FEE : 0;
@@ -81,6 +83,7 @@ checkoutRouter.post("/", async (req, res) => {
           fulfillment: input.fulfillment,
           paymentMethod: input.paymentMethod,
           deliveryAddress,
+          ...deliveryPin,
           notes: input.notes,
           total,
           // One order per store; online orders wait for the payment first

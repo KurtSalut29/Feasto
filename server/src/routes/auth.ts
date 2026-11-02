@@ -27,16 +27,19 @@ const phone = z
   .trim()
   .regex(/^(\+639|09)\d{9}$/, "Enter a mobile number like 09171234567.");
 
+/** The rules for a password at sign-up, also used when changing it. */
+export const newPassword = z
+  .string()
+  .min(8, "Use at least 8 characters.")
+  .max(72)
+  .regex(/[A-Za-z]/, "Include at least one letter.")
+  .regex(/\d/, "Include at least one number.");
+
 const accountFields = {
   name: z.string().trim().min(2, "Enter your full name.").max(80),
   email,
   phone,
-  password: z
-    .string()
-    .min(8, "Use at least 8 characters.")
-    .max(72)
-    .regex(/[A-Za-z]/, "Include at least one letter.")
-    .regex(/\d/, "Include at least one number."),
+  password: newPassword,
 };
 
 // Optional text: blank becomes undefined, everything else is trimmed and uppercased

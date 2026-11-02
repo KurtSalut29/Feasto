@@ -9,8 +9,12 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 /**
  * Photo uploads. Files go to a Docker volume that all three API copies share and that
  * Nginx serves at /uploads/, so a photo uploaded through api-1 loads through any copy.
+ * Vendors upload store and menu photos; riders upload the proof-of-delivery photo.
  */
 export const uploadsRouter = Router();
+
+/** The URL shape this route hands out; other routes check stored photo URLs against it. */
+export const UPLOADED_PHOTO = /^\/uploads\/\d+-[0-9a-f]{16}\.(jpg|png|webp)$/;
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -25,7 +29,7 @@ function detectImageType(data: Buffer): "jpg" | "png" | "webp" | null {
 uploadsRouter.post(
   "/",
   requireAuth,
-  requireRole("VENDOR"),
+  requireRole("VENDOR", "RIDER"),
   express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_BYTES }),
   async (req, res) => {
     const data = req.body;

@@ -8,7 +8,7 @@ import type { Role } from "../generated/prisma/enums.js";
 const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, keylen: number) => Promise<Buffer>;
 
 const KEY_LENGTH = 64;
-const SESSION_DAYS = 7;
+export const SESSION_DAYS = 7;
 
 export const SESSION_COOKIE = "feasto_session";
 
@@ -43,7 +43,8 @@ export async function verifyPassword(password: string, stored: string) {
 export type Session = { userId: string; role: Role; name: string };
 
 export function signSession(session: Session) {
-  return new SignJWT({ role: session.role, name: session.name })
+  // "at" is the signing time in milliseconds; the standard iat is only in whole seconds
+  return new SignJWT({ role: session.role, name: session.name, at: Date.now() })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(session.userId)
     .setIssuedAt()
@@ -51,11 +52,12 @@ export function signSession(session: Session) {
     .sign(config.jwtSecret);
 }
 
-export async function verifySession(token: string): Promise<Session | null> {
+/** The session, plus when its cookie was signed (Unix milliseconds). */
+export async function verifySession(token: string): Promise<(Session & { issuedAt: number }) | null> {
   try {
     const { payload } = await jwtVerify(token, config.jwtSecret, { algorithms: ["HS256"] });
     if (!payload.sub) return null;
-    return { userId: payload.sub, role: payload.role as Role, name: String(payload.name) };
+    return { userId: payload.sub, role: payload.role as Role, name: String(payload.name), issuedAt: typeof payload.at === "number" ? payload.at : (payload.iat ?? 0) * 1000 };
   } catch {
     return null;
   }

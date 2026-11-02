@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { OrderStatus } from "../generated/prisma/client.js";
+import { Prisma, type OrderStatus } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
+import { bboxQuery, nearQuery, nextOffset, pageQuery } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, orderCode, settlePayment, transition } from "../lib/orders.js";
 import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { redis } from "../lib/redis.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { UPLOADED_PHOTO } from "./uploads.js";
 
 export const riderRouter = Router();
 riderRouter.use(requireAuth, requireRole("RIDER"));
@@ -43,27 +45,72 @@ riderRouter.patch("/availability", async (req, res) => {
 
 // ---------- Jobs ----------
 
+const jobsQuery = z.object({
+  ...nearQuery,
+  /** nearest needs lat/lng; without them the list is "ready first", like the default */
+  sort: z.enum(["nearest", "pay", "newest"]).optional(),
+  /** Only stores this many kilometres from lat/lng */
+  within: z.coerce.number().positive().max(100).optional(),
+  bbox: bboxQuery,
+  ...pageQuery(10, 100),
+});
+
+/**
+ * Open jobs, one page at a time. The database does the filtering, sorting and paging, so a
+ * rider gets the 10 nearest jobs out of thousands without the API loading the rest.
+ */
 riderRouter.get("/jobs", async (req, res) => {
+  const { lat, lng, sort, within, bbox, limit, offset } = parseBody(jobsQuery, req.query);
   const profile = await riderProfile(req.session!.userId);
   if (profile.status !== "APPROVED" || !profile.isOnline) {
-    res.json({ online: false, approved: profile.status === "APPROVED", jobs: [] });
+    res.json({ online: false, approved: profile.status === "APPROVED", jobs: [], total: 0, nextOffset: null });
     return;
   }
-  const jobs = await prisma.order.findMany({
-    where: { fulfillment: "DELIVERY", riderId: null, status: { in: OPEN_JOB } },
-    orderBy: [{ readyAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
-    take: 30,
+
+  // Kilometres from the rider to the store. Flat-earth maths is exact to a few metres
+  // across a town and, unlike haversine, cheap enough to sort thousands of rows by.
+  const here = lat !== undefined && lng !== undefined ? { lat, lng } : null;
+  const km = here
+    ? Prisma.sql`(111.32 * sqrt(power(v.latitude - ${here.lat}::float8, 2) + power((v.longitude - ${here.lng}::float8) * ${Math.cos((here.lat * Math.PI) / 180)}::float8, 2)))`
+    : null;
+  const where = Prisma.sql`
+    WHERE o.fulfillment = 'DELIVERY' AND o."riderId" IS NULL AND o.status IN (${Prisma.raw(OPEN_JOB.map((s) => `'${s}'`).join(", "))})
+    ${bbox ? Prisma.sql`AND v.longitude BETWEEN ${bbox.west}::float8 AND ${bbox.east}::float8 AND v.latitude BETWEEN ${bbox.south}::float8 AND ${bbox.north}::float8` : Prisma.empty}
+    ${km && within ? Prisma.sql`AND ${km} <= ${within}::float8` : Prisma.empty}`;
+  const orderBy =
+    sort === "nearest" && km
+      ? Prisma.sql`${km} ASC NULLS LAST, o."createdAt" ASC`
+      : sort === "pay"
+        ? Prisma.sql`o."deliveryFee" DESC, o."createdAt" ASC`
+        : sort === "newest"
+          ? Prisma.sql`o."createdAt" DESC`
+          : // Food that's ready waits the longest, so it comes first
+            Prisma.sql`o."readyAt" ASC NULLS LAST, o."createdAt" ASC`;
+
+  const [page, [{ count }]] = await Promise.all([
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT o.id FROM "Order" o JOIN "Vendor" v ON v.id = o."vendorId" ${where}
+      ORDER BY ${orderBy} LIMIT ${limit} OFFSET ${offset}`,
+    prisma.$queryRaw<{ count: bigint }[]>`SELECT count(*) FROM "Order" o JOIN "Vendor" v ON v.id = o."vendorId" ${where}`,
+  ]);
+  const ids = page.map((row) => row.id);
+  const rows = await prisma.order.findMany({
+    where: { id: { in: ids } },
     select: {
       id: true,
       status: true,
       deliveryFee: true,
       createdAt: true,
-      vendor: { select: { name: true, address: true } },
+      vendor: { select: { name: true, address: true, latitude: true, longitude: true } },
       items: { select: { quantity: true } },
-      checkout: { select: { deliveryAddress: true } },
+      checkout: { select: { deliveryAddress: true, deliveryLat: true, deliveryLng: true } },
     },
   });
-  res.json({ online: true, approved: true, jobs });
+  // findMany doesn't keep the order of `in`, so put the rows back in the page's order
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const jobs = ids.flatMap((id) => byId.get(id) ?? []);
+  const total = Number(count);
+  res.json({ online: true, approved: true, jobs, total, nextOffset: nextOffset(offset, jobs.length, total) });
 });
 
 riderRouter.post("/jobs/:id/accept", async (req, res) => {
@@ -108,9 +155,19 @@ riderRouter.get("/active", async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { riderId: req.session!.userId, status: { in: BUSY } },
     include: {
-      vendor: { select: { name: true, address: true, owner: { select: { phone: true } } } },
+      vendor: { select: { name: true, address: true, latitude: true, longitude: true, owner: { select: { phone: true } } } },
       items: { select: { id: true, name: true, quantity: true } },
-      checkout: { select: { deliveryAddress: true, notes: true, paymentMethod: true, paymentStatus: true, resident: { select: { name: true, phone: true } } } },
+      checkout: {
+        select: {
+          deliveryAddress: true,
+          deliveryLat: true,
+          deliveryLng: true,
+          notes: true,
+          paymentMethod: true,
+          paymentStatus: true,
+          resident: { select: { name: true, phone: true } },
+        },
+      },
     },
   });
   res.json({ order });
@@ -124,17 +181,23 @@ riderRouter.post("/active/:id/picked-up", async (req, res) => {
   res.json({ ok: true });
 });
 
+const deliveredSchema = z.object({
+  photoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the handed-over order first."),
+});
+
+/** Finishing a delivery needs a proof-of-delivery photo, which the resident and the store can see. */
 riderRouter.post("/active/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
+  const { photoUrl } = parseBody(deliveredSchema, req.body);
   const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId }, select: { checkoutId: true, vendor: { select: { ownerId: true } } } });
   if (!order) throw new HttpError(404, "Order not found.");
   await prisma.$transaction(async (tx) => {
-    await transition(tx, id, ["PICKED_UP"], "DELIVERED", { finishedAt: new Date() }, { riderId: req.session!.userId });
+    await transition(tx, id, ["PICKED_UP"], "DELIVERED", { finishedAt: new Date(), deliveryPhotoUrl: photoUrl }, { riderId: req.session!.userId });
     await settlePayment(tx, order.checkoutId); // cash collected by the rider
   });
   await redis.del(locationKey(id));
   await notifyResident(id);
-  await notify(order.vendor.ownerId, { title: `${orderCode(id)} was delivered`, body: "The rider handed it to the resident.", link: "/vendor/orders?tab=done" });
+  await notify(order.vendor.ownerId, { title: `${orderCode(id)} was delivered`, body: "The rider handed it over and took a photo.", link: "/vendor/orders?tab=done" });
   await broadcastOrder(id);
   res.json({ ok: true });
 });

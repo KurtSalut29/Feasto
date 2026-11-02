@@ -1,10 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
+import { markPasswordChanged } from "../lib/accounts.js";
+import { hashPassword, SESSION_COOKIE, sessionCookieOptions, signSession, verifyPassword } from "../lib/auth.js";
 import { prisma } from "../lib/db.js";
-import { HttpError, parseBody } from "../lib/http.js";
+import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
+import { HttpError, parseBody, ValidationError } from "../lib/http.js";
+import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
 import { CHANNELS } from "../lib/realtime.js";
 import { openStream } from "../lib/sse.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { newPassword } from "./auth.js";
 
 /** Things every signed-in user does with their own account. */
 export const meRouter = Router();
@@ -35,6 +40,46 @@ meRouter.patch("/profile", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Password ----------
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password."),
+    newPassword,
+  })
+  .refine((input) => input.newPassword !== input.currentPassword, {
+    path: ["newPassword"],
+    message: "Choose a password different from your current one.",
+  });
+
+/**
+ * Change the password. Every other device is logged out: their cookies were signed before
+ * passwordChangedAt, which all API copies check through Redis. This browser gets a fresh cookie.
+ */
+meRouter.patch("/password", async (req, res) => {
+  const input = parseBody(passwordSchema, req.body);
+  const session = req.session!;
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: session.userId }, select: { email: true, passwordHash: true } });
+
+  // Wrong guesses count toward the same lock as failed logins, so this can't be used to guess passwords
+  const lockSeconds = await loginLockSeconds(user.email);
+  if (lockSeconds > 0) throw new HttpError(429, `Too many wrong attempts. Try again in ${Math.ceil(lockSeconds / 60)} minute(s).`);
+  if (!(await verifyPassword(input.currentPassword, user.passwordHash))) {
+    await recordFailedLogin(user.email);
+    throw new ValidationError({ currentPassword: ["That isn't your current password."] });
+  }
+  await clearFailedLogins(user.email);
+
+  const changedAt = new Date();
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: { passwordHash: await hashPassword(input.newPassword), passwordChangedAt: changedAt },
+  });
+  await markPasswordChanged(session.userId, changedAt);
+  res.cookie(SESSION_COOKIE, await signSession(session), sessionCookieOptions);
+  res.json({ ok: true });
+});
+
 // ---------- Notifications ----------
 
 meRouter.get("/notifications", async (req, res) => {
@@ -56,17 +101,20 @@ meRouter.post("/notifications/read-all", async (req, res) => {
 
 // ---------- Delivery addresses (residents) ----------
 
-const addressSchema = z.object({
-  label: z.string().trim().min(1, "Give it a name, like Home.").max(30),
-  details: z.string().trim().min(5, "Enter the street, barangay and city.").max(200),
-  landmark: z
-    .string()
-    .trim()
-    .max(120)
-    .optional()
-    .transform((v) => v || null),
-  isDefault: z.boolean().optional(),
-});
+const addressSchema = z
+  .object({
+    label: z.string().trim().min(1, "Give it a name, like Home.").max(30),
+    details: z.string().trim().min(5, "Enter the street, barangay and city.").max(200),
+    landmark: z
+      .string()
+      .trim()
+      .max(120)
+      .optional()
+      .transform((v) => v || null),
+    isDefault: z.boolean().optional(),
+    ...pinFields,
+  })
+  .refine(pinIsWhole, PIN_MESSAGE);
 
 meRouter.get("/addresses", requireRole("RESIDENT"), async (req, res) => {
   const addresses = await prisma.address.findMany({
