@@ -58,8 +58,11 @@ export type MenuItem = {
   isAvailable: boolean;
 };
 
+/** A pin on the map as the API sends it; both null until someone sets it. */
+export type Pin = { latitude: number | null; longitude: number | null };
+
 /** A store in the resident's browse list. */
-export type StoreSummary = {
+export type StoreSummary = Pin & {
   id: string;
   name: string;
   storeType: StoreType;
@@ -77,11 +80,27 @@ export type StoreSummary = {
   rating: number | null;
   ratingCount: number;
   isFavorite: boolean;
+  /** Kilometres from the resident's default address (or the given spot), when both have a pin */
+  distanceKm: number | null;
+};
+
+/** One page of stores from GET /stores */
+export type StorePage = { stores: StoreSummary[]; total: number; nextOffset: number | null; openCount: number; favoriteCount: number };
+
+export type StoreSections = {
+  orderAgain: StoreSummary[];
+  nearby: StoreSummary[];
+  topRated: StoreSummary[];
+  saved: StoreSummary[];
+  total: number;
+  openCount: number;
+  savedCount: number;
+  hasStartingPoint: boolean;
 };
 
 export type StoreReview = { id: string; rating: number; comment: string | null; createdAt: string; author: string };
 
-export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "matchedDishes"> & {
+export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "matchedDishes" | "distanceKm"> & {
   canBook: boolean;
   maxPartySize: number;
   menuItems: MenuItem[];
@@ -106,7 +125,7 @@ export type Cart = {
   hasProblems: boolean;
 };
 
-export type Address = { id: string; label: string; details: string; landmark: string | null; isDefault: boolean };
+export type Address = Pin & { id: string; label: string; details: string; landmark: string | null; isDefault: boolean };
 
 export type OrderStatus =
   | "AWAITING_PAYMENT"
@@ -143,13 +162,15 @@ type OrderBase = {
 
 /** An order as the resident sees it. */
 export type ResidentOrder = OrderBase & {
-  vendor: { id: string; name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
+  vendor: Pin & { id: string; name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
   rider: { name: string; phone: string | null; riderProfile: { vehicleType: VehicleType; plateNumber: string | null } | null } | null;
   checkout: {
     id: string;
     paymentMethod: PaymentMethod;
     paymentStatus: PaymentStatus;
     deliveryAddress: string | null;
+    deliveryLat: number | null;
+    deliveryLng: number | null;
     notes: string | null;
     total: string;
     createdAt: string;
@@ -202,10 +223,13 @@ export type RiderJob = {
   status: OrderStatus;
   deliveryFee: string;
   createdAt: string;
-  vendor: { name: string; address: string };
+  vendor: Pin & { name: string; address: string };
   items: { quantity: number }[];
-  checkout: { deliveryAddress: string | null };
+  checkout: { deliveryAddress: string | null; deliveryLat: number | null; deliveryLng: number | null };
 };
+
+/** One page of open jobs from GET /rider/jobs */
+export type JobsPage = { online: boolean; approved: boolean; jobs: RiderJob[]; total: number; nextOffset: number | null };
 
 export type RiderDelivery = {
   id: string;
@@ -213,10 +237,12 @@ export type RiderDelivery = {
   subtotal: string;
   deliveryFee: string;
   readyAt: string | null;
-  vendor: { name: string; address: string; owner: { phone: string | null } };
+  vendor: Pin & { name: string; address: string; owner: { phone: string | null } };
   items: { id: string; name: string; quantity: number }[];
   checkout: {
     deliveryAddress: string | null;
+    deliveryLat: number | null;
+    deliveryLng: number | null;
     notes: string | null;
     paymentMethod: PaymentMethod;
     paymentStatus: PaymentStatus;

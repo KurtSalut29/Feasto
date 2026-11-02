@@ -2,6 +2,7 @@ import { CalendarDays, Store } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
+import { formatDistance } from "@/lib/geo";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { StoreSummary } from "@/lib/types";
 import { FavoriteButton } from "./favorite-button";
@@ -33,11 +34,48 @@ export function OpenBadge({ isOpen, opensAt }: { isOpen: boolean; opensAt?: stri
   );
 }
 
+/** A small store card for the home screen's sideways rows. */
+export function StoreTile({ store, href }: { store: StoreSummary; href: string }) {
+  return (
+    <article className="group relative w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-white transition hover:shadow-[0_12px_28px_-16px_rgba(31,45,61,0.35)] has-focus-visible:outline-2 has-focus-visible:outline-brand-500">
+      <div className="relative">
+        <StoreCover imageUrl={store.imageUrl} className={`aspect-[4/3] ${store.isOpen ? "" : "opacity-60 grayscale"}`} />
+        {!store.isOpen && (
+          <span className="absolute top-2 left-2 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-gray-700 shadow-sm">Closed</span>
+        )}
+      </div>
+      <div className="p-2.5">
+        <h3 className="truncate text-sm font-semibold leading-snug text-ink">
+          <Link href={href} className="outline-none after:absolute after:inset-0 after:content-['']">
+            {store.name}
+          </Link>
+        </h3>
+        <p className="mt-1 truncate text-xs text-muted">
+          {store.distanceKm !== null && <span className="font-medium text-ink">{formatDistance(store.distanceKm)} · </span>}
+          {STORE_TYPE_LABEL[store.storeType]}
+        </p>
+        <RatingBadge rating={store.rating} count={store.ratingCount} className="mt-1.5" />
+      </div>
+    </article>
+  );
+}
+
 /**
  * A store in the browse list. The whole card opens the store; the heart sits on top of
  * the photo as its own button (a button can't go inside a link, so the link is stretched).
  */
-export function StoreCard({ store, href, showFavorite = true }: { store: StoreSummary; href: string; showFavorite?: boolean }) {
+export function StoreCard({
+  store,
+  href,
+  showFavorite = true,
+  distance = null,
+}: {
+  store: StoreSummary;
+  href: string;
+  showFavorite?: boolean;
+  /** Kilometres from the resident's delivery address, when both have a map pin */
+  distance?: number | null;
+}) {
   return (
     <article className="group relative overflow-hidden rounded-2xl border border-line bg-white transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-16px_rgba(31,45,61,0.35)] has-focus-visible:outline-2 has-focus-visible:outline-brand-500">
       <div className="relative">
@@ -62,6 +100,7 @@ export function StoreCard({ store, href, showFavorite = true }: { store: StoreSu
           <RatingBadge rating={store.rating} count={store.ratingCount} className="shrink-0" />
         </div>
         <p className="mt-0.5 truncate text-sm text-muted">
+          {distance !== null && <span className="font-medium text-ink">{formatDistance(distance)} · </span>}
           {STORE_TYPE_LABEL[store.storeType]} · {store.address}
         </p>
         {store.matchedDishes.length > 0 ? (

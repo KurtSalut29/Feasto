@@ -3,6 +3,7 @@
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,15 +12,28 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { pinOf, type LatLng } from "@/lib/geo";
 import type { Address } from "@/lib/types";
 
-function AddressDialog({ address, onClose, onSaved }: { address?: Address; onClose: () => void; onSaved: () => void }) {
+function AddressDialog({
+  address,
+  near,
+  onClose,
+  onSaved,
+}: {
+  address?: Address;
+  /** Where the map starts for a new address: another saved address */
+  near: LatLng | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [values, setValues] = useState({
     label: address?.label ?? "Home",
     details: address?.details ?? "",
     landmark: address?.landmark ?? "",
     isDefault: address?.isDefault ?? false,
   });
+  const [pin, setPin] = useState<LatLng | null>(address ? pinOf(address.latitude, address.longitude) : null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -27,9 +41,10 @@ function AddressDialog({ address, onClose, onSaved }: { address?: Address; onClo
   async function save(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
+    const body = { ...values, ...(pin && { latitude: pin.lat, longitude: pin.lng }) };
     const result = address
-      ? await apiRequest(`/me/addresses/${address.id}`, { method: "PATCH", body: values })
-      : await apiRequest("/me/addresses", { method: "POST", body: values });
+      ? await apiRequest(`/me/addresses/${address.id}`, { method: "PATCH", body })
+      : await apiRequest("/me/addresses", { method: "POST", body });
     setSaving(false);
     if (!result.ok) {
       setError(result.fieldErrors ? undefined : result.error);
@@ -65,6 +80,14 @@ function AddressDialog({ address, onClose, onSaved }: { address?: Address; onClo
           onChange={(e) => setValues((v) => ({ ...v, landmark: e.target.value }))}
           placeholder="Optional, e.g. Beside the blue gate"
           error={fieldErrors.landmark?.[0]}
+        />
+        <LocationPicker
+          value={pin}
+          onChange={setPin}
+          near={near}
+          label="Pin for the rider"
+          hint="Move the map so the pin is on your door. Riders use it to find you."
+          error={fieldErrors.latitude?.[0]}
         />
         <SwitchField
           label="Default address"
@@ -116,6 +139,16 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
                     </div>
                     <p className="mt-0.5 text-sm text-ink">{address.details}</p>
                     {address.landmark && <p className="text-sm text-muted">{address.landmark}</p>}
+                    {address.latitude == null ? (
+                      <button type="button" onClick={() => setEditing(address)} className="mt-1 text-xs font-semibold text-amber-700 hover:underline">
+                        No map pin yet. Add one so riders find you.
+                      </button>
+                    ) : (
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-700">
+                        <MapPin className="size-3.5" aria-hidden />
+                        Pinned on the map
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0">
                     <button
@@ -148,7 +181,14 @@ export function AddressManager({ addresses }: { addresses: Address[] }) {
           </Button>
         </>
       )}
-      {editing && <AddressDialog address={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} onSaved={done} />}
+      {editing && (
+        <AddressDialog
+          address={editing === "new" ? undefined : editing}
+          near={addresses.map((a) => pinOf(a.latitude, a.longitude)).find(Boolean) ?? null}
+          onClose={() => setEditing(null)}
+          onSaved={done}
+        />
+      )}
     </>
   );
 }

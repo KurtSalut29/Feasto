@@ -10,16 +10,20 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime, formatPeso } from "@/lib/format";
+import { pinOf } from "@/lib/geo";
 import { VEHICLE_LABEL } from "@/lib/labels";
 import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { ResidentOrder } from "@/lib/types";
+import type { OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
 
 export const metadata: Metadata = { title: "Order" };
 
 type RiderLocation = { lat: number; lng: number; at: string } | null;
+
+/** A delivery shows its map from the moment the store accepts it until it arrives. */
+const ON_THE_WAY: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
 
 export default function OrderPage({ params }: PageProps<"/resident/orders/[id]">) {
   return (
@@ -104,7 +108,15 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </Section>
         )}
 
-        {order.status === "PICKED_UP" && <RiderTracking orderId={order.id} initial={riderLocation} />}
+        {order.fulfillment === "DELIVERY" && ON_THE_WAY.includes(order.status) && (
+          <RiderTracking
+            orderId={order.id}
+            initial={riderLocation}
+            store={pinOf(order.vendor.latitude, order.vendor.longitude)}
+            home={pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng)}
+            pickedUp={order.status === "PICKED_UP"}
+          />
+        )}
 
         {order.rider && !dropped && (
           <Section title="Your rider">

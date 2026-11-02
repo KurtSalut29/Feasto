@@ -1,34 +1,40 @@
-import { Bike, MapPin, Package, Power, Store } from "lucide-react";
+import { ArrowRight, Bike, Wallet } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, timeAgo } from "@/lib/format";
+import { formatPeso, greeting, todayLabel } from "@/lib/format";
+import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { RiderDelivery, RiderJob } from "@/lib/types";
-import { AcceptJobButton } from "./accept-job-button";
+import type { JobsPage, RiderDelivery } from "@/lib/types";
+import { JobsPreview } from "./jobs-preview";
 
-export const metadata: Metadata = { title: "Jobs" };
+export const metadata: Metadata = { title: "Home" };
 
-export default function RiderJobsPage() {
+/** How many jobs Home shows; the rest are one tap away on the jobs list */
+const PREVIEW_SIZE = 3;
+
+type Totals = { today: { count: number; earnings: number }; allTime: { count: number; earnings: number } };
+
+export default function RiderHomePage() {
   return (
     <Suspense fallback={<MobileSkeleton />}>
-      <RiderJobs />
+      <RiderHome />
     </Suspense>
   );
 }
 
-async function RiderJobs() {
+async function RiderHome() {
   const user = await requireRole("RIDER");
+  const firstName = user.name.split(" ")[0];
   const profile = user.riderProfile;
   if (profile && profile.status !== "APPROVED") {
     return (
       <>
-        <MobileHeading title="Jobs" subtitle="Delivery orders waiting for a rider." />
+        <MobileHeading title={`Hi, ${firstName}!`} subtitle="Welcome to Feasto for riders." />
         <ApprovalNotice
           status={profile.status}
           reviewNote={profile.reviewNote}
@@ -39,88 +45,60 @@ async function RiderJobs() {
     );
   }
 
-  const [{ online, jobs }, { order: active }] = await Promise.all([
-    serverApi<{ online: boolean; jobs: RiderJob[] }>("/rider/jobs"),
+  const [jobs, { order: active }, { totals }] = await Promise.all([
+    serverApi<JobsPage>(`/rider/jobs?limit=${PREVIEW_SIZE}`),
     serverApi<{ order: RiderDelivery | null }>("/rider/active"),
+    serverApi<{ totals: Totals }>("/rider/history"),
   ]);
 
   return (
     <>
-      <MobileHeading title="Jobs" subtitle="New jobs appear here live." />
+      <div className="mb-4">
+        <p className="text-xs font-semibold tracking-wider text-brand-700 uppercase">{todayLabel()}</p>
+        <h1 className="text-[22px] font-bold tracking-tight text-ink">
+          {greeting()}, {firstName}!
+        </h1>
+      </div>
+
+      {/* Today at a glance */}
+      <Link
+        href="/rider/history"
+        className="mb-4 flex items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_16px_32px_-18px_rgba(178,58,0,0.7)]"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+          <Wallet className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-white/80">Earned today</p>
+          <p className="text-2xl leading-tight font-bold">{formatPeso(totals.today.earnings)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-2xl leading-tight font-bold">{totals.today.count}</p>
+          <p className="text-xs text-white/80">{totals.today.count === 1 ? "delivery" : "deliveries"}</p>
+        </div>
+      </Link>
 
       {active && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl bg-brand-50 p-4">
-          <Bike className="size-6 shrink-0 text-brand-600" aria-hidden />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-ink">You have a delivery in progress</p>
-            <p className="truncate text-sm text-muted">{active.vendor.name}</p>
+        <Link href="/rider/active" className="mb-4 block rounded-2xl border-2 border-brand-500 bg-white p-4 transition hover:bg-brand-50/40">
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex items-center gap-2 text-xs font-semibold tracking-wider text-brand-700 uppercase">
+              <Bike className="size-4" aria-hidden />
+              Current delivery
+            </p>
+            <Badge tone={STATUS_TONE[active.status]}>{statusLabel(active.status, "DELIVERY")}</Badge>
           </div>
-          <ButtonLink href="/rider/active" className="h-9 px-4 text-sm">
-            Open
-          </ButtonLink>
-        </div>
+          <p className="mt-2 font-semibold text-ink">
+            {active.vendor.name} <span className="font-normal text-muted">· {orderCode(active.id)}</span>
+          </p>
+          <p className="truncate text-sm text-muted">To {active.checkout.deliveryAddress}</p>
+          <p className="mt-3 flex items-center gap-1 text-sm font-semibold text-brand-700">
+            Continue delivery
+            <ArrowRight className="size-4" aria-hidden />
+          </p>
+        </Link>
       )}
 
-      {!online ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-line p-4">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-canvas text-muted">
-            <Power className="size-5" aria-hidden />
-          </span>
-          <div>
-            <p className="font-semibold text-ink">You&apos;re offline</p>
-            <p className="text-sm text-muted">Turn on the Online switch above to see delivery jobs.</p>
-          </div>
-        </div>
-      ) : jobs.length === 0 ? (
-        <EmptyState Icon={Package} title="No jobs right now" text="Stay online. New delivery orders show up here the moment a store accepts them." />
-      ) : (
-        <ul className="space-y-3">
-          {jobs.map((job) => {
-            const items = job.items.reduce((n, i) => n + i.quantity, 0);
-            return (
-              <li key={job.id} className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_8px_24px_-20px_rgba(31,45,61,0.5)]">
-                <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas/60 px-4 py-3">
-                  <div>
-                    <p className="text-xs font-medium text-muted">You earn</p>
-                    <p className="text-xl leading-tight font-bold text-ink">{formatPeso(job.deliveryFee)}</p>
-                  </div>
-                  <Badge tone={job.status === "READY" ? "success" : "neutral"}>{job.status === "READY" ? "Ready now" : "Being prepared"}</Badge>
-                </div>
-                <div className="px-4 py-3">
-                  {/* The route: store at the top, customer at the bottom, joined by a dashed line */}
-                  <ol className="relative space-y-3 text-sm before:absolute before:top-5 before:bottom-5 before:left-[13px] before:border-l-2 before:border-dashed before:border-line">
-                    <li className="relative flex gap-3">
-                      <span className="z-10 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 ring-4 ring-white">
-                        <Store className="size-3.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs text-muted">Pick up at</span>
-                        <span className="block font-semibold text-ink">{job.vendor.name}</span>
-                        <span className="block text-muted">{job.vendor.address}</span>
-                      </span>
-                    </li>
-                    <li className="relative flex gap-3">
-                      <span className="z-10 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white ring-4 ring-white">
-                        <MapPin className="size-3.5" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-xs text-muted">Deliver to</span>
-                        <span className="block text-ink">{job.checkout.deliveryAddress}</span>
-                      </span>
-                    </li>
-                  </ol>
-                  <p className="mt-3 text-xs text-gray-500">
-                    {items} {items === 1 ? "item" : "items"} · ordered {timeAgo(job.createdAt)}
-                  </p>
-                  <div className="mt-3">
-                    {active ? <p className="text-center text-sm text-muted">Finish your current delivery first.</p> : <AcceptJobButton orderId={job.id} />}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active)} />
     </>
   );
 }

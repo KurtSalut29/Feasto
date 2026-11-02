@@ -58,7 +58,7 @@ async function AdminOverview() {
   const [stats, { days }, { stores }, pendingStores, pendingRiders, live] = await Promise.all([
     serverApi<Overview>("/admin/overview"),
     serverApi<{ days: SalesDay[] }>("/admin/sales?days=14"),
-    serverApi<{ stores: StoreSummary[] }>("/stores"),
+    serverApi<{ stores: StoreSummary[] }>("/stores?sort=rating&limit=200"),
     serverApi<{ items: PendingStore[] }>("/admin/approvals?kind=stores&status=PENDING"),
     serverApi<{ items: PendingRider[] }>("/admin/approvals?kind=riders&status=PENDING"),
     serverApi<{ orders: LiveOrder[] }>("/admin/orders?group=active"),

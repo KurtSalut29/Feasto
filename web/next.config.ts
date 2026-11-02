@@ -13,6 +13,20 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // Phones open the dev server through an HTTPS tunnel (npm run tunnel); allow its address
+  allowedDevOrigins: ["*.trycloudflare.com"],
+  // The service worker must never be served from a cache, or phones would keep an old copy
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+    ];
+  },
   // The browser only talks to this Next.js app. Requests to /api/* are forwarded to the
   // Nginx load balancer, so the login cookie stays on this site and no CORS setup is needed.
   async rewrites() {

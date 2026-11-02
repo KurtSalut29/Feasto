@@ -1,6 +1,7 @@
 import { Bike, IdCard, KeyRound, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { InstallAppRow } from "@/components/app/install-app";
 import { LogoutButton } from "@/components/app/logout-button";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { ProfileCard, Row, RowGroup } from "@/components/app/profile-parts";
@@ -44,6 +45,7 @@ async function RiderAccount() {
             <Row Icon={IdCard} label="Approval status" value={<ApprovalBadge status={profile.status} />} />
           </RowGroup>
         )}
+        <InstallAppRow />
         <RowGroup title="Settings">
           <Row Icon={UserPen} label="Edit profile" href="/rider/profile" />
           <Row Icon={KeyRound} label="Change password" href="/rider/password" />

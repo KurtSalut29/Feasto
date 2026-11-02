@@ -34,7 +34,7 @@ function Tabs({ role, pathname }: { role: MobileRole; pathname: string | null })
       aria-label="Main"
       className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
-      <ul className="grid h-16 grid-cols-4">
+      <ul className={`grid h-16 ${items.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
         {items.map((item) => {
           const active = item.href === current;
           return (

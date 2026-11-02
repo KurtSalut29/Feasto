@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ROLE_HOME } from "@/lib/roles";
+import { InstallBanner } from "./install-app";
 import { LiveUpdates } from "./live-updates";
 import { NotificationBell } from "./notification-bell";
 import { TabBar } from "./tab-bar";
@@ -24,7 +25,8 @@ export function MobileShell({
     <LiveUpdates>
       <div className="min-h-dvh bg-canvas">
         <div className="relative mx-auto flex min-h-dvh max-w-[440px] flex-col bg-white sm:border-x sm:border-line sm:shadow-[0_0_40px_rgba(16,24,40,0.06)]">
-          <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-line bg-white/95 px-4 backdrop-blur">
+          {/* box-content: the 56px bar sits below the phone's status bar when installed as an app */}
+          <header className="sticky top-0 z-20 box-content flex h-14 items-center justify-between gap-3 border-b border-line bg-white/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur">
             <Link href={ROLE_HOME[role]} className="rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500">
               {/* Sized by width so the browser's rounding never disagrees with Next.js */}
               <Image src="/Logo/feasto-logo.png" alt="Feasto" width={95} height={28} className="h-auto w-[95px]" priority />
@@ -35,8 +37,11 @@ export function MobileShell({
             </div>
           </header>
 
-          {/* Bottom padding keeps content clear of the tab bar */}
-          <main className="flex-1 px-4 pt-5 pb-28">{children}</main>
+          {/* Bottom padding keeps content clear of the tab bar (and the iPhone's home bar below it) */}
+          <main className="flex-1 px-4 pt-5 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+            <InstallBanner />
+            {children}
+          </main>
 
           <TabBar role={role} />
         </div>

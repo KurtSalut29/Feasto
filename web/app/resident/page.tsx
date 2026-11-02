@@ -1,14 +1,15 @@
-import { CalendarDays, ChevronRight, Heart, MapPin, Search, SearchX, Store } from "lucide-react";
+import { ChevronRight, MapPin, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
-import { StoreCard } from "@/components/app/store-card";
+import { StoreTile } from "@/components/app/store-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
-import { STORE_TYPE_OPTIONS } from "@/lib/store-types";
-import type { Address, StoreSummary, StoreType } from "@/lib/types";
+import type { Address, StoreSections, StoreSummary } from "@/lib/types";
+import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreChips, StoreSearch } from "./stores/store-browse";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -20,38 +21,21 @@ export default function ResidentHomePage({ searchParams }: PageProps<"/resident"
   );
 }
 
+/**
+ * Home is a short page however many stores Feasto has: a few stores per row (order again,
+ * near you, top rated, saved), each row scrolling sideways, and "See all" for the full list.
+ */
 async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "searchParams">) {
-  const user = await requireRole("RESIDENT");
-  const params = await searchParams;
-  const type = STORE_TYPE_OPTIONS.find((o) => o.value === params.type)?.value as StoreType | undefined;
-  const q = typeof params.q === "string" ? params.q.trim() : "";
-  const bookable = params.reservations === "1";
-  const saved = params.favorites === "1";
+  // Searches and filters live on the store list now; old links like /resident?q=adobo go there
+  const old = filterQuery(readFilters(await searchParams)).toString();
+  if (old) redirect(`/resident/stores?${old}`);
 
-  const query = new URLSearchParams({
-    ...(type && { type }),
-    ...(q && { q }),
-    ...(bookable && { reservations: "1" }),
-    ...(saved && { favorites: "1" }),
-  });
-  const [{ stores }, { addresses }] = await Promise.all([
-    serverApi<{ stores: StoreSummary[] }>(`/stores?${query}`),
+  const user = await requireRole("RESIDENT");
+  const [sections, { addresses }] = await Promise.all([
+    serverApi<StoreSections>("/stores/sections"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
   const address = addresses.find((a) => a.isDefault);
-  const chipHref = (value?: string, reservations = bookable, favorites = saved) => {
-    const next = new URLSearchParams({
-      ...(value && { type: value }),
-      ...(q && { q }),
-      ...(reservations && { reservations: "1" }),
-      ...(favorites && { favorites: "1" }),
-    }).toString();
-    return next ? `/resident?${next}` : "/resident";
-  };
-  const toggleChip = (on: boolean) =>
-    `flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-      on ? "border-brand-600 bg-brand-600 text-white" : "border-brand-500/40 bg-brand-50 text-brand-700 hover:border-brand-500"
-    }`;
 
   return (
     <>
@@ -65,87 +49,91 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
         <MapPin className="size-5 shrink-0 text-brand-600" aria-hidden />
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-medium text-brand-700">Deliver to {address ? address.label : ""}</span>
-          <span className="block truncate text-sm font-semibold text-ink">
-            {address ? address.details : "Add a delivery address"}
-          </span>
+          <span className="block truncate text-sm font-semibold text-ink">{address ? address.details : "Add a delivery address"}</span>
         </span>
         <ChevronRight className="size-5 text-brand-700" aria-hidden />
       </Link>
 
-      <form action="/resident" className="relative mt-4" role="search">
-        {type && <input type="hidden" name="type" value={type} />}
-        {bookable && <input type="hidden" name="reservations" value="1" />}
-        {saved && <input type="hidden" name="favorites" value="1" />}
-        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search stores or dishes"
-          aria-label="Search stores or dishes"
-          className="h-12 w-full rounded-xl border border-line bg-canvas pr-4 pl-12 text-[15px] outline-none placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15"
-        />
-      </form>
+      <div className="mt-4">
+        <StoreSearch filters={NO_FILTERS} />
+      </div>
+      <div className="mt-3">
+        <StoreChips filters={NO_FILTERS} showAll={false} />
+      </div>
 
-      <nav aria-label="Store types" className="-mx-4 mt-4 overflow-x-auto px-4 [scrollbar-width:none]">
-        <ul className="flex w-max gap-2">
-          <li>
-            <Link href={chipHref(type, bookable, !saved)} aria-pressed={saved} className={toggleChip(saved)}>
-              <Heart className={`size-4 ${saved ? "fill-white" : ""}`} aria-hidden />
-              Saved
-            </Link>
-          </li>
-          <li>
-            <Link href={chipHref(type, !bookable)} aria-pressed={bookable} className={toggleChip(bookable)}>
-              <CalendarDays className="size-4" aria-hidden />
-              Book a table
-            </Link>
-          </li>
-          {[{ value: undefined, label: "All" }, ...STORE_TYPE_OPTIONS].map((option) => {
-            const active = option.value === type;
-            return (
-              <li key={option.label}>
-                <Link
-                  href={chipHref(option.value)}
-                  aria-current={active ? "page" : undefined}
-                  className={`block rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-                    active ? "border-ink bg-ink text-white" : "border-line text-ink hover:border-gray-300"
-                  }`}
-                >
-                  {option.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <h2 className="mt-7 mb-3 text-lg font-semibold text-ink">
-        {q
-          ? `Results for “${q}”`
-          : saved
-            ? "Your saved stores"
-            : bookable
-            ? "Stores that take bookings"
-            : type
-              ? STORE_TYPE_OPTIONS.find((o) => o.value === type)!.label
-              : "Stores near you"}
-      </h2>
-      {stores.length === 0 ? (
-        saved && !q && !type && !bookable ? (
-          <EmptyState Icon={Heart} title="No saved stores yet" text="Tap the heart on any store to keep it here for quick ordering." />
-        ) : q || type || bookable || saved ? (
-          <EmptyState Icon={SearchX} title="Nothing found" text="Try another word or store type." />
-        ) : (
+      {sections.total === 0 ? (
+        <div className="mt-7">
           <EmptyState Icon={Store} title="No stores yet" text="Stores appear here once an admin approves them. Check back soon!" />
-        )
-      ) : (
-        <div className="space-y-3">
-          {stores.map((store) => (
-            <StoreCard key={store.id} store={store} href={`/resident/stores/${store.id}`} />
-          ))}
         </div>
+      ) : (
+        <>
+          <StoreRow title="Order again" stores={sections.orderAgain} />
+          <StoreRow
+            title={sections.hasStartingPoint ? "Near you" : "Stores"}
+            subtitle={`${sections.openCount} open now`}
+            stores={sections.nearby}
+            seeAll={{ href: browseHref(NO_FILTERS), label: `See all ${sections.total}` }}
+          />
+          <StoreRow title="Top rated" stores={sections.topRated} seeAll={{ href: browseHref({ ...NO_FILTERS, sort: "rating" }), label: "See all" }} />
+          <StoreRow
+            title="Your saved stores"
+            stores={sections.saved}
+            seeAll={sections.savedCount > sections.saved.length ? { href: browseHref({ ...NO_FILTERS, saved: true }), label: "See all" } : undefined}
+          />
+
+          <Link
+            href={browseHref(NO_FILTERS)}
+            className="mt-7 flex items-center gap-3 rounded-2xl border border-line px-4 py-3.5 transition hover:bg-canvas"
+          >
+            <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+              <Store className="size-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-ink">Browse all {sections.total} stores</span>
+              <span className="block text-sm text-muted">Search, sort and filter</span>
+            </span>
+            <ChevronRight className="size-5 text-muted" aria-hidden />
+          </Link>
+        </>
       )}
     </>
+  );
+}
+
+/** A titled row of store tiles that scrolls sideways. Rows with no stores aren't shown. */
+function StoreRow({
+  title,
+  subtitle,
+  stores,
+  seeAll,
+}: {
+  title: string;
+  subtitle?: string;
+  stores: StoreSummary[];
+  seeAll?: { href: string; label: string };
+}) {
+  if (stores.length === 0) return null;
+  return (
+    <section className="mt-7" aria-label={title}>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-ink">{title}</h2>
+          {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
+        </div>
+        {seeAll && (
+          <Link href={seeAll.href} className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline">
+            {seeAll.label}
+            <ChevronRight className="size-4" aria-hidden />
+          </Link>
+        )}
+      </div>
+      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        {stores.map((store) => (
+          <li key={store.id} className="contents">
+            <StoreTile store={store} href={`/resident/stores/${store.id}`} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

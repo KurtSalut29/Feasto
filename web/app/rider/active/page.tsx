@@ -7,11 +7,13 @@ import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
+import { pinOf } from "@/lib/geo";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
 import { DeliveryActions } from "./delivery-actions";
 import { LocationSharer } from "./location-sharer";
+import { RiderTripMap } from "./rider-trip-map";
 
 export const metadata: Metadata = { title: "Active delivery" };
 
@@ -82,6 +84,8 @@ async function RiderActive() {
     );
   }
 
+  const store = pinOf(order.vendor.latitude, order.vendor.longitude);
+  const home = pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng);
   const collect = Number(order.subtotal) + Number(order.deliveryFee);
   const cash = order.checkout.paymentMethod === "COD" && order.checkout.paymentStatus !== "PAID";
 
@@ -96,8 +100,9 @@ async function RiderActive() {
       </div>
 
       <div className="space-y-3">
+        <RiderTripMap store={store} home={home} status={order.status} />
         <DeliveryActions orderId={order.id} status={order.status} />
-        {order.status === "PICKED_UP" && <LocationSharer orderId={order.id} />}
+        {order.status === "PICKED_UP" && <LocationSharer orderId={order.id} from={store} to={home} />}
 
         <Stop
           Icon={Store}

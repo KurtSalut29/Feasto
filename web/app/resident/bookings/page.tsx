@@ -88,7 +88,7 @@ async function ResidentBookings() {
           Icon={CalendarDays}
           title="No bookings yet"
           text="Reserve a table at stores that accept bookings."
-          action={<ButtonLink href="/resident?reservations=1">Find a place to book</ButtonLink>}
+          action={<ButtonLink href="/resident/stores?reservations=1">Find a place to book</ButtonLink>}
         />
       ) : (
         <>
@@ -97,7 +97,7 @@ async function ResidentBookings() {
             {upcoming.length === 0 ? (
               <p className="text-sm text-muted">
                 Nothing coming up.{" "}
-                <Link href="/resident?reservations=1" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/resident/stores?reservations=1" className="font-semibold text-brand-700 hover:underline">
                   Book a table
                 </Link>
               </p>

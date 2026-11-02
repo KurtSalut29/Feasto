@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "tunnel": "node scripts/tunnel.mjs"
   },
   "dependencies": {
     "jose": "^6.2.12",
-    "leaflet": "^1.9.4",
     "lucide-react": "^1.59.0",
+    "mapbox-gl": "^3.34.1",
+    "maplibre-gl": "^5.24.0",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -19,7 +21,6 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
-    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

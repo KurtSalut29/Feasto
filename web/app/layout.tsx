@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
+import { ServiceWorkerRegistration } from "@/components/app/install-app";
 import { SIDEBAR_INIT_SCRIPT } from "@/lib/sidebar";
 import "./globals.css";
 
@@ -12,6 +13,16 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: { default: "Feasto", template: "%s · Feasto" },
   description: "Order food and book tables from every vendor in your community.",
+  // Installed on an iPhone home screen: open full screen under the name "Feasto"
+  appleWebApp: { capable: true, title: "Feasto", statusBarStyle: "default" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  // Lets the page reach the screen edges on notched phones; safe-area padding keeps content clear
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -21,7 +32,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
-      <body className="min-h-full font-sans">{children}</body>
+      <body className="min-h-full font-sans">
+        {children}
+        <ServiceWorkerRegistration />
+      </body>
     </html>
   );
 }

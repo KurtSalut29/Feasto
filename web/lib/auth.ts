@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { ROLE_HOME, SESSION_COOKIE } from "./roles";
@@ -29,8 +30,13 @@ export const getCurrentUser = cache(async (): Promise<User> => {
   return user;
 });
 
-/** Like getCurrentUser, but sends users of other roles to their own dashboard. */
+/**
+ * Like getCurrentUser, but sends users of other roles to their own dashboard.
+ * Every signed-in page starts here, so it also tells Next.js the page is rendered per request:
+ * pages show "today", "Good morning" and "5 min ago", which must not be baked in ahead of time.
+ */
 export async function requireRole(role: Role): Promise<User> {
+  await connection();
   const user = await getCurrentUser();
   if (user.role !== role) redirect(ROLE_HOME[user.role]);
   return user;

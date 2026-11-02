@@ -1,10 +1,11 @@
 "use client";
 
-import { CalendarDays, CircleCheck, Clock, Eye, MapPin, Store } from "lucide-react";
+import { CalendarDays, CircleCheck, Clock, Eye, MapPin, MapPinned, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { storeState } from "@/components/app/store-status";
 import { StoreCover } from "@/components/app/store-card";
+import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
 import { formatTime } from "@/lib/format";
+import { pinOf } from "@/lib/geo";
 import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { StoreType } from "@/lib/types";
 
@@ -28,6 +30,8 @@ export type StoreSettings = {
   closesAt: string;
   isTemporarilyClosed: boolean;
   imageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 /** Roughly how the store's card looks on the residents' home page, updated as the vendor types. */
@@ -131,6 +135,21 @@ export function StoreForm({ initial }: { initial: StoreSettings }) {
               onChange={(e) => set("address", e.target.value)}
               autoComplete="street-address"
               error={err("address")}
+            />
+          </div>
+        </Card>
+
+        <Card title="Location on the map" description="Riders use this pin to find you, and residents see how far you are." Icon={MapPinned}>
+          <div className="p-5">
+            <LocationPicker
+              value={pinOf(values.latitude, values.longitude)}
+              onChange={(at) => {
+                set("latitude", at.lat);
+                set("longitude", at.lng);
+              }}
+              label="Store pin"
+              hint="Move the map so the pin is on your store's entrance."
+              error={err("latitude")}
             />
           </div>
         </Card>

@@ -6,7 +6,7 @@ import {
   History,
   House,
   LayoutDashboard,
-  Package,
+  Map as MapIcon,
   ReceiptText,
   Server,
   ShieldCheck,
@@ -28,12 +28,14 @@ export type NavItem = { href: string; label: string; Icon: LucideIcon; also?: st
 export const NAVIGATION: Record<Role, NavItem[]> = {
   RESIDENT: [
     { href: "/resident", label: "Home", Icon: House },
+    { href: "/resident/map", label: "Map", Icon: MapIcon },
     { href: "/resident/orders", label: "Orders", Icon: ReceiptText },
     { href: "/resident/bookings", label: "Bookings", Icon: CalendarDays },
     { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile"] },
   ],
   RIDER: [
-    { href: "/rider", label: "Jobs", Icon: Package },
+    { href: "/rider", label: "Home", Icon: House },
+    { href: "/rider/map", label: "Map", Icon: MapIcon },
     { href: "/rider/active", label: "Active", Icon: Bike },
     { href: "/rider/history", label: "History", Icon: History },
     { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile"] },

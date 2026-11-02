@@ -8,14 +8,16 @@ import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { QuantityControl } from "@/components/app/quantity-control";
 import { RatingBadge, Stars } from "@/components/app/rating";
 import { OpenBadge, StoreCover } from "@/components/app/store-card";
+import { FeastoMap } from "@/components/map/feasto-map";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, formatTime, timeAgo } from "@/lib/format";
+import { distanceKm, formatDistance, pinOf } from "@/lib/geo";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { Cart, MenuItem, StoreDetail, StoreReview } from "@/lib/types";
+import type { Address, Cart, MenuItem, StoreDetail, StoreReview } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Store" };
 
@@ -56,10 +58,14 @@ function DishRow({ item, quantity, storeOpen }: { item: MenuItem; quantity: numb
 async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "params">) {
   await requireRole("RESIDENT");
   const { id } = await params;
-  const [{ store }, { cart }] = await Promise.all([
+  const [{ store }, { cart }, { addresses }] = await Promise.all([
     serverApi<{ store: StoreDetail }>(`/stores/${id}`),
     serverApi<{ cart: Cart }>("/cart"),
+    serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
+  const storePin = pinOf(store.latitude, store.longitude);
+  const address = addresses.find((a) => a.isDefault);
+  const homePin = address ? pinOf(address.latitude, address.longitude) : null;
   const inCart = new Map(cart.groups.flatMap((g) => g.items.map((i) => [i.menuItemId, i.quantity] as const)));
   const sections = [...new Set(store.menuItems.map((i) => i.category))];
   const cartCount = cart.groups.find((g) => g.store.id === store.id)?.items.reduce((n, i) => n + i.quantity, 0) ?? 0;
@@ -104,9 +110,29 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
         </p>
         <p className="flex items-start gap-2">
           <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {store.address}
+          <span>
+            {store.address}
+            {storePin && homePin && address && (
+              <span className="font-medium text-ink">
+                {" "}
+                · {formatDistance(distanceKm(storePin, homePin))} from {address.label}
+              </span>
+            )}
+          </span>
         </p>
       </div>
+      {storePin && (
+        <div className="mt-3 overflow-hidden rounded-2xl border border-line">
+          <FeastoMap
+            pins={[
+              { id: "store", kind: "store", at: storePin, label: store.name },
+              ...(homePin ? [{ id: "home", kind: "home" as const, at: homePin, label: address?.label }] : []),
+            ]}
+            label={`Map showing ${store.name}${homePin ? " and your address" : ""}`}
+            className="h-36"
+          />
+        </div>
+      )}
 
       {store.canBook && (
         <ButtonLink href={`/resident/stores/${store.id}/book`} variant="secondary" className="mt-4 w-full">
@@ -129,7 +155,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
         <div className="mt-2">
           {sections.length > 1 && (
             // Jump links to each menu section; they stay under the top bar while scrolling
-            <nav aria-label="Menu sections" className="sticky top-14 z-10 -mx-4 mt-4 border-b border-line bg-white/95 px-4 py-2.5 backdrop-blur">
+            <nav aria-label="Menu sections" className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 -mx-4 mt-4 border-b border-line bg-white/95 px-4 py-2.5 backdrop-blur">
               <ul className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
                 {sections.map((section) => (
                   <li key={section}>

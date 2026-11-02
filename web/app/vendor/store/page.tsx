@@ -41,6 +41,8 @@ async function VendorStore() {
           closesAt: settings.closesAt,
           isTemporarilyClosed: settings.isTemporarilyClosed,
           imageUrl: settings.imageUrl,
+          latitude: settings.latitude,
+          longitude: settings.longitude,
         }}
       />
     </>

@@ -55,17 +55,19 @@ export function RowGroup({ title, children }: { title?: string; children: ReactN
   );
 }
 
-/** One row. With `href` it's a link to another page. */
+/** One row. With `href` it's a link to another page; with `onClick` it's a button. */
 export function Row({
   Icon,
   label,
   value,
   href,
+  onClick,
 }: {
   Icon: LucideIcon;
   label: string;
   value?: ReactNode;
   href?: string;
+  onClick?: () => void;
 }) {
   const content = (
     <>
@@ -74,7 +76,7 @@ export function Row({
       </span>
       <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">{label}</span>
       {value && <span className="shrink-0 text-sm text-muted">{value}</span>}
-      {href && <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />}
+      {(href || onClick) && <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />}
     </>
   );
   return (
@@ -86,6 +88,14 @@ export function Row({
         >
           {content}
         </Link>
+      ) : onClick ? (
+        <button
+          type="button"
+          onClick={onClick}
+          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-canvas focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500"
+        >
+          {content}
+        </button>
       ) : (
         <div className="flex items-center gap-3 px-4 py-3">{content}</div>
       )}
