@@ -1,4 +1,4 @@
-import { Bike, IdCard, KeyRound, Store, UserPen } from "lucide-react";
+import { Bike, FileBadge, IdCard, KeyRound, Store, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { InstallAppRow } from "@/components/app/install-app";
@@ -7,6 +7,7 @@ import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { ProfileCard, Row, RowGroup } from "@/components/app/profile-parts";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { requireRole } from "@/lib/auth";
+import { formatDate, isExpired } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 
 export const metadata: Metadata = { title: "Account" };
@@ -43,6 +44,14 @@ async function RiderAccount() {
             <Row Icon={Bike} label={profile.vehicleModel ?? "Motorcycle"} value={profile.plateNumber ?? undefined} />
             <Row Icon={Store} label="Rides for" value={profile.vendor?.name ?? "Free rider"} />
             <Row Icon={IdCard} label="Approval status" value={<ApprovalBadge status={profile.status} />} />
+            {profile.licenseExpiresAt && (
+              <Row
+                Icon={FileBadge}
+                label="Driver's license"
+                href="/rider/license"
+                value={isExpired(profile.licenseExpiresAt) ? <span className="font-semibold text-red-700">Expired</span> : `Until ${formatDate(profile.licenseExpiresAt)}`}
+              />
+            )}
           </RowGroup>
         )}
         <InstallAppRow />

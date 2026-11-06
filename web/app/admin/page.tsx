@@ -1,4 +1,4 @@
-import { ArrowRight, Bike, CircleCheck, ClipboardList, ReceiptText, ShieldCheck, Store, Users, Wallet } from "lucide-react";
+import { ArrowRight, Bike, CircleCheck, ClipboardList, FileClock, Hourglass, ReceiptText, ShieldCheck, Store, Users, Wallet, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -27,6 +27,9 @@ type Overview = {
   ridersOnline: number;
   residents: number;
   ordersInProgress: number;
+  stuckOrders: number;
+  renewals: number;
+  expiredDocuments: number;
 };
 type PendingStore = { id: string; name: string; storeType: StoreType; createdAt: string };
 type PendingRider = { id: string; vehicleModel: string | null; createdAt: string; user: { name: string } };
@@ -75,9 +78,31 @@ async function AdminOverview() {
     .sort((a, b) => b.rating! - a.rating! || b.ratingCount - a.ratingCount)
     .slice(0, 5);
 
+  const attention: { href: string; Icon: LucideIcon; text: string }[] = [
+    ...(stats.stuckOrders > 0 ? [{ href: "/admin/stuck", Icon: Hourglass, text: `${plural(stats.stuckOrders, "order")} stuck` }] : []),
+    ...(stats.renewals > 0 ? [{ href: "/admin/documents", Icon: FileClock, text: `${plural(stats.renewals, "renewal")} to check` }] : []),
+    ...(stats.expiredDocuments > 0 ? [{ href: "/admin/documents?view=expired", Icon: FileClock, text: plural(stats.expiredDocuments, "expired document") }] : []),
+  ];
+
   return (
     <>
       <PageHeader eyebrow={todayLabel()} title="Overview" description="What's happening on Feasto right now." />
+
+      {attention.length > 0 && (
+        <nav aria-label="Needs your attention" className="mb-5 flex flex-wrap gap-2">
+          {attention.map(({ href, Icon, text }) => (
+            <Link
+              key={href}
+              href={href}
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100/70 focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <Icon className="size-4" aria-hidden />
+              {text}
+              <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
+          ))}
+        </nav>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

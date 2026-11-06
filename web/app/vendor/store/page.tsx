@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { RenewalPanel } from "@/components/app/renewal-panel";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { StoreStatusPill } from "@/components/app/store-status";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus } from "@/lib/types";
+import type { RenewalInfo } from "@/lib/verification-fields";
 import { StoreForm, type StoreSettings } from "./store-form";
 
 export const metadata: Metadata = { title: "Store settings" };
@@ -22,6 +24,7 @@ async function VendorStore() {
   await requireRole("VENDOR");
   const { store } = await serverApi<{ store: StoreSettings & { status: ApprovalStatus } }>("/vendor/store");
   const { status, ...settings } = store;
+  const permit = status === "APPROVED" || status === "SUSPENDED" ? await serverApi<RenewalInfo>("/documents/renewal") : null;
 
   return (
     <>
@@ -45,6 +48,11 @@ async function VendorStore() {
           longitude: settings.longitude,
         }}
       />
+      {permit && (
+        <div className="mt-6">
+          <RenewalPanel data={permit} />
+        </div>
+      )}
     </>
   );
 }

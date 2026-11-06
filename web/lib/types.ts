@@ -34,10 +34,12 @@ export type User = {
     isTemporarilyClosed: boolean;
     status: ApprovalStatus;
     reviewNote: string | null;
+    permitExpiresAt: string | null;
   } | null;
   riderProfile: {
     vehicleModel: string | null;
     plateNumber: string | null;
+    licenseExpiresAt: string | null;
     status: ApprovalStatus;
     reviewNote: string | null;
     isOnline: boolean;
@@ -180,7 +182,11 @@ export type ResidentOrder = OrderBase & {
 };
 
 /** An order as the store sees it. */
+/** How far a delivery job has spread among riders. */
+export type JobDispatch = "NEW" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYONE";
+
 export type VendorOrder = OrderBase & {
+  dispatch: JobDispatch;
   rider: { name: string; phone: string | null } | null;
   checkout: {
     paymentMethod: PaymentMethod;
@@ -229,7 +235,7 @@ export type RiderJob = {
 };
 
 /** One page of open jobs from GET /rider/jobs */
-export type JobsPage = { online: boolean; approved: boolean; jobs: RiderJob[]; total: number; nextOffset: number | null };
+export type JobsPage = { online: boolean; approved: boolean; licenseExpired?: boolean; jobs: RiderJob[]; total: number; nextOffset: number | null };
 
 export type RiderDelivery = {
   id: string;

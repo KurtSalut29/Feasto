@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkTabs } from "@/components/ui/link-tabs";
 import { requireRole } from "@/lib/auth";
-import { formatDate, timeAgo } from "@/lib/format";
+import { formatDate, isExpired, timeAgo } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { ApprovalStatus, StoreType } from "@/lib/types";
@@ -77,7 +77,7 @@ function Detail({ Icon, label, children }: { Icon: LucideIcon; label: string; ch
 /** "Valid until …", or a warning when the date has passed. */
 function Expiry({ date }: { date: string | null }) {
   if (!date) return <>Not given</>;
-  return new Date(date) < new Date() ? <span className="font-semibold text-red-700">Expired {formatDate(date)}</span> : <>Valid until {formatDate(date)}</>;
+  return isExpired(date) ? <span className="font-semibold text-red-700">Expired {formatDate(date)}</span> : <>Valid until {formatDate(date)}</>;
 }
 
 /** A store's or rider's application: who, the details to check, and the decision buttons. */

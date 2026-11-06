@@ -28,7 +28,7 @@ export function DocumentPreview({ href, kind, label }: { href: string; kind: "im
           <FileText className="size-6" aria-hidden />
         </span>
       )}
-      <span className="min-w-0 flex-1 text-sm font-semibold text-ink">{label}</span>
+      <span className="min-w-0 flex-1 text-sm font-semibold break-words text-ink">{label}</span>
       <span className="flex shrink-0 items-center gap-1 pr-2 text-sm font-semibold text-brand-700">
         Open
         <ExternalLink className="size-3.5" aria-hidden />

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { JobsPage } from "@/lib/types";
 import { JobCard } from "../job-card";
+import { OfflineHint } from "../offline-hint";
 import { useOpenJobs, type JobSort } from "../use-open-jobs";
 
 /** The API sends at most 100 jobs at once */
@@ -27,7 +28,7 @@ export function JobList({ initial, pageSize, busy }: { initial: JobsPage; pageSi
   const [within, setWithin] = useState<number | undefined>();
   const [shown, setShown] = useState(pageSize);
   const { page, loading, position, locationError } = useOpenJobs({ sort, within, limit: shown, online: initial.online, initial });
-  const { online, jobs, total } = page ?? initial;
+  const { online, jobs, total, licenseExpired } = page ?? initial;
 
   const option = (on: boolean) =>
     `rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition ${on ? "bg-ink text-white" : "text-muted hover:text-ink"}`;
@@ -40,7 +41,9 @@ export function JobList({ initial, pageSize, busy }: { initial: JobsPage; pageSi
         </span>
         <div>
           <p className="font-semibold text-ink">You&apos;re offline</p>
-          <p className="text-sm text-muted">Turn on the Online switch above to see delivery jobs.</p>
+          <p className="text-sm text-muted">
+            <OfflineHint licenseExpired={licenseExpired} />
+          </p>
         </div>
       </div>
     );

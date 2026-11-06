@@ -45,6 +45,20 @@ export const STORE_CODE_FIELD: VerificationField = {
   hint: "Riding for a store? Enter its code and the store approves you. Leave blank to be a free rider, approved by Feasto.",
 };
 
+/** An approved store's permit or rider's license, and any renewal, from GET /documents/renewal. */
+export type RenewalInfo = {
+  kind: "permit" | "license";
+  id: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
+  number: string | null;
+  expiresAt: string | null;
+  expired: boolean;
+  document: "image" | "pdf" | null;
+  reviewerName: string;
+  canRenew: boolean;
+  renewal: { id: string; number: string | null; expiresAt: string | null; status: "PENDING" | "REJECTED"; note: string | null; document: "image" | "pdf" | null } | null;
+};
+
 /** What the page knows about an application, from GET /documents/verification. */
 export type Verification = {
   id: string;

@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
+import { ExpiryNotice } from "@/components/app/expiry-notice";
 import { VerificationForm } from "@/components/app/verification-form";
 import { Avatar } from "@/components/app/avatar";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
@@ -117,6 +118,15 @@ async function VendorOverview() {
             </div>
           )}
         </div>
+      )}
+
+      {(store.status === "APPROVED" || store.status === "SUSPENDED") && (
+        <ExpiryNotice
+          date={store.permitExpiresAt}
+          documentName="business permit"
+          href="/vendor/store#permit"
+          blocked="The admin may suspend your store until your renewed permit is approved. Click to send it."
+        />
       )}
 
       {stats.pending > 0 && (

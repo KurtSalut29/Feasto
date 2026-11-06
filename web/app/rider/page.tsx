@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
+import { ExpiryNotice } from "@/components/app/expiry-notice";
 import { VerificationForm } from "@/components/app/verification-form";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,8 @@ async function RiderHome() {
         </h1>
       </div>
 
+      <ExpiryNotice date={profile?.licenseExpiresAt} documentName="driver's license" href="/rider/license" blocked="You can't go online until your renewed license is approved. Tap to send it." />
+
       {/* Today at a glance */}
       <Link
         href="/rider/history"
@@ -109,7 +112,7 @@ async function RiderHome() {
         </Link>
       )}
 
-      <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active)} />
+      <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active)} storeName={profile?.vendor?.name ?? null} />
     </>
   );
 }

@@ -72,12 +72,14 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
         addressId: fulfillment === "DELIVERY" ? addressId : undefined,
         paymentMethod,
         notes,
+        expectedDeliveryFee: cart.deliveryFeePerStore,
         simulatePaymentFailure: paymentMethod === "ONLINE" && simulateFailure,
       },
     });
     if (!result.ok) {
       setPlacing(false);
       setError(result.fieldErrors?.addressId?.[0] ?? result.error);
+      router.refresh(); // the fee or the cart may have changed
       return;
     }
     const { orderIds } = result.data;

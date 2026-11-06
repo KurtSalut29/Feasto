@@ -98,7 +98,7 @@ function OrderCard({ order, column }: { order: VendorOrder; column: Tab }) {
       )}
 
       <div className="mt-3 border-t border-line px-4 py-3">
-        <OrderActions orderId={order.id} status={order.status} fulfillment={order.fulfillment} riderName={order.rider?.name} />
+        <OrderActions orderId={order.id} status={order.status} fulfillment={order.fulfillment} riderName={order.rider?.name} dispatch={order.dispatch} />
       </div>
     </li>
   );

@@ -9,14 +9,14 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_SIDE = 2000;
 
 /** Uploads the signed-in store's permit or rider's license. Throws with a message to show on failure. */
-export async function uploadDocument(file: File) {
+export async function uploadDocument(file: File, url = "/api/documents/mine") {
   let body: Blob = file;
   if (file.type !== "application/pdf") {
     if (!file.type.startsWith("image/")) throw new Error("Choose a photo or a PDF of the document.");
     body = await resizePhoto(file, MAX_SIDE);
   }
   if (body.size > MAX_BYTES) throw new Error("That file is over 5 MB. Try a smaller one.");
-  const response = await fetch("/api/documents/mine", {
+  const response = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": file.type === "application/pdf" ? "application/pdf" : "image/jpeg" },
     body,

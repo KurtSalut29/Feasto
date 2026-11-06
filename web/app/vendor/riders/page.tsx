@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import { Avatar } from "@/components/app/avatar";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { DocumentPreview } from "@/components/app/document-preview";
+import { RenewalReview } from "@/components/app/renewal-review";
 import { ReviewActions } from "@/components/app/review-actions";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatDate, timeAgo } from "@/lib/format";
+import { formatDate, isExpired, timeAgo } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus } from "@/lib/types";
 import { RemoveRiderButton, RiderCode } from "./rider-controls";
@@ -30,6 +31,7 @@ type StoreRider = {
   isOnline: boolean;
   createdAt: string;
   user: { name: string; email: string; phone: string | null };
+  renewal: { id: string; number: string | null; expiresAt: string; submittedAt: string; document: "image" | "pdf" | null } | null;
 };
 
 export default function VendorRidersPage() {
@@ -93,7 +95,7 @@ async function Riders() {
 }
 
 function RiderCard({ rider }: { rider: StoreRider }) {
-  const expired = rider.licenseExpiresAt !== null && new Date(rider.licenseExpiresAt) < new Date();
+  const expired = rider.licenseExpiresAt !== null && isExpired(rider.licenseExpiresAt);
   return (
     <li className="flex flex-col rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="flex items-start gap-3 border-b border-line px-5 py-4">
@@ -129,6 +131,16 @@ function RiderCard({ rider }: { rider: StoreRider }) {
           {rider.user.email}
         </p>
         <DocumentPreview href={`/api/documents/rider/${rider.id}`} kind={rider.document} label="Driver's license" />
+        {rider.renewal && (
+          <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3">
+            <p className="font-semibold text-ink">Renewed license to check</p>
+            <p className="text-ink">
+              {rider.renewal.number} · valid until {formatDate(rider.renewal.expiresAt)}
+            </p>
+            <DocumentPreview href={`/api/documents/renewal/${rider.renewal.id}/file`} kind={rider.renewal.document} label="Renewed driver's license" />
+            <RenewalReview path={`/vendor/rider-renewals/${rider.renewal.id}/review`} name={rider.user.name} />
+          </div>
+        )}
         {rider.reviewNote && rider.status !== "PENDING" && (
           <p className="rounded-xl bg-canvas px-3 py-2 text-muted">
             <span className="font-medium text-ink">Reason:</span> {rider.reviewNote}

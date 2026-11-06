@@ -6,9 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/api-client";
-import type { Fulfillment, OrderStatus } from "@/lib/types";
+import type { Fulfillment, JobDispatch, OrderStatus } from "@/lib/types";
 
 type Step = "accept" | "preparing" | "ready" | "complete";
+
+/** Who a delivery job has reached so far, in the store's words. */
+const LOOKING_FOR_RIDER: Record<JobDispatch, string> = {
+  NEW: "Looking for a rider…",
+  STORE_RIDERS: "Asking your own riders first",
+  NEAREST: "Asking the riders nearest your store",
+  WIDER: "Asking more riders nearby",
+  EVERYONE: "Waiting for any free rider to accept",
+};
 
 /** The next step(s) the store can take for an order. */
 export function OrderActions({
@@ -16,11 +25,13 @@ export function OrderActions({
   status,
   fulfillment,
   riderName,
+  dispatch,
 }: {
   orderId: string;
   status: OrderStatus;
   fulfillment: Fulfillment;
   riderName?: string;
+  dispatch: JobDispatch;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -80,12 +91,16 @@ export function OrderActions({
       </Button>
     );
   else if (status === "READY")
-    actions = <p className="text-sm text-muted">{riderName ? `${riderName} is coming to pick it up` : "Waiting for a rider to accept"}</p>;
+    actions = <p className="text-sm text-muted">{riderName ? `${riderName} is coming to pick it up` : LOOKING_FOR_RIDER[dispatch]}</p>;
   else if (status === "PICKED_UP") actions = <p className="text-sm text-muted">Out for delivery with {riderName}</p>;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {actions}
+      {/* While it's being prepared the store still wants to know who's coming */}
+      {fulfillment === "DELIVERY" && (status === "ACCEPTED" || status === "PREPARING") && (
+        <p className="w-full text-xs text-muted">{riderName ? `${riderName} will pick it up` : LOOKING_FOR_RIDER[dispatch]}</p>
+      )}
       {error && !rejecting && <p className="w-full text-xs text-red-600">{error}</p>}
       <Dialog open={rejecting} onClose={() => setRejecting(false)} title="Decline this order?" description="The resident sees your reason. Any reserved stock goes back to your menu.">
         <form

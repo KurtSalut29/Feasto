@@ -18,6 +18,7 @@ export function ReviewActions({
   id,
   name,
   status,
+  suspendNote = "",
 }: {
   kind: "stores" | "riders";
   /** Where the decision goes: the admin's routes unless a store is reviewing its own rider */
@@ -25,6 +26,8 @@ export function ReviewActions({
   id: string;
   name: string;
   status: ApprovalStatus;
+  /** Filled in as the reason when suspending, e.g. that the permit expired */
+  suspendNote?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<Decision | null>(null);
@@ -60,7 +63,14 @@ export function ReviewActions({
         </Button>
       )}
       {status === "APPROVED" && (
-        <Button variant="secondary" className="h-9 px-4 text-sm text-red-600" onClick={() => setAsking("SUSPENDED")}>
+        <Button
+          variant="secondary"
+          className="h-9 px-4 text-sm text-red-600"
+          onClick={() => {
+            setNote(suspendNote);
+            setAsking("SUSPENDED");
+          }}
+        >
           <Ban className="size-4" aria-hidden />
           Suspend
         </Button>

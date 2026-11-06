@@ -36,7 +36,7 @@ async function RiderJobs() {
         <ArrowLeft className="size-4" aria-hidden />
         Home
       </Link>
-      <MobileHeading title="All jobs" subtitle="Sort and narrow down the open delivery jobs." />
+      <MobileHeading title="All jobs" subtitle={user.riderProfile?.vendor ? `Open delivery jobs from ${user.riderProfile.vendor.name}.` : "The open delivery jobs that have reached you."} />
       <JobList initial={jobs} pageSize={JOBS_PAGE_SIZE} busy={Boolean(active)} />
     </>
   );

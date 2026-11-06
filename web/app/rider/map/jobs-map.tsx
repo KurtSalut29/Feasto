@@ -6,13 +6,14 @@ import { useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
 import { FeastoMap, type MapPin as Pin, type MapView } from "@/components/map/feasto-map";
 import { FullMapFrame, MapButton } from "@/components/map/full-map";
-import { useGeolocation } from "@/components/map/use-my-location";
+import { setDemoPosition, useGeolocation } from "@/components/map/use-my-location";
 import { formatPeso } from "@/lib/format";
 import { DEFAULT_CENTER, distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import { AcceptJobButton } from "../accept-job-button";
 import { groupJobsByStore, groupLabel, groupStores } from "../job-groups";
 import { useJobsChanged } from "../use-open-jobs";
+import { OfflineHint } from "../offline-hint";
 
 /** The most jobs loaded for one view of the map */
 const MAX_JOBS = 100;
@@ -22,7 +23,7 @@ const MAX_JOBS = 100;
  * store is in view are loaded, again after every pan or zoom and whenever jobs change.
  */
 export function JobsMap({ active, online }: { active: RiderDelivery | null; online: boolean }) {
-  const { position: me, error } = useGeolocation();
+  const { position: me, error, simulated } = useGeolocation();
   const [view, setView] = useState<MapView | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focus, setFocus] = useState<LatLng | null>(null);
@@ -72,9 +73,25 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
       />
 
       <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2">
-        <p className="pointer-events-auto rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-ink shadow-md ring-1 ring-black/5">
-          {online ? `${total} open ${total === 1 ? "job" : "jobs"} here` : "You're offline"}
-        </p>
+        <div className="pointer-events-auto flex flex-col items-start gap-2">
+          <p className="rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-ink shadow-md ring-1 ring-black/5">
+            {online ? `${total} open ${total === 1 ? "job" : "jobs"} here` : "You're offline"}
+          </p>
+          {/* For showing Feasto without riding around: the rider counts as being at the map's center */}
+          {online && (
+            <button
+              type="button"
+              onClick={() => {
+                if (simulated) return setDemoPosition(null);
+                const [west, south, east, north] = (view?.bbox ?? "").split(",").map(Number);
+                if (view) setDemoPosition({ lat: (south + north) / 2, lng: (west + east) / 2 });
+              }}
+              className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-md ring-1 ring-black/5 hover:bg-canvas"
+            >
+              {simulated ? "Demo: use my real GPS" : "Demo: place me at the map's center"}
+            </button>
+          )}
+        </div>
         <div className="pointer-events-auto">
           <MapButton
             label="Show where I am"
@@ -85,7 +102,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         </div>
       </div>
       {error === "blocked" && (
-        <p className="absolute inset-x-3 top-16 rounded-xl bg-white px-3 py-2 text-sm text-red-600 shadow-md">
+        <p className="absolute inset-x-3 top-24 rounded-xl bg-white px-3 py-2 text-sm text-red-600 shadow-md">
           Location is blocked. Allow it in your browser settings to see yourself on the map.
         </p>
       )}
@@ -94,7 +111,9 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         {!online && (
           <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5">
             <Power className="size-5 shrink-0 text-muted" aria-hidden />
-            <p className="text-sm text-ink">Turn on the Online switch above to see delivery jobs.</p>
+            <p className="text-sm text-ink">
+              <OfflineHint licenseExpired={data?.licenseExpired} />
+            </p>
           </div>
         )}
         {online && !selected && total > jobs.length && (

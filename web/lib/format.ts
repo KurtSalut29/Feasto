@@ -55,6 +55,14 @@ export function manilaDate(addDays = 0) {
   return new Date(Date.now() + 8 * 3600_000 + addDays * 86400_000).toISOString().slice(0, 10);
 }
 
+/** Days until a date column's date in Manila: 0 is today, negative has passed. */
+export function daysLeft(iso: string) {
+  return Math.round((Date.parse(iso.slice(0, 10)) - Date.parse(manilaDate())) / 86400_000);
+}
+
+/** A permit or license is good through its expiry date and has expired from the day after. */
+export const isExpired = (iso: string) => daysLeft(iso) < 0;
+
 /** "Wednesday, October 21" in Manila */
 export function todayLabel() {
   return new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "long", month: "long", day: "numeric" });

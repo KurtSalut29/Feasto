@@ -12,10 +12,14 @@ import { SidebarNav } from "./sidebar-nav";
 
 type DashboardRole = "VENDOR" | "ADMIN";
 
-/** Which sidebar link shows a live count, and what the count means (read by screen readers). */
-const COUNTED_LINK: Record<DashboardRole, { href: string; meaning: string }> = {
-  VENDOR: { href: "/vendor/orders", meaning: "new orders" },
-  ADMIN: { href: "/admin/approvals", meaning: "waiting for review" },
+/** Which sidebar links show a live count, and what the count means (read by screen readers). */
+const COUNTED_LINKS: Record<DashboardRole, { href: string; meaning: string }[]> = {
+  VENDOR: [{ href: "/vendor/orders", meaning: "new orders" }],
+  ADMIN: [
+    { href: "/admin/approvals", meaning: "waiting for review" },
+    { href: "/admin/documents", meaning: "documents to check" },
+    { href: "/admin/stuck", meaning: "stuck orders" },
+  ],
 };
 
 /**
@@ -23,7 +27,6 @@ const COUNTED_LINK: Record<DashboardRole, { href: string; meaning: string }> = {
  * The sidebar's server parts re-render on every live update, so the counts stay current.
  */
 export function DashboardShell({ role, children }: { role: DashboardRole; children: ReactNode }) {
-  const counted = COUNTED_LINK[role];
   return (
     <LiveUpdates>
       <div className="min-h-dvh bg-canvas">
@@ -39,13 +42,14 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
               <SidebarUser />
             </Suspense>
           }
-          badges={{
-            [counted.href]: (
-              <Suspense fallback={null}>
-                <NavCount role={role} meaning={counted.meaning} />
-              </Suspense>
-            ),
-          }}
+          badges={Object.fromEntries(
+            COUNTED_LINKS[role].map(({ href, meaning }) => [
+              href,
+              <Suspense key={href} fallback={null}>
+                <NavCount role={role} href={href} meaning={meaning} />
+              </Suspense>,
+            ]),
+          )}
         />
         <main className="min-w-0 px-4 py-6 sm:px-8 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
           <div className="relative mx-auto max-w-6xl">
@@ -136,20 +140,24 @@ async function SidebarUser() {
   );
 }
 
-/** Things waiting for this person: new orders for a vendor, sign-ups to review for an admin. */
-const waitingCount = cache(async (role: DashboardRole): Promise<number> => {
+/** Things waiting for this person, by sidebar link: new orders for a vendor, what needs the admin. */
+const waitingCounts = cache(async (role: DashboardRole): Promise<Record<string, number>> => {
   try {
-    if (role === "VENDOR") return (await serverApi<{ pending: number }>("/vendor/overview")).pending;
-    const stats = await serverApi<{ pendingStores: number; pendingRiders: number }>("/admin/overview");
-    return stats.pendingStores + stats.pendingRiders;
+    if (role === "VENDOR") return { "/vendor/orders": (await serverApi<{ pending: number }>("/vendor/overview")).pending };
+    const stats = await serverApi<{ pendingStores: number; pendingRiders: number; renewals: number; expiredDocuments: number; stuckOrders: number }>("/admin/overview");
+    return {
+      "/admin/approvals": stats.pendingStores + stats.pendingRiders,
+      "/admin/documents": stats.renewals + stats.expiredDocuments,
+      "/admin/stuck": stats.stuckOrders,
+    };
   } catch {
-    return 0; // a missing count shouldn't break the whole dashboard
+    return {}; // a missing count shouldn't break the whole dashboard
   }
 });
 
 /** Count pill on a sidebar link; becomes a dot when the sidebar is folded. */
-async function NavCount({ role, meaning }: { role: DashboardRole; meaning: string }) {
-  const count = await waitingCount(role);
+async function NavCount({ role, href, meaning }: { role: DashboardRole; href: string; meaning: string }) {
+  const count = (await waitingCounts(role))[href] ?? 0;
   if (count === 0) return null;
   return (
     <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[11px] font-semibold text-white group-aria-[current=page]:bg-white group-aria-[current=page]:text-brand-700 lg:collapsed:absolute lg:collapsed:top-2 lg:collapsed:right-3 lg:collapsed:ml-0 lg:collapsed:size-2.5 lg:collapsed:min-w-0 lg:collapsed:p-0 lg:collapsed:ring-2 lg:collapsed:ring-white lg:collapsed:group-aria-[current=page]:ring-brand-600">
