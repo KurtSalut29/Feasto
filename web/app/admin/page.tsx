@@ -12,11 +12,10 @@ import { Card, CARD_LINK } from "@/components/ui/card";
 import { percentChange, StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, timeAgo, todayLabel } from "@/lib/format";
-import { VEHICLE_LABEL } from "@/lib/labels";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType, VehicleType } from "@/lib/types";
+import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -30,7 +29,7 @@ type Overview = {
   ordersInProgress: number;
 };
 type PendingStore = { id: string; name: string; storeType: StoreType; createdAt: string };
-type PendingRider = { id: string; vehicleType: VehicleType; createdAt: string; user: { name: string } };
+type PendingRider = { id: string; vehicleModel: string | null; createdAt: string; user: { name: string } };
 type LiveOrder = {
   id: string;
   status: OrderStatus;
@@ -69,7 +68,7 @@ async function AdminOverview() {
   const lastWeek = days.slice(0, 7);
   const queue = [
     ...pendingStores.items.map((s) => ({ id: s.id, name: s.name, kind: "stores" as const, detail: STORE_TYPE_LABEL[s.storeType], createdAt: s.createdAt })),
-    ...pendingRiders.items.map((r) => ({ id: r.id, name: r.user.name, kind: "riders" as const, detail: VEHICLE_LABEL[r.vehicleType], createdAt: r.createdAt })),
+    ...pendingRiders.items.map((r) => ({ id: r.id, name: r.user.name, kind: "riders" as const, detail: r.vehicleModel ?? "Motorcycle", createdAt: r.createdAt })),
   ].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const topStores = stores
     .filter((s) => s.rating !== null)

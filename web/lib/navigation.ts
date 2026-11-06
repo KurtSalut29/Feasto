@@ -45,6 +45,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/vendor/orders", label: "Orders", Icon: ClipboardList, group: "Today" },
     { href: "/vendor/reservations", label: "Reservations", Icon: CalendarDays, group: "Today" },
     { href: "/vendor/menu", label: "Menu", Icon: UtensilsCrossed, group: "Your store" },
+    { href: "/vendor/riders", label: "Riders", Icon: Bike, group: "Your store" },
     { href: "/vendor/store", label: "Store settings", Icon: Store, group: "Your store" },
   ],
   ADMIN: [

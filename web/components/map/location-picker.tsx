@@ -20,6 +20,7 @@ export function LocationPicker({
   label = "Pin on the map",
   hint = "Move the map so the pin sits on the exact spot.",
   error,
+  required = false,
 }: {
   value: LatLng | null;
   onChange: (at: LatLng) => void;
@@ -28,6 +29,8 @@ export function LocationPicker({
   label?: string;
   hint?: string;
   error?: string;
+  /** The form can't be sent without a pin, e.g. a new store's location */
+  required?: boolean;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const engine = useRef<MapEngine | null>(null);
@@ -109,7 +112,7 @@ export function LocationPicker({
         {!ready && !failed && <div aria-hidden className="absolute inset-0 animate-pulse bg-gray-200/70" />}
         {failed ? (
           <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted">
-            The map couldn&apos;t load. You can still save without a pin.
+            {required ? "The map couldn't load. Check your internet connection and try again." : "The map couldn't load. You can still save without a pin."}
           </p>
         ) : (
           // The pin stays in the middle; its tip marks the spot

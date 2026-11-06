@@ -3,8 +3,6 @@ export type Role = "RESIDENT" | "RIDER" | "VENDOR" | "ADMIN";
 /** Review state of a vendor's store or a rider's account. */
 export type ApprovalStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED";
 
-export type VehicleType = "MOTORCYCLE" | "BICYCLE" | "E_BIKE";
-
 export type StoreType =
   | "RESTAURANT"
   | "FAST_FOOD"
@@ -38,11 +36,13 @@ export type User = {
     reviewNote: string | null;
   } | null;
   riderProfile: {
-    vehicleType: VehicleType;
+    vehicleModel: string | null;
     plateNumber: string | null;
     status: ApprovalStatus;
     reviewNote: string | null;
     isOnline: boolean;
+    /** The store this rider works for; null for a free rider */
+    vendor: { name: string } | null;
   } | null;
 };
 
@@ -163,7 +163,7 @@ type OrderBase = {
 /** An order as the resident sees it. */
 export type ResidentOrder = OrderBase & {
   vendor: Pin & { id: string; name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
-  rider: { name: string; phone: string | null; riderProfile: { vehicleType: VehicleType; plateNumber: string | null } | null } | null;
+  rider: { name: string; phone: string | null; riderProfile: { vehicleModel: string | null; plateNumber: string | null } | null } | null;
   checkout: {
     id: string;
     paymentMethod: PaymentMethod;

@@ -4,34 +4,34 @@ import {
   ArrowLeft,
   ArrowRight,
   Bike,
-  IdCard,
   LockKeyhole,
   Mail,
   MapPin,
-  Motorbike,
-  RectangleEllipsis,
   ShoppingBag,
   Smartphone,
   Store,
   UserRound,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { DocumentPicker, uploadDocument } from "@/components/app/document-upload";
+import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/ui/password-strength";
-import { SegmentedControl, type SegmentOption } from "@/components/ui/segmented-control";
 import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import type { LatLng } from "@/lib/geo";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
+import type { Role, StoreType, User } from "@/lib/types";
+import { PERMIT_FIELDS, RIDER_LICENSE_FIELDS, RIDER_PERSONAL_FIELDS, STORE_CODE_FIELD, type VerificationField } from "@/lib/verification-fields";
 import { AUTH_BUTTON } from "../auth-ui";
-import type { Role, StoreType, User, VehicleType } from "@/lib/types";
 
 type SignupRole = Exclude<Role, "ADMIN">;
+type Step = "account" | "store" | "location" | "permit" | "personal" | "license";
 
 const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon }[] = [
   { value: "RESIDENT", label: "Resident", Icon: ShoppingBag },
@@ -39,35 +39,52 @@ const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon }[] = [
   { value: "VENDOR", label: "Vendor", Icon: Store },
 ];
 
-const vehicleOptions: SegmentOption<VehicleType>[] = [
-  { value: "MOTORCYCLE", label: "Motorcycle", Icon: Motorbike },
-  { value: "BICYCLE", label: "Bicycle", Icon: Bike },
-  { value: "E_BIKE", label: "E-bike", Icon: Zap },
-];
+/** The steps of each role's sign-up, short enough that each fits on one screen. */
+const STEPS: Record<SignupRole, Step[]> = {
+  RESIDENT: ["account"],
+  VENDOR: ["account", "store", "location", "permit"],
+  RIDER: ["account", "personal", "license"],
+};
 
-const ACCOUNT_FIELDS = ["name", "email", "phone", "password"] as const;
+const STEP_TEXT: Record<Exclude<Step, "account">, { title: string; subtitle: string }> = {
+  store: { title: "Your store", subtitle: "What residents will see." },
+  location: { title: "Where is your store?", subtitle: "Riders and residents use this pin to find you." },
+  permit: { title: "Your business permit", subtitle: "An admin checks this before your store goes live." },
+  personal: { title: "About you", subtitle: "Feasto keeps these details private." },
+  license: { title: "Your motorcycle and license", subtitle: "Feasto riders all use motorcycles." },
+};
 
-const emptyValues = {
+/** Which fields each step holds, to return to the right step when the server finds a problem. */
+const STEP_FIELDS: Record<Step, string[]> = {
+  account: ["name", "email", "phone", "password"],
+  store: ["storeName", "storeAddress", "storeType"],
+  location: ["latitude", "longitude"],
+  permit: PERMIT_FIELDS.map((f) => f.name),
+  personal: RIDER_PERSONAL_FIELDS.map((f) => f.name),
+  license: [...RIDER_LICENSE_FIELDS, STORE_CODE_FIELD].map((f) => f.name),
+};
+
+const emptyValues: Record<string, string> = {
   name: "",
   email: "",
   phone: "",
   password: "",
   storeName: "",
   storeAddress: "",
-  plateNumber: "",
-  licenseNumber: "",
 };
 
-/** "Step 1 of 2" with a two-part progress bar, for riders and vendors. */
-function StepIndicator({ step }: { step: 1 | 2 }) {
+/** "Step 1 of 3" with a progress bar, for riders and vendors. */
+function StepIndicator({ step, total }: { step: number; total: number }) {
   return (
     <div className="mb-1.5 flex items-center justify-center gap-2.5">
       <span aria-hidden className="flex gap-1">
-        {[1, 2].map((n) => (
-          <span key={n} className={`h-1 w-6 rounded-full transition-colors ${n <= step ? "bg-brand-600" : "bg-line"}`} />
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={`h-1 w-6 rounded-full transition-colors ${i < step ? "bg-brand-600" : "bg-line"}`} />
         ))}
       </span>
-      <span className="text-xs font-semibold tracking-[0.12em] text-brand-700 uppercase">Step {step} of 2</span>
+      <span className="text-xs font-semibold tracking-[0.12em] text-brand-700 uppercase">
+        Step {step} of {total}
+      </span>
     </div>
   );
 }
@@ -102,8 +119,8 @@ function RolePicker({ value, onChange }: { value: SignupRole; onChange: (role: S
   );
 }
 
-/** Quick checks before moving on to step 2. The API still validates everything. */
-function checkAccountFields(values: typeof emptyValues): FieldErrors {
+/** Quick checks before moving on from the account step. The API still validates everything. */
+function checkAccountFields(values: Record<string, string>): FieldErrors {
   const errors: FieldErrors = {};
   if (values.name.trim().length < 2) errors.name = ["Enter your full name."];
   if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) errors.email = ["Enter a valid email address."];
@@ -116,18 +133,19 @@ function checkAccountFields(values: typeof emptyValues): FieldErrors {
 
 export function RegisterForm() {
   const [role, setRole] = useState<SignupRole>("RESIDENT");
-  // Vendors and riders fill in their account first, then their store or vehicle,
-  // so each step fits on one screen.
-  const [step, setStep] = useState<"account" | "details">("account");
+  const [step, setStep] = useState<Step>("account");
   const [values, setValues] = useState(emptyValues);
-  const [vehicleType, setVehicleType] = useState<VehicleType | "">("");
   const [storeType, setStoreType] = useState<StoreType | "">("");
   const [acceptsReservations, setAcceptsReservations] = useState(false);
+  const [pin, setPin] = useState<LatLng | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  const hasDetailsStep = role === "VENDOR" || role === "RIDER";
+  const steps = STEPS[role];
+  const stepIndex = steps.indexOf(step);
+  const isLastStep = stepIndex === steps.length - 1;
 
   // Editing a field clears its error message
   function clearError(name: string) {
@@ -139,11 +157,6 @@ export function RegisterForm() {
     clearError(event.target.name);
   }
 
-  function chooseVehicle(type: VehicleType) {
-    setVehicleType(type);
-    clearError("vehicleType");
-  }
-
   // Picking a store type also sets the usual reservations choice for it; the vendor can still flip it.
   function chooseStoreType(type: StoreType) {
     setStoreType(type);
@@ -151,11 +164,42 @@ export function RegisterForm() {
     clearError("storeType");
   }
 
+  /** What's missing on this step. The API checks the details again when the form is sent. */
+  function checkStep(): FieldErrors {
+    const blank = (fields: VerificationField[]) =>
+      Object.fromEntries(fields.filter((f) => !f.optional && !values[f.name]?.trim()).map((f) => [f.name, [f.missing ?? "Fill this in."]]));
+    if (step === "account") return checkAccountFields(values);
+    if (step === "store") {
+      return {
+        ...(values.storeName.trim().length < 2 && { storeName: ["Enter your store's name."] }),
+        ...(values.storeAddress.trim().length < 5 && { storeAddress: ["Enter your store's address."] }),
+        ...(!storeType && { storeType: ["Choose your store type."] }),
+      };
+    }
+    if (step === "location") return pin ? {} : { latitude: ["Move the map so the pin sits on your store."] };
+    const documentMissing = documentFile ? {} : { document: [`Upload a photo or PDF of your ${step === "permit" ? "business permit" : "driver's license"}.`] };
+    if (step === "permit") return { ...blank(PERMIT_FIELDS), ...documentMissing };
+    if (step === "personal") return blank(RIDER_PERSONAL_FIELDS);
+    return { ...blank(RIDER_LICENSE_FIELDS), ...documentMissing };
+  }
+
   function requestBody() {
-    const { name, email, phone, password, storeName, storeAddress, plateNumber, licenseNumber } = values;
+    const { name, email, phone, password } = values;
     const account = { role, name, email, phone, password };
-    if (role === "VENDOR") return { ...account, storeName, storeAddress, storeType, acceptsReservations };
-    if (role === "RIDER") return { ...account, vehicleType, plateNumber, licenseNumber };
+    const pick = (fields: VerificationField[]) => Object.fromEntries(fields.map((f) => [f.name, values[f.name] ?? ""]));
+    if (role === "VENDOR") {
+      return {
+        ...account,
+        storeName: values.storeName,
+        storeAddress: values.storeAddress,
+        storeType,
+        acceptsReservations,
+        latitude: pin?.lat,
+        longitude: pin?.lng,
+        ...pick(PERMIT_FIELDS),
+      };
+    }
+    if (role === "RIDER") return { ...account, ...pick([...RIDER_PERSONAL_FIELDS, ...RIDER_LICENSE_FIELDS, STORE_CODE_FIELD]) };
     return account;
   }
 
@@ -163,26 +207,29 @@ export function RegisterForm() {
     event.preventDefault();
     setError(undefined);
 
-    if (hasDetailsStep && step === "account") {
-      const errors = checkAccountFields(values);
-      setFieldErrors(errors);
-      if (Object.keys(errors).length === 0) setStep("details");
+    const errors = checkStep();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    if (!isLastStep) {
+      setStep(steps[stepIndex + 1]);
       return;
     }
 
     setSubmitting(true);
-    setFieldErrors({});
     const result = await apiRequest<{ user: User }>("/auth/register", { method: "POST", body: requestBody() });
 
     if (!result.ok) {
       // Field problems are shown under each field, so only show the banner for other errors
       setError(result.fieldErrors ? undefined : result.error);
       setFieldErrors(result.fieldErrors ?? {});
-      // Go back to step 1 if the problem is there (e.g. email already used)
-      if (ACCOUNT_FIELDS.some((field) => result.fieldErrors?.[field])) setStep("account");
+      // Go back to the first step with a problem (e.g. email already used)
+      const wrong = steps.find((s) => STEP_FIELDS[s].some((field) => result.fieldErrors?.[field]));
+      if (wrong) setStep(wrong);
       setSubmitting(false);
       return;
     }
+    // The account now exists. If this upload fails, Home asks for the document again.
+    if (documentFile) await uploadDocument(documentFile).catch(() => undefined);
     // A full page load (not router.replace) after signing in: Next.js keeps visited pages
     // alive in the background, so this clears the old form, its loading state and the
     // typed password, and makes the next visit to /login or /register check the new session.
@@ -191,21 +238,44 @@ export function RegisterForm() {
 
   const fieldError = (name: string) => fieldErrors[name]?.[0];
 
-  if (step === "details") {
+  /** Text boxes for a list of verification details. */
+  const fieldBoxes = (fields: VerificationField[], focusFirst = true) =>
+    fields.map(({ name, label, type, placeholder, Icon, hint, uppercase, optional }, index) => (
+      <TextField
+        key={name}
+        label={label}
+        name={name}
+        type={type ?? "text"}
+        inputMode={type === "tel" ? "tel" : undefined}
+        value={values[name] ?? ""}
+        onChange={update}
+        placeholder={placeholder}
+        icon={Icon}
+        hint={hint}
+        autoCapitalize={uppercase ? "characters" : undefined}
+        required={!optional}
+        autoFocus={focusFirst && index === 0}
+        error={fieldError(name)}
+      />
+    ));
+
+  if (step !== "account") {
     return (
       <DetailsStep
-        title={role === "VENDOR" ? "Your store" : "Your vehicle"}
-        subtitle={
-          role === "VENDOR"
-            ? "An admin reviews new stores first."
-            : "An admin checks your details first."
-        }
+        step={stepIndex + 1}
+        total={steps.length}
+        {...STEP_TEXT[step]}
         error={error}
         submitting={submitting}
-        onBack={() => setStep("account")}
+        isLast={isLastStep}
+        onBack={() => {
+          setError(undefined);
+          setFieldErrors({});
+          setStep(steps[stepIndex - 1]);
+        }}
         onSubmit={handleSubmit}
       >
-        {role === "VENDOR" ? (
+        {step === "store" && (
           <>
             <TextField
               label="Store name"
@@ -246,47 +316,49 @@ export function RegisterForm() {
               onChange={setAcceptsReservations}
             />
           </>
-        ) : (
+        )}
+        {step === "location" && (
+          <LocationPicker
+            value={pin}
+            onChange={(at) => {
+              setPin(at);
+              clearError("latitude");
+            }}
+            label="Pin on the map"
+            required
+            error={fieldError("latitude")}
+          />
+        )}
+        {step === "permit" && (
           <>
-            <SegmentedControl
-              name="vehicleType"
-              legend="Vehicle type"
-              options={vehicleOptions}
-              value={vehicleType}
-              onChange={chooseVehicle}
-              error={fieldError("vehicleType")}
+            {fieldBoxes(PERMIT_FIELDS)}
+            <DocumentPicker
+              label="Photo or PDF of your business permit"
+              hint="JPG, PNG or PDF, up to 5 MB. All the text must be readable."
+              file={documentFile}
+              onChange={(file) => {
+                setDocumentFile(file);
+                clearError("document");
+              }}
+              error={fieldError("document")}
             />
-            {vehicleType === "MOTORCYCLE" && (
-              <>
-                <TextField
-                  label="Plate number"
-                  name="plateNumber"
-                  value={values.plateNumber}
-                  onChange={update}
-                  placeholder="ABC 1234"
-                  icon={RectangleEllipsis}
-                  autoCapitalize="characters"
-                  required
-                  error={fieldError("plateNumber")}
-                />
-                <TextField
-                  label="Driver's license number"
-                  name="licenseNumber"
-                  value={values.licenseNumber}
-                  onChange={update}
-                  placeholder="N01-23-456789"
-                  icon={IdCard}
-                  autoCapitalize="characters"
-                  required
-                  error={fieldError("licenseNumber")}
-                />
-              </>
-            )}
-            {(vehicleType === "BICYCLE" || vehicleType === "E_BIKE") && (
-              <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-muted">
-                No plate or license needed for {vehicleType === "BICYCLE" ? "bicycles" : "e-bikes"}.
-              </p>
-            )}
+          </>
+        )}
+        {step === "personal" && fieldBoxes(RIDER_PERSONAL_FIELDS)}
+        {step === "license" && (
+          <>
+            {fieldBoxes(RIDER_LICENSE_FIELDS)}
+            <DocumentPicker
+              label="Photo of your driver's license"
+              hint="JPG, PNG or PDF, up to 5 MB. All the text must be readable."
+              file={documentFile}
+              onChange={(file) => {
+                setDocumentFile(file);
+                clearError("document");
+              }}
+              error={fieldError("document")}
+            />
+            {fieldBoxes([STORE_CODE_FIELD], false)}
           </>
         )}
       </DetailsStep>
@@ -295,11 +367,17 @@ export function RegisterForm() {
 
   return (
     <>
-      {hasDetailsStep && <StepIndicator step={1} />}
+      {steps.length > 1 && <StepIndicator step={1} total={steps.length} />}
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">Create your account</h1>
 
       <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
-        <RolePicker value={role} onChange={setRole} />
+        <RolePicker
+          value={role}
+          onChange={(next) => {
+            setRole(next);
+            setDocumentFile(null);
+          }}
+        />
 
         {error && <Alert tone="error">{error}</Alert>}
 
@@ -358,11 +436,11 @@ export function RegisterForm() {
             {role === "VENDOR"
               ? "Continue to store details"
               : role === "RIDER"
-                ? "Continue to vehicle details"
+                ? "Continue to rider details"
                 : submitting
                   ? "Creating account…"
                   : "Create account"}
-            {hasDetailsStep && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
+            {steps.length > 1 && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
           </Button>
         </div>
       </form>
@@ -371,25 +449,31 @@ export function RegisterForm() {
 }
 
 function DetailsStep({
+  step,
+  total,
   title,
   subtitle,
   error,
   submitting,
+  isLast,
   onBack,
   onSubmit,
   children,
 }: {
+  step: number;
+  total: number;
   title: string;
   subtitle: string;
   error?: string;
   submitting: boolean;
+  isLast: boolean;
   onBack: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
 }) {
   return (
     <>
-      <StepIndicator step={2} />
+      <StepIndicator step={step} total={total} />
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">{title}</h1>
       <p className="mt-1 text-balance text-center text-[15px] text-muted">{subtitle}</p>
 
@@ -397,11 +481,11 @@ function DetailsStep({
         {error && <Alert tone="error">{error}</Alert>}
         {children}
         <div className="flex gap-3 pt-1">
-          <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to account details">
+          <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to the previous step">
             <ArrowLeft className="size-5" aria-hidden />
           </Button>
           <Button type="submit" loading={submitting} className={`flex-1 ${AUTH_BUTTON}`}>
-            {submitting ? "Creating account…" : "Create account"}
+            {!isLast ? "Continue" : submitting ? "Creating account…" : "Create account"}
           </Button>
         </div>
       </form>

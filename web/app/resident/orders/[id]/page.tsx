@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
-import { VEHICLE_LABEL } from "@/lib/labels";
 import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { OrderStatus, ResidentOrder } from "@/lib/types";
@@ -128,7 +127,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
                 <p className="font-semibold text-ink">{order.rider.name}</p>
                 {order.rider.riderProfile && (
                   <p className="text-sm text-muted">
-                    {VEHICLE_LABEL[order.rider.riderProfile.vehicleType]}
+                    {order.rider.riderProfile.vehicleModel ?? "Motorcycle"}
                     {order.rider.riderProfile.plateNumber && ` · ${order.rider.riderProfile.plateNumber}`}
                   </p>
                 )}

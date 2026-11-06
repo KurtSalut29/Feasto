@@ -11,10 +11,9 @@ import { SearchBox } from "@/components/ui/search-box";
 import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { VEHICLE_LABEL } from "@/lib/labels";
 import { ROLE_LABEL } from "@/lib/roles";
 import { serverApi } from "@/lib/server-api";
-import type { ApprovalStatus, Role, VehicleType } from "@/lib/types";
+import type { ApprovalStatus, Role } from "@/lib/types";
 import { AccountStatusButton } from "./account-status-button";
 
 export const metadata: Metadata = { title: "Users" };
@@ -28,7 +27,7 @@ type UserRow = {
   createdAt: string;
   disabledAt: string | null;
   vendor: { name: string; status: ApprovalStatus } | null;
-  riderProfile: { vehicleType: VehicleType; status: ApprovalStatus } | null;
+  riderProfile: { vehicleModel: string | null; status: ApprovalStatus; vendor: { name: string } | null } | null;
 };
 type UsersResponse = { users: UserRow[]; page: number; pageSize: number; total: number; counts: Partial<Record<Role, number>> };
 
@@ -151,7 +150,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
                       <td className={TD}>
                         {review ? (
                           <div className="min-w-0">
-                            <p className="truncate text-ink">{user.vendor ? user.vendor.name : VEHICLE_LABEL[user.riderProfile!.vehicleType]}</p>
+                            <p className="truncate text-ink">{user.vendor ? user.vendor.name : (user.riderProfile!.vendor?.name ?? "Free rider")}</p>
                             <p className={`text-xs font-medium ${review.status === "APPROVED" ? "text-emerald-700" : review.status === "PENDING" ? "text-amber-700" : "text-red-700"}`}>
                               {APPROVAL[review.status].label}
                             </p>

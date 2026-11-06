@@ -16,11 +16,14 @@ export function ApprovalNotice({
   reviewNote,
   pendingText,
   blockedText,
+  reviewer = "the admin",
 }: {
   status: ApprovalStatus;
   reviewNote: string | null;
   pendingText: string;
   blockedText: string;
+  /** Who gave the reason, e.g. a rider's store */
+  reviewer?: string;
 }) {
   if (status === "APPROVED") return null;
   const { tone, title } = messages[status];
@@ -30,7 +33,7 @@ export function ApprovalNotice({
       {status === "PENDING" ? pendingText : blockedText}
       {reviewNote && status !== "PENDING" && (
         <span className="mt-1 block">
-          <span className="font-medium">Reason from the admin:</span> {reviewNote}
+          <span className="font-medium">Reason from {reviewer}:</span> {reviewNote}
         </span>
       )}
     </Alert>

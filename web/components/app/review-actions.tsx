@@ -14,11 +14,14 @@ type Decision = "APPROVED" | "REJECTED" | "SUSPENDED";
 /** Approve / reject / suspend / reinstate buttons for one store or rider. */
 export function ReviewActions({
   kind,
+  basePath = `/admin/${kind}`,
   id,
   name,
   status,
 }: {
   kind: "stores" | "riders";
+  /** Where the decision goes: the admin's routes unless a store is reviewing its own rider */
+  basePath?: string;
   id: string;
   name: string;
   status: ApprovalStatus;
@@ -32,7 +35,7 @@ export function ReviewActions({
   async function review(decision: Decision, reason?: string) {
     setPending(decision);
     setError(undefined);
-    const result = await apiRequest(`/admin/${kind}/${id}/review`, {
+    const result = await apiRequest(`${basePath}/${id}/review`, {
       method: "POST",
       body: { decision, note: reason },
     });

@@ -1,4 +1,4 @@
-import { Bike, IdCard, KeyRound, UserPen } from "lucide-react";
+import { Bike, IdCard, KeyRound, Store, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { InstallAppRow } from "@/components/app/install-app";
@@ -8,7 +8,6 @@ import { ProfileCard, Row, RowGroup } from "@/components/app/profile-parts";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
-import { VEHICLE_LABEL } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -40,8 +39,9 @@ async function RiderAccount() {
           ]}
         />
         {profile && (
-          <RowGroup title="Vehicle">
-            <Row Icon={Bike} label={VEHICLE_LABEL[profile.vehicleType]} value={profile.plateNumber ?? undefined} />
+          <RowGroup title="Rider details">
+            <Row Icon={Bike} label={profile.vehicleModel ?? "Motorcycle"} value={profile.plateNumber ?? undefined} />
+            <Row Icon={Store} label="Rides for" value={profile.vendor?.name ?? "Free rider"} />
             <Row Icon={IdCard} label="Approval status" value={<ApprovalBadge status={profile.status} />} />
           </RowGroup>
         )}

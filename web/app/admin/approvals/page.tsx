@@ -1,7 +1,9 @@
-import { Bike, CalendarCheck, Mail, MapPin, Phone, ShieldCheck, Store, type LucideIcon } from "lucide-react";
+import { Bike, Building2, CalendarCheck, CalendarClock, Cake, FileBadge, HeartPulse, House, Mail, MapPin, Phone, ShieldCheck, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/app/avatar";
+import { DocumentPreview } from "@/components/app/document-preview";
+import { ReviewActions } from "@/components/app/review-actions";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -9,11 +11,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LinkTabs } from "@/components/ui/link-tabs";
 import { requireRole } from "@/lib/auth";
 import { formatDate, timeAgo } from "@/lib/format";
-import { VEHICLE_LABEL } from "@/lib/labels";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { ApprovalStatus, StoreType, VehicleType } from "@/lib/types";
-import { ReviewActions } from "./review-actions";
+import type { ApprovalStatus, StoreType } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Approvals" };
 
@@ -26,9 +26,31 @@ const STATUS: Record<ApprovalStatus, { label: string; tone: BadgeTone }> = {
 };
 
 type Contact = { name: string; email: string; phone: string | null };
-type Review = { id: string; status: ApprovalStatus; reviewNote: string | null; reviewedAt: string | null; createdAt: string };
-type StoreItem = Review & { name: string; storeType: StoreType; address: string; acceptsReservations: boolean; owner: Contact };
-type RiderItem = Review & { vehicleType: VehicleType; plateNumber: string | null; licenseNumber: string | null; user: Contact };
+type Review = { id: string; status: ApprovalStatus; reviewNote: string | null; reviewedAt: string | null; createdAt: string; document: "image" | "pdf" | null };
+type StoreItem = Review & {
+  name: string;
+  storeType: StoreType;
+  address: string;
+  acceptsReservations: boolean;
+  businessName: string | null;
+  businessPhone: string | null;
+  permitNumber: string | null;
+  permitExpiresAt: string | null;
+  owner: Contact;
+};
+type RiderItem = Review & {
+  vehicleModel: string | null;
+  plateNumber: string | null;
+  licenseNumber: string | null;
+  licenseExpiresAt: string | null;
+  birthDate: string | null;
+  address: string | null;
+  emergencyName: string | null;
+  emergencyPhone: string | null;
+  suspendedByAdmin: boolean;
+  vendor: { name: string } | null;
+  user: Contact;
+};
 type ApprovalsResponse = {
   counts: Record<"stores" | "riders", Record<ApprovalStatus, number>>;
 } & ({ kind: "stores"; items: StoreItem[] } | { kind: "riders"; items: RiderItem[] });
@@ -52,6 +74,12 @@ function Detail({ Icon, label, children }: { Icon: LucideIcon; label: string; ch
   );
 }
 
+/** "Valid until …", or a warning when the date has passed. */
+function Expiry({ date }: { date: string | null }) {
+  if (!date) return <>Not given</>;
+  return new Date(date) < new Date() ? <span className="font-semibold text-red-700">Expired {formatDate(date)}</span> : <>Valid until {formatDate(date)}</>;
+}
+
 /** A store's or rider's application: who, the details to check, and the decision buttons. */
 function Application({
   avatar,
@@ -59,6 +87,7 @@ function Application({
   subtitle,
   item,
   details,
+  document,
   actions,
 }: {
   avatar: ReactNode;
@@ -66,6 +95,7 @@ function Application({
   subtitle: string;
   item: Review;
   details: ReactNode;
+  document: ReactNode;
   actions: ReactNode;
 }) {
   return (
@@ -80,7 +110,8 @@ function Application({
           {STATUS[item.status].label}
         </Badge>
       </div>
-      <dl className="flex-1 space-y-2.5 px-5 py-4">{details}</dl>
+      <dl className="flex-1 space-y-2.5 px-5 pt-4 pb-3">{details}</dl>
+      <div className="px-5 pb-4">{document}</div>
       {item.status !== "PENDING" && item.reviewNote && (
         <p className="mx-5 mb-4 rounded-xl bg-canvas px-3 py-2 text-sm text-muted">
           <span className="font-medium text-ink">Your note:</span> {item.reviewNote}
@@ -111,8 +142,8 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
         title="Approvals"
         description={
           waiting > 0
-            ? `${waiting} ${waiting === 1 ? "application is" : "applications are"} waiting. New stores and riders can't start until you approve them.`
-            : "New stores and riders can't start until you approve them."
+            ? `${waiting} ${waiting === 1 ? "application is" : "applications are"} waiting. New stores and free riders can't start until you approve them. Stores review their own riders.`
+            : "New stores and free riders can't start until you approve them. Stores review their own riders."
         }
       />
 
@@ -166,6 +197,16 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
                       <Detail Icon={CalendarCheck} label="Bookings">
                         {store.acceptsReservations ? "Takes table reservations" : "No reservations"}
                       </Detail>
+                      <Detail Icon={Building2} label="Business">
+                        {store.businessName ?? "Not given"}
+                        {store.businessPhone && ` · ${store.businessPhone}`}
+                      </Detail>
+                      <Detail Icon={FileBadge} label="Permit no.">
+                        {store.permitNumber ?? "Not given"}
+                      </Detail>
+                      <Detail Icon={CalendarClock} label="Permit">
+                        <Expiry date={store.permitExpiresAt} />
+                      </Detail>
                       <Detail Icon={Phone} label="Owner">
                         {store.owner.name} · {store.owner.phone ?? "no phone"}
                       </Detail>
@@ -174,6 +215,7 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
                       </Detail>
                     </>
                   }
+                  document={<DocumentPreview href={`/api/documents/store/${store.id}`} kind={store.document} label="Business permit" />}
                   actions={<ReviewActions kind="stores" id={store.id} name={store.name} status={store.status} />}
                 />
               ))
@@ -182,16 +224,28 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
                   key={rider.id}
                   item={rider}
                   title={rider.user.name}
-                  subtitle={`Rider · ${VEHICLE_LABEL[rider.vehicleType]}`}
+                  subtitle={rider.vendor ? `Rider for ${rider.vendor.name}` : "Free rider"}
                   avatar={<Avatar name={rider.user.name} size="lg" />}
                   details={
                     <>
-                      <Detail Icon={Bike} label="Vehicle">
-                        {VEHICLE_LABEL[rider.vehicleType]}
+                      <Detail Icon={Bike} label="Motorcycle">
+                        {rider.vehicleModel ?? "Not given"}
                         {rider.plateNumber && ` · plate ${rider.plateNumber}`}
                       </Detail>
                       <Detail Icon={ShieldCheck} label="License">
-                        {rider.licenseNumber ?? "Not needed for this vehicle"}
+                        {rider.licenseNumber ?? "Not given"}
+                      </Detail>
+                      <Detail Icon={CalendarClock} label="Expiry">
+                        <Expiry date={rider.licenseExpiresAt} />
+                      </Detail>
+                      <Detail Icon={Cake} label="Birth date">
+                        {rider.birthDate ? formatDate(rider.birthDate) : "Not given"}
+                      </Detail>
+                      <Detail Icon={House} label="Address">
+                        {rider.address ?? "Not given"}
+                      </Detail>
+                      <Detail Icon={HeartPulse} label="Emergency">
+                        {rider.emergencyName ? `${rider.emergencyName} · ${rider.emergencyPhone}` : "Not given"}
                       </Detail>
                       <Detail Icon={Phone} label="Phone">
                         {rider.user.phone ?? "No phone"}
@@ -201,7 +255,15 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
                       </Detail>
                     </>
                   }
-                  actions={<ReviewActions kind="riders" id={rider.id} name={rider.user.name} status={rider.status} />}
+                  document={<DocumentPreview href={`/api/documents/rider/${rider.id}`} kind={rider.document} label="Driver's license" />}
+                  actions={
+                    // A store lifts the suspensions it made itself
+                    rider.vendor && rider.status === "SUSPENDED" && !rider.suspendedByAdmin ? (
+                      <p className="text-sm text-muted">Suspended by {rider.vendor.name}</p>
+                    ) : (
+                      <ReviewActions kind="riders" id={rider.id} name={rider.user.name} status={rider.status} />
+                    )
+                  }
                 />
               ))}
         </ul>

@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
+import { VerificationForm } from "@/components/app/verification-form";
 import { Avatar } from "@/components/app/avatar";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { Stars } from "@/components/app/rating";
@@ -30,6 +31,7 @@ import { formatPeso, formatTime, greeting, timeAgo, todayLabel } from "@/lib/for
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { SalesDay } from "@/lib/types";
+import type { Verification } from "@/lib/verification-fields";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -72,6 +74,7 @@ async function VendorOverview() {
     serverApi<{ days: SalesDay[] }>("/vendor/sales?days=14"),
     serverApi<Reviews>("/vendor/reviews"),
   ]);
+  const verification = store.status === "PENDING" || store.status === "REJECTED" ? await serverApi<Verification>("/documents/verification") : null;
   const thisWeek = sum(days.slice(7));
   const lastWeek = sum(days.slice(0, 7));
   const topQuantity = stats.bestSellers[0]?.quantity ?? 0;
@@ -108,6 +111,11 @@ async function VendorOverview() {
             pendingText={`An admin will review ${store.name} soon. You can prepare your menu in the meantime; residents will see your store once it's approved.`}
             blockedText={`Residents can't see ${store.name} right now. Please contact the Feasto admin.`}
           />
+          {verification && (
+            <div className="mt-4">
+              <VerificationForm role="VENDOR" data={verification} />
+            </div>
+          )}
         </div>
       )}
 

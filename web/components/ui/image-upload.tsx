@@ -7,9 +7,9 @@ import { useRef, useState } from "react";
 const MAX_SIDE = 1200;
 
 /** Shrinks a photo in the browser so uploads from phones are small and fast. */
-async function resize(file: File): Promise<Blob> {
+export async function resizePhoto(file: File, maxSide = MAX_SIDE): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -22,7 +22,7 @@ async function resize(file: File): Promise<Blob> {
 /** Shrinks and uploads a photo, returning its /uploads/... URL. Throws with a message to show on failure. */
 export async function uploadPhoto(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Choose a photo (JPG, PNG or WebP).");
-  const body = await resize(file);
+  const body = await resizePhoto(file);
   const response = await fetch("/api/uploads", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error ?? "Upload failed. Try another photo.");

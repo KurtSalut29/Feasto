@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
+import { VerificationForm } from "@/components/app/verification-form";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
@@ -10,6 +11,7 @@ import { formatPeso, greeting, todayLabel } from "@/lib/format";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
+import type { Verification } from "@/lib/verification-fields";
 import { JobsPreview } from "./jobs-preview";
 
 export const metadata: Metadata = { title: "Home" };
@@ -32,15 +34,24 @@ async function RiderHome() {
   const firstName = user.name.split(" ")[0];
   const profile = user.riderProfile;
   if (profile && profile.status !== "APPROVED") {
+    const store = profile.vendor?.name ?? null;
+    const canEdit = profile.status === "PENDING" || profile.status === "REJECTED";
+    const verification = canEdit ? await serverApi<Verification>("/documents/verification") : null;
     return (
       <>
         <MobileHeading title={`Hi, ${firstName}!`} subtitle="Welcome to Feasto for riders." />
         <ApprovalNotice
           status={profile.status}
           reviewNote={profile.reviewNote}
-          pendingText="An admin is checking your vehicle details. You can go online and accept jobs once you're approved."
-          blockedText="You can't go online or accept jobs right now. Please contact the Feasto admin."
+          reviewer={store ?? "the admin"}
+          pendingText={`${store ?? "A Feasto admin"} is checking your license and motorcycle details. You can go online and accept jobs once you're approved.`}
+          blockedText={`You can't go online or accept jobs right now. Please contact ${store ?? "the Feasto admin"}.`}
         />
+        {canEdit && verification && (
+          <div className="mt-4">
+            <VerificationForm role="RIDER" data={verification} />
+          </div>
+        )}
       </>
     );
   }
