@@ -1,6 +1,7 @@
 import { prisma } from "./db.js";
 import { redis } from "./redis.js";
-import { DELIVERY_FEE, isStoreOpen } from "./storeHours.js";
+import { getSettings } from "./settings.js";
+import { isStoreOpen } from "./storeHours.js";
 
 /**
  * The cart lives in Redis as a hash: menu item id -> quantity. Any API copy can read
@@ -31,7 +32,8 @@ export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STO
 /** The cart with current prices, grouped by store, and anything that would stop checkout. */
 export async function buildCart(userId: string) {
   const lines = await readCartQuantities(userId);
-  if (lines.length === 0) return { groups: [], itemCount: 0, itemsTotal: 0, deliveryFeePerStore: DELIVERY_FEE, hasProblems: false };
+  const { deliveryFee } = await getSettings();
+  if (lines.length === 0) return { groups: [], itemCount: 0, itemsTotal: 0, deliveryFeePerStore: deliveryFee, hasProblems: false };
 
   const items = await prisma.menuItem.findMany({
     where: { id: { in: lines.map((l) => l.menuItemId) } },
@@ -85,7 +87,7 @@ export async function buildCart(userId: string) {
     groups: list,
     itemCount: list.reduce((n, g) => n + g.items.reduce((m, i) => m + i.quantity, 0), 0),
     itemsTotal: list.reduce((n, g) => n + g.subtotal, 0),
-    deliveryFeePerStore: DELIVERY_FEE,
+    deliveryFeePerStore: deliveryFee,
     hasProblems: list.some((g) => g.problem || g.items.some((i) => i.problem)),
   };
 }

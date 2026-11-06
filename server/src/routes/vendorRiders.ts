@@ -1,7 +1,10 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
+import { logActivity } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
+import { BUSY, forgetRiderPosition } from "../lib/dispatch.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { notify } from "../lib/realtime.js";
+import { renewalReviewSchema, reviewRenewal } from "../lib/renewals.js";
 import { documentKind, newRiderCode, reviewRider, reviewSchema } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { myVendorId } from "./vendor.js";
@@ -12,6 +15,8 @@ import { myVendorId } from "./vendor.js";
  */
 export const vendorRidersRouter = Router();
 vendorRidersRouter.use(requireAuth, requireRole("VENDOR"));
+
+const actorOf = (req: Request) => ({ userId: req.session!.userId, name: req.session!.name });
 
 vendorRidersRouter.get("/riders", async (req, res) => {
   const store = await prisma.vendor.findUniqueOrThrow({
@@ -35,6 +40,7 @@ vendorRidersRouter.get("/riders", async (req, res) => {
           isOnline: true,
           createdAt: true,
           user: { select: { name: true, email: true, phone: true } },
+          renewals: { where: { status: "PENDING" }, select: { id: true, number: true, expiresAt: true, file: true, submittedAt: true } },
         },
       },
     },
@@ -42,13 +48,26 @@ vendorRidersRouter.get("/riders", async (req, res) => {
   res.json({
     code: store.riderCode,
     storeStatus: store.status,
-    riders: store.riders.map(({ licenseFile, ...rider }) => ({ ...rider, document: documentKind(licenseFile) })),
+    riders: store.riders.map(({ licenseFile, renewals, ...rider }) => {
+      const [renewal] = renewals;
+      return {
+        ...rider,
+        document: documentKind(licenseFile),
+        renewal: renewal ? { id: renewal.id, number: renewal.number, expiresAt: renewal.expiresAt, submittedAt: renewal.submittedAt, document: documentKind(renewal.file) } : null,
+      };
+    }),
   });
 });
 
 vendorRidersRouter.post("/riders/:id/review", async (req, res) => {
   const input = parseBody(reviewSchema, req.body);
-  await reviewRider(String(req.params.id), input, { vendorId: await myVendorId(req.session!.userId) });
+  await reviewRider(String(req.params.id), input, { vendorId: await myVendorId(req.session!.userId), actor: actorOf(req) });
+  res.json({ ok: true });
+});
+
+vendorRidersRouter.post("/rider-renewals/:id/review", async (req, res) => {
+  const input = parseBody(renewalReviewSchema, req.body);
+  await reviewRenewal(String(req.params.id), input, { vendorId: await myVendorId(req.session!.userId), actor: actorOf(req) });
   res.json({ ok: true });
 });
 
@@ -56,16 +75,20 @@ vendorRidersRouter.post("/riders/:id/review", async (req, res) => {
 vendorRidersRouter.post("/riders/:id/remove", async (req, res) => {
   const id = String(req.params.id);
   const vendorId = await myVendorId(req.session!.userId);
-  const rider = await prisma.riderProfile.findFirst({ where: { id, vendorId }, select: { userId: true, suspendedByAdmin: true, vendor: { select: { name: true } } } });
+  const rider = await prisma.riderProfile.findFirst({ where: { id, vendorId }, select: { userId: true, suspendedByAdmin: true, user: { select: { name: true } }, vendor: { select: { name: true } } } });
   if (!rider) throw new HttpError(404, "This rider isn't part of your store.");
   if (rider.suspendedByAdmin) throw new HttpError(403, "The Feasto admin suspended this rider, so only the admin can change this.");
-  const busy = await prisma.order.count({ where: { riderId: rider.userId, status: { in: ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"] } } });
+  const busy = await prisma.order.count({ where: { riderId: rider.userId, status: { in: BUSY } } });
   if (busy > 0) throw new HttpError(409, "This rider is on a delivery. Try again when it's finished.");
 
-  await prisma.riderProfile.update({
-    where: { id },
-    data: { vendorId: null, status: "PENDING", reviewNote: null, reviewedAt: null, isOnline: false },
+  await prisma.$transaction(async (tx) => {
+    await tx.riderProfile.update({
+      where: { id },
+      data: { vendorId: null, status: "PENDING", reviewNote: null, reviewedAt: null, isOnline: false },
+    });
+    await logActivity(tx, actorOf(req), { category: "APPROVALS", action: "Removed rider from store", target: rider.user.name, detail: rider.vendor?.name });
   });
+  await forgetRiderPosition(rider.userId);
   await notify(rider.userId, {
     title: `You're no longer a rider for ${rider.vendor?.name}`,
     body: "A Feasto admin will review your account so you can ride as a free rider.",

@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Prisma, type OrderStatus } from "../generated/prisma/client.js";
+import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
+import { BUSY, forgetRiderPosition, jobVisibleTo, OPEN_JOB, saveRiderPosition } from "../lib/dispatch.js";
 import { bboxQuery, nearQuery, nextOffset, pageQuery } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, orderCode, settlePayment, transition } from "../lib/orders.js";
 import { CHANNELS, notify, publish } from "../lib/realtime.js";
+import { hasExpired } from "../lib/renewals.js";
 import { redis } from "../lib/redis.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -13,11 +15,6 @@ import { UPLOADED_PHOTO } from "./uploads.js";
 
 export const riderRouter = Router();
 riderRouter.use(requireAuth, requireRole("RIDER"));
-
-/** Statuses where a delivery order can be taken by a rider (store accepted it, nobody took it yet). */
-const OPEN_JOB: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY"];
-/** Statuses where a rider is busy with an order. */
-const BUSY: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
 
 const locationKey = (orderId: string) => `rider-location:${orderId}`;
 
@@ -34,13 +31,32 @@ async function approvedRider(userId: string) {
   return profile;
 }
 
+/** An expired license means no new work. A delivery already under way can still finish. */
+function refuseExpiredLicense(profile: { licenseExpiresAt: Date | null }) {
+  if (hasExpired(profile.licenseExpiresAt)) throw new HttpError(403, "Your driver's license has expired. Upload your renewed license to go online.");
+}
+
 // ---------- Availability ----------
 
 riderRouter.patch("/availability", async (req, res) => {
   const { isOnline } = parseBody(z.object({ isOnline: z.boolean() }), req.body);
   const profile = await approvedRider(req.session!.userId);
+  if (isOnline) refuseExpiredLicense(profile);
   await prisma.riderProfile.update({ where: { id: profile.id }, data: { isOnline } });
+  if (!isOnline) await forgetRiderPosition(req.session!.userId);
   res.json({ isOnline });
+});
+
+const positionSchema = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
+/** The phone reports where an online rider is, so jobs reach the riders nearest the store first. */
+riderRouter.post("/position", async (req, res) => {
+  const { lat, lng } = parseBody(positionSchema, req.body);
+  const userId = req.session!.userId;
+  const profile = await riderProfile(userId);
+  if (profile.status !== "APPROVED" || !profile.isOnline) throw new HttpError(409, "Go online to share your position.");
+  await saveRiderPosition(userId, lat, lng);
+  res.status(204).end();
 });
 
 // ---------- Jobs ----------
@@ -61,9 +77,10 @@ const jobsQuery = z.object({
  */
 riderRouter.get("/jobs", async (req, res) => {
   const { lat, lng, sort, within, bbox, limit, offset } = parseBody(jobsQuery, req.query);
-  const profile = await riderProfile(req.session!.userId);
+  const userId = req.session!.userId;
+  const profile = await riderProfile(userId);
   if (profile.status !== "APPROVED" || !profile.isOnline) {
-    res.json({ online: false, approved: profile.status === "APPROVED", jobs: [], total: 0, nextOffset: null });
+    res.json({ online: false, approved: profile.status === "APPROVED", licenseExpired: hasExpired(profile.licenseExpiresAt), jobs: [], total: 0, nextOffset: null });
     return;
   }
 
@@ -75,6 +92,12 @@ riderRouter.get("/jobs", async (req, res) => {
     : null;
   const where = Prisma.sql`
     WHERE o.fulfillment = 'DELIVERY' AND o."riderId" IS NULL AND o.status IN (${Prisma.raw(OPEN_JOB.map((s) => `'${s}'`).join(", "))})
+    ${
+      // The same rule as jobVisibleTo, which the Accept button checks
+      profile.vendorId
+        ? Prisma.sql`AND o."vendorId" = ${profile.vendorId}`
+        : Prisma.sql`AND (o.dispatch = 'EVERYONE' OR EXISTS (SELECT 1 FROM "JobOffer" jo WHERE jo."orderId" = o.id AND jo."riderId" = ${userId}))`
+    }
     ${bbox ? Prisma.sql`AND v.longitude BETWEEN ${bbox.west}::float8 AND ${bbox.east}::float8 AND v.latitude BETWEEN ${bbox.south}::float8 AND ${bbox.north}::float8` : Prisma.empty}
     ${km && within ? Prisma.sql`AND ${km} <= ${within}::float8` : Prisma.empty}`;
   const orderBy =
@@ -118,6 +141,7 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
   const orderId = String(req.params.id);
   const profile = await approvedRider(userId);
   if (!profile.isOnline) throw new HttpError(400, "Go online to accept jobs.");
+  refuseExpiredLicense(profile);
 
   // A short Redis lock per rider: two quick taps on two different jobs can't both pass
   // the "one delivery at a time" check below. SET NX is atomic across all API copies.
@@ -130,10 +154,14 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
     // The claim itself: only succeeds if nobody has taken the job yet. When several riders
     // tap at once, the database lets exactly one UPDATE through.
     const { count } = await prisma.order.updateMany({
-      where: { id: orderId, riderId: null, fulfillment: "DELIVERY", status: { in: OPEN_JOB } },
-      data: { riderId: userId },
+      where: { id: orderId, riderId: null, fulfillment: "DELIVERY", status: { in: OPEN_JOB }, ...jobVisibleTo(profile) },
+      data: { riderId: userId, nextDispatchAt: null },
     });
-    if (count === 0) throw new HttpError(409, "Another rider already took this job.");
+    if (count === 0) {
+      const job = await prisma.order.findUnique({ where: { id: orderId }, select: { riderId: true, status: true } });
+      if (job && !job.riderId && OPEN_JOB.includes(job.status)) throw new HttpError(403, "This job hasn't reached you yet.");
+      throw new HttpError(409, "Another rider already took this job.");
+    }
   } finally {
     await redis.del(lock);
   }

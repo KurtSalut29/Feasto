@@ -1,12 +1,15 @@
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import express, { Router } from "express";
 import { z } from "zod";
 import { config } from "../config.js";
 import { Prisma } from "../generated/prisma/client.js";
+import { logActivity, notifyAdmin } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
+import { notify } from "../lib/realtime.js";
+import { hasExpired, removeDocument } from "../lib/renewals.js";
 import { documentKind, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { detectImageType } from "./uploads.js";
@@ -24,8 +27,6 @@ const CONTENT_TYPE = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", 
 
 /** Recognise the file from its first bytes rather than trusting its name. */
 const detectDocumentType = (data: Buffer) => (data.toString("ascii", 0, 5) === "%PDF-" ? "pdf" : detectImageType(data));
-
-const removeFile = (name: string | null) => (name ? rm(path.join(config.documentDir, name), { force: true }) : undefined);
 
 /** Sends one private document. The browser shows it but mustn't keep a copy. */
 async function sendDocument(res: express.Response, name: string) {
@@ -62,10 +63,10 @@ documentsRouter.put(
         ? await prisma.vendor.updateMany({ where: { ownerId: userId, status: { in: [...EDITABLE] } }, data: { permitFile: name } })
         : await prisma.riderProfile.updateMany({ where: { userId, status: { in: [...EDITABLE] } }, data: { licenseFile: name } });
     if (count === 0) {
-      await removeFile(name);
+      await removeDocument(name);
       throw new HttpError(409, "This document was already reviewed, so it can't be changed now.");
     }
-    await removeFile(previous ?? null);
+    await removeDocument(previous);
     res.json({ document: documentKind(name) });
   },
 );
@@ -87,6 +88,146 @@ documentsRouter.get("/rider/:id", async (req, res) => {
   const allowed = req.session!.role === "ADMIN" || rider?.userId === userId || rider?.vendor?.ownerId === userId;
   if (!rider?.licenseFile || !allowed) throw new HttpError(404, "Document not found.");
   await sendDocument(res, rider.licenseFile);
+});
+
+// ---------- Renewing a document after approval ----------
+
+/** Whose renewal this is, for the signed-in store or rider. */
+async function renewalOwner(session: { userId: string; role: string; name: string }) {
+  if (session.role === "VENDOR") {
+    const store = await prisma.vendor.findUniqueOrThrow({
+      where: { ownerId: session.userId },
+      select: { id: true, name: true, status: true, permitNumber: true, permitExpiresAt: true, permitFile: true },
+    });
+    return {
+      where: { vendorId: store.id },
+      kind: "permit" as const,
+      id: store.id,
+      name: store.name,
+      status: store.status,
+      number: store.permitNumber,
+      expiresAt: store.permitExpiresAt,
+      file: store.permitFile,
+      reviewerName: "the Feasto admin",
+      storeOwnerId: null,
+    };
+  }
+  const rider = await prisma.riderProfile.findUniqueOrThrow({
+    where: { userId: session.userId },
+    select: { id: true, status: true, licenseNumber: true, licenseExpiresAt: true, licenseFile: true, vendor: { select: { name: true, ownerId: true } } },
+  });
+  return {
+    where: { riderId: rider.id },
+    kind: "license" as const,
+    id: rider.id,
+    name: session.name,
+    status: rider.status,
+    number: rider.licenseNumber,
+    expiresAt: rider.licenseExpiresAt,
+    file: rider.licenseFile,
+    reviewerName: rider.vendor?.name ?? "the Feasto admin",
+    storeOwnerId: rider.vendor?.ownerId ?? null,
+  };
+}
+
+const CAN_RENEW = ["APPROVED", "SUSPENDED"];
+const OPEN = { in: ["DRAFT", "PENDING"] } as Prisma.EnumRenewalStatusFilter;
+
+documentsRouter.get("/renewal", requireRole("VENDOR", "RIDER"), async (req, res) => {
+  const owner = await renewalOwner(req.session!);
+  const latest = await prisma.documentRenewal.findFirst({
+    where: { ...owner.where, status: { not: "DRAFT" } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, number: true, expiresAt: true, file: true, status: true, note: true, submittedAt: true },
+  });
+  res.json({
+    kind: owner.kind,
+    id: owner.id,
+    status: owner.status,
+    number: owner.number,
+    expiresAt: owner.expiresAt,
+    expired: hasExpired(owner.expiresAt),
+    document: documentKind(owner.file),
+    reviewerName: owner.reviewerName,
+    canRenew: CAN_RENEW.includes(owner.status),
+    renewal: latest && latest.status !== "APPROVED" ? { ...latest, file: undefined, document: documentKind(latest.file) } : null,
+  });
+});
+
+/** Holds the new file aside until it's submitted, and then until it's approved. */
+documentsRouter.put(
+  "/renewal/file",
+  requireRole("VENDOR", "RIDER"),
+  express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES }),
+  async (req, res) => {
+    const data = req.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new HttpError(400, "Choose a photo or PDF of the document.");
+    const extension = detectDocumentType(data);
+    if (!extension) throw new HttpError(400, "That file isn't a JPG, PNG, WebP or PDF.");
+    const owner = await renewalOwner(req.session!);
+    if (!CAN_RENEW.includes(owner.status)) throw new HttpError(409, "Your application hasn't been approved yet, so change the document in your application instead.");
+    const open = await prisma.documentRenewal.findFirst({ where: { ...owner.where, status: OPEN }, select: { id: true, status: true, file: true } });
+    if (open?.status === "PENDING") throw new HttpError(409, "Your renewal is already being reviewed.");
+
+    const name = `${randomBytes(16).toString("hex")}.${extension}`;
+    await mkdir(config.documentDir, { recursive: true });
+    await writeFile(path.join(config.documentDir, name), data);
+    try {
+      if (open) await prisma.documentRenewal.update({ where: { id: open.id }, data: { file: name } });
+      else await prisma.documentRenewal.create({ data: { ...owner.where, file: name } });
+    } catch (error) {
+      await removeDocument(name);
+      // Two uploads at the same moment: the unique index lets one in
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new HttpError(409, "Please try again.");
+      throw error;
+    }
+    await removeDocument(open?.file);
+    res.json({ document: documentKind(name) });
+  },
+);
+
+/** Sends the new details and the file already uploaded to whoever reviews this owner. */
+documentsRouter.post("/renewal", requireRole("VENDOR", "RIDER"), async (req, res) => {
+  const owner = await renewalOwner(req.session!);
+  if (!CAN_RENEW.includes(owner.status)) throw new HttpError(409, "Your application hasn't been approved yet, so change the document in your application instead.");
+  const { number, expiresAt } = parseBody(
+    z.object(
+      owner.kind === "permit"
+        ? { number: permitFields.permitNumber, expiresAt: permitFields.permitExpiresAt }
+        : { number: riderFields.licenseNumber, expiresAt: riderFields.licenseExpiresAt },
+    ),
+    req.body,
+  );
+  if (owner.expiresAt && expiresAt <= owner.expiresAt) {
+    throw new ValidationError({ expiresAt: ["The new expiry date must be later than the one on file."] });
+  }
+
+  const documentName = owner.kind === "permit" ? "business permit" : "driver's license";
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.documentRenewal.updateMany({
+      where: { ...owner.where, status: "DRAFT", file: { not: null } },
+      data: { number, expiresAt, status: "PENDING", note: null, submittedAt: new Date() },
+    });
+    if (count === 0) throw new HttpError(409, `Upload your renewed ${documentName} first.`);
+    await logActivity(tx, { userId: req.session!.userId, name: req.session!.name }, { category: "DOCUMENTS", action: `Submitted renewed ${documentName}`, target: owner.name });
+  });
+
+  const message = { title: `${owner.name} renewed their ${documentName}`, body: "Check the new document and approve or reject it." };
+  if (owner.storeOwnerId) await notify(owner.storeOwnerId, { ...message, link: "/vendor/riders" });
+  else await notifyAdmin({ ...message, link: "/admin/documents" });
+  res.status(201).json({ ok: true });
+});
+
+/** The new document, for the people who may see the one it replaces. */
+documentsRouter.get("/renewal/:id/file", async (req, res) => {
+  const renewal = await prisma.documentRenewal.findUnique({
+    where: { id: String(req.params.id) },
+    select: { file: true, vendor: { select: { ownerId: true } }, rider: { select: { userId: true, vendor: { select: { ownerId: true } } } } },
+  });
+  const userId = req.session!.userId;
+  const allowed = req.session!.role === "ADMIN" || renewal?.vendor?.ownerId === userId || renewal?.rider?.userId === userId || renewal?.rider?.vendor?.ownerId === userId;
+  if (!renewal?.file || !allowed) throw new HttpError(404, "Document not found.");
+  await sendDocument(res, renewal.file);
 });
 
 // ---------- The applicant's own details ----------

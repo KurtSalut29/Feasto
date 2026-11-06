@@ -22,6 +22,8 @@ export const CACHE_KEYS = {
   storeList: "cache:stores:list",
   /** One store with its menu */
   store: (vendorId: string) => `cache:store:${vendorId}`,
+  /** The admin's settings */
+  settings: "cache:settings",
 };
 
 /** Call after anything a resident would see about a store changes (details, menu, approval). */

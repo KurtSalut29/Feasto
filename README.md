@@ -32,7 +32,7 @@ Browser ─► Next.js ─► Nginx ──► api-2 ├────────�
 
 | Resident (mobile) | Rider (mobile) | Vendor (dashboard) | Admin (dashboard) |
 |---|---|---|---|
-| Browse, search, filter by store type | Sign-up with license photo; a free rider is approved by the admin, a store's rider by the store (using its code) | Sign-up with business permit and map pin; store details, cover photo, hours, "temporarily closed" | Approve / reject / suspend stores and riders, with their documents side by side |
+| Browse, search, filter by store type | Jobs reach the store's riders first, then the nearest free riders in waves; sign-up with license photo; a free rider is approved by the admin, a store's rider by the store (using its code) | Sign-up with business permit and map pin; store details, cover photo, hours, "temporarily closed" | Approve / reject / suspend stores and riders, with their documents side by side. Check renewed permits and licenses, watch what's expired or expiring, step in on stuck orders, read the activity log, and set the delivery fee and rider wave timings |
 | One cart across several stores | Online/offline switch | Menu with photos, sections, stock, availability; own riders: code, approve, suspend, remove | Users list with search |
 | Delivery or pickup, cash or online (simulated) | Live job list, race-safe accept | Live order board with sound, accept/decline, preparing, ready | All orders across stores |
 | Live order tracking with rider map | Pickup → delivered, live GPS sharing | Table setup and daily bookings | Sales reports computed in parallel |
@@ -121,14 +121,14 @@ The permits and licenses in the demo are made-up samples marked SAMPLE ONLY (`se
 
 | Role | Email | What to show |
 |---|---|---|
-| Admin | `admin@feasto.com` | 3 approvals waiting, sales chart, reports, system monitor, disable a user |
+| Admin | `admin@feasto.com` | 3 approvals waiting, 1 renewal to check, expired and expiring documents, stuck orders, activity log, settings, sales chart, reports, system monitor, disable a user |
 | Resident | `juan@feasto.com` | Saved stores, an order being prepared, past orders to rate and order again, a table booking |
 | Vendor | `nena@feasto.com` | Aling Nena's Carinderia: 2 new orders waiting, sales chart, ratings; own riders: Mark approved, Leo waiting for approval |
 | Vendor | `remy@feasto.com` | Lola Remy's Kitchen: tables and bookings, a ready order waiting for a rider |
 | Rider | `pedro@feasto.com` | Online, 2 ready jobs waiting, earnings history |
 
 Other demo accounts: vendors `marco@`, `bea@`, `ramon@`, `kim@`, `ben@`, `sofia@`, `lorna@`, `carlos@`;
-free riders `jessa@` (and `rico@`, pending); Aling Nena's riders `mark@` and `leo@` (pending); residents `maria@`, `carlo@`, `andrea@`,
+free riders `jessa@` (license expiring soon), `ariel@` (license expired) and `rico@` (pending); Aling Nena's riders `mark@` and `leo@` (pending); residents `maria@`, `carlo@`, `andrea@`,
 `miguel@`, `patricia@` (all `@feasto.com`). Pending stores: `tonyo@`, `grace@`.
 
 Food photos come from [TheMealDB](https://www.themealdb.com) and [TheCocktailDB](https://www.thecocktaildb.com),
@@ -160,6 +160,7 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Saga (distributed transaction)** | Online payment fails → orders cancelled and stock restored automatically | At checkout choose Online payment and turn on "Demo: make the payment fail" |
 | **Idempotency** | Each checkout carries a one-time key | Double-clicking "Place order" never creates two orders |
 | **Concurrency control** | Conditional updates and unique indexes | 10 buyers for the last item → 1 order; 5 riders accept one job → 1 gets it; 100 bookings for one table → 1 (`loadtest/booking-race.js`) |
+| **Proximity dispatch** | A store's riders get its job first (1 minute by default), then the 3 nearest free riders, after a wait the next 5, after another wait everyone. The admin sets both waits in Settings. Rider positions live in a Redis geo index; each job's next step is in PostgreSQL, and workers claim due steps with `SKIP LOCKED` | Two riders use "Demo: place me at the map's center" near and far from a store; accept an order as the vendor: the near one gets it first. `docker compose logs -f worker worker-2` shows each step. Stop `worker` mid-way: `worker-2` carries on |
 | **Distributed lock** | Redis `SET NX` per rider | A rider can't grab two jobs with quick double taps |
 | **Paging and spatial queries** | Rider jobs are filtered, sorted by distance and paged inside PostgreSQL; the store list is paged from the Redis cache; both maps load only what's on screen | Rider → Home shows the 3 nearest jobs, "See all" → sort/"Within 2 km"/"Show more"; pan the Map and watch it load only that area |
 | **Shared cache** | Store list and menus cached in Redis, cleared on change | Edit a price as a vendor; every API copy shows the new price immediately |
@@ -168,4 +169,7 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Session revocation** | Logins are stateless signed cookies, so disabled accounts are kept in a Redis set that all 3 API copies check on every request | Admin → Users → Disable a resident who is logged in elsewhere: their open page logs out within a second |
 | **Atomic counters** | Each rating updates the store's rating total in the same transaction; a unique index allows one rating per order | Rate an order from two tabs at once: only one rating is saved |
 | **Shared file storage** | Photos on a Docker volume used by all copies, served by Nginx | Upload a dish photo; it loads no matter which copy serves the page |
+| **Shared settings** | The delivery fee and wave timings are in PostgreSQL with a copy in Redis. Saving clears that copy for all 3 API copies and both workers at once | Admin → Settings: change the fee and open the cart. The next job's waves use the new timing right away |
+| **Once-only background checks** | Both workers check expiring documents and stuck orders each minute. `UPDATE ... RETURNING` and Redis `SET NX` make sure each reminder or action still happens once | Admin → Stuck orders shows waiting orders; with two workers running, the admin's notification arrives once |
+| **One admin, enforced by the database** | A partial unique index on `User.role` refuses a second admin, however it's attempted | In `psql`, try to make another user an admin: PostgreSQL refuses |
 | **Private shared files** | Permits and licenses on a second volume that all API copies share but Nginx can't see; each download goes through a permission check | Admin → Approvals opens a license; a different store gets "not found" for the same link |

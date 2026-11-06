@@ -18,6 +18,10 @@ export function enqueue(tx: Tx, topic: QueueName, payload: Record<string, unknow
  * Returns how many events were sent.
  */
 export async function relayOutbox(channel: QueueChannel, batchSize = 100) {
+  // Most ticks nothing is waiting, so don't open a transaction just to find that out
+  const anyWaiting = await prisma.outboxEvent.findFirst({ where: { publishedAt: null }, select: { id: true } });
+  if (!anyWaiting) return 0;
+
   return prisma.$transaction(async (tx) => {
     const events = await tx.$queryRaw<{ id: string; topic: QueueName; payload: Record<string, unknown> }[]>`
       SELECT id, topic, payload FROM "OutboxEvent"

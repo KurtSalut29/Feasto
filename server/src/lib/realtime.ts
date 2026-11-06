@@ -11,6 +11,8 @@ export const CHANNELS = {
   user: (userId: string) => `rt:user:${userId}`,
   /** Every online, approved rider listens here for new delivery jobs */
   riders: "rt:riders",
+  /** The admin's pages reload whenever any order changes */
+  admin: "rt:admin",
 };
 
 export type RealtimeEvent =

@@ -9,9 +9,10 @@ const password = process.env.ADMIN_PASSWORD;
 if (!email || !password) {
   console.log("ADMIN_EMAIL or ADMIN_PASSWORD not set; skipping admin account.");
 } else {
-  const existing = await prisma.user.findUnique({ where: { email } });
+  // Feasto has one admin, so changing ADMIN_EMAIL later doesn't create a second one
+  const existing = await prisma.user.findFirst({ where: { role: "ADMIN" }, select: { email: true } });
   if (existing) {
-    console.log(`Admin account ${email} already exists.`);
+    console.log(`The admin account ${existing.email} already exists.`);
   } else {
     await prisma.user.create({
       data: { email, name: "Feasto Admin", role: "ADMIN", passwordHash: await hashPassword(password) },

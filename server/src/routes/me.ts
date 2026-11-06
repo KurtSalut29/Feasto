@@ -21,6 +21,7 @@ meRouter.get("/events", async (req, res) => {
   const { userId, role } = req.session!;
   const channels = [CHANNELS.user(userId)];
   if (role === "RIDER") channels.push(CHANNELS.riders);
+  if (role === "ADMIN") channels.push(CHANNELS.admin);
   await openStream(res, channels);
 });
 

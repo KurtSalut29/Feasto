@@ -60,6 +60,32 @@ enum OrderStatus {
   CANCELLED
 }
 
+/// How far a delivery job has spread among riders. Each step is explained in lib/dispatch.ts.
+enum JobDispatch {
+  NEW
+  STORE_RIDERS
+  NEAREST
+  WIDER
+  EVERYONE
+}
+
+/// Where a store's or rider's replacement document is. DRAFT has the file but wasn't submitted yet.
+enum RenewalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// The filters on the admin's activity log.
+enum ActivityCategory {
+  APPROVALS
+  DOCUMENTS
+  ACCOUNTS
+  ORDERS
+  SETTINGS
+}
+
 enum Fulfillment {
   DELIVERY
   PICKUP
@@ -94,6 +120,7 @@ model User {
   riderProfile  RiderProfile? // set when role = RIDER
   checkouts     Checkout[]
   deliveries    Order[]        @relation("RiderDeliveries")
+  jobOffers     JobOffer[]
   bookings      Booking[]
   addresses     Address[]
   notifications Notification[]
@@ -160,6 +187,7 @@ model Vendor {
   reviews   Review[]
   favoredBy Favorite[]
   riders    RiderProfile[]
+  renewals  DocumentRenewal[]
 }
 
 /// A motorcycle rider's details. Riders can't go online or take jobs until they're approved:
@@ -190,7 +218,64 @@ model RiderProfile {
   isOnline         Boolean        @default(false)
   createdAt        DateTime       @default(now())
 
+  renewals DocumentRenewal[]
+
   @@index([vendorId, status])
+}
+
+/// A replacement for an approved store's permit or rider's license. It stays separate until the
+/// reviewer approves it, so the document on file is always one that somebody checked.
+/// The migration adds partial unique indexes: at most one DRAFT or PENDING per store or rider.
+model DocumentRenewal {
+  id          String        @id @default(cuid())
+  vendorId    String?
+  vendor      Vendor?       @relation(fields: [vendorId], references: [id])
+  riderId     String?
+  rider       RiderProfile? @relation(fields: [riderId], references: [id])
+  number      String?
+  expiresAt   DateTime?     @db.Date
+  /// File name in the private documents folder, until it's approved or rejected
+  file        String?
+  status      RenewalStatus @default(DRAFT)
+  note        String? // the reason when rejected
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  @@index([status, submittedAt])
+  @@index([vendorId])
+  @@index([riderId])
+}
+
+/// What was done on Feasto, by whom, and why. The API only ever adds lines.
+/// Names are copied so an old line stays true after someone changes their name.
+model ActivityLog {
+  id        String           @id @default(cuid())
+  /// Null when Feasto did it automatically
+  actorId   String?
+  actorName String
+  category  ActivityCategory
+  action    String
+  target    String
+  detail    String?
+  createdAt DateTime         @default(now())
+
+  @@index([createdAt])
+  @@index([category, createdAt])
+}
+
+/// What the admin can change without a new release. There's only ever one row, with id 1.
+model PlatformSettings {
+  id                Int      @id @default(1)
+  /// Per store in a checkout. Orders keep the fee they were placed with.
+  deliveryFee       Decimal  @default(49) @db.Decimal(10, 2)
+  /// How long a store's own riders have a job to themselves
+  storeRiderSeconds Int      @default(60)
+  /// The wait between waves of free riders
+  riderWaveSeconds  Int      @default(30)
+  /// How long an order waits for a store or rider before the admin is told
+  stuckMinutes      Int      @default(15)
+  updatedAt         DateTime @updatedAt
 }
 
 model MenuItem {
@@ -251,6 +336,9 @@ model Order {
   rejectReason     String?
   /// Photo the rider took at the door, under /uploads/
   deliveryPhotoUrl String?
+  dispatch         JobDispatch @default(NEW)
+  /// When the job should reach more riders; null when there's nothing left to do
+  nextDispatchAt   DateTime?
   acceptedAt       DateTime?
   readyAt          DateTime?
   pickedUpAt       DateTime?
@@ -260,10 +348,25 @@ model Order {
 
   items  OrderItem[]
   review Review?
+  offers JobOffer[]
 
   @@index([vendorId, status])
   @@index([riderId])
   @@index([checkoutId])
+  @@index([nextDispatchAt])
+}
+
+/// A free rider this job has reached so far. Only they can see and accept it until it opens to everyone.
+model JobOffer {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  riderId   String
+  rider     User     @relation(fields: [riderId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, riderId])
+  @@index([riderId])
 }
 
 model OrderItem {

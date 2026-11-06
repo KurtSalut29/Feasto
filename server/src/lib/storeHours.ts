@@ -18,9 +18,6 @@ export function isStoreOpen(store: { opensAt: string; closesAt: string; isTempor
   return time >= store.opensAt && time < store.closesAt;
 }
 
-/** Flat delivery fee per store in a checkout (pickup is free). */
-export const DELIVERY_FEE = 49;
-
 /** Midnight today in Manila (UTC+8, no daylight saving), as a Date. */
 export function manilaStartOfDay(now = new Date()) {
   const manila = new Date(now.getTime() + 8 * 3600_000);

@@ -17,6 +17,7 @@ import { ordersRouter } from "./routes/orders.js";
 import { riderRouter } from "./routes/rider.js";
 import { storesRouter } from "./routes/stores.js";
 import { uploadsRouter } from "./routes/uploads.js";
+import { adminToolsRouter } from "./routes/adminTools.js";
 import { documentsRouter } from "./routes/documents.js";
 import { vendorRidersRouter } from "./routes/vendorRiders.js";
 import { vendorRouter } from "./routes/vendor.js";
@@ -49,6 +50,7 @@ app.get("/api/health", async (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin", adminToolsRouter);
 app.use("/api/me", meRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/documents", documentsRouter);

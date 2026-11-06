@@ -1,10 +1,12 @@
 import type { ConsumeMessage } from "amqplib";
 import { config } from "./config.js";
 import { invalidateStore } from "./lib/cache.js";
+import { runDueDispatches } from "./lib/dispatch.js";
 import { prisma } from "./lib/db.js";
 import { broadcastOrder, orderCode, restoreStock, settlePayment } from "./lib/orders.js";
 import { enqueue, relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat } from "./lib/heartbeat.js";
+import { runMonitors } from "./lib/monitor.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/queue.js";
 import { CHANNELS, notify, publish as publishRealtime } from "./lib/realtime.js";
 import { redis } from "./lib/redis.js";
@@ -201,12 +203,46 @@ const relayTimer = setInterval(async () => {
   }
 }, 500);
 
+// ---------- Spreading delivery jobs to riders ----------
+
+let dispatching = false;
+const dispatchTimer = setInterval(async () => {
+  if (dispatching) return;
+  dispatching = true;
+  try {
+    await runDueDispatches(log);
+  } catch (error) {
+    console.error(`[${config.instanceId}] job dispatch failed`, error);
+  } finally {
+    dispatching = false;
+  }
+}, 1000);
+
+// ---------- Expiring documents and stuck orders ----------
+
+let monitoring = false;
+async function monitor() {
+  if (monitoring) return;
+  monitoring = true;
+  try {
+    await runMonitors(log);
+  } catch (error) {
+    console.error(`[${config.instanceId}] monitor failed`, error);
+  } finally {
+    monitoring = false;
+  }
+}
+const monitorTimer = setInterval(monitor, 60_000);
+void monitor();
+
 const stopHeartbeat = startHeartbeat("worker", () => ({ busyJobs, parallelJobs: PARALLEL_JOBS }));
 log(`worker ready, handling up to ${PARALLEL_JOBS} jobs in parallel`);
 
 async function shutdown() {
   log("shutting down");
   clearInterval(relayTimer);
+  clearInterval(dispatchTimer);
+  clearInterval(monitorTimer);
   stopHeartbeat();
   await channel.close();
   await connection.close();

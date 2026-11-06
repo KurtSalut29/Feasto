@@ -73,7 +73,7 @@ export async function broadcastOrder(orderId: string) {
   });
   const event = { type: "order.updated" as const, orderId, status: order.status };
   const users = [order.checkout.residentId, order.vendor.ownerId, order.riderId].filter((u): u is string => Boolean(u));
-  await Promise.all(users.map((u) => publish(CHANNELS.user(u), event)));
+  await Promise.all([...users.map((u) => publish(CHANNELS.user(u), event)), publish(CHANNELS.admin, event)]);
   // Delivery jobs appear/disappear for riders when an order is accepted, picked or cancelled
   if (order.fulfillment === "DELIVERY") await publish(CHANNELS.riders, { type: "jobs.changed" });
 }

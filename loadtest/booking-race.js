@@ -1,12 +1,14 @@
 // Concurrency test: 100 residents try to book the same table at the same moment.
 // Expected: exactly 1 booking succeeds, the other 99 are told the time is taken.
 // Needs ADMIN_EMAIL and ADMIN_PASSWORD (to approve the test store), see loadtest/README.md.
+import encoding from "k6/encoding";
 import exec from "k6/execution";
 import http from "k6/http";
 import { Counter } from "k6/metrics";
 
 const BASE = __ENV.BASE || "http://nginx/api";
 const PEOPLE = Number(__ENV.PEOPLE || 100);
+const PERMIT_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 const json = { headers: { "Content-Type": "application/json" } };
 const booked = new Counter("bookings_succeeded");
 const refused = new Counter("bookings_refused");
@@ -34,8 +36,16 @@ export function setup() {
       storeName: `Race Test Diner ${run % 10000}`,
       storeAddress: "1 Test Street, Quezon City",
       storeType: "RESTAURANT",
+      latitude: 11.5618,
+      longitude: 124.3965,
+      businessName: "Race Test Food Services",
+      businessPhone: "09170000001",
+      permitNumber: `RACE-${run % 100000}`,
+      permitExpiresAt: "2035-12-31",
     }),
   );
+  // Any small PNG will do; a store can't be approved without a permit on file
+  http.put(`${BASE}/documents/mine`, encoding.b64decode(PERMIT_PNG, "std"), { headers: { "Content-Type": "image/png" }, cookies: { feasto_session: vendor } });
   http.patch(
     `${BASE}/vendor/store`,
     JSON.stringify({

@@ -13,7 +13,8 @@ import type { DiningTable, Fulfillment, MenuItem, OrderStatus, PaymentMethod, St
 import { hashPassword } from "./lib/auth.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
-import { DELIVERY_FEE } from "./lib/storeHours.js";
+import { daysFromToday } from "./lib/renewals.js";
+import { DEFAULT_SETTINGS } from "./lib/settings.js";
 import { newRiderCode } from "./lib/verification.js";
 
 const DEMO_PASSWORD = "demo1234";
@@ -286,12 +287,13 @@ const PENDING_STORES = [
 ];
 
 // Pedro, Jessa and Rico are free riders. Mark and Leo ride for Aling Nena's Carinderia.
-const RIDERS: { name: string; email: string; vehicleModel: string; plateNumber: string; licenseNumber: string; store?: string; pending?: boolean }[] = [
+const RIDERS: { name: string; email: string; vehicleModel: string; plateNumber: string; licenseNumber: string; store?: string; pending?: boolean; licenseExpiresIn?: number }[] = [
   { name: "Pedro Reyes", email: "pedro@feasto.com", vehicleModel: "Honda Click 125", plateNumber: "NBC 1234", licenseNumber: "N01-21-104455" },
-  { name: "Jessa Ramos", email: "jessa@feasto.com", vehicleModel: "Yamaha Mio i125", plateNumber: "ADF 5678", licenseNumber: "N02-19-223344" },
-  { name: "Mark Navarro", email: "mark@feasto.com", vehicleModel: "Suzuki Raider 150", plateNumber: "KLM 3456", licenseNumber: "N04-20-331122", store: "nena@feasto.com" },
+  { name: "Jessa Ramos", email: "jessa@feasto.com", vehicleModel: "Yamaha Mio i125", plateNumber: "ADF 5678", licenseNumber: "N02-19-223344", licenseExpiresIn: 15 },
+  { name: "Mark Navarro", email: "mark@feasto.com", vehicleModel: "Suzuki Raider 150", plateNumber: "KLM 3456", licenseNumber: "N04-20-331122", store: "nena@feasto.com", licenseExpiresIn: 10 },
   { name: "Leo Castillo", email: "leo@feasto.com", vehicleModel: "Honda TMX 125", plateNumber: "PQR 7890", licenseNumber: "N05-23-778899", store: "nena@feasto.com", pending: true },
   { name: "Rico Fernandez", email: "rico@feasto.com", vehicleModel: "Kawasaki Barako 175", plateNumber: "WQR 9012", licenseNumber: "N03-22-556677", pending: true },
+  { name: "Ariel Aquino", email: "ariel@feasto.com", vehicleModel: "Honda XRM 125", plateNumber: "VTX 2468", licenseNumber: "N06-18-990011", licenseExpiresIn: -10 },
 ];
 
 const RESIDENTS = [
@@ -333,7 +335,7 @@ function weightedRating() {
 
 async function wipe() {
   await prisma.$executeRawUnsafe(
-    `TRUNCATE "Review", "Favorite", "Notification", "OutboxEvent", "Booking", "DiningTable", "OrderItem", "Order", "Checkout", "MenuItem", "Address", "RiderProfile", "Vendor", "User" CASCADE`,
+    `TRUNCATE "DocumentRenewal", "ActivityLog", "PlatformSettings", "JobOffer", "Review", "Favorite", "Notification", "OutboxEvent", "Booking", "DiningTable", "OrderItem", "Order", "Checkout", "MenuItem", "Address", "RiderProfile", "Vendor", "User" CASCADE`,
   );
   // Carts, caches, login lockouts, disabled-account list, rider positions and old reports
   await redis.flushdb();
@@ -376,7 +378,7 @@ async function main() {
 
   const passwordHash = await hashPassword(DEMO_PASSWORD);
   const accountsSince = manilaAt(30, "09:00");
-  await prisma.user.create({
+  const admin = await prisma.user.create({
     data: { email: adminEmail, name: "Feasto Admin", role: "ADMIN", passwordHash: await hashPassword(adminPassword), createdAt: accountsSince },
   });
 
@@ -483,7 +485,7 @@ async function main() {
               vehicleModel: r.vehicleModel,
               plateNumber: r.plateNumber,
               licenseNumber: r.licenseNumber,
-              licenseExpiresAt: new Date("2028-06-30"),
+              licenseExpiresAt: r.licenseExpiresIn === undefined ? new Date("2028-06-30") : daysFromToday(r.licenseExpiresIn),
               licenseFile: await sampleDocument("license"),
               birthDate: new Date(`${1988 + index}-03-15`),
               address: "Brgy. Santissimo Rosario, Naval, Biliran",
@@ -560,7 +562,7 @@ async function main() {
       quantity: between(1, Number(item.price) < 60 ? 3 : 2),
     }));
     const subtotal = lines.reduce((n, l) => n + Number(l.item.price) * l.quantity, 0);
-    const deliveryFee = fulfillment === "DELIVERY" ? DELIVERY_FEE : 0;
+    const deliveryFee = fulfillment === "DELIVERY" ? DEFAULT_SETTINGS.deliveryFee : 0;
     const finished = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"].includes(status);
     const failed = status === "REJECTED" || status === "CANCELLED";
     const reached = (step: OrderStatus[]) => step.includes(status);
@@ -589,6 +591,8 @@ async function main() {
         riderId: rider?.id ?? null,
         status,
         fulfillment,
+        // Jobs already waiting when the demo starts are open to every free rider
+        ...(["ACCEPTED", "PREPARING", "READY"].includes(status) && !rider && { dispatch: "EVERYONE" as const }),
         subtotal,
         deliveryFee,
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
@@ -702,6 +706,51 @@ async function main() {
       { userId: juan.user.id, title: "Burger Barn is preparing your order", body: "We'll let you know when it's on the way.", link: "/resident/orders", createdAt: ago(6) },
       { userId: juan.user.id, title: "Table booked at Lola Remy's Kitchen", body: "See you there!", link: "/resident/bookings", createdAt: ago(60 * 20) },
       { userId: byName("Aling Nena's Carinderia").owner.id, title: "New order", body: "2 new orders are waiting for you.", link: "/vendor/orders", createdAt: ago(2) },
+    ],
+  });
+
+  // ----- Documents for the admin's monitor, and an activity log with some history -----
+  console.log("Creating document renewals and the activity log…");
+  const storeNamed = (name: string) => byName(name).vendor.id;
+  await prisma.vendor.update({ where: { id: storeNamed("Tea Time PH") }, data: { permitExpiresAt: daysFromToday(20) } });
+  await prisma.vendor.update({ where: { id: storeNamed("Kuya Ben's Street Eats") }, data: { permitExpiresAt: daysFromToday(-12) } });
+  await prisma.vendor.update({ where: { id: storeNamed("Kape Kanto") }, data: { permitExpiresAt: daysFromToday(-3) } });
+  // Kape Kanto already sent its renewal for the admin to check; Mark's goes to Aling Nena's
+  await prisma.documentRenewal.create({
+    data: {
+      vendorId: storeNamed("Kape Kanto"),
+      number: "NVL-2027-1004",
+      expiresAt: daysFromToday(362),
+      file: await sampleDocument("permit"),
+      status: "PENDING",
+      submittedAt: ago(90),
+    },
+  });
+  const mark = await prisma.riderProfile.findFirstOrThrow({ where: { user: { email: "mark@feasto.com" } }, select: { id: true } });
+  await prisma.documentRenewal.create({
+    data: { riderId: mark.id, number: "N04-20-331122", expiresAt: daysFromToday(1825), file: await sampleDocument("license"), status: "PENDING", submittedAt: ago(45) },
+  });
+
+  const adminActor = { actorId: admin.id, actorName: admin.name };
+  const nena = byName("Aling Nena's Carinderia").owner;
+  await prisma.activityLog.createMany({
+    data: [
+      ...stores.map(({ seed, vendor }) => ({ ...adminActor, category: "APPROVALS" as const, action: "Approved store", target: seed.name, createdAt: vendor.reviewedAt! })),
+      ...RIDERS.flatMap((r) =>
+        r.pending
+          ? []
+          : [
+              {
+                ...(r.store ? { actorId: nena.id, actorName: nena.name } : adminActor),
+                category: "APPROVALS" as const,
+                action: "Approved rider",
+                target: r.name,
+                createdAt: accountsSince,
+              },
+            ],
+      ),
+      { actorId: null, actorName: "Feasto (automatic)", category: "DOCUMENTS" as const, action: "Took rider offline: license expired", target: "Ariel Aquino", createdAt: ago(60 * 24 * 9) },
+      { actorId: null, actorName: "Kape Kanto", category: "DOCUMENTS" as const, action: "Submitted renewed business permit", target: "Kape Kanto", createdAt: ago(90) },
     ],
   });
 

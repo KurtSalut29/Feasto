@@ -4,16 +4,20 @@ import { z } from "zod";
 import { config } from "../config.js";
 import type { ApprovalStatus, OrderStatus, Prisma, Role } from "../generated/prisma/client.js";
 import { markDisabled } from "../lib/accounts.js";
+import { logActivity } from "../lib/activity.js";
 import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { readHeartbeats } from "../lib/heartbeat.js";
+import { stuckOrdersWhere } from "../lib/monitor.js";
 import { QUEUES } from "../lib/queue.js";
 import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { redis } from "../lib/redis.js";
 import { readReport, REPORT_LIST, reportKey } from "../lib/reports.js";
+import { manilaToday } from "../lib/renewals.js";
 import { dailySales } from "../lib/sales.js";
-import { ALLOWED_FROM, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
+import { getSettings } from "../lib/settings.js";
+import { ALLOWED_FROM, decisionVerbs, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const adminRouter = Router();
@@ -23,7 +27,9 @@ const STATUSES = ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"] as const;
 
 adminRouter.get("/overview", async (_req, res) => {
   // The counts are independent, so they run in parallel instead of one after another
-  const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress] = await Promise.all([
+  const { stuckMinutes } = await getSettings();
+  const today = manilaToday();
+  const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress, stuckOrders, renewals, expiredStores, expiredRiders] = await Promise.all([
     prisma.vendor.count({ where: { status: "PENDING" } }),
     prisma.riderProfile.count({ where: { status: "PENDING", vendorId: null } }),
     prisma.vendor.count({ where: { status: "APPROVED" } }),
@@ -31,8 +37,23 @@ adminRouter.get("/overview", async (_req, res) => {
     prisma.riderProfile.count({ where: { status: "APPROVED", isOnline: true, user: { disabledAt: null } } }),
     prisma.user.count({ where: { role: "RESIDENT" } }),
     prisma.order.count({ where: { status: { in: ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"] } } }),
+    prisma.order.count({ where: stuckOrdersWhere(stuckMinutes) }),
+    prisma.documentRenewal.count({ where: { status: "PENDING", OR: [{ vendorId: { not: null } }, { rider: { vendorId: null } }] } }),
+    prisma.vendor.count({ where: { status: "APPROVED", permitExpiresAt: { lt: today } } }),
+    prisma.riderProfile.count({ where: { status: "APPROVED", licenseExpiresAt: { lt: today } } }),
   ]);
-  res.json({ pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress });
+  res.json({
+    pendingStores,
+    pendingRiders,
+    activeStores,
+    activeRiders,
+    ridersOnline,
+    residents,
+    ordersInProgress,
+    stuckOrders,
+    renewals,
+    expiredDocuments: expiredStores + expiredRiders,
+  });
 });
 
 // ---------- Approvals ----------
@@ -125,15 +146,23 @@ adminRouter.post("/stores/:id/review", async (req, res) => {
     if (store && !store.permitFile) throw new HttpError(409, "This store hasn't uploaded a business permit yet.");
   }
 
-  // Only change it if it's still in a state this decision may come from. If two admins
-  // review the same store at once, the second update matches nothing and is refused.
-  const { count } = await prisma.vendor.updateMany({
-    where: { id, status: { in: ALLOWED_FROM[decision] } },
-    data: { status: decision, reviewNote: decision === "APPROVED" ? null : note, reviewedAt: new Date() },
+  // Only change it if it's still in a state this decision may come from. If the admin reviews
+  // the same store twice at once (two tabs, a double-click), the second update matches nothing.
+  const store = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.vendor.updateMany({
+      where: { id, status: { in: ALLOWED_FROM[decision] } },
+      data: { status: decision, reviewNote: decision === "APPROVED" ? null : note, reviewedAt: new Date() },
+    });
+    if (count === 0) throw new HttpError(409, "This store was already reviewed or changed. Refresh to see its current status.");
+    const reviewed = await tx.vendor.findUniqueOrThrow({ where: { id }, select: { ownerId: true, name: true } });
+    await logActivity(tx, { userId: req.session!.userId, name: req.session!.name }, {
+      category: "APPROVALS",
+      action: `${decisionVerbs[decision]} store`,
+      target: reviewed.name,
+      detail: decision === "APPROVED" ? null : note,
+    });
+    return reviewed;
   });
-  if (count === 0) throw new HttpError(409, "This store was already reviewed or changed. Refresh to see its current status.");
-
-  const store = await prisma.vendor.findUniqueOrThrow({ where: { id }, select: { ownerId: true, name: true } });
   await invalidateStore(id);
   await notify(store.ownerId, {
     title: `${store.name} was ${decisionWords[decision]}`,
@@ -145,7 +174,7 @@ adminRouter.post("/stores/:id/review", async (req, res) => {
 
 adminRouter.post("/riders/:id/review", async (req, res) => {
   const input = parseBody(reviewSchema, req.body);
-  await reviewRider(String(req.params.id), input, { admin: true });
+  await reviewRider(String(req.params.id), input, { admin: true, actor: { userId: req.session!.userId, name: req.session!.name } });
   res.json({ ok: true });
 });
 
@@ -379,15 +408,20 @@ const disableSchema = z.object({ disabled: z.boolean() });
 adminRouter.post("/users/:id/status", async (req, res) => {
   const { disabled } = parseBody(disableSchema, req.body);
   const id = String(req.params.id);
-  const user = await prisma.user.findUnique({ where: { id }, select: { role: true, vendor: { select: { id: true } } } });
+  const user = await prisma.user.findUnique({ where: { id }, select: { name: true, role: true, vendor: { select: { id: true } } } });
   if (!user) throw new HttpError(404, "User not found.");
   if (user.role === "ADMIN") throw new HttpError(400, "Admin accounts can't be disabled.");
 
-  await prisma.$transaction([
-    prisma.user.update({ where: { id }, data: { disabledAt: disabled ? new Date() : null } }),
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: { disabledAt: disabled ? new Date() : null } });
     // A disabled rider stops receiving jobs
-    ...(disabled && user.role === "RIDER" ? [prisma.riderProfile.updateMany({ where: { userId: id }, data: { isOnline: false } })] : []),
-  ]);
+    if (disabled && user.role === "RIDER") await tx.riderProfile.updateMany({ where: { userId: id }, data: { isOnline: false } });
+    await logActivity(tx, { userId: req.session!.userId, name: req.session!.name }, {
+      category: "ACCOUNTS",
+      action: disabled ? "Disabled account" : "Enabled account",
+      target: user.name,
+    });
+  });
   await markDisabled(id, disabled);
   // A disabled vendor's store disappears for residents (and comes back when enabled)
   if (user.vendor) await invalidateStore(user.vendor.id);

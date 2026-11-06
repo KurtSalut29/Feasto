@@ -174,7 +174,7 @@ async function vendorStep(
   from: OrderStatus[],
   to: OrderStatus,
   extra: Prisma.OrderUncheckedUpdateManyInput,
-  options: { pickupOnly?: boolean; restore?: boolean } = {},
+  options: { pickupOnly?: boolean; restore?: boolean; startDispatch?: boolean } = {},
 ) {
   const vendorId = await myVendorId(userId);
   const order = await prisma.order.findFirst({ where: { id: orderId, vendorId }, select: { checkoutId: true, fulfillment: true } });
@@ -182,7 +182,9 @@ async function vendorStep(
   if (options.pickupOnly && order.fulfillment !== "PICKUP") throw new HttpError(400, "Delivery orders are completed by the rider.");
 
   await prisma.$transaction(async (tx) => {
-    await transition(tx, orderId, from, to, extra, { vendorId });
+    // A delivery order starts looking for a rider the moment the store accepts it
+    const dispatch = options.startDispatch && order.fulfillment === "DELIVERY" ? { dispatch: "NEW" as const, nextDispatchAt: new Date() } : {};
+    await transition(tx, orderId, from, to, { ...extra, ...dispatch }, { vendorId });
     if (options.restore) await restoreStock(tx, orderId);
     await settlePayment(tx, order.checkoutId);
   });
@@ -192,7 +194,7 @@ async function vendorStep(
 }
 
 vendorRouter.post("/orders/:id/accept", async (req, res) => {
-  await vendorStep(req.session!.userId, String(req.params.id), ["PLACED"], "ACCEPTED", { acceptedAt: new Date() });
+  await vendorStep(req.session!.userId, String(req.params.id), ["PLACED"], "ACCEPTED", { acceptedAt: new Date() }, { startDispatch: true });
   res.json({ ok: true });
 });
 

@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import type { ApprovalStatus } from "../generated/prisma/client.js";
+import { logActivity, type Actor } from "./activity.js";
 import { prisma } from "./db.js";
 import { HttpError, ValidationError } from "./http.js";
 import { notify } from "./realtime.js";
@@ -117,6 +118,9 @@ export const reviewSchema = z
 
 export const decisionWords = { APPROVED: "approved", REJECTED: "not approved", SUSPENDED: "suspended" } as const;
 
+/** How the activity log words each decision. */
+export const decisionVerbs = { APPROVED: "Approved", REJECTED: "Rejected", SUSPENDED: "Suspended" } as const;
+
 /**
  * Reviews a rider. A store decides about its own riders and the admin about free riders.
  * The admin can also suspend a store's rider, and then only the admin can lift that.
@@ -124,11 +128,11 @@ export const decisionWords = { APPROVED: "approved", REJECTED: "not approved", S
 export async function reviewRider(
   id: string,
   { decision, note }: z.infer<typeof reviewSchema>,
-  by: { admin: true } | { vendorId: string },
+  by: ({ admin: true } | { vendorId: string }) & { actor: Actor },
 ) {
   const rider = await prisma.riderProfile.findUnique({
     where: { id },
-    select: { userId: true, vendorId: true, licenseFile: true, suspendedByAdmin: true, vendor: { select: { name: true } } },
+    select: { userId: true, vendorId: true, licenseFile: true, suspendedByAdmin: true, user: { select: { name: true } }, vendor: { select: { name: true } } },
   });
   if ("vendorId" in by) {
     if (!rider || rider.vendorId !== by.vendorId) throw new HttpError(404, "This rider isn't part of your store.");
@@ -141,20 +145,28 @@ export async function reviewRider(
   }
   if (decision === "APPROVED" && !rider.licenseFile) throw new HttpError(409, "This rider hasn't uploaded a driver's license yet.");
 
-  // Only change it if it's still in a state this decision may come from. If two people
-  // review the same rider at once, the second update matches nothing and is refused.
-  const { count } = await prisma.riderProfile.updateMany({
-    where: { id, status: { in: ALLOWED_FROM[decision] } },
-    data: {
-      status: decision,
-      reviewNote: decision === "APPROVED" ? null : note,
-      reviewedAt: new Date(),
-      suspendedByAdmin: "admin" in by && decision === "SUSPENDED",
-      // A suspended rider is taken offline immediately
-      ...(decision !== "APPROVED" && { isOnline: false }),
-    },
+  // Only change it if it's still in a state this decision may come from. If the store and the
+  // admin review the same rider at once, the second update matches nothing and is refused.
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.riderProfile.updateMany({
+      where: { id, status: { in: ALLOWED_FROM[decision] } },
+      data: {
+        status: decision,
+        reviewNote: decision === "APPROVED" ? null : note,
+        reviewedAt: new Date(),
+        suspendedByAdmin: "admin" in by && decision === "SUSPENDED",
+        // A suspended rider is taken offline immediately
+        ...(decision !== "APPROVED" && { isOnline: false }),
+      },
+    });
+    if (count === 0) throw new HttpError(409, "This rider was already reviewed or changed. Refresh to see their current status.");
+    await logActivity(tx, by.actor, {
+      category: "APPROVALS",
+      action: `${decisionVerbs[decision]} rider`,
+      target: rider.user.name,
+      detail: decision === "APPROVED" ? null : note,
+    });
   });
-  if (count === 0) throw new HttpError(409, "This rider was already reviewed or changed. Refresh to see their current status.");
 
   await notify(rider.userId, {
     title: `Your rider account was ${decisionWords[decision]}`,

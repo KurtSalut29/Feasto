@@ -82,10 +82,11 @@ const publicUser = {
       isTemporarilyClosed: true,
       status: true,
       reviewNote: true,
+      permitExpiresAt: true,
     },
   },
   riderProfile: {
-    select: { vehicleModel: true, plateNumber: true, status: true, reviewNote: true, isOnline: true, vendor: { select: { name: true } } },
+    select: { vehicleModel: true, plateNumber: true, licenseExpiresAt: true, status: true, reviewNote: true, isOnline: true, vendor: { select: { name: true } } },
   },
 } satisfies Prisma.UserSelect;
 

@@ -7,7 +7,6 @@ import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
 import { QUEUES } from "../lib/queue.js";
-import { DELIVERY_FEE } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const checkoutRouter = Router();
@@ -26,6 +25,8 @@ const checkoutSchema = z
       .max(200)
       .optional()
       .transform((v) => v || null),
+    /** The fee the page showed. If the admin changed it since, the resident sees the new total first. */
+    expectedDeliveryFee: z.number().optional(),
     /** Demo switch: make the simulated online payment fail to show the saga undoing the order */
     simulatePaymentFailure: z.boolean().optional(),
   })
@@ -58,7 +59,10 @@ checkoutRouter.post("/", async (req, res) => {
     deliveryPin = { deliveryLat: address.latitude, deliveryLng: address.longitude };
   }
 
-  const deliveryFee = input.fulfillment === "DELIVERY" ? DELIVERY_FEE : 0;
+  const deliveryFee = input.fulfillment === "DELIVERY" ? cart.deliveryFeePerStore : 0;
+  if (input.fulfillment === "DELIVERY" && input.expectedDeliveryFee !== undefined && input.expectedDeliveryFee !== deliveryFee) {
+    throw new HttpError(409, `The delivery fee is now ₱${deliveryFee} per store. Check the new total and place your order again.`);
+  }
   const total = cart.itemsTotal + deliveryFee * cart.groups.length;
 
   try {
