@@ -13,6 +13,7 @@ x-server-env: &server-env
   # Read from the .env file next to this one (copy .env.example to create it)
   JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
   UPLOAD_DIR: /app/uploads
+  DOCUMENT_DIR: /app/documents
 
 # Settings shared by the three API copies.
 x-api: &api
@@ -20,9 +21,11 @@ x-api: &api
   build: ./server
   restart: unless-stopped
   mem_limit: 256m
-  # Every API copy (and the worker) shares one photo folder
+  # Every API copy shares one photo folder and one private documents folder.
+  # Only the photos are mounted into Nginx.
   volumes:
     - uploads:/app/uploads
+    - documents:/app/documents
   depends_on:
     migrate:
       condition: service_completed_successfully
@@ -103,6 +106,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
     volumes:
       - uploads:/app/uploads
+      - documents:/app/documents
     depends_on:
       postgres:
         condition: service_healthy
@@ -135,6 +139,9 @@ services:
     environment:
       <<: *server-env
       INSTANCE_ID: worker-1
+    # Workers never read permits or licenses
+    volumes:
+      - uploads:/app/uploads
 
   worker-2:
     <<: *api
@@ -142,6 +149,8 @@ services:
     environment:
       <<: *server-env
       INSTANCE_ID: worker-2
+    volumes:
+      - uploads:/app/uploads
 
   nginx:
     image: nginx:1.29-alpine
@@ -157,5 +166,6 @@ services:
       - api-3
 
 volumes:
+  documents:
   pgdata:
   uploads:

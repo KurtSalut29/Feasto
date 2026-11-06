@@ -3,8 +3,9 @@
 A Parallel and Distributed Multi-Vendor Food Ordering and Booking System.
 
 Residents order from several stores in one checkout, choose delivery or pickup, and book tables.
-Vendors run their store from a web dashboard. Riders take delivery jobs and share their live
-location. Admins approve stores and riders, watch every order, run sales reports and monitor the servers.
+Vendors run their store from a web dashboard, with their own riders if they have them. Riders (on
+motorcycles) take delivery jobs and share their live location. The one admin approves stores and free
+riders, watches every order, runs sales reports and monitors the servers.
 
 ## Project layout
 
@@ -31,8 +32,8 @@ Browser ─► Next.js ─► Nginx ──► api-2 ├────────�
 
 | Resident (mobile) | Rider (mobile) | Vendor (dashboard) | Admin (dashboard) |
 |---|---|---|---|
-| Browse, search, filter by store type | Admin approval of vehicle details | Store details, cover photo, hours, "temporarily closed" | Approve / reject / suspend stores and riders |
-| One cart across several stores | Online/offline switch | Menu with photos, sections, stock, availability | Users list with search |
+| Browse, search, filter by store type | Sign-up with license photo; a free rider is approved by the admin, a store's rider by the store (using its code) | Sign-up with business permit and map pin; store details, cover photo, hours, "temporarily closed" | Approve / reject / suspend stores and riders, with their documents side by side |
+| One cart across several stores | Online/offline switch | Menu with photos, sections, stock, availability; own riders: code, approve, suspend, remove | Users list with search |
 | Delivery or pickup, cash or online (simulated) | Live job list, race-safe accept | Live order board with sound, accept/decline, preparing, ready | All orders across stores |
 | Live order tracking with rider map | Pickup → delivered, live GPS sharing | Table setup and daily bookings | Sales reports computed in parallel |
 | Table booking by date, time and party size | Earnings history | Today's orders and sales | System monitor (API copies, workers, queues) |
@@ -116,17 +117,18 @@ docker compose --profile tools run --rm --build demo
 ```
 
 Every demo account uses the password **`demo1234`** (the admin keeps the password from `.env`).
+The permits and licenses in the demo are made-up samples marked SAMPLE ONLY (`server/demo/documents`).
 
 | Role | Email | What to show |
 |---|---|---|
 | Admin | `admin@feasto.com` | 3 approvals waiting, sales chart, reports, system monitor, disable a user |
 | Resident | `juan@feasto.com` | Saved stores, an order being prepared, past orders to rate and order again, a table booking |
-| Vendor | `nena@feasto.com` | Aling Nena's Carinderia: 2 new orders waiting, sales chart, ratings |
+| Vendor | `nena@feasto.com` | Aling Nena's Carinderia: 2 new orders waiting, sales chart, ratings; own riders: Mark approved, Leo waiting for approval |
 | Vendor | `remy@feasto.com` | Lola Remy's Kitchen: tables and bookings, a ready order waiting for a rider |
 | Rider | `pedro@feasto.com` | Online, 2 ready jobs waiting, earnings history |
 
 Other demo accounts: vendors `marco@`, `bea@`, `ramon@`, `kim@`, `ben@`, `sofia@`, `lorna@`, `carlos@`;
-riders `jessa@`, `mark@`, `leo@` (and `rico@`, pending); residents `maria@`, `carlo@`, `andrea@`,
+free riders `jessa@` (and `rico@`, pending); Aling Nena's riders `mark@` and `leo@` (pending); residents `maria@`, `carlo@`, `andrea@`,
 `miguel@`, `patricia@` (all `@feasto.com`). Pending stores: `tonyo@`, `grace@`.
 
 Food photos come from [TheMealDB](https://www.themealdb.com) and [TheCocktailDB](https://www.thecocktaildb.com),
@@ -166,3 +168,4 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Session revocation** | Logins are stateless signed cookies, so disabled accounts are kept in a Redis set that all 3 API copies check on every request | Admin → Users → Disable a resident who is logged in elsewhere: their open page logs out within a second |
 | **Atomic counters** | Each rating updates the store's rating total in the same transaction; a unique index allows one rating per order | Rate an order from two tabs at once: only one rating is saved |
 | **Shared file storage** | Photos on a Docker volume used by all copies, served by Nginx | Upload a dish photo; it loads no matter which copy serves the page |
+| **Private shared files** | Permits and licenses on a second volume that all API copies share but Nginx can't see; each download goes through a permission check | Admin → Approvals opens a license; a different store gets "not found" for the same link |
