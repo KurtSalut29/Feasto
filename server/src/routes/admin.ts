@@ -13,6 +13,7 @@ import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { redis } from "../lib/redis.js";
 import { readReport, REPORT_LIST, reportKey } from "../lib/reports.js";
 import { dailySales } from "../lib/sales.js";
+import { ALLOWED_FROM, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const adminRouter = Router();
@@ -24,7 +25,7 @@ adminRouter.get("/overview", async (_req, res) => {
   // The counts are independent, so they run in parallel instead of one after another
   const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress] = await Promise.all([
     prisma.vendor.count({ where: { status: "PENDING" } }),
-    prisma.riderProfile.count({ where: { status: "PENDING" } }),
+    prisma.riderProfile.count({ where: { status: "PENDING", vendorId: null } }),
     prisma.vendor.count({ where: { status: "APPROVED" } }),
     prisma.riderProfile.count({ where: { status: "APPROVED" } }),
     prisma.riderProfile.count({ where: { status: "APPROVED", isOnline: true, user: { disabledAt: null } } }),
@@ -44,9 +45,16 @@ const listQuery = z.object({
 adminRouter.get("/approvals", async (req, res) => {
   const { kind, status } = listQuery.parse(req.query);
 
+  // A store reviews its own riders, so the admin's queue only has free riders. Once they're
+  // working, every rider is listed, because the admin can suspend any of them.
+  const riderScope = status === "PENDING" || status === "REJECTED" ? { vendorId: null } : {};
   const [storeCounts, riderCounts] = await Promise.all([
     prisma.vendor.groupBy({ by: ["status"], _count: true }),
-    prisma.riderProfile.groupBy({ by: ["status"], _count: true }),
+    prisma.riderProfile.groupBy({
+      by: ["status"],
+      where: { OR: [{ vendorId: null }, { status: { in: ["APPROVED", "SUSPENDED"] } }] },
+      _count: true,
+    }),
   ]);
   const toCounts = (rows: { status: ApprovalStatus; _count: number }[]) =>
     Object.fromEntries(STATUSES.map((s) => [s, rows.find((r) => r.status === s)?._count ?? 0]));
@@ -64,6 +72,11 @@ adminRouter.get("/approvals", async (req, res) => {
             storeType: true,
             address: true,
             acceptsReservations: true,
+            businessName: true,
+            businessPhone: true,
+            permitNumber: true,
+            permitExpiresAt: true,
+            permitFile: true,
             status: true,
             reviewNote: true,
             reviewedAt: true,
@@ -72,14 +85,22 @@ adminRouter.get("/approvals", async (req, res) => {
           },
         })
       : await prisma.riderProfile.findMany({
-          where: { status },
+          where: { status, ...riderScope },
           orderBy: { createdAt: status === "PENDING" ? "asc" : "desc" },
           take: 100,
           select: {
             id: true,
-            vehicleType: true,
+            vehicleModel: true,
             plateNumber: true,
             licenseNumber: true,
+            licenseExpiresAt: true,
+            licenseFile: true,
+            birthDate: true,
+            address: true,
+            emergencyName: true,
+            emergencyPhone: true,
+            suspendedByAdmin: true,
+            vendor: { select: { name: true } },
             status: true,
             reviewNote: true,
             reviewedAt: true,
@@ -88,31 +109,21 @@ adminRouter.get("/approvals", async (req, res) => {
           },
         });
 
-  res.json({ kind, status, counts: { stores: toCounts(storeCounts), riders: toCounts(riderCounts) }, items });
-});
-
-/** Which statuses each decision may come from. */
-const ALLOWED_FROM: Record<Exclude<ApprovalStatus, "PENDING">, ApprovalStatus[]> = {
-  APPROVED: ["PENDING", "REJECTED", "SUSPENDED"], // approve, reconsider, or reinstate
-  REJECTED: ["PENDING"],
-  SUSPENDED: ["APPROVED"],
-};
-
-const reviewSchema = z
-  .object({
-    decision: z.enum(["APPROVED", "REJECTED", "SUSPENDED"]),
-    note: z.string().trim().max(300).optional(),
-  })
-  .refine((v) => v.decision === "APPROVED" || (v.note && v.note.length >= 3), {
-    path: ["note"],
-    message: "Give a short reason so they know what to fix.",
+  // Pages only learn whether there's a document and what kind, never its file name
+  const withDocument = items.map((item) => {
+    const { permitFile, licenseFile, ...rest } = item as typeof item & { permitFile?: string | null; licenseFile?: string | null };
+    return { ...rest, document: documentKind(permitFile ?? licenseFile ?? null) };
   });
-
-const decisionWords = { APPROVED: "approved", REJECTED: "not approved", SUSPENDED: "suspended" } as const;
+  res.json({ kind, status, counts: { stores: toCounts(storeCounts), riders: toCounts(riderCounts) }, items: withDocument });
+});
 
 adminRouter.post("/stores/:id/review", async (req, res) => {
   const { decision, note } = parseBody(reviewSchema, req.body);
   const id = String(req.params.id);
+  if (decision === "APPROVED") {
+    const store = await prisma.vendor.findUnique({ where: { id }, select: { permitFile: true } });
+    if (store && !store.permitFile) throw new HttpError(409, "This store hasn't uploaded a business permit yet.");
+  }
 
   // Only change it if it's still in a state this decision may come from. If two admins
   // review the same store at once, the second update matches nothing and is refused.
@@ -133,27 +144,8 @@ adminRouter.post("/stores/:id/review", async (req, res) => {
 });
 
 adminRouter.post("/riders/:id/review", async (req, res) => {
-  const { decision, note } = parseBody(reviewSchema, req.body);
-  const id = String(req.params.id);
-
-  const { count } = await prisma.riderProfile.updateMany({
-    where: { id, status: { in: ALLOWED_FROM[decision] } },
-    data: {
-      status: decision,
-      reviewNote: decision === "APPROVED" ? null : note,
-      reviewedAt: new Date(),
-      // A suspended rider is taken offline immediately
-      ...(decision !== "APPROVED" && { isOnline: false }),
-    },
-  });
-  if (count === 0) throw new HttpError(409, "This rider was already reviewed or changed. Refresh to see their current status.");
-
-  const rider = await prisma.riderProfile.findUniqueOrThrow({ where: { id }, select: { userId: true } });
-  await notify(rider.userId, {
-    title: `Your rider account was ${decisionWords[decision]}`,
-    body: decision === "APPROVED" ? "You can now go online and accept delivery jobs." : `Reason: ${note}`,
-    link: "/rider",
-  });
+  const input = parseBody(reviewSchema, req.body);
+  await reviewRider(String(req.params.id), input, { admin: true });
   res.json({ ok: true });
 });
 
@@ -203,7 +195,7 @@ adminRouter.get("/users", async (req, res) => {
         createdAt: true,
         disabledAt: true,
         vendor: { select: { id: true, name: true, status: true } },
-        riderProfile: { select: { vehicleType: true, status: true } },
+        riderProfile: { select: { vehicleModel: true, status: true, vendor: { select: { name: true } } } },
       },
     }),
     prisma.user.groupBy({ by: ["role"], _count: true }),

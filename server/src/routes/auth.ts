@@ -12,6 +12,7 @@ import {
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
 import { acceptsReservationsByDefault, STORE_TYPES } from "../lib/storeTypes.js";
+import { mobileNumber, newRiderCode, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const authRouter = Router();
@@ -20,12 +21,6 @@ const email = z
   .email("Enter a valid email address.")
   .trim()
   .transform((value) => value.toLowerCase());
-
-// Philippine mobile numbers: 09XXXXXXXXX or +639XXXXXXXXX
-const phone = z
-  .string()
-  .trim()
-  .regex(/^(\+639|09)\d{9}$/, "Enter a mobile number like 09171234567.");
 
 /** The rules for a password at sign-up, also used when changing it. */
 export const newPassword = z
@@ -38,47 +33,28 @@ export const newPassword = z
 const accountFields = {
   name: z.string().trim().min(2, "Enter your full name.").max(80),
   email,
-  phone,
+  phone: mobileNumber,
   password: newPassword,
 };
 
-// Optional text: blank becomes undefined, everything else is trimmed and uppercased
-const optionalCode = (pattern: RegExp, message: string) =>
-  z
-    .string()
-    .trim()
-    .transform((value) => value.toUpperCase())
-    .pipe(z.union([z.literal(""), z.string().regex(pattern, message)]))
-    .transform((value) => value || undefined)
-    .optional();
-
-const riderFields = {
-  vehicleType: z.enum(["MOTORCYCLE", "BICYCLE", "E_BIKE"], "Choose your vehicle."),
-  plateNumber: optionalCode(/^[A-Z0-9][A-Z0-9 -]{3,9}$/, "Enter a plate number like ABC 1234."),
-  licenseNumber: optionalCode(/^[A-Z0-9][A-Z0-9-]{5,19}$/, "Enter a license number like N01-23-456789."),
-};
-
 // Admin accounts are never self-registered; they come from the seed step.
-const registerSchema = z
-  .discriminatedUnion("role", [
-    z.object({ role: z.literal("RESIDENT"), ...accountFields }),
-    z.object({ role: z.literal("RIDER"), ...accountFields, ...riderFields }),
-    z.object({
-      role: z.literal("VENDOR"),
-      ...accountFields,
-      storeName: z.string().trim().min(2, "Enter your store's name.").max(80),
-      storeAddress: z.string().trim().min(5, "Enter your store's address.").max(200),
-      storeType: z.enum(STORE_TYPES, "Choose your store type."),
-      // Optional: when left out, it follows the store type (on for dine-in places)
-      acceptsReservations: z.boolean().optional(),
-    }),
-  ])
-  // Motorcycle riders must give a plate and license number; bicycles and e-bikes don't need them.
-  .superRefine((input, ctx) => {
-    if (input.role !== "RIDER" || input.vehicleType !== "MOTORCYCLE") return;
-    if (!input.plateNumber) ctx.addIssue({ code: "custom", path: ["plateNumber"], message: "Enter your plate number." });
-    if (!input.licenseNumber) ctx.addIssue({ code: "custom", path: ["licenseNumber"], message: "Enter your driver's license number." });
-  });
+const registerSchema = z.discriminatedUnion("role", [
+  z.object({ role: z.literal("RESIDENT"), ...accountFields }),
+  z.object({ role: z.literal("RIDER"), ...accountFields, ...riderFields }),
+  z.object({
+    role: z.literal("VENDOR"),
+    ...accountFields,
+    storeName: z.string().trim().min(2, "Enter your store's name.").max(80),
+    storeAddress: z.string().trim().min(5, "Enter your store's address.").max(200),
+    storeType: z.enum(STORE_TYPES, "Choose your store type."),
+    // Optional: when left out, it follows the store type (on for dine-in places)
+    acceptsReservations: z.boolean().optional(),
+    // Where the store is, so riders can be matched by how near they are
+    latitude: z.number("Set your store's pin on the map.").min(-90).max(90),
+    longitude: z.number("Set your store's pin on the map.").min(-180).max(180),
+    ...permitFields,
+  }),
+  ]);
 
 const loginSchema = z.object({
   email,
@@ -108,7 +84,9 @@ const publicUser = {
       reviewNote: true,
     },
   },
-  riderProfile: { select: { vehicleType: true, plateNumber: true, status: true, reviewNote: true, isOnline: true } },
+  riderProfile: {
+    select: { vehicleModel: true, plateNumber: true, status: true, reviewNote: true, isOnline: true, vendor: { select: { name: true } } },
+  },
 } satisfies Prisma.UserSelect;
 
 /**
@@ -129,6 +107,8 @@ function uniqueViolationField(error: Prisma.PrismaClientKnownRequestError): stri
 
 authRouter.post("/register", async (req, res) => {
   const input = parseBody(registerSchema, req.body);
+  // A rider joining a store needs its code to be right before anything is saved
+  const riderStore = input.role === "RIDER" && input.storeCode ? await storeForCode(input.storeCode) : null;
 
   try {
     const user = await prisma.user.create({
@@ -147,25 +127,40 @@ authRouter.post("/register", async (req, res) => {
               address: input.storeAddress,
               storeType: input.storeType,
               acceptsReservations: input.acceptsReservations ?? acceptsReservationsByDefault(input.storeType),
+              latitude: input.latitude,
+              longitude: input.longitude,
+              businessName: input.businessName,
+              businessPhone: input.businessPhone,
+              permitNumber: input.permitNumber,
+              permitExpiresAt: input.permitExpiresAt,
+              riderCode: newRiderCode(),
               opensAt: "08:00",
               closesAt: "21:00",
             },
           },
         }),
-        // Riders also start as PENDING and can't take jobs until an admin approves them.
+        // Riders also start as PENDING: their store approves them if they gave its code,
+        // otherwise the admin does. The license photo is uploaded right after this.
         ...(input.role === "RIDER" && {
           riderProfile: {
             create: {
-              vehicleType: input.vehicleType,
-              // Only motorcycles carry a plate and license
-              plateNumber: input.vehicleType === "MOTORCYCLE" ? input.plateNumber : null,
-              licenseNumber: input.vehicleType === "MOTORCYCLE" ? input.licenseNumber : null,
+              vendorId: riderStore?.id,
+              birthDate: input.birthDate,
+              address: input.address,
+              emergencyName: input.emergencyName,
+              emergencyPhone: input.emergencyPhone,
+              vehicleModel: input.vehicleModel,
+              plateNumber: input.plateNumber,
+              licenseNumber: input.licenseNumber,
+              licenseExpiresAt: input.licenseExpiresAt,
             },
           },
         }),
       },
       select: publicUser,
     });
+
+    if (riderStore) await notifyStoreOfRider(riderStore.ownerId, user.name);
 
     res.cookie(SESSION_COOKIE, await signSession({ userId: user.id, role: user.role, name: user.name }), sessionCookieOptions);
     res.status(201).json({ user });
@@ -176,6 +171,7 @@ authRouter.post("/register", async (req, res) => {
       if (uniqueViolationField(error).includes("licenseNumber")) {
         throw new ValidationError({ licenseNumber: ["This license number is already registered to another rider."] });
       }
+      if (uniqueViolationField(error).includes("riderCode")) throw new HttpError(409, "Something went wrong. Please try again.");
       throw new ValidationError({ email: ["An account with this email already exists."] });
     }
     throw error;

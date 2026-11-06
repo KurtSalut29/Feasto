@@ -13,8 +13,8 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
-# Uploaded photos live on a shared volume mounted here; the app runs as "node", so it must own it
-RUN mkdir -p /app/uploads && chown node:node /app/uploads
+# Photos and private documents live on shared volumes mounted here; the app runs as "node", so it must own them
+RUN mkdir -p /app/uploads /app/documents && chown node:node /app/uploads /app/documents
 USER node
 EXPOSE 4000
 CMD ["node", "dist/api.js"]

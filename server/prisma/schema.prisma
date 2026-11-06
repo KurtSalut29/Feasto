@@ -40,12 +40,6 @@ enum StoreType {
   HOME_KITCHEN
 }
 
-enum VehicleType {
-  MOTORCYCLE
-  BICYCLE
-  E_BIKE
-}
-
 enum PaymentStatus {
   PENDING
   PAID
@@ -138,6 +132,15 @@ model Vendor {
   latitude            Float?
   longitude           Float?
   imageUrl            String?
+  /// The registered business, which can differ from the name residents see
+  businessName        String?
+  businessPhone       String?
+  permitNumber        String?
+  permitExpiresAt     DateTime?      @db.Date
+  /// File name of the business permit in the private documents folder, never a public URL
+  permitFile          String?
+  /// Riders enter this when they sign up to join this store
+  riderCode           String         @unique
   status              ApprovalStatus @default(PENDING)
   reviewNote          String? // admin's reason when rejecting or suspending
   reviewedAt          DateTime?
@@ -156,21 +159,38 @@ model Vendor {
   tables    DiningTable[]
   reviews   Review[]
   favoredBy Favorite[]
+  riders    RiderProfile[]
 }
 
-/// A rider's vehicle details. Riders can't go online or take jobs until an admin approves them.
+/// A motorcycle rider's details. Riders can't go online or take jobs until they're approved:
+/// by their store if they joined one with its code, otherwise by the admin.
 model RiderProfile {
-  id            String         @id @default(cuid())
-  userId        String         @unique
-  user          User           @relation(fields: [userId], references: [id])
-  vehicleType   VehicleType
-  plateNumber   String? // required for motorcycles
-  licenseNumber String?        @unique // driver's license, required for motorcycles
-  status        ApprovalStatus @default(PENDING)
-  reviewNote    String?
-  reviewedAt    DateTime?
-  isOnline      Boolean        @default(false)
-  createdAt     DateTime       @default(now())
+  id               String         @id @default(cuid())
+  userId           String         @unique
+  user             User           @relation(fields: [userId], references: [id])
+  /// The store this rider works for; null for a free rider
+  vendorId         String?
+  vendor           Vendor?        @relation(fields: [vendorId], references: [id])
+  /// Motorcycle make and model, e.g. Honda Click 125
+  vehicleModel     String?
+  plateNumber      String?
+  licenseNumber    String?        @unique
+  licenseExpiresAt DateTime?      @db.Date
+  /// File name of the license photo in the private documents folder, never a public URL
+  licenseFile      String?
+  birthDate        DateTime?      @db.Date
+  address          String?
+  emergencyName    String?
+  emergencyPhone   String?
+  status           ApprovalStatus @default(PENDING)
+  reviewNote       String?
+  reviewedAt       DateTime?
+  /// Only the admin can lift a suspension the admin made, not the rider's store
+  suspendedByAdmin Boolean        @default(false)
+  isOnline         Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+
+  @@index([vendorId, status])
 }
 
 model MenuItem {

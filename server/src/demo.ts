@@ -4,18 +4,21 @@
 // ratings and table bookings. The admin account is recreated from ADMIN_EMAIL/ADMIN_PASSWORD.
 //
 // Run:  docker compose run --rm demo      (see README "Demo data")
+import { randomBytes } from "node:crypto";
 import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
-import type { DiningTable, Fulfillment, MenuItem, OrderStatus, PaymentMethod, StoreType, User, Vendor, VehicleType } from "./generated/prisma/client.js";
+import type { DiningTable, Fulfillment, MenuItem, OrderStatus, PaymentMethod, StoreType, User, Vendor } from "./generated/prisma/client.js";
 import { hashPassword } from "./lib/auth.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
 import { DELIVERY_FEE } from "./lib/storeHours.js";
+import { newRiderCode } from "./lib/verification.js";
 
 const DEMO_PASSWORD = "demo1234";
 const PHOTO_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "demo", "photos");
+const DOCUMENT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "demo", "documents");
 
 // Same "random" data every run, so the demo is predictable
 let seed = 20261121;
@@ -282,12 +285,13 @@ const PENDING_STORES = [
   { owner: { name: "Grace Tan", email: "grace@feasto.com" }, name: "Brew & Bloom Café", storeType: "CAFE" as const, address: "Brgy. Calumpang, Naval, Biliran" },
 ];
 
-const RIDERS: { name: string; email: string; vehicleType: VehicleType; plateNumber?: string; licenseNumber?: string; pending?: boolean }[] = [
-  { name: "Pedro Reyes", email: "pedro@feasto.com", vehicleType: "MOTORCYCLE", plateNumber: "NBC 1234", licenseNumber: "N01-21-104455" },
-  { name: "Jessa Ramos", email: "jessa@feasto.com", vehicleType: "MOTORCYCLE", plateNumber: "ADF 5678", licenseNumber: "N02-19-223344" },
-  { name: "Mark Navarro", email: "mark@feasto.com", vehicleType: "E_BIKE" },
-  { name: "Leo Castillo", email: "leo@feasto.com", vehicleType: "BICYCLE" },
-  { name: "Rico Fernandez", email: "rico@feasto.com", vehicleType: "MOTORCYCLE", plateNumber: "WQR 9012", licenseNumber: "N03-22-556677", pending: true },
+// Pedro, Jessa and Rico are free riders. Mark and Leo ride for Aling Nena's Carinderia.
+const RIDERS: { name: string; email: string; vehicleModel: string; plateNumber: string; licenseNumber: string; store?: string; pending?: boolean }[] = [
+  { name: "Pedro Reyes", email: "pedro@feasto.com", vehicleModel: "Honda Click 125", plateNumber: "NBC 1234", licenseNumber: "N01-21-104455" },
+  { name: "Jessa Ramos", email: "jessa@feasto.com", vehicleModel: "Yamaha Mio i125", plateNumber: "ADF 5678", licenseNumber: "N02-19-223344" },
+  { name: "Mark Navarro", email: "mark@feasto.com", vehicleModel: "Suzuki Raider 150", plateNumber: "KLM 3456", licenseNumber: "N04-20-331122", store: "nena@feasto.com" },
+  { name: "Leo Castillo", email: "leo@feasto.com", vehicleModel: "Honda TMX 125", plateNumber: "PQR 7890", licenseNumber: "N05-23-778899", store: "nena@feasto.com", pending: true },
+  { name: "Rico Fernandez", email: "rico@feasto.com", vehicleModel: "Kawasaki Barako 175", plateNumber: "WQR 9012", licenseNumber: "N03-22-556677", pending: true },
 ];
 
 const RESIDENTS = [
@@ -335,7 +339,26 @@ async function wipe() {
   await redis.flushdb();
   await mkdir(config.uploadDir, { recursive: true });
   for (const file of await readdir(config.uploadDir)) await rm(path.join(config.uploadDir, file), { force: true });
+  await mkdir(config.documentDir, { recursive: true });
+  for (const file of await readdir(config.documentDir)) await rm(path.join(config.documentDir, file), { force: true });
 }
+
+/** A copy of a made-up sample document (marked SAMPLE), never a real permit or license. */
+async function sampleDocument(kind: "permit" | "license") {
+  const name = `${randomBytes(16).toString("hex")}.png`;
+  await copyFile(path.join(DOCUMENT_DIR, `sample-${kind}.png`), path.join(config.documentDir, name));
+  return name;
+}
+
+/** The made-up business details every demo store is verified with. */
+const permitOf = async (storeName: string, index: number) => ({
+  businessName: `${storeName} Food Services`,
+  businessPhone: phone(),
+  permitNumber: `NVL-2026-${String(1001 + index)}`,
+  permitExpiresAt: new Date("2027-12-31"),
+  permitFile: await sampleDocument("permit"),
+  riderCode: newRiderCode(),
+});
 
 async function photo(slug: string) {
   const name = `demo-${slug}.jpg`;
@@ -379,6 +402,7 @@ async function main() {
             address: s.address,
             ...pin(s.owner.email),
             imageUrl,
+            ...(await permitOf(s.name, index)),
             status: "APPROVED",
             reviewedAt: new Date(accountsSince.getTime() + index * 86400_000 + 3600_000),
             opensAt: s.opensAt,
@@ -430,6 +454,7 @@ async function main() {
             acceptsReservations: s.storeType === "RESTAURANT" || s.storeType === "CAFE",
             address: s.address,
             ...pin(s.owner.email),
+            ...(await permitOf(s.name, 100 + index)),
             opensAt: "09:00",
             closesAt: "21:00",
             createdAt: manilaAt(1 - index, "08:30"),
@@ -454,9 +479,16 @@ async function main() {
           createdAt: r.pending ? manilaAt(0, "07:45") : new Date(accountsSince.getTime() + index * 43200_000),
           riderProfile: {
             create: {
-              vehicleType: r.vehicleType,
-              plateNumber: r.plateNumber ?? null,
-              licenseNumber: r.licenseNumber ?? null,
+              vendorId: r.store ? (await prisma.vendor.findFirstOrThrow({ where: { owner: { email: r.store } }, select: { id: true } })).id : null,
+              vehicleModel: r.vehicleModel,
+              plateNumber: r.plateNumber,
+              licenseNumber: r.licenseNumber,
+              licenseExpiresAt: new Date("2028-06-30"),
+              licenseFile: await sampleDocument("license"),
+              birthDate: new Date(`${1988 + index}-03-15`),
+              address: "Brgy. Santissimo Rosario, Naval, Biliran",
+              emergencyName: "Maria Santos",
+              emergencyPhone: phone(),
               status: r.pending ? "PENDING" : "APPROVED",
               reviewedAt: r.pending ? null : accountsSince,
               isOnline: !r.pending && index < 2,
@@ -532,7 +564,7 @@ async function main() {
     const finished = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"].includes(status);
     const failed = status === "REJECTED" || status === "CANCELLED";
     const reached = (step: OrderStatus[]) => step.includes(status);
-    const rider = fulfillment === "DELIVERY" && reached(["PICKED_UP", "DELIVERED"]) ? (opts.rider ?? pick(activeRiders)) : (opts.rider ?? null);
+    const rider = fulfillment === "DELIVERY" && reached(["PICKED_UP", "DELIVERED"]) ? (opts.rider ?? pick(activeRiders.filter((r) => [undefined, store.owner.email].includes(RIDERS[riders.indexOf(r)].store)))) : (opts.rider ?? null);
     const at = (m: number) => new Date(createdAt.getTime() + minutes(m));
 
     const checkout = await prisma.checkout.create({

@@ -24,6 +24,9 @@ export const config = {
   cookieSecure: process.env.COOKIE_SECURE === "true",
   // Where uploaded photos are saved. In Docker this is a volume shared by every API copy.
   uploadDir: process.env.UPLOAD_DIR ?? "uploads",
+  // Business permits and driver's licenses. Shared by the API copies, but Nginx can't see this
+  // folder, so a file only leaves through the API after checking who is asking.
+  documentDir: process.env.DOCUMENT_DIR ?? "documents",
   // Simulated work in the worker, so parallel processing is visible in the demo
   orderProcessingDelayMs: Number(process.env.ORDER_PROCESSING_DELAY_MS ?? 800),
   paymentDelayMs: Number(process.env.PAYMENT_DELAY_MS ?? 1500),

@@ -35,6 +35,10 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     res.status(error.status).json({ error: error.message });
     return;
   }
+  if (error?.type === "entity.too.large") {
+    res.status(413).json({ error: "That file is too big." });
+    return;
+  }
   // Errors from Express itself, such as a request body that isn't valid JSON
   if (typeof error?.status === "number" && error.status < 500) {
     res.status(error.status).json({ error: "Invalid request." });
