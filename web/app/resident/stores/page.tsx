@@ -4,12 +4,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { StoreCard } from "@/components/app/store-card";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
-import { STORE_TYPE_OPTIONS } from "@/lib/store-types";
+import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { StorePage } from "@/lib/types";
-import { browseHref, filterQuery, readFilters, StoreChips, StoreSearch } from "./store-browse";
+import { CategoryTabs } from "./category-tabs";
+import { browseHref, type BrowseFilters, filterQuery, NO_FILTERS, readFilters, StoreFilters, StoreSearch } from "./store-browse";
 
 export const metadata: Metadata = { title: "Stores" };
 
@@ -25,8 +27,20 @@ export default function StoresPage({ searchParams }: PageProps<"/resident/stores
   );
 }
 
-const SORT_LABEL = { nearest: "Nearest", rating: "Top rated", name: "A–Z" } as const;
+function pageTitle({ q, type, saved, bookable }: BrowseFilters) {
+  if (q) return `Results for “${q}”`;
+  if (type) return STORE_TYPE_LABEL[type];
+  if (saved) return "Your saved stores";
+  if (bookable) return "Stores that take bookings";
+  return "All stores";
+}
 
+const storeCount = (n: number) => `${n} ${n === 1 ? "store" : "stores"}`;
+
+/**
+ * Every way into the stores ends here, and the page reads in the order a resident asks:
+ * where am I, what else is there, how do I narrow it, then the stores themselves.
+ */
 async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "searchParams">) {
   await requireRole("RESIDENT");
   const params = await searchParams;
@@ -36,86 +50,72 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
   const shown = Math.min(MAX_SHOWN, Math.max(PAGE_SIZE, Math.ceil((Number(params.show) || 0) / PAGE_SIZE) * PAGE_SIZE));
   const query = filterQuery(filters);
   query.set("limit", String(shown));
-  const { stores, total, openCount } = await serverApi<StorePage>(`/stores?${query}`);
+  const { stores, total, openCount, typeCounts } = await serverApi<StorePage>(`/stores?${query}`);
 
   // Without a pinned delivery address there's nothing to measure from, so no "Nearest"
   const canMeasure = stores.some((s) => s.distanceKm !== null);
   const sort = filters.sort ?? (canMeasure ? "nearest" : "name");
-  const sorts = (canMeasure ? ["nearest", "rating", "name"] : ["rating", "name"]) as (keyof typeof SORT_LABEL)[];
-  const filtered = Boolean(filters.q || filters.type || filters.bookable || filters.saved || filters.open);
-  const title = filters.q
-    ? `Results for “${filters.q}”`
-    : filters.saved
-      ? "Your saved stores"
-      : filters.bookable
-        ? "Stores that take bookings"
-        : filters.type
-          ? STORE_TYPE_OPTIONS.find((o) => o.value === filters.type)!.label
-          : "All stores";
-  const option = (on: boolean) =>
-    `rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap transition ${on ? "bg-ink text-white" : "text-muted hover:text-ink"}`;
   const more = filterQuery(filters);
   more.set("show", String(shown + PAGE_SIZE));
 
+  const totalAnyType = Object.values(typeCounts).reduce((sum, n) => sum + n, 0);
+  // Only kinds that have something to show, plus the chosen one so the page still says where it is
+  const tabs = [
+    { label: "All", count: totalAnyType, href: browseHref({ ...filters, type: undefined }), active: !filters.type },
+    ...STORE_TYPE_OPTIONS.filter((o) => typeCounts[o.value] || o.value === filters.type).map((o) => ({
+      label: o.label,
+      count: typeCounts[o.value] ?? 0,
+      href: browseHref({ ...filters, type: o.value }),
+      active: o.value === filters.type,
+    })),
+  ];
+
   return (
     <>
-      <Link href="/resident" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden />
-        Home
-      </Link>
-      <StoreSearch filters={filters} />
-      <div className="mt-3">
-        <StoreChips filters={filters} />
-      </div>
-
-      <div className="mt-6 mb-3">
-        <h1 className="text-lg font-bold text-ink">{title}</h1>
-        <p className="text-sm text-muted">
-          {total} {total === 1 ? "store" : "stores"}
-          {!filters.open && total > 0 && ` · ${openCount} open now`}
-        </p>
-      </div>
-
-      {/* How to order the list, and whether to hide closed stores */}
-      <div className="-mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
-        <div role="group" aria-label="Sort stores" className="flex shrink-0 gap-0.5 rounded-full bg-canvas p-1">
-          {sorts.map((value) => (
-            <Link key={value} href={browseHref({ ...filters, sort: value })} aria-pressed={sort === value} replace scroll={false} className={option(sort === value)}>
-              {SORT_LABEL[value]}
-            </Link>
-          ))}
-        </div>
+      <div className="flex items-start gap-1">
         <Link
-          href={browseHref({ ...filters, open: !filters.open })}
-          aria-pressed={filters.open}
-          replace
-          scroll={false}
-          className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-            filters.open ? "border-emerald-600 bg-emerald-600 text-white" : "border-line text-ink hover:border-gray-300"
-          }`}
+          href="/resident"
+          aria-label="Back to Home"
+          className="-ml-2.5 flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
         >
-          Open now
+          <ArrowLeft className="size-5" aria-hidden />
         </Link>
+        <div className="min-w-0 pt-1">
+          <h1 className="text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] text-ink">{pageTitle(filters)}</h1>
+          {total > 0 && (
+            <p className="mt-0.5 text-sm text-muted">
+              {storeCount(total)}
+              {filters.q && filters.type && ` in ${STORE_TYPE_LABEL[filters.type]}`}
+              {!filters.open && ` · ${openCount} open now`}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <StoreSearch filters={filters} />
+      </div>
+      <div className="mt-2">
+        <CategoryTabs tabs={tabs} />
+      </div>
+      <div className="mt-3">
+        <StoreFilters filters={filters} sort={total > 1 ? sort : undefined} canMeasure={canMeasure} />
       </div>
 
       {stores.length === 0 ? (
-        filters.saved && !filters.q && !filters.type && !filters.bookable ? (
-          <EmptyState Icon={Heart} title="No saved stores yet" text="Tap the heart on any store to keep it here for quick ordering." />
-        ) : filtered ? (
-          <EmptyState Icon={SearchX} title="Nothing found" text="Try another word or store type." />
-        ) : (
-          <EmptyState Icon={Store} title="No stores yet" text="Stores appear here once an admin approves them. Check back soon!" />
-        )
+        <NoStores filters={filters} totalAnyType={totalAnyType} />
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="mt-1 divide-y divide-line">
             {stores.map((store) => (
-              <StoreCard key={store.id} store={store} href={`/resident/stores/${store.id}`} distance={store.distanceKm} />
+              <StoreCard key={store.id} store={store} href={`/resident/stores/${store.id}`} showType={!filters.type} />
             ))}
           </div>
-          <p className="mt-4 text-center text-sm text-muted">
-            Showing {stores.length} of {total}
-          </p>
+          {stores.length < total && (
+            <p className="mt-4 text-center text-sm text-muted">
+              Showing {stores.length} of {total}
+            </p>
+          )}
           {stores.length < total && shown < MAX_SHOWN && (
             <Link
               href={`/resident/stores?${more}`}
@@ -134,4 +134,67 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
       )}
     </>
   );
+}
+
+/** Says why the list is empty and offers the way out, so nothing here is a dead end. */
+function NoStores({ filters, totalAnyType }: { filters: BrowseFilters; totalAnyType: number }) {
+  const { q, type, open, bookable, saved, sort } = filters;
+  const label = type && STORE_TYPE_LABEL[type];
+
+  if (q && label && totalAnyType > 0) {
+    return (
+      <EmptyState
+        Icon={SearchX}
+        title={`No “${q}” in ${label}`}
+        text={`${storeCount(totalAnyType)} in other categories ${totalAnyType === 1 ? "has" : "have"} it.`}
+        action={<ButtonLink href={browseHref({ ...filters, type: undefined })}>See {totalAnyType === 1 ? "it" : "them"}</ButtonLink>}
+      />
+    );
+  }
+  if (q) {
+    return (
+      <EmptyState
+        Icon={SearchX}
+        title={`No results for “${q}”`}
+        text="Check the spelling, or try a store name or a dish."
+        action={
+          <ButtonLink href={browseHref({ ...filters, q: "" })} variant="secondary">
+            Clear search
+          </ButtonLink>
+        }
+      />
+    );
+  }
+  if (saved && !type && !open && !bookable) {
+    return <EmptyState Icon={Heart} title="No saved stores yet" text="Tap the heart on any store to keep it here for quick ordering." />;
+  }
+  if (open || bookable || saved) {
+    return (
+      <EmptyState
+        Icon={SearchX}
+        title={label ? `No ${label} stores match these filters` : "No stores match these filters"}
+        text="Turn off a filter to see more."
+        action={
+          <ButtonLink href={browseHref({ ...NO_FILTERS, type, sort })} variant="secondary">
+            Clear filters
+          </ButtonLink>
+        }
+      />
+    );
+  }
+  if (label) {
+    return (
+      <EmptyState
+        Icon={Store}
+        title={`No ${label} stores yet`}
+        text="Stores appear here once an admin approves them."
+        action={
+          <ButtonLink href={browseHref(NO_FILTERS)} variant="secondary">
+            See all stores
+          </ButtonLink>
+        }
+      />
+    );
+  }
+  return <EmptyState Icon={Store} title="No stores yet" text="Stores appear here once an admin approves them. Check back soon!" />;
 }

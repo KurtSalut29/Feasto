@@ -74,6 +74,7 @@ export type StoreSummary = Pin & {
   opensAt: string;
   closesAt: string;
   acceptsReservations: boolean;
+  isTemporarilyClosed: boolean;
   isOpen: boolean;
   dishCount: number;
   categories: string[];
@@ -87,9 +88,21 @@ export type StoreSummary = Pin & {
 };
 
 /** One page of stores from GET /stores */
-export type StorePage = { stores: StoreSummary[]; total: number; nextOffset: number | null; openCount: number; favoriteCount: number };
+export type StorePage = {
+  stores: StoreSummary[];
+  total: number;
+  nextOffset: number | null;
+  openCount: number;
+  /** How many stores of each kind match, whichever kind is chosen */
+  typeCounts: Partial<Record<StoreType, number>>;
+  favoriteCount: number;
+};
+
+/** One kind of store on the resident's Home. */
+export type StoreCategory = { type: StoreType; count: number; imageUrl: string | null };
 
 export type StoreSections = {
+  categories: StoreCategory[];
   orderAgain: StoreSummary[];
   nearby: StoreSummary[];
   topRated: StoreSummary[];

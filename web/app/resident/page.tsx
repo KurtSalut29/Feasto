@@ -1,4 +1,4 @@
-import { ChevronRight, MapPin, Store } from "lucide-react";
+import { CalendarDays, ChevronRight, Heart, MapPin, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,7 +9,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
 import type { Address, StoreSections, StoreSummary } from "@/lib/types";
-import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreChips, StoreSearch } from "./stores/store-browse";
+import { CategoryGrid } from "./category-grid";
+import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreSearch } from "./stores/store-browse";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -22,8 +23,9 @@ export default function ResidentHomePage({ searchParams }: PageProps<"/resident"
 }
 
 /**
- * Home is a short page however many stores Feasto has: a few stores per row (order again,
- * near you, top rated, saved), each row scrolling sideways, and "See all" for the full list.
+ * Home answers "what can I get here?" first, with the kinds of stores. Below that, a few stores
+ * per row (order again, near you, top rated, saved), each saying what it is and scrolling
+ * sideways, so the page stays short however many stores Feasto has.
  */
 async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "searchParams">) {
   // Searches and filters live on the store list now; old links like /resident?q=adobo go there
@@ -57,9 +59,6 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
       <div className="mt-4">
         <StoreSearch filters={NO_FILTERS} />
       </div>
-      <div className="mt-3">
-        <StoreChips filters={NO_FILTERS} showAll={false} />
-      </div>
 
       {sections.total === 0 ? (
         <div className="mt-7">
@@ -67,36 +66,61 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
         </div>
       ) : (
         <>
-          <StoreRow title="Order again" stores={sections.orderAgain} />
+          <section className="mt-6" aria-label="Categories">
+            <SectionHeading title="Categories" seeAll={{ href: browseHref(NO_FILTERS), label: `All ${sections.total} stores` }} />
+            <CategoryGrid categories={sections.categories} />
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Shortcut href={browseHref({ ...NO_FILTERS, bookable: true })} Icon={CalendarDays} label="Book a table" />
+              <Shortcut href={browseHref({ ...NO_FILTERS, saved: true })} Icon={Heart} label="Saved stores" />
+            </div>
+          </section>
+
+          <StoreRow title="Order again" subtitle="Stores you've ordered from" stores={sections.orderAgain} />
           <StoreRow
-            title={sections.hasStartingPoint ? "Near you" : "Stores"}
-            subtitle={`${sections.openCount} open now`}
+            title={sections.hasStartingPoint ? "Near you" : "Stores on Feasto"}
+            subtitle={`${sections.hasStartingPoint ? "Closest to your delivery address · " : ""}${sections.openCount} open now`}
             stores={sections.nearby}
-            seeAll={{ href: browseHref(NO_FILTERS), label: `See all ${sections.total}` }}
+            seeAll={{ href: browseHref(NO_FILTERS), label: "See all" }}
           />
-          <StoreRow title="Top rated" stores={sections.topRated} seeAll={{ href: browseHref({ ...NO_FILTERS, sort: "rating" }), label: "See all" }} />
+          <StoreRow title="Top rated" subtitle="Residents' highest-rated stores" stores={sections.topRated} seeAll={{ href: browseHref({ ...NO_FILTERS, sort: "rating" }), label: "See all" }} />
           <StoreRow
             title="Your saved stores"
+            subtitle="Stores you tapped the heart on"
             stores={sections.saved}
             seeAll={sections.savedCount > sections.saved.length ? { href: browseHref({ ...NO_FILTERS, saved: true }), label: "See all" } : undefined}
           />
-
-          <Link
-            href={browseHref(NO_FILTERS)}
-            className="mt-7 flex items-center gap-3 rounded-2xl border border-line px-4 py-3.5 transition hover:bg-canvas"
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-              <Store className="size-5" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-semibold text-ink">Browse all {sections.total} stores</span>
-              <span className="block text-sm text-muted">Search, sort and filter</span>
-            </span>
-            <ChevronRight className="size-5 text-muted" aria-hidden />
-          </Link>
         </>
       )}
     </>
+  );
+}
+
+function SectionHeading({ title, subtitle, seeAll }: { title: string; subtitle?: string; seeAll?: { href: string; label: string } }) {
+  return (
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold text-ink">{title}</h2>
+        {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
+      </div>
+      {seeAll && (
+        <Link href={seeAll.href} className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline">
+          {seeAll.label}
+          <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function Shortcut({ href, Icon, label }: { href: string; Icon: LucideIcon; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+    >
+      <Icon className="size-4 text-brand-600" aria-hidden />
+      {label}
+    </Link>
   );
 }
 
@@ -115,18 +139,7 @@ function StoreRow({
   if (stores.length === 0) return null;
   return (
     <section className="mt-7" aria-label={title}>
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-ink">{title}</h2>
-          {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
-        </div>
-        {seeAll && (
-          <Link href={seeAll.href} className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline">
-            {seeAll.label}
-            <ChevronRight className="size-4" aria-hidden />
-          </Link>
-        )}
-      </div>
+      <SectionHeading title={title} subtitle={subtitle} seeAll={seeAll} />
       <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         {stores.map((store) => (
           <li key={store.id} className="contents">

@@ -1,7 +1,9 @@
-import { CalendarDays, Heart, Search } from "lucide-react";
+import { CalendarDays, Heart, Search, X } from "lucide-react";
 import Link from "next/link";
-import { STORE_TYPE_OPTIONS } from "@/lib/store-types";
+import type { ReactNode } from "react";
+import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { StoreType } from "@/lib/types";
+import { SortMenu } from "./category-tabs";
 
 /** What the store list is showing; every part lives in the address so Back and sharing keep it. */
 export type BrowseFilters = {
@@ -44,8 +46,9 @@ export function browseHref(f: BrowseFilters) {
   return query ? `/resident/stores?${query}` : "/resident/stores";
 }
 
-/** Search box. Searching always opens the store list, wherever it's typed. */
+/** Search box. Searching always opens the store list, and stays inside the chosen category. */
 export function StoreSearch({ filters, autoFocus }: { filters: BrowseFilters; autoFocus?: boolean }) {
+  const words = filters.type ? `Search in ${STORE_TYPE_LABEL[filters.type]}` : "Search stores or dishes";
   return (
     <form action="/resident/stores" className="relative" role="search">
       {[...filterQuery({ ...filters, q: "" })].map(([name, value]) => (
@@ -53,61 +56,74 @@ export function StoreSearch({ filters, autoFocus }: { filters: BrowseFilters; au
       ))}
       <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
       <input
+        key={filters.q}
         type="search"
         name="q"
         defaultValue={filters.q}
         autoFocus={autoFocus}
-        placeholder="Search stores or dishes"
-        aria-label="Search stores or dishes"
-        className="h-12 w-full rounded-xl border border-line bg-canvas pr-4 pl-12 text-[15px] outline-none placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15"
+        maxLength={60}
+        placeholder={words}
+        aria-label={words}
+        className="h-12 w-full rounded-xl border border-line bg-canvas pr-12 pl-12 text-[15px] outline-none placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
       />
+      {filters.q && (
+        <Link
+          href={browseHref({ ...filters, q: "" })}
+          aria-label="Clear search"
+          className="absolute top-1/2 right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-muted transition hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+        >
+          <X className="size-5" aria-hidden />
+        </Link>
+      )}
     </form>
   );
 }
 
-const toggleChip = (on: boolean) =>
-  `flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-    on ? "border-brand-600 bg-brand-600 text-white" : "border-brand-500/40 bg-brand-50 text-brand-700 hover:border-brand-500"
+const SORT_LABEL = { nearest: "Nearest", rating: "Top rated", name: "A–Z" } as const;
+
+const filterChip = (on: boolean) =>
+  `flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+    on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-gray-300"
   }`;
 
 /**
- * Saved, Book a table and the store types, in one sideways row. On Home they open the list
- * with that filter; on the list they switch it on or off.
+ * What narrows the list and how it's ordered, in one sideways row. Each filter switches on and
+ * off where it is, keeping the place on the page. `sort` is left out when there's nothing to order.
  */
-export function StoreChips({ filters, showAll = true }: { filters: BrowseFilters; showAll?: boolean }) {
-  const types = showAll ? [{ value: undefined, label: "All" }, ...STORE_TYPE_OPTIONS] : STORE_TYPE_OPTIONS;
+export function StoreFilters({ filters, sort, canMeasure }: { filters: BrowseFilters; sort?: keyof typeof SORT_LABEL; canMeasure: boolean }) {
+  const chip = (on: boolean, change: Partial<BrowseFilters>, children: ReactNode) => (
+    <Link href={browseHref({ ...filters, ...change })} aria-pressed={on} replace scroll={false} className={filterChip(on)}>
+      {children}
+    </Link>
+  );
+  const sorts = (canMeasure ? ["nearest", "rating", "name"] : ["rating", "name"]) as (keyof typeof SORT_LABEL)[];
   return (
-    <nav aria-label="Store types" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none]">
-      <ul className="flex w-max gap-2">
-        <li>
-          <Link href={browseHref({ ...filters, saved: !filters.saved })} aria-pressed={filters.saved} className={toggleChip(filters.saved)}>
-            <Heart className={`size-4 ${filters.saved ? "fill-white" : ""}`} aria-hidden />
-            Saved
-          </Link>
-        </li>
-        <li>
-          <Link href={browseHref({ ...filters, bookable: !filters.bookable })} aria-pressed={filters.bookable} className={toggleChip(filters.bookable)}>
-            <CalendarDays className="size-4" aria-hidden />
-            Book a table
-          </Link>
-        </li>
-        {types.map((option) => {
-          const active = showAll && option.value === filters.type;
-          return (
-            <li key={option.label}>
-              <Link
-                href={browseHref({ ...filters, type: option.value as StoreType | undefined })}
-                aria-current={active ? "page" : undefined}
-                className={`block rounded-full border px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-                  active ? "border-ink bg-ink text-white" : "border-line text-ink hover:border-gray-300"
-                }`}
-              >
-                {option.label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <div role="group" aria-label="Filter stores" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [mask-image:linear-gradient(to_right,transparent,black_16px,black_calc(100%-16px),transparent)]">
+      {sort && <SortMenu value={sort} options={sorts.map((value) => ({ value, label: SORT_LABEL[value], href: browseHref({ ...filters, sort: value }) }))} />}
+      {chip(
+        filters.open,
+        { open: !filters.open },
+        <>
+          <span className={`size-2 rounded-full ${filters.open ? "bg-emerald-300" : "bg-emerald-500"}`} aria-hidden />
+          Open now
+        </>,
+      )}
+      {chip(
+        filters.bookable,
+        { bookable: !filters.bookable },
+        <>
+          <CalendarDays className="size-4" aria-hidden />
+          Takes bookings
+        </>,
+      )}
+      {chip(
+        filters.saved,
+        { saved: !filters.saved },
+        <>
+          <Heart className={`size-4 ${filters.saved ? "fill-white" : ""}`} aria-hidden />
+          Saved
+        </>,
+      )}
+    </div>
   );
 }

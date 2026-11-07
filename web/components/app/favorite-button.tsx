@@ -6,7 +6,7 @@ import { useState } from "react";
 import { apiRequest } from "@/lib/api-client";
 
 /** Heart that saves a store to the resident's favorites. Changes instantly, then syncs. */
-export function FavoriteButton({ storeId, storeName, isFavorite }: { storeId: string; storeName: string; isFavorite: boolean }) {
+export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { storeId: string; storeName: string; isFavorite: boolean; plain?: boolean }) {
   const router = useRouter();
   const [saved, setSaved] = useState(isFavorite);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,9 @@ export function FavoriteButton({ storeId, storeName, isFavorite }: { storeId: st
       disabled={busy}
       aria-pressed={saved}
       aria-label={saved ? `Remove ${storeName} from favorites` : `Save ${storeName} to favorites`}
-      className="flex size-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur transition hover:scale-105 focus-visible:outline-2 focus-visible:outline-brand-500 active:scale-95"
+      className={`flex size-10 items-center justify-center rounded-full transition hover:scale-105 focus-visible:outline-2 focus-visible:outline-brand-500 active:scale-95 ${
+        plain ? "" : "bg-white/95 shadow-sm backdrop-blur"
+      }`}
     >
       <Heart
         className={`size-5 transition ${saved ? "fill-brand-600 text-brand-600" : "text-ink"}`}
