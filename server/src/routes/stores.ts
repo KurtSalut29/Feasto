@@ -117,15 +117,18 @@ storesRouter.get("/", async (req, res) => {
   ]);
   const needle = q?.toLowerCase();
 
-  const matching = all
-    .filter((s) => !type || s.storeType === type)
+  const matchingAnyType = all
     .filter((s) => !reservations || s.acceptsReservations)
     .filter((s) => !favorites || saved.has(s.id))
     .filter((s) => !bbox || (s.latitude != null && s.longitude != null && inBbox(bbox, s.latitude, s.longitude)))
     .map((s) => summarize(s, saved, from, needle))
     .filter((s) => !needle || s.name.toLowerCase().includes(needle) || s.matchedDishes.length > 0)
-    .filter((s) => !open || s.isOpen)
-    .sort(openFirst(sort ?? (from ? "nearest" : "name")));
+    .filter((s) => !open || s.isOpen);
+  const matching = matchingAnyType.filter((s) => !type || s.storeType === type).sort(openFirst(sort ?? (from ? "nearest" : "name")));
+
+  // Each kind's matches, whichever kind is chosen, so the list can point to the others
+  const typeCounts: Record<string, number> = {};
+  for (const store of matchingAnyType) typeCounts[store.storeType] = (typeCounts[store.storeType] ?? 0) + 1;
 
   const stores = matching.slice(offset, offset + limit);
   res.json({
@@ -133,6 +136,7 @@ storesRouter.get("/", async (req, res) => {
     total: matching.length,
     nextOffset: nextOffset(offset, stores.length, matching.length),
     openCount: matching.filter((s) => s.isOpen).length,
+    typeCounts,
     favoriteCount: saved.size,
   });
 });
@@ -161,7 +165,17 @@ storesRouter.get("/sections", requireRole("RESIDENT"), async (req, res) => {
   const stores = all.map((s) => summarize(s, saved, from));
   const byId = new Map(stores.map((s) => [s.id, s]));
 
+  // Each kind of store with how many there are, and a photo from its best open store
+  const categories = new Map<string, { type: string; count: number; imageUrl: string | null }>();
+  for (const store of [...stores].sort(openFirst("rating"))) {
+    const category = categories.get(store.storeType) ?? { type: store.storeType, count: 0, imageUrl: null };
+    category.count++;
+    category.imageUrl ??= store.imageUrl;
+    categories.set(store.storeType, category);
+  }
+
   res.json({
+    categories: [...categories.values()],
     orderAgain: recent.flatMap((order) => byId.get(order.vendorId) ?? []),
     nearby: [...stores].sort(openFirst(from ? "nearest" : "name")).slice(0, SECTION_SIZE),
     topRated: stores.filter((s) => s.rating !== null).sort(openFirst("rating")).slice(0, SECTION_SIZE),
