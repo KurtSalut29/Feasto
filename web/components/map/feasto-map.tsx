@@ -94,6 +94,12 @@ export function FeastoMap({
       made?.map.remove();
       host.remove();
       ownMarkers.clear();
+      // A hidden page (kept by <Activity>) keeps its state, so forget the removed map;
+      // otherwise coming back would put pins on it before the new one is ready
+      setEngine(null);
+      setSlots({});
+      framedIds.current = "";
+      framedDestination.current = "";
     };
     // start only matters for the first view
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -10,7 +10,7 @@ import { SearchBox } from "@/components/ui/search-box";
 import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime, formatPeso, timeAgo } from "@/lib/format";
-import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { Fulfillment, OrderStatus, PaymentMethod, PaymentStatus } from "@/lib/types";
 
@@ -153,7 +153,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
                       )}
                     </td>
                     <td className={TD}>
-                      <p className="text-ink">{PAYMENT_LABEL[o.checkout.paymentMethod]}</p>
+                      <p className="text-ink">{paymentName(o.checkout)}</p>
                       <p className={`text-xs ${o.checkout.paymentStatus === "PAID" ? "text-emerald-700" : "text-muted"}`}>
                         {o.checkout.paymentMethod === "COD" && o.checkout.paymentStatus === "PENDING"
                           ? "Due on handover"

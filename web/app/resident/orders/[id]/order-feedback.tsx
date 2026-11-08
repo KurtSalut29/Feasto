@@ -30,7 +30,7 @@ export function RateOrder({
 
   if (review) {
     return (
-      <section className="rounded-2xl border border-line bg-white p-4">
+      <section id="rate" className="scroll-mt-20 rounded-2xl border border-line bg-white p-4">
         <h2 className="text-sm font-semibold text-ink">Your rating</h2>
         <div className="mt-2 flex items-center gap-2">
           <Stars value={review.rating} size="size-5" />
@@ -54,7 +54,7 @@ export function RateOrder({
 
   const shown = hover || rating;
   return (
-    <form onSubmit={submit} className="rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4">
+    <form id="rate" onSubmit={submit} className="scroll-mt-20 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4">
       <h2 className="font-semibold text-ink">How was your order?</h2>
       <p className="mt-0.5 text-sm text-muted">Your rating helps {storeName} and other residents.</p>
       <fieldset className="mt-3">
@@ -104,7 +104,7 @@ export function RateOrder({
 }
 
 /** Puts the same dishes back in the cart and opens it. */
-export function ReorderButton({ orderId }: { orderId: string }) {
+export function ReorderButton({ orderId, compact }: { orderId: string; /** A small link-style button, for lists */ compact?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -120,6 +120,32 @@ export function ReorderButton({ orderId }: { orderId: string }) {
       return setMessage(`Added to cart. Not available right now: ${result.data.skipped.join(", ")}.`);
     }
     router.push("/resident/cart");
+  }
+
+  if (compact) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={reorder}
+          disabled={busy}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-60"
+        >
+          <RotateCcw className={`size-3.5 ${busy ? "animate-spin" : ""}`} aria-hidden />
+          Order again
+        </button>
+        {message && (
+          <p role="status" className="basis-full text-[13px] text-muted">
+            {message}{" "}
+            {message.startsWith("Added") && (
+              <Link href="/resident/cart" className="font-semibold text-brand-700 hover:underline">
+                Go to cart
+              </Link>
+            )}
+          </p>
+        )}
+      </>
+    );
   }
 
   return (

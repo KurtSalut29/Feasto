@@ -58,6 +58,8 @@ export type MenuItem = {
   imageUrl: string | null;
   stock: number | null;
   isAvailable: boolean;
+  /** How many residents have received; only on a store's menu */
+  soldCount?: number;
 };
 
 /** A pin on the map as the API sends it; both null until someone sets it. */
@@ -118,6 +120,10 @@ export type StoreReview = { id: string; rating: number; comment: string | null; 
 export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "matchedDishes" | "distanceKm"> & {
   canBook: boolean;
   maxPartySize: number;
+  /** Per store, when delivered */
+  deliveryFee: number;
+  /** How many residents gave 1 to 5 stars */
+  ratingBreakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
   menuItems: MenuItem[];
   reviews: StoreReview[];
 };
@@ -129,7 +135,7 @@ export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STO
 
 export type Cart = {
   groups: {
-    store: { id: string; name: string; imageUrl: string | null; isOpen: boolean };
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -155,6 +161,8 @@ export type OrderStatus =
   | "CANCELLED";
 
 export type Fulfillment = "DELIVERY" | "PICKUP";
+export type OnlinePayment = "GCASH" | "MAYA" | "GRABPAY" | "SHOPEEPAY" | "COINS" | "VISA" | "MASTERCARD" | "JCB" | "AMEX";
+
 export type PaymentMethod = "COD" | "ONLINE";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
@@ -182,6 +190,7 @@ export type ResidentOrder = OrderBase & {
   checkout: {
     id: string;
     paymentMethod: PaymentMethod;
+    onlineMethod?: OnlinePayment | null;
     paymentStatus: PaymentStatus;
     deliveryAddress: string | null;
     deliveryLat: number | null;
@@ -203,6 +212,7 @@ export type VendorOrder = OrderBase & {
   rider: { name: string; phone: string | null } | null;
   checkout: {
     paymentMethod: PaymentMethod;
+    onlineMethod?: OnlinePayment | null;
     paymentStatus: PaymentStatus;
     deliveryAddress: string | null;
     notes: string | null;
@@ -264,6 +274,7 @@ export type RiderDelivery = {
     deliveryLng: number | null;
     notes: string | null;
     paymentMethod: PaymentMethod;
+    onlineMethod?: OnlinePayment | null;
     paymentStatus: PaymentStatus;
     resident: { name: string; phone: string | null };
   };

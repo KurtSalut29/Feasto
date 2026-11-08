@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, Minus, Plus } from "lucide-react";
+import { LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/api-client";
@@ -60,10 +60,11 @@ export function QuantityControl({
             type="button"
             onClick={() => change(quantity - 1)}
             disabled={busy}
-            aria-label={`Remove one ${name}`}
-            className={`flex ${size} items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500`}
+            aria-label={quantity === 1 ? `Remove ${name} from cart` : `Remove one ${name}`}
+            className={`flex ${size} items-center justify-center rounded-full transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 ${quantity === 1 ? "text-red-600" : "text-ink"}`}
           >
-            <Minus className="size-4" aria-hidden />
+            {/* The last one goes out of the cart altogether, so say so with a bin */}
+            {quantity === 1 ? <Trash2 className="size-4" aria-hidden /> : <Minus className="size-4" aria-hidden />}
           </button>
           <span className="min-w-6 text-center text-sm font-semibold text-ink" aria-live="polite">
             {quantity}

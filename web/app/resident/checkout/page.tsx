@@ -1,6 +1,4 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
@@ -20,7 +18,7 @@ export default function CheckoutPage() {
 }
 
 async function Checkout() {
-  await requireRole("RESIDENT");
+  const user = await requireRole("RESIDENT");
   const [{ cart }, { addresses }] = await Promise.all([
     serverApi<{ cart: Cart }>("/cart"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
@@ -30,12 +28,8 @@ async function Checkout() {
 
   return (
     <>
-      <Link href="/resident/cart" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden />
-        Cart
-      </Link>
       <MobileHeading title="Checkout" />
-      <CheckoutForm cart={cart} addresses={addresses} />
+      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} />
     </>
   );
 }

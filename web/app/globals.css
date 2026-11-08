@@ -3,6 +3,14 @@
 /* Styles for when the dashboard sidebar is folded into an icon rail (set on <html> by lib/sidebar.ts) */
 @custom-variant collapsed (&:where([data-sidebar="collapsed"] *));
 
+/* The bottom tabs' height while they show (main tab pages only); bars pinned to the bottom sit above it */
+:root {
+  --tabbar-h: 0px;
+}
+:root:has([data-tabbar]) {
+  --tabbar-h: 4rem;
+}
+
 @theme inline {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
@@ -25,6 +33,17 @@
   /* Login and register: the card rises in, the food stickers drift */
   --animate-rise-in: rise-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-drift: drift 7s ease-in-out infinite;
+  /* The cart count when something is added */
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  @keyframes pop {
+    from {
+      transform: scale(0.6);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
 
   @keyframes rise-in {
     from {
@@ -42,4 +61,15 @@
 body {
   background: #ffffff;
   color: var(--color-ink);
+}
+
+/* Printing a receipt prints only the paper slip, not the app around it */
+@media print {
+  body:has([data-receipt]) header,
+  body:has([data-receipt]) [data-tabbar] {
+    display: none !important;
+  }
+  body:has([data-receipt]) main {
+    padding: 0 !important;
+  }
 }

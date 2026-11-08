@@ -66,7 +66,7 @@ function Brand({ role }: { role: DashboardRole }) {
       aria-label="Feasto home"
       className="flex shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500"
     >
-      <Image src="/Logo/feasto-logo.png" alt="" width={108} height={32} className="h-8 w-auto lg:collapsed:hidden" priority />
+      <Image src="/Logo/feasto-logo.png" alt="" width={108} height={32} className="h-8 w-[108px] shrink-0 object-contain lg:collapsed:hidden" priority />
       <Image src="/Logo/feasto-mascot.png" alt="" width={40} height={40} className="hidden size-10 lg:collapsed:block" />
     </Link>
   );

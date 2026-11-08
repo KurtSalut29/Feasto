@@ -1,21 +1,23 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, BellOff, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api-client";
-import { timeAgo } from "@/lib/format";
 import { useLiveEvent } from "./live-updates";
+import { groupByDay, NOTIFICATIONS_READ, NotificationItem, type AppNotification } from "./notification-list";
 
-type Notification = { id: string; title: string; body: string; link: string | null; readAt: string | null; createdAt: string };
+/** How many the panel shows; the full page has the rest */
+const IN_PANEL = 8;
 
 /**
- * Bell with an unread count; opens a panel with recent notifications.
+ * Bell with an unread count; opens a panel with the latest notifications.
  * "icon" sits inside a top bar; "floating" is a round white button on the page background.
+ * With `allHref`, the panel links to a page with every notification.
  */
-export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "floating" }) {
+export function NotificationBell({ variant = "icon", allHref }: { variant?: "icon" | "floating"; allHref?: string }) {
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<{ notifications: Notification[]; unread: number }>({ notifications: [], unread: 0 });
+  const [data, setData] = useState<{ notifications: AppNotification[]; unread: number }>({ notifications: [], unread: 0 });
   const panel = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -33,14 +35,26 @@ export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "flo
     if (event.type === "notification") void load();
   });
 
-  // Close when clicking outside
+  // The notifications page read them all: clear the count here too
+  useEffect(() => {
+    const onRead = () => setData((d) => ({ ...d, unread: 0 }));
+    window.addEventListener(NOTIFICATIONS_READ, onRead);
+    return () => window.removeEventListener(NOTIFICATIONS_READ, onRead);
+  }, []);
+
+  // Close when clicking outside, or with Esc
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
       if (panel.current && !panel.current.contains(e.target as Node)) setOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   async function toggle() {
@@ -52,13 +66,21 @@ export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "flo
     }
   }
 
+  // Close the panel and mark what was shown as read, so the next opening shows only what's new
+  const close = () => {
+    setOpen(false);
+    setData((d) => ({ ...d, notifications: d.notifications.map((n) => (n.readAt ? n : { ...n, readAt: new Date().toISOString() })) }));
+  };
+
   const label = data.unread ? `Notifications, ${data.unread} unread` : "Notifications";
+  const shown = data.notifications.slice(0, IN_PANEL);
+  const fresh = data.notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="relative" ref={panel}>
       <button
         type="button"
-        onClick={toggle}
+        onClick={() => (open ? close() : void toggle())}
         aria-label={label}
         aria-expanded={open}
         className={`relative flex items-center justify-center rounded-full text-ink transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
@@ -70,7 +92,7 @@ export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "flo
         <Bell className="size-[22px]" aria-hidden />
         {data.unread > 0 && (
           <span
-            className={`absolute flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-4 text-white ${
+            className={`absolute flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] leading-4 font-bold text-white ${
               variant === "floating" ? "-top-0.5 -right-0.5 ring-2 ring-white" : "top-1.5 right-1.5"
             }`}
           >
@@ -80,36 +102,46 @@ export function NotificationBell({ variant = "icon" }: { variant?: "icon" | "flo
       </button>
       {open && (
         <div
-          className={`absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-line bg-white shadow-xl ${
-            variant === "floating" ? "top-14" : "top-12"
+          role="dialog"
+          aria-label="Notifications"
+          // On a phone the panel spans the screen under the top bar; on wider screens it hangs from the bell
+          className={`fixed inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top)+0.5rem)] z-50 overflow-hidden rounded-2xl border border-line bg-white shadow-xl transition-transform duration-150 ease-out starting:-translate-y-1 sm:absolute sm:inset-x-auto sm:right-0 sm:w-[22rem] ${
+            variant === "floating" ? "sm:top-14" : "sm:top-12"
           }`}
         >
-          <p className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">Notifications</p>
-          {data.notifications.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <p className="text-sm font-semibold text-ink">Notifications</p>
+            {fresh > 0 && <p className="text-xs font-medium text-brand-700">{fresh} new</p>}
+          </div>
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center px-6 py-8 text-center">
+              <BellOff className="size-6 text-gray-300" aria-hidden />
+              <p className="mt-2 text-sm font-medium text-ink">You&apos;re all caught up</p>
+              <p className="mt-0.5 text-[13px] text-muted">Order updates and booking news show up here.</p>
+            </div>
           ) : (
-            <ul className="max-h-96 divide-y divide-line overflow-y-auto">
-              {data.notifications.map((n) => {
-                const content = (
-                  <>
-                    <p className="text-sm font-semibold text-ink">{n.title}</p>
-                    <p className="mt-0.5 text-sm text-muted">{n.body}</p>
-                    <p className="mt-1 text-xs text-gray-400">{timeAgo(n.createdAt)}</p>
-                  </>
-                );
-                return (
-                  <li key={n.id} className={n.readAt ? "" : "bg-brand-50/50"}>
-                    {n.link ? (
-                      <Link href={n.link} onClick={() => setOpen(false)} className="block px-4 py-3 hover:bg-canvas">
-                        {content}
-                      </Link>
-                    ) : (
-                      <div className="px-4 py-3">{content}</div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="max-h-[26rem] overflow-y-auto">
+              {groupByDay(shown).map((group) => (
+                <section key={group.label}>
+                  <h3 className="bg-canvas/70 px-4 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{group.label}</h3>
+                  <ul className="divide-y divide-line">
+                    {group.items.map((n) => (
+                      <NotificationItem key={n.id} notification={n} onOpen={close} />
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+          {allHref && shown.length > 0 && (
+            <Link
+              href={allHref}
+              onClick={close}
+              className="flex items-center justify-center gap-1 border-t border-line px-4 py-3 text-sm font-semibold text-brand-700 hover:bg-canvas"
+            >
+              See all notifications
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
           )}
         </div>
       )}

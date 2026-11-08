@@ -39,7 +39,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           href="/login"
           className="mx-auto block w-fit rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500"
         >
-          <Image src="/Logo/feasto-logo.png" alt="Feasto" width={122} height={36} className="h-9 w-auto" priority />
+          <Image src="/Logo/feasto-logo.png" alt="Feasto" width={122} height={36} className="h-9 w-[122px] object-contain" priority />
         </Link>
         <div className="mt-3">{children}</div>
       </main>

@@ -9,7 +9,7 @@ import { LinkTabs } from "@/components/ui/link-tabs";
 import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime, formatPeso, timeAgo } from "@/lib/format";
-import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrder } from "@/lib/types";
 import { OrderActions } from "./order-actions";
@@ -69,7 +69,7 @@ function OrderCard({ order, column }: { order: VendorOrder; column: Tab }) {
       </ul>
       <div className="mx-4 mt-2 flex items-baseline justify-between border-t border-dashed border-line pt-2 text-sm">
         <span className="text-muted">
-          {items} {items === 1 ? "item" : "items"} · {PAYMENT_LABEL[order.checkout.paymentMethod]}
+          {items} {items === 1 ? "item" : "items"} · {paymentName(order.checkout)}
           {order.checkout.paymentStatus === "PAID" && <span className="font-medium text-emerald-700"> · paid</span>}
         </span>
         <span className="font-semibold text-ink tabular-nums">{formatPeso(order.subtotal)}</span>
@@ -156,7 +156,7 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
                         {order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
                       </td>
                       <td className={TD}>
-                        <p className="text-ink">{PAYMENT_LABEL[order.checkout.paymentMethod]}</p>
+                        <p className="text-ink">{paymentName(order.checkout)}</p>
                         <p className="text-xs text-muted">
                           {order.checkout.paymentStatus === "PENDING" && ["REJECTED", "CANCELLED"].includes(order.status)
                             ? "Not charged"

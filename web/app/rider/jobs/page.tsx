@@ -1,6 +1,4 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
@@ -32,10 +30,6 @@ async function RiderJobs() {
   ]);
   return (
     <>
-      <Link href="/rider" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden />
-        Home
-      </Link>
       <MobileHeading title="All jobs" subtitle={user.riderProfile?.vendor ? `Open delivery jobs from ${user.riderProfile.vendor.name}.` : "The open delivery jobs that have reached you."} />
       <JobList initial={jobs} pageSize={JOBS_PAGE_SIZE} busy={Boolean(active)} />
     </>

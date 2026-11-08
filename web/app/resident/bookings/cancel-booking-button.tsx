@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/api-client";
 
-export function CancelBookingButton({ bookingId }: { bookingId: string }) {
+export function CancelBookingButton({ bookingId, storeName, when }: { bookingId: string; storeName: string; when: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,9 +18,14 @@ export function CancelBookingButton({ bookingId }: { bookingId: string }) {
         onClick={() => setOpen(true)}
         className="rounded-lg px-2 py-1 text-sm font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-brand-500"
       >
-        Cancel
+        Cancel booking
       </button>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Cancel this booking?" description="The table is released for someone else.">
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Cancel this booking?"
+        description={`Your table at ${storeName} on ${when} is released for someone else. The store is told right away.`}
+      >
         {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setOpen(false)}>

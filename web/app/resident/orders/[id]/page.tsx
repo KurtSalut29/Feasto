@@ -1,17 +1,17 @@
-import { ArrowLeft, Bike, LoaderCircle, MapPin, Phone, Store } from "lucide-react";
+import { Bike, LoaderCircle, MapPin, Phone, ReceiptText, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { OrderProgress } from "@/components/app/order-progress";
 import { RiderTracking } from "@/components/app/rider-tracking";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
-import { orderCode, PAYMENT_LABEL, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { hasReceipt, orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
@@ -51,10 +51,6 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
 
   return (
     <>
-      <Link href="/resident/orders" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft className="size-4" aria-hidden />
-        Orders
-      </Link>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight text-ink">{order.vendor.name}</h1>
@@ -166,7 +162,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               <span>{formatPeso(total)}</span>
             </div>
             <p className="text-sm text-muted">
-              {PAYMENT_LABEL[order.checkout.paymentMethod]} · {paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
+              {paymentName(order.checkout)} · {paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
             </p>
           </div>
         </Section>
@@ -194,6 +190,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </div>
         </Section>
 
+        {hasReceipt(order) && (
+          <ButtonLink href={`/resident/orders/${order.id}/receipt`} variant="secondary" className="w-full">
+            <ReceiptText className="size-[18px]" aria-hidden />
+            View receipt
+          </ButtonLink>
+        )}
         {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT") && <CancelOrderButton orderId={order.id} />}
         {(received || dropped) && <ReorderButton orderId={order.id} />}
       </div>

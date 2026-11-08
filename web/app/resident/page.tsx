@@ -71,7 +71,7 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
             <CategoryGrid categories={sections.categories} />
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Shortcut href={browseHref({ ...NO_FILTERS, bookable: true })} Icon={CalendarDays} label="Book a table" />
-              <Shortcut href={browseHref({ ...NO_FILTERS, saved: true })} Icon={Heart} label="Saved stores" />
+              <Shortcut href="/resident/saved" Icon={Heart} label="Saved stores" />
             </div>
           </section>
 
@@ -87,7 +87,7 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
             title="Your saved stores"
             subtitle="Stores you tapped the heart on"
             stores={sections.saved}
-            seeAll={sections.savedCount > sections.saved.length ? { href: browseHref({ ...NO_FILTERS, saved: true }), label: "See all" } : undefined}
+            seeAll={{ href: "/resident/saved", label: sections.savedCount > sections.saved.length ? `See all ${sections.savedCount}` : "See all" }}
           />
         </>
       )}

@@ -1,7 +1,10 @@
 "use client";
 
-import { Banknote, Bike, CreditCard, MapPin, Store } from "lucide-react";
+import { Bike, MapPin, Store } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { DishPhoto } from "@/components/app/dish-photo";
+import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -44,14 +47,33 @@ function Choice({
   );
 }
 
-export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Address[] }) {
+/** One numbered step of checkout; the steps follow the order a resident decides in. */
+function Step({ n, title, action, children }: { n: number; title: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-labelledby={`step-${n}`}>
+      <div className="mb-2.5 flex items-center justify-between gap-3">
+        <h2 id={`step-${n}`} className="flex items-center gap-2 font-semibold text-ink">
+          <span className="flex size-6 items-center justify-center rounded-full bg-ink text-xs font-bold text-white" aria-hidden>
+            {n}
+          </span>
+          {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; addresses: Address[]; holder: string; phone: string | null }) {
   const router = useRouter();
   // Made once per visit: if "Place order" is clicked twice or the request is retried,
   // the server sees the same key and won't create a second order.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [fulfillment, setFulfillment] = useState<Fulfillment>("DELIVERY");
   const [addressId, setAddressId] = useState(addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? "");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("COD");
+  const [pay, setPay] = useState<PayChoice>("COD");
+  const paymentMethod: PaymentMethod = pay === "COD" ? "COD" : "ONLINE";
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
@@ -71,6 +93,7 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
         fulfillment,
         addressId: fulfillment === "DELIVERY" ? addressId : undefined,
         paymentMethod,
+        onlineMethod: pay === "COD" ? undefined : pay,
         notes,
         expectedDeliveryFee: cart.deliveryFeePerStore,
         simulatePaymentFailure: paymentMethod === "ONLINE" && simulateFailure,
@@ -87,9 +110,8 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
   }
 
   return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="mb-2 font-semibold text-ink">How do you want it?</h2>
+    <div className="space-y-7">
+      <Step n={1} title="How do you want it?">
         <SegmentedControl
           name="fulfillment"
           legend="Delivery or pickup"
@@ -100,16 +122,18 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
             { value: "PICKUP", label: "Pickup", Icon: Store },
           ]}
         />
-      </section>
+      </Step>
 
       {fulfillment === "DELIVERY" ? (
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-semibold text-ink">Deliver to</h2>
+        <Step
+          n={2}
+          title="Deliver to"
+          action={
             <Link href="/resident/addresses" className="text-sm font-semibold text-brand-700 hover:underline">
               {addresses.length ? "Manage" : "Add address"}
             </Link>
-          </div>
+          }
+        >
           {addresses.length === 0 ? (
             <Alert tone="pending">Add a delivery address first, or choose Pickup.</Alert>
           ) : (
@@ -127,34 +151,36 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
               ))}
             </div>
           )}
-        </section>
+        </Step>
       ) : (
-        <Alert tone="pending" title="You'll collect it yourself">
-          {stores > 1 ? `Pick up from each of the ${stores} stores when they say it's ready.` : "Pick it up at the store when it's ready."} No
-          delivery fee.
-        </Alert>
+        <Step n={2} title={stores > 1 ? "Pick up at these stores" : "Pick up at"}>
+          <ul className="space-y-2">
+            {cart.groups.map((g) => (
+              <li key={g.store.id} className="flex items-start gap-3 rounded-xl border border-line p-3.5">
+                <Store className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold text-ink">{g.store.name}</span>
+                  <span className="block text-sm text-muted">{g.store.address}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-muted">
+            {stores > 1 ? "Each store tells you when its part is ready." : "We'll tell you when it's ready."} No delivery fee.
+          </p>
+        </Step>
       )}
 
-      <section>
-        <h2 className="mb-2 font-semibold text-ink">Payment</h2>
-        <div className="space-y-2">
-          <Choice
-            name="payment"
-            checked={paymentMethod === "COD"}
-            onChange={() => setPaymentMethod("COD")}
-            title="Cash"
-            text={fulfillment === "DELIVERY" ? "Pay the rider when it arrives." : "Pay at the store."}
-            Icon={Banknote}
-          />
-          <Choice
-            name="payment"
-            checked={paymentMethod === "ONLINE"}
-            onChange={() => setPaymentMethod("ONLINE")}
-            title="Online payment"
-            text="Simulated for this project; no real money moves."
-            Icon={CreditCard}
-          />
-        </div>
+      <Step n={3} title="Payment">
+        <PaymentPicker
+          value={pay}
+          onChange={setPay}
+          total={total}
+          holder={holder}
+          phone={phone}
+          delivery={fulfillment === "DELIVERY"}
+          parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? cart.deliveryFeePerStore : 0) }))}
+        />
         {paymentMethod === "ONLINE" && (
           <div className="mt-3">
             <SwitchField
@@ -165,26 +191,54 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
             />
           </div>
         )}
-      </section>
+      </Step>
 
-      <TextareaField
-        label="Notes for the store"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Optional, e.g. No onions please."
-        maxLength={200}
-        rows={2}
-      />
-
-      <section className="rounded-2xl border border-line p-4">
-        <h2 className="mb-3 font-semibold text-ink">Summary</h2>
-        <ul className="space-y-1.5 text-[15px]">
+      <Step
+        n={4}
+        title="Your order"
+        action={
+          <Link href="/resident/cart" className="text-sm font-semibold text-brand-700 hover:underline">
+            Edit
+          </Link>
+        }
+      >
+        <div className="space-y-3">
           {cart.groups.map((g) => (
-            <li key={g.store.id} className="flex justify-between gap-3">
-              <span className="truncate text-muted">{g.store.name}</span>
-              <span className="text-ink">{formatPeso(g.subtotal)}</span>
-            </li>
+            <div key={g.store.id} className="rounded-2xl border border-line">
+              <p className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">{g.store.name}</p>
+              <ul className="divide-y divide-line px-4">
+                {g.items.map((item) => (
+                  <li key={item.menuItemId} className="flex items-center gap-3 py-2.5 text-sm">
+                    <DishPhoto src={item.imageUrl} sizes="40px" className="size-10 shrink-0 rounded-lg" />
+                    <span className="min-w-0 flex-1 text-ink">
+                      <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.name}
+                    </span>
+                    <span className="shrink-0 text-ink tabular-nums">{formatPeso(item.lineTotal)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
+        </div>
+        <div className="mt-4">
+          <TextareaField
+            label={fulfillment === "DELIVERY" ? `Note for the ${stores > 1 ? "stores" : "store"} and rider` : `Note for the ${stores > 1 ? "stores" : "store"}`}
+            hint={stores > 1 || fulfillment === "DELIVERY" ? "Everyone working on this order sees it." : undefined}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={fulfillment === "DELIVERY" ? "Optional, e.g. No onions. Please call when outside." : "Optional, e.g. No onions please."}
+            maxLength={200}
+            rows={2}
+          />
+        </div>
+      </Step>
+
+      <section aria-label="Summary" className="rounded-2xl border border-line p-4">
+        <ul className="space-y-1.5 text-[15px]">
+          <li className="flex justify-between gap-3">
+            <span className="text-muted">Items ({cart.itemCount})</span>
+            <span className="text-ink tabular-nums">{formatPeso(cart.itemsTotal)}</span>
+          </li>
           <li className="flex justify-between gap-3">
             <span className="text-muted">
               {fulfillment === "DELIVERY"
@@ -202,7 +256,7 @@ export function CheckoutForm({ cart, addresses }: { cart: Cart; addresses: Addre
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <div className="sticky bottom-20">
+      <div className="sticky bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))]">
         <Button
           className="w-full shadow-lg"
           loading={placing}

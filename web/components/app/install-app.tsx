@@ -103,7 +103,7 @@ export function InstallBanner() {
 
 function InstallBannerOutsideAccount() {
   const path = usePathname();
-  return path.endsWith("/account") || path.endsWith("/map") ? null : <InstallCard />;
+  return path.endsWith("/account") || path.endsWith("/map") || path.endsWith("/receipt") ? null : <InstallCard />;
 }
 
 function InstallCard() {

@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, Heart, SearchX, Store } from "lucide-react";
+import { ChevronDown, Heart, SearchX, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -72,15 +72,8 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
 
   return (
     <>
-      <div className="flex items-start gap-1">
-        <Link
-          href="/resident"
-          aria-label="Back to Home"
-          className="-ml-2.5 flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-        >
-          <ArrowLeft className="size-5" aria-hidden />
-        </Link>
-        <div className="min-w-0 pt-1">
+      <div>
+        <div className="min-w-0">
           <h1 className="text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] text-ink">{pageTitle(filters)}</h1>
           {total > 0 && (
             <p className="mt-0.5 text-sm text-muted">

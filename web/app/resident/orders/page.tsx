@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, timeAgo } from "@/lib/format";
-import { isFinished, orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { formatClock, formatPeso, manilaDate, timeAgo } from "@/lib/format";
+import { hasReceipt, isFinished, itemsSummary, orderCode, paymentName, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { ResidentOrder } from "@/lib/types";
+import type { OrderStatus, ResidentOrder } from "@/lib/types";
+import { ReorderButton } from "./[id]/order-feedback";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -24,51 +25,134 @@ export default function ResidentOrdersPage() {
   );
 }
 
-function OrderRow({ order }: { order: ResidentOrder }) {
-  const items = order.items.reduce((n, i) => n + i.quantity, 0);
-  const live = !isFinished(order.status);
-  const received = order.status === "DELIVERED" || order.status === "COMPLETED";
+const totalOf = (order: ResidentOrder) => Number(order.subtotal) + Number(order.deliveryFee);
+const isReceived = (status: OrderStatus) => status === "DELIVERED" || status === "COMPLETED";
+
+/** How far along a live order is, as steps of a short bar. */
+function progress(order: ResidentOrder) {
+  const steps = order.fulfillment === "DELIVERY" ? ["Placed", "Preparing", "Ready", "On the way", "Delivered"] : ["Placed", "Preparing", "Ready", "Collected"];
+  const at: Partial<Record<OrderStatus, number>> = { AWAITING_PAYMENT: 0, PLACED: 0, ACCEPTED: 1, PREPARING: 1, READY: 2, PICKED_UP: 3 };
+  return { steps, done: at[order.status] ?? 0 };
+}
+
+/** An order on its way: the store, where it is now, and a bar of the steps left. */
+function LiveOrder({ order }: { order: ResidentOrder }) {
+  const { steps, done } = progress(order);
   return (
     <li>
       <Link
         href={`/resident/orders/${order.id}`}
-        className={`flex items-center gap-3 rounded-2xl border p-3 transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
-          live ? "border-brand-100 bg-brand-50/50 hover:bg-brand-50" : "border-line hover:bg-canvas"
-        }`}
+        className="block rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4 shadow-[0_10px_24px_-18px_rgba(178,58,0,0.6)] transition hover:border-brand-500/40 focus-visible:outline-2 focus-visible:outline-brand-500"
       >
-        <StoreCover imageUrl={order.vendor.imageUrl} className="size-14 shrink-0 rounded-xl" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start gap-3">
+          <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-ink">{order.vendor.name}</p>
-            <span className="shrink-0 text-xs text-gray-400">{timeAgo(order.createdAt)}</span>
+            <p className="text-[13px] text-muted">
+              {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"} · placed {timeAgo(order.createdAt).toLowerCase()}
+            </p>
           </div>
-          <p className="text-sm text-muted">
-            {orderCode(order.id)} · {items} {items === 1 ? "item" : "items"} ·{" "}
-            {formatPeso(Number(order.subtotal) + Number(order.deliveryFee))}
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            {live && (
-              <span className="relative flex size-2" aria-hidden>
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60" />
-                <span className="relative inline-flex size-2 rounded-full bg-brand-600" />
-              </span>
-            )}
-            <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
-            {received &&
-              (order.review ? (
-                <Stars value={order.review.rating} size="size-3" />
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
-                  <Star className="size-3.5" aria-hidden />
-                  Rate it
-                </span>
-              ))}
-          </div>
+          <span className="text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
         </div>
-        <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />
+
+        <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
+          <span className="relative flex size-2.5" aria-hidden>
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
+            <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />
+          </span>
+          {statusLabel(order.status, order.fulfillment)}
+        </p>
+        <ol className="mt-2 flex gap-1" aria-label={`Step ${done + 1} of ${steps.length}: ${steps[done]}`}>
+          {steps.map((step, i) => (
+            <li key={step} className={`h-1.5 flex-1 rounded-full ${i <= done ? "bg-brand-600" : "bg-brand-100"}`}>
+              <span className="sr-only">
+                {step}
+                {i <= done ? ", done" : ""}
+              </span>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-1 flex justify-between text-[11px] text-muted" aria-hidden>
+          <span>{steps[0]}</span>
+          <span>{steps[steps.length - 1]}</span>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-brand-100 pt-3">
+          <p className="min-w-0 truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700">
+            Track
+            <ChevronRight className="size-4" aria-hidden />
+          </span>
+        </div>
       </Link>
     </li>
   );
+}
+
+/** A finished order: what it was, how it ended, and what's left to do with it. */
+function PastOrder({ order }: { order: ResidentOrder }) {
+  const received = isReceived(order.status);
+  return (
+    <li className="relative rounded-2xl border border-line bg-white p-3 transition hover:bg-canvas/60 has-[a.stretch:focus-visible]:outline-2 has-[a.stretch:focus-visible]:outline-brand-500">
+      <div className="flex gap-3">
+        <StoreCover imageUrl={order.vendor.imageUrl} className={`size-14 shrink-0 rounded-xl ${received ? "" : "opacity-60 grayscale"}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <p className="truncate font-semibold text-ink">
+              <Link href={`/resident/orders/${order.id}`} className="stretch outline-none after:absolute after:inset-0 after:content-['']">
+                {order.vendor.name}
+              </Link>
+            </p>
+            <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
+          </div>
+          <p className="truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+            <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
+            <span>
+              {formatClock(order.createdAt)} · {paymentName(order.checkout)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Above the stretched link, so each one does its own thing */}
+      <div className="relative z-10 mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+        {received &&
+          (order.review ? (
+            <span className="inline-flex h-8 items-center gap-1.5 px-1 text-[13px] text-muted">
+              <Stars value={order.review.rating} size="size-3.5" />
+              <span className="sr-only">You rated it {order.review.rating} of 5</span>
+            </span>
+          ) : (
+            <Link
+              href={`/resident/orders/${order.id}#rate`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand-50 px-3 text-[13px] font-semibold text-brand-700 transition hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <Star className="size-3.5" aria-hidden />
+              Rate it
+            </Link>
+          ))}
+        {hasReceipt(order) && (
+          <Link
+            href={`/resident/orders/${order.id}/receipt`}
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+          >
+            <ReceiptText className="size-3.5" aria-hidden />
+            Receipt
+          </Link>
+        )}
+        <ReorderButton orderId={order.id} compact />
+      </div>
+    </li>
+  );
+}
+
+/** "Today", "Yesterday" or "Mon, Nov 3", by the day in Manila. */
+function dayLabel(iso: string) {
+  const day = new Date(new Date(iso).getTime() + 8 * 3600_000).toISOString().slice(0, 10);
+  if (day === manilaDate(0)) return "Today";
+  if (day === manilaDate(-1)) return "Yesterday";
+  return new Date(iso).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
 async function ResidentOrders() {
@@ -91,27 +175,55 @@ async function ResidentOrders() {
     );
   }
 
+  const days = new Map<string, ResidentOrder[]>();
+  for (const order of past) {
+    const label = dayLabel(order.createdAt);
+    days.set(label, [...(days.get(label) ?? []), order]);
+  }
+  const toRate = past.filter((o) => isReceived(o.status) && !o.review).length;
+
   return (
     <>
-      <MobileHeading title="Orders" subtitle="Updates arrive live, no need to refresh." />
+      <MobileHeading
+        title="Orders"
+        subtitle={active.length ? `${active.length} on the way. Updates arrive live, no need to refresh.` : "Your past orders, receipts and ratings."}
+      />
       {active.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-400">In progress</h2>
-          <ul className="space-y-2">
+        <section className="mb-7" aria-labelledby="orders-active">
+          <h2 id="orders-active" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            In progress
+          </h2>
+          <ul className="space-y-3">
             {active.map((o) => (
-              <OrderRow key={o.id} order={o} />
+              <LiveOrder key={o.id} order={o} />
             ))}
           </ul>
         </section>
       )}
       {past.length > 0 && (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-400">Past orders</h2>
-          <ul className="space-y-2">
-            {past.map((o) => (
-              <OrderRow key={o.id} order={o} />
+        <section aria-labelledby="orders-past">
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <h2 id="orders-past" className="text-sm font-semibold tracking-wider text-gray-400 uppercase">
+              Past orders
+            </h2>
+            {toRate > 0 && (
+              <p className="text-xs font-medium text-brand-700">
+                {toRate} to rate
+              </p>
+            )}
+          </div>
+          <div className="space-y-5">
+            {[...days].map(([label, list]) => (
+              <div key={label}>
+                <h3 className="mb-2 text-[13px] font-semibold text-ink">{label}</h3>
+                <ul className="space-y-2">
+                  {list.map((o) => (
+                    <PastOrder key={o.id} order={o} />
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       )}
     </>

@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { activeHref, NAVIGATION } from "@/lib/navigation";
+import { activeHref, isTabPage, NAVIGATION } from "@/lib/navigation";
 import type { Role } from "@/lib/types";
 
 type MobileRole = Extract<Role, "RESIDENT" | "RIDER">;
 
 /**
- * Bottom navigation for the mobile roles (resident and rider). Reading the current URL
- * happens inside <Suspense> so pages with an id in the URL can still prerender; until
- * then the tabs render without a highlighted one.
+ * Bottom navigation for the mobile roles (resident and rider), shown only on the main tab
+ * pages; a store, the cart or an order fills the screen and has a back arrow instead.
+ * Reading the current URL happens inside <Suspense> so pages with an id in the URL can still prerender.
  */
 export function TabBar({ role }: { role: MobileRole }) {
   return (
-    <Suspense fallback={<Tabs role={role} pathname={null} />}>
+    <Suspense fallback={null}>
       <ActiveTabs role={role} />
     </Suspense>
   );
@@ -25,13 +25,15 @@ function ActiveTabs({ role }: { role: MobileRole }) {
   return <Tabs role={role} pathname={usePathname()} />;
 }
 
-function Tabs({ role, pathname }: { role: MobileRole; pathname: string | null }) {
+function Tabs({ role, pathname }: { role: MobileRole; pathname: string }) {
   const items = NAVIGATION[role];
-  const current = pathname === null ? null : activeHref(items, pathname);
+  if (!isTabPage(role, pathname)) return null;
+  const current = activeHref(items, pathname);
 
   return (
     <nav
       aria-label="Main"
+      data-tabbar
       className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
       <ul className={`grid h-16 ${items.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>

@@ -79,7 +79,7 @@ function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }
     >
       {open && (
         <div className="px-6 pt-8 pb-6 text-center transition duration-200 ease-out starting:scale-95 starting:opacity-0">
-          <Image src="/Logo/feasto-logo.png" alt="Feasto" width={149} height={44} className="mx-auto h-11 w-auto" />
+          <Image src="/Logo/feasto-logo.png" alt="Feasto" width={149} height={44} className="mx-auto h-11 w-[149px] object-contain" />
           <h2 id={titleId} className="mt-7 text-xl font-semibold text-ink">
             Log out of Feasto?
           </h2>

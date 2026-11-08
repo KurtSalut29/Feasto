@@ -35,14 +35,14 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/resident/map", label: "Map", Icon: MapIcon },
     { href: "/resident/orders", label: "Orders", Icon: ReceiptText },
     { href: "/resident/bookings", label: "Bookings", Icon: CalendarDays },
-    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile"] },
+    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications"] },
   ],
   RIDER: [
     { href: "/rider", label: "Home", Icon: House },
     { href: "/rider/map", label: "Map", Icon: MapIcon },
     { href: "/rider/active", label: "Active", Icon: Bike },
     { href: "/rider/history", label: "History", Icon: History },
-    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license"] },
+    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password"] },
   ],
   VENDOR: [
     { href: "/vendor", label: "Overview", Icon: LayoutDashboard, group: "Today" },
@@ -73,6 +73,21 @@ const matches = (item: NavItem, pathname: string) =>
  * Which item is active. The first item is the role's home: it's active on its own
  * page and on any page that doesn't belong to another item (e.g. a store's page).
  */
+/** The bottom tabs show only on the main tab pages themselves; every other page has a back arrow instead. */
+export function isTabPage(role: Role, pathname: string) {
+  return NAVIGATION[role].some((item) => item.href === pathname);
+}
+
+/** Where Back goes when Feasto has no page to go back to, e.g. a link opened from a message. */
+export function parentPage(role: Role, pathname: string) {
+  const items = NAVIGATION[role];
+  const owner = items.find((item) => item.also?.some((page) => pathname === page || pathname.startsWith(`${page}/`)));
+  if (owner) return owner.href;
+  if (pathname === "/resident/checkout") return "/resident/cart";
+  const parent = pathname.replace(/\/[^/]+$/, "");
+  return parent.split("/").length > 1 && parent ? parent : items[0].href;
+}
+
 export function activeHref(items: NavItem[], pathname: string) {
   return items.slice(1).find((item) => matches(item, pathname))?.href ?? items[0].href;
 }
