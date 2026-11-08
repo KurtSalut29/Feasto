@@ -230,7 +230,7 @@ export type ResidentBooking = {
   status: BookingStatus;
   /** Confirmed and still in the future (decided by the server) */
   upcoming: boolean;
-  table: { label: string; vendor: { id: string; name: string; address: string; imageUrl: string | null } };
+  table: { label: string; vendor: Pin & { id: string; name: string; address: string; imageUrl: string | null } };
 };
 
 export type VendorBooking = {
@@ -250,11 +250,19 @@ export type DiningTable = { id: string; label: string; seats: number };
 export type RiderJob = {
   id: string;
   status: OrderStatus;
+  subtotal: string;
   deliveryFee: string;
   createdAt: string;
-  vendor: Pin & { name: string; address: string };
-  items: { quantity: number }[];
-  checkout: { deliveryAddress: string | null; deliveryLat: number | null; deliveryLng: number | null };
+  vendor: Pin & { name: string; address: string; imageUrl: string | null };
+  items: { name: string; quantity: number; unitPrice: string }[];
+  checkout: {
+    deliveryAddress: string | null;
+    deliveryLat: number | null;
+    deliveryLng: number | null;
+    paymentMethod: PaymentMethod;
+    onlineMethod?: OnlinePayment | null;
+    paymentStatus: PaymentStatus;
+  };
 };
 
 /** One page of open jobs from GET /rider/jobs */
@@ -266,8 +274,8 @@ export type RiderDelivery = {
   subtotal: string;
   deliveryFee: string;
   readyAt: string | null;
-  vendor: Pin & { name: string; address: string; owner: { phone: string | null } };
-  items: { id: string; name: string; quantity: number }[];
+  vendor: Pin & { name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
+  items: { id: string; name: string; quantity: number; unitPrice: string }[];
   checkout: {
     deliveryAddress: string | null;
     deliveryLat: number | null;

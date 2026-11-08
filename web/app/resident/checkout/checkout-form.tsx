@@ -149,6 +149,15 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
                   Icon={MapPin}
                 />
               ))}
+              {addresses.find((a) => a.id === addressId)?.latitude == null && (
+                <Alert tone="pending">
+                  This address has no map pin, so the rider will have to find it from the text.{" "}
+                  <Link href="/resident/addresses" className="font-semibold underline">
+                    Pin it on the map
+                  </Link>{" "}
+                  for live tracking and directions.
+                </Alert>
+              )}
             </div>
           )}
         </Step>

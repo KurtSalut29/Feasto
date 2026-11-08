@@ -1,19 +1,28 @@
-import { History, Store } from "lucide-react";
+import { History } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { SalesChart } from "@/components/app/sales-chart";
+import { StoreCover } from "@/components/app/store-card";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatClock, formatDay, formatPeso } from "@/lib/format";
 import { orderCode } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { SalesDay } from "@/lib/types";
+import type { PaymentMethod, SalesDay } from "@/lib/types";
 
 export const metadata: Metadata = { title: "History" };
 
-type Delivery = { id: string; finishedAt: string; deliveryFee: string; vendor: { name: string }; checkout: { deliveryAddress: string | null } };
+type Delivery = {
+  id: string;
+  finishedAt: string;
+  deliveryFee: string;
+  subtotal: string;
+  vendor: { name: string; imageUrl: string | null };
+  items: { quantity: number }[];
+  checkout: { deliveryAddress: string | null; paymentMethod: PaymentMethod };
+};
 type HistoryResponse = {
   deliveries: Delivery[];
   today: string;
@@ -36,6 +45,7 @@ const manilaDay = (iso: string) => new Date(new Date(iso).getTime() + 8 * 3600_0
 const dayBefore = (day: string, n: number) => new Date(new Date(`${day}T12:00:00Z`).getTime() - n * 86400_000).toISOString().slice(0, 10);
 const plural = (n: number) => `${n} ${n === 1 ? "delivery" : "deliveries"}`;
 const sum = (list: Delivery[]) => list.reduce((n, d) => n + Number(d.deliveryFee), 0);
+const itemCount = (d: Delivery) => (d.items ?? []).reduce((n, i) => n + i.quantity, 0);
 
 /** Earnings per day for the last 7 days (Philippine dates), from the delivery list. */
 function lastWeek(deliveries: Delivery[], today: string): SalesDay[] {
@@ -127,14 +137,18 @@ async function RiderHistory() {
             <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
               {group.items.map((d) => (
                 <li key={d.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600" aria-hidden>
-                    <Store className="size-[18px]" />
-                  </span>
+                  <StoreCover imageUrl={d.vendor.imageUrl} className="size-11 shrink-0 rounded-xl" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink">{d.vendor.name}</p>
                     <p className="truncate text-[13px] text-muted">
                       {formatClock(d.finishedAt)} · {orderCode(d.id)}
                     </p>
+                    {d.subtotal !== undefined && (
+                      <p className="truncate text-xs text-muted">
+                        {itemCount(d)} {itemCount(d) === 1 ? "item" : "items"} · {formatPeso(Number(d.subtotal) + Number(d.deliveryFee))} order ·{" "}
+                        {d.checkout.paymentMethod === "COD" ? "cash collected" : "paid online"}
+                      </p>
+                    )}
                   </div>
                   <p className="shrink-0 font-semibold text-emerald-700 tabular-nums">+{formatPeso(d.deliveryFee)}</p>
                 </li>

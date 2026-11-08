@@ -6,8 +6,8 @@ import { House, MapPinOff, Maximize2, Store, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { DEFAULT_CENTER, type LatLng } from "@/lib/geo";
-import { createMap, getRoute, mapHost, type MapEngine, type Route } from "./map-engine";
+import { DEFAULT_CENTER, distanceKm, type LatLng } from "@/lib/geo";
+import { createMap, getRoute, mapHost, trimRoute, type MapEngine, type Route } from "./map-engine";
 
 export type MapPin = {
   id: string;
@@ -65,7 +65,8 @@ export function FeastoMap({
   const container = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
   const [failed, setFailed] = useState(false);
-  const markers = useRef(new Map<string, { marker: ReturnType<MapEngine["marker"]>; element: HTMLElement }>());
+  const markers = useRef(new Map<string, MarkerEntry>());
+  const shownRoute = useRef<{ to: string; route: Route } | null>(null);
   const [slots, setSlots] = useState<Record<string, HTMLElement>>({});
   const framedIds = useRef("");
   const framedDestination = useRef("");
@@ -93,7 +94,9 @@ export function FeastoMap({
       cancelled = true;
       made?.map.remove();
       host.remove();
+      for (const entry of ownMarkers.values()) if (entry.frame) cancelAnimationFrame(entry.frame);
       ownMarkers.clear();
+      shownRoute.current = null;
       // A hidden page (kept by <Activity>) keeps its state, so forget the removed map;
       // otherwise coming back would put pins on it before the new one is ready
       setEngine(null);
@@ -120,13 +123,13 @@ export function FeastoMap({
     for (const pin of pins) {
       const existing = current.get(pin.id);
       if (existing) {
-        existing.marker.setLngLat([pin.at.lng, pin.at.lat]);
+        glide(existing, pin.at);
         continue;
       }
       const element = document.createElement("div");
       element.addEventListener("click", () => latest.current.onSelect?.(pin.id));
       const marker = engine.marker(element).setLngLat([pin.at.lng, pin.at.lat]).addTo(engine.map);
-      current.set(pin.id, { marker, element });
+      current.set(pin.id, { marker, element, movedAt: performance.now() });
     }
     setSlots(Object.fromEntries([...current].map(([id, { element }]) => [id, element])));
 
@@ -170,8 +173,13 @@ export function FeastoMap({
       return;
     }
     let cancelled = false;
-    void getRoute(route.from, route.to).then((result) => {
+    const destination = `${route.to.lat},${route.to.lng}`;
+    // Moving along the road already shown: just cut off the part behind, no new request
+    const known = shownRoute.current?.to === destination ? trimRoute(shownRoute.current.route, route.from) : null;
+    const ready = known ? Promise.resolve({ full: shownRoute.current!.route, ahead: known }) : getRoute(route.from, route.to).then((full) => ({ full, ahead: trimRoute(full, route.from) ?? full }));
+    void ready.then(({ full, ahead: result }) => {
       if (cancelled) return;
+      shownRoute.current = { to: destination, route: full };
       const data = { type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: result.line } };
       const source = map.getSource(ROUTE_SOURCE) as { setData?: (d: typeof data) => void } | undefined;
       if (source?.setData) source.setData(data);
@@ -194,7 +202,6 @@ export function FeastoMap({
         });
       }
       // Once per destination, zoom out to show the whole way (later rider moves keep the view)
-      const destination = `${route.to.lat},${route.to.lng}`;
       if (latest.current.autoFrame && framedDestination.current !== destination) {
         framedDestination.current = destination;
         frame(engine, [...latest.current.pins.map((p) => p.at), ...result.line.map(([lng, lat]) => ({ lat, lng }))]);
@@ -256,6 +263,42 @@ export function FeastoMap({
       {pins.map((pin) => slots[pin.id] && createPortalPin(pin, slots[pin.id]))}
     </div>
   );
+}
+
+type MarkerEntry = {
+  marker: ReturnType<MapEngine["marker"]>;
+  element: HTMLElement;
+  /** When the pin last got a new position, to glide over about the same time to the next */
+  movedAt: number;
+  frame?: number;
+};
+
+const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Moves a pin to its new spot smoothly instead of jumping. A moving rider sends a position
+ * every few seconds, so the glide lasts about as long as the gap between positions: the pin
+ * keeps moving at an even pace and reaches each spot as the next one arrives. Long jumps
+ * (a first fix, a reload) and reduced motion just move it.
+ */
+function glide(entry: MarkerEntry, to: LatLng) {
+  const now = performance.now();
+  const gap = now - entry.movedAt;
+  entry.movedAt = now;
+  if (entry.frame) cancelAnimationFrame(entry.frame);
+  const start = entry.marker.getLngLat();
+  const from = { lat: start.lat, lng: start.lng };
+  if (reducedMotion() || distanceKm(from, to) > 1) {
+    entry.marker.setLngLat([to.lng, to.lat]);
+    return;
+  }
+  const duration = Math.min(Math.max(gap, 300), 5000);
+  const step = (time: number) => {
+    const t = Math.min((time - now) / duration, 1);
+    entry.marker.setLngLat([from.lng + (to.lng - from.lng) * t, from.lat + (to.lat - from.lat) * t]);
+    entry.frame = t < 1 ? requestAnimationFrame(step) : undefined;
+  };
+  entry.frame = requestAnimationFrame(step);
 }
 
 function createPortalPin(pin: MapPin, element: HTMLElement) {

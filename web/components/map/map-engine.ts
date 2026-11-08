@@ -1,7 +1,7 @@
 "use client";
 
 import type { Map as MapInstance, Marker } from "maplibre-gl";
-import { distanceKm, estimateMinutes, type LatLng } from "@/lib/geo";
+import { distanceKm, estimateMinutes, nearestOnPath, pathKm, type LatLng } from "@/lib/geo";
 
 /**
  * Which map library draws the map. Mapbox when a token is set (nicest look, road routes,
@@ -116,7 +116,11 @@ export type Route = {
   minutes: number;
   /** True when it follows real roads (Mapbox Directions), false for a straight line */
   roads: boolean;
+  /** Turn-by-turn steps ("Turn left onto Castin Street"), when the route follows roads */
+  steps: RouteStep[];
 };
+
+export type RouteStep = { text: string; km: number; kind: string; modifier?: string };
 
 const routeCache = new Map<string, Promise<Route>>();
 
@@ -135,7 +139,7 @@ export function getRoute(from: LatLng, to: LatLng): Promise<Route> {
 async function fetchRoute(from: LatLng, to: LatLng): Promise<Route> {
   const straight = (): Route => {
     const km = distanceKm(from, to);
-    return { line: [[from.lng, from.lat], [to.lng, to.lat]], km, minutes: estimateMinutes(km), roads: false };
+    return { line: [[from.lng, from.lat], [to.lng, to.lat]], km, minutes: estimateMinutes(km), roads: false, steps: [] };
   };
   if (!MAPBOX_TOKEN) return straight();
   try {
@@ -143,23 +147,92 @@ async function fetchRoute(from: LatLng, to: LatLng): Promise<Route> {
       // Mapbox has no motorbike profile. "driving" (cars) avoids the small barangay streets riders
       // really use and sends them around one-way blocks; "cycling" follows those streets.
       `https://api.mapbox.com/directions/v5/mapbox/cycling/${from.lng},${from.lat};${to.lng},${to.lat}` +
-      `?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+      `?geometries=geojson&overview=full&steps=true&language=en&access_token=${MAPBOX_TOKEN}`;
     const response = await fetch(url);
     if (!response.ok) return straight();
-    const data = (await response.json()) as { routes?: { geometry: { coordinates: [number, number][] }; distance: number; duration: number }[] };
+    const data = (await response.json()) as {
+      routes?: {
+        geometry: { coordinates: [number, number][] };
+        distance: number;
+        duration: number;
+        legs?: { steps?: { distance: number; maneuver: { instruction: string; type: string; modifier?: string } }[] }[];
+      }[];
+    };
     const best = data.routes?.[0];
     if (!best) return straight();
     const km = best.distance / 1000;
     // A road route over 3× the straight distance usually means a pin sits on a footpath or behind
     // a wall, so the detour is misleading; the straight guide and estimate are closer to the truth
     if (km > 3 * distanceKm(from, to) && km > 0.5) return straight();
-    return { line: best.geometry.coordinates, km, minutes: Math.max(1, Math.round(best.duration / 60)), roads: true };
+    const steps = (best.legs ?? []).flatMap((leg) =>
+      (leg.steps ?? []).map((step) => ({
+        // The cycling profile says "Bike southwest…"; riders here are on motorbikes
+        text: step.maneuver.instruction.replace(/^Bike\b/, "Head"),
+        km: step.distance / 1000,
+        kind: step.maneuver.type,
+        modifier: step.maneuver.modifier,
+      })),
+    );
+    return { line: best.geometry.coordinates, km, minutes: Math.max(1, Math.round(best.duration / 60)), roads: true, steps };
   } catch {
     return straight();
   }
 }
 
+/** How far off a route someone can be and still be on it (GPS wobble, the width of a road) */
+const ON_ROUTE_KM = 0.04;
+
+/**
+ * The part of a route still ahead of someone at `at`, or null when they've left the route
+ * (then it should be asked for again). Time and turns are cut down in step with the distance.
+ */
+export function trimRoute(route: Route, at: LatLng): Route | null {
+  const path = route.line.map(([lng, lat]) => ({ lat, lng }));
+  if (path.length < 2) return null;
+  const { index, spot, offKm } = nearestOnPath(path, at);
+  if (route.roads && offKm > ON_ROUTE_KM) return null;
+  const ahead = [spot, ...path.slice(index + 1)];
+  const km = pathKm(ahead);
+  const done = route.km - km;
+  let passed = 0;
+  const steps = route.steps.filter((step) => {
+    passed += step.km;
+    return passed > done || step.kind === "arrive";
+  });
+  return {
+    ...route,
+    line: ahead.map((p) => [p.lng, p.lat] as [number, number]),
+    km,
+    minutes: Math.max(1, Math.round(route.minutes * (route.km ? km / route.km : 1))),
+    steps,
+  };
+}
+
 export type Place = { id: string; name: string; detail: string; at: LatLng };
+
+const addressCache = new Map<string, Promise<LatLng | null>>();
+/** How far from the store an address found by its text may be */
+const NEAR_KM = 25;
+
+/**
+ * Where an address probably is, for an address saved without a map pin: the best match for its
+ * text near a known spot (the store). Only the street part is searched, not the landmark after "·".
+ * Null without Mapbox or when nothing matches.
+ */
+export function locateAddress(address: string, near: LatLng): Promise<LatLng | null> {
+  const street = address.split(" · ")[0].trim();
+  let found = addressCache.get(street);
+  if (!found) {
+    // The nearest match close to the store; a same-named street in another province is no help
+    found = searchPlaces(street, near).then((places) => {
+      const close = places.map((p) => ({ at: p.at, km: distanceKm(near, p.at) })).filter((p) => p.km <= NEAR_KM);
+      close.sort((a, b) => a.km - b.km);
+      return close[0]?.at ?? null;
+    });
+    addressCache.set(street, found);
+  }
+  return found;
+}
 
 /** Address suggestions near a point (Mapbox Geocoding). Empty without a token. */
 export async function searchPlaces(query: string, near: LatLng): Promise<Place[]> {

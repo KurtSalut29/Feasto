@@ -79,3 +79,9 @@ export function deliverySteps(status: OrderStatus) {
   const at: Partial<Record<OrderStatus, number>> = { ACCEPTED: 0, PREPARING: 0, READY: 1, PICKED_UP: 2, DELIVERED: 3 };
   return { steps, done: at[status] ?? 0 };
 }
+
+/** For a rider: whether to collect cash at the door, or the order is already paid. */
+export function riderPayment(checkout: { paymentMethod: PaymentMethod; onlineMethod?: OnlinePayment | null; paymentStatus: PaymentStatus }) {
+  const cash = checkout.paymentMethod === "COD" && checkout.paymentStatus !== "PAID";
+  return { cash, label: cash ? "Cash on delivery" : `Paid · ${paymentName(checkout)}` };
+}

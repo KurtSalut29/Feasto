@@ -1,4 +1,4 @@
-import { Bike, CalendarDays, ChevronRight, Clock, MapPin, MessageSquareText, Navigation, Star, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Bike, CalendarDays, ChevronRight, Clock, MapPin, MessageSquareText, Star, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -9,6 +9,7 @@ import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { Stars } from "@/components/app/rating";
 import { StoreCover } from "@/components/app/store-card";
 import { storeState } from "@/components/app/store-status";
+import { DirectionsButton } from "@/components/map/directions-button";
 import { FeastoMap } from "@/components/map/feasto-map";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink, buttonClass } from "@/components/ui/button";
@@ -224,16 +225,12 @@ function StoreInfo({
             )}
           </div>
           {storePin && (
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${storePin.lat},${storePin.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <DirectionsButton
+              to={storePin}
+              name={store.name}
+              address={store.address}
               className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line px-3 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-            >
-              <Navigation className="size-4 text-brand-600" aria-hidden />
-              Directions
-              <span className="sr-only">(opens Google Maps)</span>
-            </a>
+            />
           )}
         </div>
         <dl className="divide-y divide-line">

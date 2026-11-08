@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { OrderProgress } from "@/components/app/order-progress";
 import { RiderTracking } from "@/components/app/rider-tracking";
+import { StoreCover } from "@/components/app/store-card";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -48,12 +49,14 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
   const total = Number(order.subtotal) + Number(order.deliveryFee);
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
   const received = order.status === "DELIVERED" || order.status === "COMPLETED";
+  const onTheWay = order.fulfillment === "DELIVERY" && ON_THE_WAY.includes(order.status);
 
   return (
     <>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">{order.vendor.name}</h1>
+      <div className="mb-4 flex items-start gap-3">
+        <StoreCover imageUrl={order.vendor.imageUrl} className="size-14 shrink-0 rounded-2xl" eager />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[22px] leading-tight font-bold tracking-tight text-ink">{order.vendor.name}</h1>
           <p className="text-sm text-muted">
             Order {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
           </p>
@@ -103,17 +106,29 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </Section>
         )}
 
-        {order.fulfillment === "DELIVERY" && ON_THE_WAY.includes(order.status) && (
+        {onTheWay && (
           <RiderTracking
             orderId={order.id}
             initial={riderLocation}
             store={pinOf(order.vendor.latitude, order.vendor.longitude)}
+            storeName={order.vendor.name}
             home={pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng)}
+            homeAddress={order.checkout.deliveryAddress}
+            rider={
+              order.rider && {
+                name: order.rider.name,
+                phone: order.rider.phone,
+                vehicle: order.rider.riderProfile
+                  ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
+                  : null,
+              }
+            }
             pickedUp={order.status === "PICKED_UP"}
           />
         )}
 
-        {order.rider && !dropped && (
+        {/* While it's on the way, the rider is shown with the live map above */}
+        {order.rider && !dropped && !onTheWay && (
           <Section title="Your rider">
             <div className="flex items-center gap-3">
               <span className="flex size-10 items-center justify-center rounded-full bg-brand-50 text-brand-600">

@@ -1,14 +1,16 @@
-import { Banknote, Check, Map as MapIcon, MapPin, MessageSquareText, Navigation, Phone, Store, type LucideIcon } from "lucide-react";
+import { Banknote, Check, CreditCard, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense, type ReactNode } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { StepBar } from "@/components/app/step-bar";
+import { StoreCover } from "@/components/app/store-card";
+import { DirectionsButton } from "@/components/map/directions-button";
 import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
-import { pinOf } from "@/lib/geo";
-import { deliverySteps, orderCode, statusLabel } from "@/lib/order-status";
+import { pinOf, type LatLng } from "@/lib/geo";
+import { deliverySteps, orderCode, paymentName, riderPayment, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
 import { DeliveryActions } from "./delivery-actions";
@@ -16,8 +18,6 @@ import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
 
 export const metadata: Metadata = { title: "Active delivery" };
-
-const mapsLink = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
 export default function RiderActivePage() {
   return (
@@ -27,55 +27,69 @@ export default function RiderActivePage() {
   );
 }
 
-/** One end of the trip: who and where, with directions and a call button. A dashed line joins it to the next. */
+const pill =
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
+
+/**
+ * One end of the trip: who and where, with in-app directions and a call button. A dashed line
+ * joins it to the next. The store's stop shows its photo.
+ */
 function Stop({
   Icon,
+  imageUrl,
   label,
   title,
   address,
   phone,
+  pin,
+  near,
+  kind,
   done,
   last,
 }: {
   Icon: LucideIcon;
+  /** The store's photo, shown in the dot in place of the icon */
+  imageUrl?: string | null;
   label: string;
   title: string;
   address: string;
   phone: string | null;
+  pin: LatLng | null;
+  /** Where to look for an address saved without a pin */
+  near?: LatLng | null;
+  kind: "store" | "home";
   done?: boolean;
   last?: boolean;
 }) {
   return (
     <li className={`relative flex gap-3 ${last ? "" : "pb-5"}`}>
       {!last && <span aria-hidden className="absolute top-10 bottom-1 left-[17px] border-l-2 border-dashed border-line" />}
-      <span
-        className={`z-10 flex size-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white ${
-          done ? "bg-emerald-50 text-emerald-600" : last ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-600"
-        }`}
-      >
-        {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
-      </span>
+      {imageUrl !== undefined ? (
+        <span className="relative z-10 shrink-0">
+          <StoreCover imageUrl={imageUrl} className="size-9 rounded-full ring-4 ring-white" />
+          {done && (
+            <span className="absolute -right-1 -bottom-1 flex size-[18px] items-center justify-center rounded-full bg-emerald-600 text-white ring-2 ring-white">
+              <Check className="size-3" aria-hidden />
+            </span>
+          )}
+        </span>
+      ) : (
+        <span
+          className={`z-10 flex size-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white ${
+            done ? "bg-emerald-50 text-emerald-600" : last ? "bg-brand-600 text-white" : "bg-brand-50 text-brand-600"
+          }`}
+        >
+          {done ? <Check className="size-4" aria-hidden /> : <Icon className="size-4" aria-hidden />}
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className={`text-xs font-semibold tracking-wider uppercase ${done ? "text-emerald-700" : "text-gray-400"}`}>{label}</p>
         <p className="mt-0.5 font-semibold text-ink">{title}</p>
         <p className="text-sm text-muted">{address}</p>
         <div className="mt-2.5 flex gap-2">
-          <a
-            href={mapsLink(address)}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Directions to ${title}`}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-          >
-            <Navigation className="size-4 text-brand-600" aria-hidden />
-            Directions
-          </a>
+          {(pin || address) && <DirectionsButton to={pin} near={near} name={title} address={address} kind={kind} className={pill} />}
           {phone && (
-            <a
-              href={`tel:${phone}`}
-              aria-label={`Call ${title}`}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-            >
+            <a href={`tel:${phone}`} aria-label={`Call ${title}`} className={pill}>
               <Phone className="size-4 text-brand-600" aria-hidden />
               Call
             </a>
@@ -96,8 +110,9 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * The delivery the rider is on, in the order they need it: how far along it is, the map,
- * the next button to press, cash to collect, then the route and what to carry.
+ * The delivery the rider is on, in the order they need it: how far along it is, the map with
+ * the way to the next stop, the next button to press, whether to collect cash, then the route
+ * and the order itself with its prices.
  */
 async function RiderActive() {
   await requireRole("RIDER");
@@ -127,8 +142,8 @@ async function RiderActive() {
 
   const store = pinOf(order.vendor.latitude, order.vendor.longitude);
   const home = pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng);
-  const collect = Number(order.subtotal) + Number(order.deliveryFee);
-  const cash = order.checkout.paymentMethod === "COD" && order.checkout.paymentStatus !== "PAID";
+  const total = Number(order.subtotal) + Number(order.deliveryFee);
+  const payment = riderPayment(order.checkout);
   const pickedUp = order.status === "PICKED_UP";
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0);
   const { steps, done } = deliverySteps(order.status);
@@ -136,8 +151,9 @@ async function RiderActive() {
   return (
     <>
       <section aria-label="Delivery progress" className="mb-3 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex items-start gap-3">
+          <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" eager />
+          <div className="min-w-0 flex-1">
             <h1 className="text-[22px] leading-tight font-bold tracking-tight text-ink">Order {orderCode(order.id)}</h1>
             <p className="mt-0.5 truncate text-sm text-muted">
               {order.vendor.name} to {order.checkout.resident.name}
@@ -152,7 +168,7 @@ async function RiderActive() {
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
             <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />
           </span>
-          {statusLabel(order.status, "DELIVERY")}
+          {pickedUp ? `On the way to ${order.checkout.resident.name.split(" ")[0]}` : `Heading to ${order.vendor.name} · ${statusLabel(order.status, "DELIVERY")}`}
         </p>
         <div className="mt-2">
           <StepBar steps={steps} done={done} />
@@ -160,15 +176,22 @@ async function RiderActive() {
       </section>
 
       <div className="space-y-3">
-        <RiderTripMap store={store} home={home} status={order.status} />
+        <RiderTripMap store={store} home={home} homeAddress={order.checkout.deliveryAddress} status={order.status} />
         <DeliveryActions orderId={order.id} status={order.status} />
-        {pickedUp && <LocationSharer orderId={order.id} from={store} to={home} />}
+        <LocationSharer orderId={order.id} heading={pickedUp ? "home" : "store"} store={store} home={home} />
 
-        {cash && (
+        {payment.cash ? (
           <div className="flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-amber-900">
             <Banknote className="size-6 shrink-0" aria-hidden />
             <p className="text-sm">
-              Collect <span className="text-base font-bold">{formatPeso(collect)}</span> in cash from the customer.
+              Collect <span className="text-base font-bold">{formatPeso(total)}</span> in cash from the customer.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-900">
+            <CreditCard className="size-6 shrink-0" aria-hidden />
+            <p className="text-sm">
+              <span className="font-bold">Already paid</span> with {paymentName(order.checkout)}. Collect nothing, just hand it over.
             </p>
           </div>
         )}
@@ -177,6 +200,9 @@ async function RiderActive() {
           <ol>
             <Stop
               Icon={Store}
+              imageUrl={order.vendor.imageUrl}
+              pin={store}
+              kind="store"
               label={pickedUp ? "Picked up" : "1 · Pick up at"}
               done={pickedUp}
               title={order.vendor.name}
@@ -185,6 +211,9 @@ async function RiderActive() {
             />
             <Stop
               Icon={MapPin}
+              pin={home}
+              near={store}
+              kind="home"
               label="2 · Deliver to"
               last
               title={order.checkout.resident.name}
@@ -194,15 +223,37 @@ async function RiderActive() {
           </ol>
         </Box>
 
-        <Box title={`${itemCount} ${itemCount === 1 ? "item" : "items"} to carry`}>
-          <ul className="space-y-1 text-[15px] text-ink">
+        <Box title={`The order · ${itemCount} ${itemCount === 1 ? "item" : "items"}`}>
+          <ul className="space-y-2 text-[15px] text-ink">
             {order.items.map((item) => (
               <li key={item.id} className="flex gap-2">
                 <span className="w-7 shrink-0 font-semibold text-brand-700 tabular-nums">{item.quantity}×</span>
-                {item.name}
+                <span className="min-w-0 flex-1">
+                  {item.name}
+                  <span className="block text-xs text-muted">{formatPeso(item.unitPrice)} each</span>
+                </span>
+                <span className="shrink-0 tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
               </li>
             ))}
           </ul>
+          <dl className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted">Food</dt>
+              <dd className="text-ink tabular-nums">{formatPeso(order.subtotal)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted">Delivery fee (your pay)</dt>
+              <dd className="text-ink tabular-nums">{formatPeso(order.deliveryFee)}</dd>
+            </div>
+            <div className="flex justify-between text-[15px] font-bold text-ink">
+              <dt>Order total</dt>
+              <dd className="tabular-nums">{formatPeso(total)}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-muted">Payment</dt>
+              <dd className={`font-semibold ${payment.cash ? "text-amber-800" : "text-emerald-700"}`}>{payment.label}</dd>
+            </div>
+          </dl>
           {order.checkout.notes && (
             <p className="mt-3 flex gap-2 rounded-xl bg-canvas px-3 py-2 text-sm text-ink">
               <MessageSquareText className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />

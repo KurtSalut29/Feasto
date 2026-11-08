@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus, CircleCheck, Clock, MapPin, Navigation, NotebookPen, RotateCcw, Users } from "lucide-react";
+import { CalendarDays, CalendarPlus, CircleCheck, Clock, MapPin, NotebookPen, RotateCcw, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -12,6 +12,8 @@ import { formatClock, formatDay, manilaDate } from "@/lib/format";
 import { orderCode } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { BookingStatus, ResidentBooking } from "@/lib/types";
+import { DirectionsButton } from "@/components/map/directions-button";
+import { pinOf } from "@/lib/geo";
 import { CancelBookingButton } from "./cancel-booking-button";
 
 export const metadata: Metadata = { title: "Bookings" };
@@ -72,7 +74,6 @@ function calendarHref(booking: ResidentBooking) {
   return `data:text/calendar;charset=utf-8,${encodeURIComponent(lines.join("\r\n"))}`;
 }
 
-const directionsHref = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
 const chip =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
@@ -80,6 +81,7 @@ const chip =
 /** The next reservation, as a ticket: the store, the moment, the party, and what to do before going. */
 function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBooked: boolean }) {
   const store = booking.table.vendor;
+  const storePin = pinOf(store.latitude, store.longitude);
   return (
     <article
       aria-label={`Next booking at ${store.name}`}
@@ -145,10 +147,11 @@ function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBo
             <CalendarPlus className="size-4 text-brand-600" aria-hidden />
             Add to calendar
           </a>
-          <a href={directionsHref(store.address)} target="_blank" rel="noreferrer" className={chip}>
-            <Navigation className="size-4 text-brand-600" aria-hidden />
-            Directions
-          </a>
+          {storePin ? (
+            <DirectionsButton to={storePin} name={store.name} address={store.address} className={chip} />
+          ) : (
+            <span className={`${chip} text-muted`}>No map pin yet</span>
+          )}
         </div>
         <div className="flex justify-center">
           <CancelBookingButton bookingId={booking.id} storeName={store.name} when={`${formatDay(booking.startsAt)}, ${formatClock(booking.startsAt)}`} />

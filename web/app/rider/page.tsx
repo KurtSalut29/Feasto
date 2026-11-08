@@ -7,6 +7,7 @@ import { ExpiryNotice } from "@/components/app/expiry-notice";
 import { VerificationForm } from "@/components/app/verification-form";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { StepBar } from "@/components/app/step-bar";
+import { StoreCover } from "@/components/app/store-card";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
 import { deliverySteps, orderCode, statusLabel } from "@/lib/order-status";
@@ -90,10 +91,15 @@ function CurrentDelivery({ order }: { order: RiderDelivery }) {
         </p>
         <span className="text-sm font-bold text-ink tabular-nums">+{formatPeso(order.deliveryFee)}</span>
       </div>
-      <p className="mt-2 font-semibold text-ink">
-        {order.vendor.name} <span className="font-normal text-muted">· {orderCode(order.id)}</span>
-      </p>
-      <p className="truncate text-sm text-muted">To {order.checkout.deliveryAddress}</p>
+      <div className="mt-2 flex items-center gap-3">
+        <StoreCover imageUrl={order.vendor.imageUrl} className="size-11 shrink-0 rounded-xl" />
+        <div className="min-w-0">
+          <p className="truncate font-semibold text-ink">
+            {order.vendor.name} <span className="font-normal text-muted">· {orderCode(order.id)}</span>
+          </p>
+          <p className="truncate text-sm text-muted">To {order.checkout.deliveryAddress}</p>
+        </div>
+      </div>
       <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
         <span className="relative flex size-2.5" aria-hidden>
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />

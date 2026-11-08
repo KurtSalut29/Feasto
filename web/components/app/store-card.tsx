@@ -17,7 +17,7 @@ export function StoreCover({ imageUrl, className = "", eager, Icon = Store }: { 
       {imageUrl ? (
         <Image src={imageUrl} alt="" fill unoptimized loading={eager ? "eager" : "lazy"} className="object-cover" />
       ) : (
-        <Icon className="absolute inset-0 m-auto size-9 text-brand-600/40" aria-hidden />
+        <Icon className="absolute inset-0 m-auto size-[45%] max-h-9 max-w-9 text-brand-600/40" aria-hidden />
       )}
     </div>
   );
