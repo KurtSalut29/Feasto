@@ -21,7 +21,7 @@ async function VendorMenu() {
   const { items } = await serverApi<{ items: MenuItem[] }>("/vendor/menu");
   return (
     <>
-      <PageHeader title="Menu" description="The dishes residents can order from your store." />
+      <PageHeader eyebrow="Your store" title="Menu" description="The dishes residents can order from your store." />
       <MenuManager items={items} />
     </>
   );

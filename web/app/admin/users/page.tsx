@@ -85,7 +85,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
 
   return (
     <>
-      <PageHeader title="Users" description={`Everyone with a Feasto account · ${all} in total.`} />
+      <PageHeader eyebrow="Manage" title="Users" description={`Everyone with a Feasto account · ${all} in total.`} />
 
       <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
@@ -110,7 +110,48 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
         {data.users.length === 0 ? (
           <EmptyState Icon={Users} title="No users found" text={q ? `Nobody matches “${q}”.` : "No accounts in this group yet."} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per person, so the role, status and button are all in view */}
+          <ul className="divide-y divide-line md:hidden">
+            {data.users.map((user) => {
+              const disabled = Boolean(user.disabledAt);
+              const review = user.vendor ?? user.riderProfile;
+              return (
+                <li key={user.id} className={`px-4 py-3.5 ${disabled ? "bg-canvas/60" : ""}`}>
+                  <div className="flex items-start gap-3">
+                    <Avatar name={user.name} muted={disabled} />
+                    <div className="min-w-0 flex-1">
+                      <p className={`truncate font-medium ${disabled ? "text-muted" : "text-ink"}`}>{user.name}</p>
+                      <p className="truncate text-xs text-muted">{user.email}</p>
+                      {user.phone && <p className="text-xs text-muted tabular-nums">{user.phone}</p>}
+                      <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <RoleChip role={user.role} />
+                        {disabled ? (
+                          <Badge tone="danger" dot>
+                            Disabled
+                          </Badge>
+                        ) : (
+                          <Badge tone="success" dot>
+                            Active
+                          </Badge>
+                        )}
+                      </p>
+                      {review && (
+                        <p className="mt-1 truncate text-xs text-muted">
+                          {user.vendor ? user.vendor.name : (user.riderProfile!.vendor?.name ?? "Free rider")} ·{" "}
+                          <span className={`font-medium ${review.status === "APPROVED" ? "text-emerald-700" : review.status === "PENDING" ? "text-amber-700" : "text-red-700"}`}>
+                            {APPROVAL[review.status].label}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                    {user.role !== "ADMIN" && <AccountStatusButton userId={user.id} name={user.name} disabled={disabled} />}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className={`${TABLE} min-w-[760px]`}>
               <thead className={THEAD}>
                 <tr>
@@ -180,6 +221,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
               </tbody>
             </table>
           </div>
+          </>
         )}
         <Pagination page={page} pageSize={data.pageSize} total={data.total} noun="users" href={(n) => href({ page: n > 1 ? String(n) : undefined })} />
       </section>

@@ -198,7 +198,7 @@ export function SidebarNav({
         <div className="flex h-14 items-center justify-between rounded-2xl border border-line/80 bg-white/90 pr-1.5 pl-4 shadow-[0_8px_24px_-16px_rgba(31,45,61,0.35)] backdrop-blur">
           <Brand role={role} />
           <div className="flex items-center gap-1">
-            <NotificationBell />
+            <NotificationBell allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             <button
               type="button"
               onClick={() => setOpen(true)}

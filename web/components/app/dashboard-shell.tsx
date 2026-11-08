@@ -1,8 +1,8 @@
-import { KeyRound, ShieldCheck, Store } from "lucide-react";
+import { CalendarDays, Coffee, KeyRound, Moon, ShieldCheck, Store, Sun, Sunrise, Sunset, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { cache, Suspense, type ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth";
-import { initials } from "@/lib/format";
+import { initials, mealTime, todayLabel, type MealTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { User } from "@/lib/types";
 import { LiveUpdates } from "./live-updates";
@@ -52,10 +52,14 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
           )}
         />
         <main className="min-w-0 px-4 py-6 sm:px-8 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
-          <div className="relative mx-auto max-w-6xl">
-            {/* Level with the page title; on small screens the bell is in the top bar instead */}
-            <div className="absolute top-0 right-0 z-20 hidden lg:block">
-              <NotificationBell variant="floating" />
+          <div className="mx-auto max-w-6xl">
+            {/* Big screens: today's date on the left, the bell on the right, above every page.
+                On small screens the bell sits in the sidebar's top bar instead. */}
+            <div data-print-hide className="relative z-20 mb-5 hidden h-11 items-center justify-between gap-4 lg:flex">
+              <Suspense fallback={<span />}>
+                <TodayLine />
+              </Suspense>
+              <NotificationBell variant="floating" allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             </div>
             {children}
           </div>
@@ -64,6 +68,32 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
     </LiveUpdates>
   );
 }
+
+/** "Monday, November 9 · Dinner rush": the day and the part of it the kitchen is in, by Manila time */
+async function TodayLine() {
+  await getCurrentUser(); // reads the session, so the date is worked out per request
+  const meal = mealTime();
+  const { Icon, label } = MEAL_LABEL[meal];
+  return (
+    <p className="flex items-center gap-2 text-sm text-muted">
+      <CalendarDays className="size-4 text-gray-400" aria-hidden />
+      <span className="font-semibold text-ink">{todayLabel()}</span>
+      <span aria-hidden className="text-gray-300">
+        ·
+      </span>
+      <Icon className="size-4 text-brand-600" aria-hidden />
+      {label}
+    </p>
+  );
+}
+
+const MEAL_LABEL: Record<MealTime, { Icon: LucideIcon; label: string }> = {
+  breakfast: { Icon: Sunrise, label: "Breakfast" },
+  lunch: { Icon: Sun, label: "Lunch rush" },
+  merienda: { Icon: Coffee, label: "Merienda" },
+  dinner: { Icon: Sunset, label: "Dinner rush" },
+  late: { Icon: Moon, label: "Late night" },
+};
 
 const STORE_STATE: Record<NonNullable<User["vendor"]>["status"], { label: string; dot: string }> = {
   APPROVED: { label: "Live for residents", dot: "bg-emerald-500" },
@@ -181,8 +211,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    // Right padding keeps the actions clear of the notification bell in the corner
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4 lg:pr-16">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <p className="mb-1 text-xs font-semibold tracking-wider text-brand-700 uppercase">{eyebrow}</p>}
         <h1 className="text-[26px] leading-tight font-bold tracking-tight text-ink">{title}</h1>

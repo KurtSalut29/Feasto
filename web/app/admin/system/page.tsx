@@ -8,6 +8,7 @@ import { TABLE, TBODY, TD, TH, THEAD } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
+import { MarshallingPanel } from "./marshalling-panel";
 
 export const metadata: Metadata = { title: "System" };
 
@@ -39,6 +40,7 @@ const QUEUE_LABEL: Record<string, string> = {
   "payment.requested": "Online payments",
   "report.requested": "Report requests",
   "report.part": "Report store jobs",
+  "system.sample": "Sample messages",
 };
 
 export default function AdminSystemPage() {
@@ -146,7 +148,7 @@ async function SystemMonitor() {
   return (
     <>
       <AutoRefresh everyMs={5000} />
-      <PageHeader title="System" description="Live status of every server, refreshed every 5 seconds." />
+      <PageHeader eyebrow="Insights" title="System" description="Live status of every server, and every message they marshal and unmarshal." />
 
       <section
         aria-label="Overall status"
@@ -260,6 +262,8 @@ async function SystemMonitor() {
           </ul>
         </Card>
       </div>
+
+      <MarshallingPanel />
     </>
   );
 }

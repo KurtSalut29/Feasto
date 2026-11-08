@@ -120,6 +120,9 @@ export type StoreReview = { id: string; rating: number; comment: string | null; 
 export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "matchedDishes" | "distanceKm"> & {
   canBook: boolean;
   maxPartySize: number;
+  /** The ways to pay the store takes */
+  acceptsCash: boolean;
+  onlinePayments: OnlinePayment[];
   /** Per store, when delivered */
   deliveryFee: number;
   /** How many residents gave 1 to 5 stars */
@@ -135,7 +138,7 @@ export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STO
 
 export type Cart = {
   groups: {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean };
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -207,17 +210,28 @@ export type ResidentOrder = OrderBase & {
 /** How far a delivery job has spread among riders. */
 export type JobDispatch = "NEW" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYONE";
 
-export type VendorOrder = OrderBase & {
+export type VendorOrder = Omit<OrderBase, "items"> & {
   dispatch: JobDispatch;
-  rider: { name: string; phone: string | null } | null;
+  /** Each dish, with its menu photo */
+  items: (OrderBase["items"][number] & { menuItem?: { imageUrl: string | null } | null })[];
+  rider: { name: string; phone: string | null; riderProfile?: { vehicleModel: string | null; plateNumber: string | null } | null } | null;
+  /** Where the rider is now, while they're on this order */
+  riderLocation?: { lat: number; lng: number; at: string } | null;
   checkout: {
     paymentMethod: PaymentMethod;
     onlineMethod?: OnlinePayment | null;
     paymentStatus: PaymentStatus;
     deliveryAddress: string | null;
+    deliveryLat?: number | null;
+    deliveryLng?: number | null;
     notes: string | null;
     resident: { name: string; phone: string | null };
   };
+};
+
+/** One order in full, for the store's order page and printed slip */
+export type VendorOrderDetail = VendorOrder & {
+  vendor: Pin & { name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
 };
 
 export type BookingStatus = "CONFIRMED" | "CANCELLED" | "COMPLETED" | "NO_SHOW";

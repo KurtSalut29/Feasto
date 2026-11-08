@@ -196,7 +196,7 @@ async function Documents({ searchParams }: Pick<PageProps<"/admin/documents">, "
 
   return (
     <>
-      <PageHeader title="Documents" description="Renewed permits and licenses to check, and the ones that have expired or are about to." />
+      <PageHeader eyebrow="Manage" title="Documents" description="Renewed permits and licenses to check, and the ones that have expired or are about to." />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <LinkTabs

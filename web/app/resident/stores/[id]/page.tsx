@@ -1,4 +1,4 @@
-import { Bike, CalendarDays, ChevronRight, Clock, MapPin, MessageSquareText, Star, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Banknote, Bike, CalendarDays, ChevronRight, Clock, MapPin, MessageSquareText, Star, Store, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { FavoriteButton } from "@/components/app/favorite-button";
 import { JumpLink } from "@/components/app/jump-link";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
+import { PAYMENT_OPTIONS, PaymentLogo } from "@/components/app/payment-brands";
 import { Stars } from "@/components/app/rating";
 import { StoreCover } from "@/components/app/store-card";
 import { storeState } from "@/components/app/store-status";
@@ -20,7 +21,7 @@ import { distanceKm, formatDistance, pinOf } from "@/lib/geo";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_ICON } from "@/lib/store-type-icons";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { Address, Cart, StoreDetail } from "@/lib/types";
+import type { Address, Cart, OnlinePayment, StoreDetail } from "@/lib/types";
 import { ReviewList } from "./review-list";
 import { StoreMenu } from "./store-menu";
 
@@ -251,6 +252,22 @@ function StoreInfo({
           </InfoRow>
           <InfoRow Icon={Store} label="Pickup">
             Free. Collect it at the store when it&apos;s ready.
+          </InfoRow>
+          <InfoRow Icon={Wallet} label="Pays with">
+            <span className="flex flex-wrap items-center gap-1.5">
+              {store.acceptsCash && (
+                <span className="inline-flex h-6 items-center gap-1 rounded-md bg-emerald-50 px-1.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  <Banknote className="size-3.5" aria-hidden />
+                  Cash
+                </span>
+              )}
+              {PAYMENT_OPTIONS.filter((o) => o.tile && store.onlinePayments.includes(o.value as OnlinePayment)).map((o) => (
+                <span key={o.value} title={o.name} className="flex h-6 w-10 items-center justify-center rounded-md bg-white ring-1 ring-line">
+                  <PaymentLogo file={o.tile!} tint={o.brand} className="h-4 w-8" />
+                  <span className="sr-only">{o.name}</span>
+                </span>
+              ))}
+            </span>
           </InfoRow>
           {store.canBook && (
             <InfoRow Icon={CalendarDays} label="Bookings">

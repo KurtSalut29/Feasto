@@ -4,6 +4,7 @@ import { Bike, MapPin, Store } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
+import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -72,7 +73,9 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [fulfillment, setFulfillment] = useState<Fulfillment>("DELIVERY");
   const [addressId, setAddressId] = useState(addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? "");
-  const [pay, setPay] = useState<PayChoice>("COD");
+  // Each store chooses the ways to pay it takes; one payment covers the cart, so every store must take it
+  const refusedBy = (choice: PayChoice) => cart.groups.find((g) => !takes(g.store, choice))?.store.name ?? null;
+  const [pay, setPay] = useState<PayChoice>(() => PAYMENT_OPTIONS.find((o) => !refusedBy(o.value))?.value ?? "COD");
   const paymentMethod: PaymentMethod = pay === "COD" ? "COD" : "ONLINE";
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
@@ -184,6 +187,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         <PaymentPicker
           value={pay}
           onChange={setPay}
+          refusedBy={refusedBy}
           total={total}
           holder={holder}
           phone={phone}

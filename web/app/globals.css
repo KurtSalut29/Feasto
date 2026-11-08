@@ -20,6 +20,7 @@
      600 and 700 are deeper so white text on buttons and orange links stay readable (WCAG AA). */
   --color-brand-50: #fff5ee;
   --color-brand-100: #ffe6d5;
+  --color-brand-200: #ffcbab;
   --color-brand-500: #fe5502;
   --color-brand-600: #d24600;
   --color-brand-700: #b23a00;
@@ -66,6 +67,8 @@ body {
 /* Printing a receipt prints only the paper slip, not the app around it */
 @media print {
   body:has([data-receipt]) header,
+  body:has([data-receipt]) aside,
+  body:has([data-receipt]) [data-print-hide],
   body:has([data-receipt]) [data-tabbar] {
     display: none !important;
   }

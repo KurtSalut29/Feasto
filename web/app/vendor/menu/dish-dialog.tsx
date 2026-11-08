@@ -36,16 +36,19 @@ export function DishDialog({
   open,
   item,
   categories,
+  section,
   onClose,
   onSaved,
 }: {
   open: boolean;
   item?: MenuItem;
   categories: string[];
+  /** For a new dish: the menu section it starts in */
+  section?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [values, setValues] = useState(() => toValues(item));
+  const [values, setValues] = useState(() => ({ ...toValues(item), category: item?.category ?? section ?? "" }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});

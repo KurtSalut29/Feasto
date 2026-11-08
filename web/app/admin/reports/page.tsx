@@ -7,11 +7,11 @@ import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell"
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
-import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDate, formatPeso, timeAgo } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { GenerateReport } from "./generate-report";
+import { StoreSales, WorkerChip } from "./store-sales";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -42,30 +42,16 @@ export default function AdminReportsPage({ searchParams }: PageProps<"/admin/rep
 const day = (date: string) => formatDate(`${date}T12:00:00+08:00`);
 const range = (r: { from: string; to: string }) => (r.from === r.to ? day(r.from) : `${day(r.from)} – ${day(r.to)}`);
 
-// Each worker gets its own chip color, so you can see the jobs were split between them
-const WORKER_COLORS = ["bg-sky-50 text-sky-700 ring-sky-100", "bg-violet-50 text-violet-700 ring-violet-100", "bg-teal-50 text-teal-700 ring-teal-100"];
-
-function WorkerChip({ name, workers }: { name: string; workers: string[] }) {
-  const color = WORKER_COLORS[Math.max(0, workers.indexOf(name)) % WORKER_COLORS.length];
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ${color}`}>
-      <Cpu className="size-3" aria-hidden />
-      {name}
-    </span>
-  );
-}
-
 async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "searchParams">) {
   await requireRole("ADMIN");
   const params = await searchParams;
   const { reports } = await serverApi<{ reports: ReportSummary[] }>("/admin/reports");
   const id = typeof params.id === "string" ? params.id : reports[0]?.id;
   const report = id ? (await serverApi<{ report: Report }>(`/admin/reports/${id}`)).report : null;
-  const topSales = report?.rows.reduce((max, r) => Math.max(max, r.sales), 0) ?? 0;
 
   return (
     <>
-      <PageHeader title="Reports" description="Sales per store, computed in parallel: each store is a separate job shared across the workers." />
+      <PageHeader eyebrow="Insights" title="Reports" description="Sales per store, computed in parallel: each store is a separate job shared across the workers." />
 
       <Card className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
@@ -136,48 +122,12 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
                 <StatCard label="Delivery fees" value={formatPeso(report.totals.deliveryFees)} hint="Earned by riders" Icon={Bike} accent="emerald" />
               </div>
 
-              <Card title="Sales by store" description="Highest sales first" className="mt-6">
-                <div className="overflow-x-auto">
-                  <table className={`${TABLE} min-w-[680px]`}>
-                    <thead className={THEAD}>
-                      <tr>
-                        <th className={TH}>Store</th>
-                        <th className={`${TH} text-right`}>Orders</th>
-                        <th className={`${TH} text-right`}>Sales</th>
-                        <th className={TH}>Share of sales</th>
-                        <th className={TH}>Computed by</th>
-                      </tr>
-                    </thead>
-                    <tbody className={TBODY}>
-                      {[...report.rows]
-                        .sort((a, b) => b.sales - a.sales)
-                        .map((row) => {
-                          const share = report.totals.sales ? (row.sales / report.totals.sales) * 100 : 0;
-                          return (
-                            <tr key={row.vendorId} className={TR}>
-                              <td className={TD}>
-                                <p className="font-medium text-ink">{row.name}</p>
-                                <p className="text-xs text-muted">{row.topDish ? `Best seller: ${row.topDish}` : "No orders in this period"}</p>
-                              </td>
-                              <td className={`${TD} text-right text-ink tabular-nums`}>{row.orders}</td>
-                              <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(row.sales)}</td>
-                              <td className={TD}>
-                                <div className="flex items-center gap-2.5">
-                                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-canvas">
-                                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${topSales ? (row.sales / topSales) * 100 : 0}%` }} />
-                                  </div>
-                                  <span className="w-10 text-xs text-muted tabular-nums">{share.toFixed(0)}%</span>
-                                </div>
-                              </td>
-                              <td className={TD}>
-                                <WorkerChip name={row.computedBy} workers={report.workers} />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
+              <Card
+                title="Sales by store"
+                description={`Highest sales first · ${report.rows.filter((r) => r.orders > 0).length} of ${report.rows.length} stores sold something`}
+                className="mt-6"
+              >
+                <StoreSales rows={report.rows} totalSales={report.totals.sales} workers={report.workers} />
               </Card>
             </>
           )}

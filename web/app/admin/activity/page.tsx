@@ -55,7 +55,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
 
   return (
     <>
-      <PageHeader title="Activity log" description="Who did what on Feasto, when and why. Lines are only ever added, never changed." />
+      <PageHeader eyebrow="Insights" title="Activity log" description="Who did what on Feasto, when and why. Lines are only ever added, never changed." />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <LinkTabs

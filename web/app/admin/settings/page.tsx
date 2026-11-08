@@ -20,7 +20,7 @@ async function Settings() {
   const { settings } = await serverApi<{ settings: PlatformSettings }>("/admin/settings");
   return (
     <>
-      <PageHeader title="Settings" description="Applied right away across every server. Each change is written in the activity log." />
+      <PageHeader eyebrow="Insights" title="Settings" description="Applied right away across every server. Each change is written in the activity log." />
       <SettingsForm initial={settings} />
     </>
   );

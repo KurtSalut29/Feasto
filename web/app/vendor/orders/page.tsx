@@ -1,106 +1,33 @@
-import { Bike, Camera, ClipboardList, History, LayoutGrid, MapPin, MessageSquareText, Phone, Store } from "lucide-react";
+import { ArrowDownWideNarrow, Bike, ClipboardList, History, ListOrdered, MessageSquareText, Store } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkTabs } from "@/components/ui/link-tabs";
-import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
-import { formatDateTime, formatPeso, timeAgo } from "@/lib/format";
-import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { formatPeso, renderTime } from "@/lib/format";
+import { pinOf } from "@/lib/geo";
+import { itemsSummary, orderCode, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrder } from "@/lib/types";
-import { OrderActions } from "./order-actions";
+import { HistoryTable } from "./history-table";
+import { paymentLine } from "./order-parts";
+import { OrderPanel } from "./order-panel";
+import { isStageKey, ordinal, stageOf, STAGES, type StageKey } from "./queue";
+import { WaitClock } from "./wait-clock";
 
 export const metadata: Metadata = { title: "Orders" };
 
 type Tab = "new" | "preparing" | "ready" | "done";
 type OrdersResponse = { orders: VendorOrder[]; counts: Record<Tab, number> };
 
-/** The three live columns of the kitchen board, left to right. */
-const COLUMNS = [
-  { key: "new", title: "New", dot: "bg-amber-500", empty: "New orders pop up here instantly, with a sound." },
-  { key: "preparing", title: "In the kitchen", dot: "bg-brand-500", empty: "Orders you accepted and are cooking." },
-  { key: "ready", title: "Ready", dot: "bg-emerald-500", empty: "Waiting for the resident or a rider to pick up." },
-] as const;
-
 export default function VendorOrdersPage({ searchParams }: PageProps<"/vendor/orders">) {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
       <VendorOrders searchParams={searchParams} />
     </Suspense>
-  );
-}
-
-function OrderCard({ order, column }: { order: VendorOrder; column: Tab }) {
-  const items = order.items.reduce((n, i) => n + i.quantity, 0);
-  const delivery = order.fulfillment === "DELIVERY";
-  return (
-    <li
-      className={`rounded-2xl border bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)] ${
-        column === "new" ? "border-amber-200 ring-2 ring-amber-100" : "border-line"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-2 px-4 pt-3.5">
-        <p className="font-bold text-ink">{orderCode(order.id)}</p>
-        <span className="text-xs text-muted">{timeAgo(order.createdAt)}</span>
-      </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-4">
-        <span
-          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${delivery ? "bg-sky-50 text-sky-700" : "bg-gray-100 text-gray-700"}`}
-        >
-          {delivery ? <Bike className="size-3.5" aria-hidden /> : <Store className="size-3.5" aria-hidden />}
-          {delivery ? "Delivery" : "Pickup"}
-        </span>
-        {column !== "new" && <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>}
-      </div>
-
-      <ul className="mx-4 mt-3 space-y-1 border-t border-dashed border-line pt-3 text-sm">
-        {order.items.map((item) => (
-          <li key={item.id} className="flex justify-between gap-3">
-            <span className="min-w-0 text-ink">
-              <span className="font-semibold text-brand-700">{item.quantity}×</span> {item.name}
-            </span>
-            <span className="shrink-0 text-muted tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mx-4 mt-2 flex items-baseline justify-between border-t border-dashed border-line pt-2 text-sm">
-        <span className="text-muted">
-          {items} {items === 1 ? "item" : "items"} · {paymentName(order.checkout)}
-          {order.checkout.paymentStatus === "PAID" && <span className="font-medium text-emerald-700"> · paid</span>}
-        </span>
-        <span className="font-semibold text-ink tabular-nums">{formatPeso(order.subtotal)}</span>
-      </div>
-
-      <div className="mx-4 mt-3 space-y-1.5 rounded-xl bg-canvas px-3 py-2.5 text-[13px]">
-        <p className="font-semibold text-ink">{order.checkout.resident.name}</p>
-        {order.checkout.resident.phone && (
-          <p className="flex items-center gap-2 text-muted">
-            <Phone className="size-3.5 shrink-0" aria-hidden />
-            {order.checkout.resident.phone}
-          </p>
-        )}
-        {order.checkout.deliveryAddress && (
-          <p className="flex gap-2 text-muted">
-            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            {order.checkout.deliveryAddress}
-          </p>
-        )}
-      </div>
-      {order.checkout.notes && (
-        <p className="mx-4 mt-2 flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
-          <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          {order.checkout.notes}
-        </p>
-      )}
-
-      <div className="mt-3 border-t border-line px-4 py-3">
-        <OrderActions orderId={order.id} status={order.status} fulfillment={order.fulfillment} riderName={order.rider?.name} dispatch={order.dispatch} />
-      </div>
-    </li>
   );
 }
 
@@ -114,7 +41,7 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
       variant="segmented"
       label="View"
       tabs={[
-        { href: "/vendor/orders", label: "Live board", Icon: LayoutGrid, count: counts.new + counts.preparing + counts.ready, active: !history },
+        { href: "/vendor/orders", label: "Queue", Icon: ListOrdered, count: counts.new + counts.preparing + counts.ready, active: !history },
         { href: "/vendor/orders?tab=done", label: "History", Icon: History, count: counts.done, active: history },
       ]}
     />
@@ -124,107 +51,187 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
     const data = await serverApi<OrdersResponse>("/vendor/orders?tab=done");
     return (
       <>
-        <PageHeader title="Orders" description="Delivered, collected, declined and cancelled orders." actions={views(data.counts)} />
-        <Card>
-          {data.orders.length === 0 ? (
-            <EmptyState Icon={ClipboardList} title="No finished orders yet" text="Orders move here once they're delivered, collected, declined or cancelled." />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className={`${TABLE} min-w-[820px]`}>
-                <thead className={THEAD}>
-                  <tr>
-                    <th className={TH}>Order</th>
-                    <th className={TH}>Resident</th>
-                    <th className={TH}>Dishes</th>
-                    <th className={TH}>Payment</th>
-                    <th className={`${TH} text-right`}>Food total</th>
-                    <th className={TH}>Status</th>
-                  </tr>
-                </thead>
-                <tbody className={TBODY}>
-                  {data.orders.map((order) => (
-                    <tr key={order.id} className={TR}>
-                      <td className={TD}>
-                        <p className="font-semibold text-ink">{orderCode(order.id)}</p>
-                        <p className="text-xs text-muted">{formatDateTime(order.createdAt)}</p>
-                      </td>
-                      <td className={TD}>
-                        <p className="text-ink">{order.checkout.resident.name}</p>
-                        <p className="text-xs text-muted">{order.fulfillment === "DELIVERY" ? `Delivery${order.rider ? ` · ${order.rider.name}` : ""}` : "Pickup"}</p>
-                      </td>
-                      <td className={`${TD} max-w-64 truncate text-muted`} title={order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}>
-                        {order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
-                      </td>
-                      <td className={TD}>
-                        <p className="text-ink">{paymentName(order.checkout)}</p>
-                        <p className="text-xs text-muted">
-                          {order.checkout.paymentStatus === "PENDING" && ["REJECTED", "CANCELLED"].includes(order.status)
-                            ? "Not charged"
-                            : paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
-                        </p>
-                      </td>
-                      <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(order.subtotal)}</td>
-                      <td className={TD}>
-                        <Badge tone={STATUS_TONE[order.status]} dot>
-                          {statusLabel(order.status, order.fulfillment)}
-                        </Badge>
-                        {order.rejectReason && <p className="mt-1 max-w-48 truncate text-xs text-muted">“{order.rejectReason}”</p>}
-                        {order.deliveryPhotoUrl && (
-                          <a
-                            href={order.deliveryPhotoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 hover:underline"
-                          >
-                            <Camera className="size-3.5" aria-hidden />
-                            Delivery photo
-                          </a>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+        <PageHeader eyebrow="Today" title="Orders" description="Delivered, collected, declined and cancelled orders." actions={views(data.counts)} />
+        <HistoryTable orders={data.orders} />
       </>
     );
   }
 
-  const [fresh, cooking, ready] = await Promise.all(COLUMNS.map((c) => serverApi<OrdersResponse>(`/vendor/orders?tab=${c.key}`)));
-  const byColumn = { new: fresh.orders, preparing: cooking.orders, ready: ready.orders };
+  const [{ orders: queue, counts }, { store }] = await Promise.all([
+    serverApi<OrdersResponse>("/vendor/orders?tab=active"),
+    serverApi<{ store: { latitude: number | null; longitude: number | null } }>("/vendor/store"),
+  ]);
+  const storePin = pinOf(store.latitude, store.longitude);
+  const stage = isStageKey(params.stage) ? params.stage : null;
+  // The server sends the queue oldest first: first come, first served
+  const shown = stage ? queue.filter((o) => stageOf(o.status)?.key === stage) : queue;
+  const selected = shown.find((o) => o.id === params.order) ?? shown[0];
+  const renderedAt = renderTime();
+
+  const href = (next: { stage?: StageKey | null; order?: string }) => {
+    const query = new URLSearchParams();
+    const nextStage = next.stage === undefined ? stage : next.stage;
+    if (nextStage) query.set("stage", nextStage);
+    if (next.order) query.set("order", next.order);
+    const text = query.toString();
+    return text ? `/vendor/orders?${text}` : "/vendor/orders";
+  };
+
+  const tabs = [
+    { key: null, label: "All orders", dot: "bg-ink", count: queue.length },
+    ...STAGES.map((s) => ({ key: s.key, label: s.label, dot: s.dot, count: queue.filter((o) => stageOf(o.status)?.key === s.key).length })),
+  ];
 
   return (
     <>
-      <PageHeader title="Orders" description="New orders appear instantly. Accept them, then move them along." actions={views(fresh.counts)} />
-      <div className="grid items-start gap-5 lg:grid-cols-3">
-        {COLUMNS.map(({ key, title, dot, empty }) => {
-          const orders = byColumn[key];
-          return (
-            <section key={key} aria-labelledby={`col-${key}`} className="rounded-2xl bg-gray-100/70 p-2.5 ring-1 ring-line/60">
-              <header className="flex items-center justify-between px-2 pt-1 pb-3">
-                <h2 id={`col-${key}`} className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <span aria-hidden className={`size-2 rounded-full ${dot}`} />
-                  {title}
-                </h2>
-                <span className="min-w-6 rounded-full bg-white px-2 py-0.5 text-center text-xs font-semibold text-ink tabular-nums shadow-sm">
-                  {orders.length}
-                </span>
-              </header>
-              {orders.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-muted">{empty}</p>
-              ) : (
-                <ul className="space-y-2.5">
-                  {orders.map((order) => (
-                    <OrderCard key={order.id} order={order} column={key} />
-                  ))}
-                </ul>
-              )}
-            </section>
-          );
-        })}
-      </div>
+      <PageHeader
+        eyebrow="Today"
+        title="Orders"
+        description="First come, first served: the oldest order is always at the top of the queue."
+        actions={views(counts)}
+      />
+
+      {/* Which stage to show, with how many orders are in each */}
+      <nav aria-label="Stage" className="-mx-4 mb-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+        <ul className="flex w-max gap-2">
+          {tabs.map((tab) => {
+            const active = stage === tab.key;
+            return (
+              <li key={tab.key ?? "all"}>
+                <Link
+                  href={href({ stage: tab.key })}
+                  scroll={false}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+                    active ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-gray-300"
+                  }`}
+                >
+                  <span aria-hidden className={`size-2 rounded-full ${active && tab.key === null ? "bg-white" : tab.dot}`} />
+                  {tab.label}
+                  <span
+                    className={`min-w-6 rounded-full px-1.5 text-center text-xs leading-5 tabular-nums ${
+                      active ? "bg-white/20 text-white" : tab.key === "new" && tab.count > 0 ? "bg-amber-100 text-amber-800" : "bg-canvas text-muted"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {queue.length === 0 ? (
+        <Card>
+          <EmptyState
+            Icon={ClipboardList}
+            title="No orders right now"
+            text="New orders appear here instantly, with a sound. The oldest one always stays at the top."
+          />
+        </Card>
+      ) : (
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,370px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,410px)_minmax(0,1fr)]">
+          <section aria-labelledby="queue-title" className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <header className="flex items-center justify-between gap-3 border-b border-line bg-canvas/50 px-4 py-3">
+              <h2 id="queue-title" className="text-sm font-semibold text-ink">
+                {stage ? STAGES.find((s) => s.key === stage)!.label : "Queue"} · {shown.length} {shown.length === 1 ? "order" : "orders"}
+              </h2>
+              <p className="flex items-center gap-1 text-xs text-muted">
+                <ArrowDownWideNarrow className="size-3.5" aria-hidden />
+                Oldest first
+              </p>
+            </header>
+            {shown.length === 0 ? (
+              <p className="px-4 py-10 text-center text-sm text-muted">Nothing in this stage right now.</p>
+            ) : (
+              <ol className="divide-y divide-line">
+                {shown.map((order, i) => (
+                  <li key={order.id}>
+                    <QueueRow order={order} position={i + 1} on={order.id === selected?.id} href={href({ order: order.id })} renderedAt={renderedAt} />
+                    {/* Phones: the chosen order opens right under its row */}
+                    {order.id === selected?.id && (
+                      <div className="border-t border-brand-100 px-4 py-4 lg:hidden">
+                        <OrderPanel order={order} store={storePin} position={i + 1} renderedAt={renderedAt} />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+
+          {/* Big screens: the chosen order beside the queue */}
+          <div className="hidden rounded-2xl border border-line bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:sticky lg:top-6 lg:block">
+            {selected ? (
+              <OrderPanel order={selected} store={storePin} position={shown.indexOf(selected) + 1} renderedAt={renderedAt} map />
+            ) : (
+              <p className="py-16 text-center text-sm text-muted">Choose an order from the queue.</p>
+            )}
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+/** One order in the queue, compact: its place in line, how long it has waited, and what it is. */
+function QueueRow({ order, position, on, href, renderedAt }: { order: VendorOrder; position: number; on: boolean; href: string; renderedAt: number }) {
+  const count = order.items.reduce((n, item) => n + item.quantity, 0);
+  const payment = paymentLine(order);
+  const step = stageOf(order.status);
+  const delivery = order.fulfillment === "DELIVERY";
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      aria-current={on ? "true" : undefined}
+      className={`relative flex gap-3 px-4 py-3.5 transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
+        on ? "bg-brand-50/70" : "hover:bg-canvas/60"
+      }`}
+    >
+      {on && <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-r bg-brand-600" />}
+      <span
+        title={`${ordinal(position)} in line`}
+        className={`flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums ${
+          position === 1 ? "bg-ink text-white" : "bg-canvas text-muted ring-1 ring-line"
+        }`}
+      >
+        {position}
+        <span className="sr-only"> in line</span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-2">
+          <span className="truncate font-bold text-ink">
+            {orderCode(order.id)} <span className="font-medium text-muted">· {order.checkout.resident.name.split(" ")[0]}</span>
+          </span>
+          <WaitClock since={order.createdAt} status={order.status} renderedAt={renderedAt} />
+        </span>
+        <span className="mt-0.5 block truncate text-sm text-muted">
+          {count} {count === 1 ? "item" : "items"} · {itemsSummary(order.items)}
+        </span>
+        <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+          {step && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-ink ring-1 ring-line">
+              <span aria-hidden className={`size-1.5 rounded-full ${step.dot}`} />
+              {statusLabel(order.status, order.fulfillment)}
+            </span>
+          )}
+          <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${delivery ? "bg-sky-50 text-sky-700" : "bg-gray-100 text-gray-700"}`}>
+            {delivery ? <Bike className="size-3.5" aria-hidden /> : <Store className="size-3.5" aria-hidden />}
+            {delivery ? "Delivery" : "Pickup"}
+          </span>
+          <span className={`rounded-md px-1.5 py-0.5 tabular-nums ${payment.tone === "paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+            {formatPeso(payment.total)} · {payment.tone === "paid" ? "Paid" : order.checkout.paymentMethod === "COD" ? "Cash" : "Unpaid"}
+          </span>
+          {order.checkout.notes && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-800">
+              <MessageSquareText className="size-3.5" aria-hidden />
+              Note
+            </span>
+          )}
+        </span>
+      </span>
+    </Link>
   );
 }

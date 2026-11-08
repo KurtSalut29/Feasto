@@ -70,7 +70,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
 
   return (
     <>
-      <PageHeader title="Orders" description="Every order across all stores. This page updates live." />
+      <PageHeader eyebrow="Manage" title="Orders" description="Every order across all stores. This page updates live." />
 
       {/* The totals double as the filter */}
       <nav aria-label="Order status" className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">

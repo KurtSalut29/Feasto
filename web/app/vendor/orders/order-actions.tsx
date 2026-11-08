@@ -26,12 +26,15 @@ export function OrderActions({
   fulfillment,
   riderName,
   dispatch,
+  riderShown = false,
 }: {
   orderId: string;
   status: OrderStatus;
   fulfillment: Fulfillment;
   riderName?: string;
   dispatch: JobDispatch;
+  /** The rider has their own live panel next to these buttons, so don't repeat who's coming */
+  riderShown?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -90,15 +93,17 @@ export function OrderActions({
         Collected by customer
       </Button>
     );
-  else if (status === "READY")
+  else if (status === "READY" && !riderShown)
     actions = <p className="text-sm text-muted">{riderName ? `${riderName} is coming to pick it up` : LOOKING_FOR_RIDER[dispatch]}</p>;
-  else if (status === "PICKED_UP") actions = <p className="text-sm text-muted">Out for delivery with {riderName}</p>;
+  else if (status === "READY") actions = <p className="text-sm text-muted">Hand it over when the rider arrives.</p>;
+  else if (status === "PICKED_UP" && !riderShown) actions = <p className="text-sm text-muted">Out for delivery with {riderName}</p>;
+  else if (status === "PICKED_UP") actions = <p className="text-sm text-muted">Out for delivery. Nothing left for you to do.</p>;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {actions}
       {/* While it's being prepared the store still wants to know who's coming */}
-      {fulfillment === "DELIVERY" && (status === "ACCEPTED" || status === "PREPARING") && (
+      {fulfillment === "DELIVERY" && !riderShown && (status === "ACCEPTED" || status === "PREPARING") && (
         <p className="w-full text-xs text-muted">{riderName ? `${riderName} will pick it up` : LOOKING_FOR_RIDER[dispatch]}</p>
       )}
       {error && !rejecting && <p className="w-full text-xs text-red-600">{error}</p>}

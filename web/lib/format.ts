@@ -91,6 +91,25 @@ export function weekdayLabel() {
   return new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "long" });
 }
 
+/** The time a server page was drawn, handed to client clocks so their first paint matches */
+export function renderTime() {
+  return Date.now();
+}
+
+/** Whole minutes since a time, for queues ("waiting 12 min") */
+export function minutesSince(iso: string, now = Date.now()) {
+  return Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
+}
+
+/** 12 -> "12 min", 75 -> "1 hr 15 min" */
+export function formatMinutes(minutes: number) {
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} hr ${m} min` : `${h} hr`;
+}
+
 /** 1250 -> "₱1.3K", 980 -> "₱980" for tight spaces */
 export function compactPeso(value: number) {
   if (value >= 1000) return `₱${(value / 1000).toFixed(value >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;

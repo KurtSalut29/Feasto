@@ -1,0 +1,88 @@
+import { Camera, ClipboardList } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
+import { formatDateTime, formatPeso } from "@/lib/format";
+import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import type { VendorOrder } from "@/lib/types";
+import { DishThumb } from "./order-parts";
+
+/** Finished orders, newest first: delivered, collected, declined and cancelled. */
+export function HistoryTable({ orders }: { orders: VendorOrder[] }) {
+  return (
+    <Card>
+      {orders.length === 0 ? (
+        <EmptyState Icon={ClipboardList} title="No finished orders yet" text="Orders move here once they're delivered, collected, declined or cancelled." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className={`${TABLE} min-w-[820px]`}>
+            <thead className={THEAD}>
+              <tr>
+                <th className={TH}>Order</th>
+                <th className={TH}>Resident</th>
+                <th className={TH}>Dishes</th>
+                <th className={TH}>Payment</th>
+                <th className={`${TH} text-right`}>Food total</th>
+                <th className={TH}>Status</th>
+              </tr>
+            </thead>
+            <tbody className={TBODY}>
+              {orders.map((order) => (
+                <tr key={order.id} className={TR}>
+                  <td className={TD}>
+                    <Link href={`/vendor/orders/${order.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">
+                      {orderCode(order.id)}
+                    </Link>
+                    <p className="text-xs text-muted">{formatDateTime(order.createdAt)}</p>
+                  </td>
+                  <td className={TD}>
+                    <p className="text-ink">{order.checkout.resident.name}</p>
+                    <p className="text-xs text-muted">{order.fulfillment === "DELIVERY" ? `Delivery${order.rider ? ` · ${order.rider.name}` : ""}` : "Pickup"}</p>
+                  </td>
+                  <td className={TD} title={order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}>
+                    <div className="flex max-w-72 items-center gap-2">
+                      <span className="flex shrink-0 -space-x-2">
+                        {order.items.slice(0, 3).map((item) => (
+                          <DishThumb key={item.id} src={item.menuItem?.imageUrl} className="size-7 ring-2 ring-white" />
+                        ))}
+                      </span>
+                      <span className="min-w-0 truncate text-muted">{order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}</span>
+                    </div>
+                  </td>
+                  <td className={TD}>
+                    <p className="text-ink">{paymentName(order.checkout)}</p>
+                    <p className="text-xs text-muted">
+                      {order.checkout.paymentStatus === "PENDING" && ["REJECTED", "CANCELLED"].includes(order.status)
+                        ? "Not charged"
+                        : paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
+                    </p>
+                  </td>
+                  <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(order.subtotal)}</td>
+                  <td className={TD}>
+                    <Badge tone={STATUS_TONE[order.status]} dot>
+                      {statusLabel(order.status, order.fulfillment)}
+                    </Badge>
+                    {order.rejectReason && <p className="mt-1 max-w-48 truncate text-xs text-muted">“{order.rejectReason}”</p>}
+                    {order.deliveryPhotoUrl && (
+                      <a
+                        href={order.deliveryPhotoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 flex w-fit items-center gap-1 text-xs font-semibold text-brand-700 hover:underline"
+                      >
+                        <Camera className="size-3.5" aria-hidden />
+                        Delivery photo
+                      </a>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}

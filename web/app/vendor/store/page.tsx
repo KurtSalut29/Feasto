@@ -29,8 +29,9 @@ async function VendorStore() {
   return (
     <>
       <PageHeader
+        eyebrow="Your store"
         title="Store settings"
-        description="How your store appears to residents."
+        description="How your store appears to residents, when it is open, and how they can pay."
         actions={status === "APPROVED" ? <StoreStatusPill store={settings} /> : <ApprovalBadge status={status} />}
       />
       <StoreForm
@@ -46,13 +47,11 @@ async function VendorStore() {
           imageUrl: settings.imageUrl,
           latitude: settings.latitude,
           longitude: settings.longitude,
+          acceptsCash: settings.acceptsCash,
+          onlinePayments: settings.onlinePayments,
         }}
+        permit={permit ? <RenewalPanel data={permit} /> : undefined}
       />
-      {permit && (
-        <div className="mt-6">
-          <RenewalPanel data={permit} />
-        </div>
-      )}
     </>
   );
 }

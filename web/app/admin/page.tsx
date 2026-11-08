@@ -1,9 +1,9 @@
-import { ArrowRight, Bike, CircleCheck, ClipboardList, FileClock, Hourglass, ReceiptText, ShieldCheck, Store, Users, Wallet, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bike, CircleCheck, ClipboardList, FileClock, Hourglass, ReceiptText, ShieldCheck, Store, Users, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Avatar } from "@/components/app/avatar";
-import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { DashboardSkeleton } from "@/components/app/dashboard-shell";
 import { RatingBadge } from "@/components/app/rating";
 import { SalesChart } from "@/components/app/sales-chart";
 import { StoreCover } from "@/components/app/store-card";
@@ -11,11 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CARD_LINK } from "@/components/ui/card";
 import { percentChange, StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, timeAgo, todayLabel } from "@/lib/format";
+import { formatPeso, timeAgo } from "@/lib/format";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType } from "@/lib/types";
+import { AdminHero, type Attention } from "./admin-hero";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -56,7 +57,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const sum = (days: SalesDay[], key: "sales" | "orders") => days.reduce((n, d) => n + d[key], 0);
 
 async function AdminOverview() {
-  await requireRole("ADMIN");
+  const user = await requireRole("ADMIN");
   const [stats, { days }, { stores }, pendingStores, pendingRiders, live] = await Promise.all([
     serverApi<Overview>("/admin/overview"),
     serverApi<{ days: SalesDay[] }>("/admin/sales?days=14"),
@@ -78,31 +79,21 @@ async function AdminOverview() {
     .sort((a, b) => b.rating! - a.rating! || b.ratingCount - a.ratingCount)
     .slice(0, 5);
 
-  const attention: { href: string; Icon: LucideIcon; text: string }[] = [
+  const applications = stats.pendingStores + stats.pendingRiders;
+  const attention: Attention[] = [
     ...(stats.stuckOrders > 0 ? [{ href: "/admin/stuck", Icon: Hourglass, text: `${plural(stats.stuckOrders, "order")} stuck` }] : []),
+    ...(applications > 0 ? [{ href: "/admin/approvals", Icon: ShieldCheck, text: `${plural(applications, "application")} to review` }] : []),
     ...(stats.renewals > 0 ? [{ href: "/admin/documents", Icon: FileClock, text: `${plural(stats.renewals, "renewal")} to check` }] : []),
     ...(stats.expiredDocuments > 0 ? [{ href: "/admin/documents?view=expired", Icon: FileClock, text: plural(stats.expiredDocuments, "expired document") }] : []),
   ];
 
   return (
     <>
-      <PageHeader eyebrow={todayLabel()} title="Overview" description="What's happening on Feasto right now." />
-
-      {attention.length > 0 && (
-        <nav aria-label="Needs your attention" className="mb-5 flex flex-wrap gap-2">
-          {attention.map(({ href, Icon, text }) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100/70 focus-visible:outline-2 focus-visible:outline-brand-500"
-            >
-              <Icon className="size-4" aria-hidden />
-              {text}
-              <ArrowRight className="size-3.5" aria-hidden />
-            </Link>
-          ))}
-        </nav>
-      )}
+      <AdminHero
+        firstName={user.name.split(" ")[0]}
+        summary={`${plural(stats.activeStores, "store")} live, ${stats.ridersOnline} of ${plural(stats.activeRiders, "rider")} online, and ${plural(stats.ordersInProgress, "order")} on the move.`}
+        attention={attention}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
