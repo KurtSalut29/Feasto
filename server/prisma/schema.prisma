@@ -96,6 +96,19 @@ enum PaymentMethod {
   ONLINE
 }
 
+/// Which wallet or card an online payment uses. Payments are simulated; no money moves.
+enum OnlinePayment {
+  GCASH
+  MAYA
+  GRABPAY
+  SHOPEEPAY
+  COINS
+  VISA
+  MASTERCARD
+  JCB
+  AMEX
+}
+
 enum BookingStatus {
   CONFIRMED
   CANCELLED
@@ -306,6 +319,8 @@ model Checkout {
   resident        User          @relation(fields: [residentId], references: [id])
   fulfillment     Fulfillment
   paymentMethod   PaymentMethod
+  /// Set for online payments; empty for cash and for orders from before wallets were offered
+  onlineMethod    OnlinePayment?
   total           Decimal       @db.Decimal(10, 2)
   paymentStatus   PaymentStatus @default(PENDING)
   /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.

@@ -20,7 +20,7 @@ const orderInclude = {
   items: { select: { id: true, name: true, unitPrice: true, quantity: true } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true } } } },
   checkout: {
-    select: { id: true, paymentMethod: true, paymentStatus: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
+    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
   },
   review: { select: { rating: true, comment: true, createdAt: true } },
 } as const;

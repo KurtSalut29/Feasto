@@ -281,7 +281,7 @@ adminRouter.get("/orders", async (req, res) => {
         createdAt: true,
         vendor: { select: { name: true } },
         rider: { select: { name: true } },
-        checkout: { select: { paymentMethod: true, paymentStatus: true, resident: { select: { name: true } } } },
+        checkout: { select: { paymentMethod: true, onlineMethod: true, paymentStatus: true, resident: { select: { name: true } } } },
       },
     }),
     prisma.order.groupBy({ by: ["status"], _count: true }),

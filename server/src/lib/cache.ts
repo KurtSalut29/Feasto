@@ -20,8 +20,8 @@ export async function invalidate(...keys: string[]) {
 export const CACHE_KEYS = {
   /** Every approved store, used for browsing and search */
   storeList: "cache:stores:list",
-  /** One store with its menu */
-  store: (vendorId: string) => `cache:store:${vendorId}`,
+  /** One store with its menu. Bump the version when its shape changes, so old copies are never read */
+  store: (vendorId: string) => `cache:store:v2:${vendorId}`,
   /** The admin's settings */
   settings: "cache:settings",
 };

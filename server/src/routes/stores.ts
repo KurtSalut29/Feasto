@@ -5,6 +5,7 @@ import { CACHE_KEYS, cached } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { bboxQuery, distanceKm, inBbox, nearQuery, nextOffset, pageQuery, type LatLng } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
+import { getSettings } from "../lib/settings.js";
 import { isStoreOpen } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -187,34 +188,62 @@ storesRouter.get("/sections", requireRole("RESIDENT"), async (req, res) => {
   });
 });
 
+/** A store with its menu, how many of each dish residents have received, and its latest reviews. */
+async function loadStore(id: string) {
+  const store = await prisma.vendor.findFirst({
+    where: { id, ...ACTIVE_STORE },
+    select: {
+      ...storeFields,
+      // The newest ones that say something; a bare star rating counts in the breakdown below
+      reviews: {
+        where: { comment: { not: null } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: { id: true, rating: true, comment: true, createdAt: true, resident: { select: { name: true } } },
+      },
+      tables: { where: { isActive: true }, select: { seats: true } },
+      menuItems: {
+        where: { deletedAt: null },
+        // In the order the store added them; the sections follow that order below
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        select: { id: true, name: true, category: true, description: true, price: true, imageUrl: true, stock: true, isAvailable: true },
+      },
+    },
+  });
+  if (!store) return null;
+
+  // Only food that reached the resident counts, not cancelled or rejected orders
+  const sold = await prisma.orderItem.groupBy({
+    by: ["menuItemId"],
+    where: { order: { vendorId: id, status: { in: ["DELIVERED", "COMPLETED"] } } },
+    _sum: { quantity: true },
+  });
+  const soldOf = new Map(sold.map((row) => [row.menuItemId, row._sum.quantity ?? 0]));
+  // How many residents gave each number of stars
+  const stars = await prisma.review.groupBy({ by: ["rating"], where: { vendorId: id }, _count: { _all: true } });
+  const ratingBreakdown = Object.fromEntries([1, 2, 3, 4, 5].map((n) => [n, stars.find((s) => s.rating === n)?._count._all ?? 0]));
+  // A section sits where its first dish was added, so "Mains" isn't pushed after "Desserts" by the alphabet
+  const sections = [...new Set(store.menuItems.map((item) => item.category))];
+  const menuItems = store.menuItems
+    .map((item) => ({ ...item, soldCount: soldOf.get(item.id) ?? 0 }))
+    .sort((a, b) => sections.indexOf(a.category) - sections.indexOf(b.category));
+  return { ...store, menuItems, ratingBreakdown };
+}
+
 storesRouter.get("/:id", async (req, res) => {
   const id = String(req.params.id);
-  const store = await cached(CACHE_KEYS.store(id), CACHE_SECONDS, () =>
-    prisma.vendor.findFirst({
-      where: { id, ...ACTIVE_STORE },
-      select: {
-        ...storeFields,
-        reviews: {
-          orderBy: { createdAt: "desc" },
-          take: 6,
-          select: { id: true, rating: true, comment: true, createdAt: true, resident: { select: { name: true } } },
-        },
-        tables: { where: { isActive: true }, select: { seats: true } },
-        menuItems: {
-          where: { deletedAt: null },
-          orderBy: [{ category: "asc" }, { name: "asc" }],
-          select: { id: true, name: true, category: true, description: true, price: true, imageUrl: true, stock: true, isAvailable: true },
-        },
-      },
-    }),
-  );
+  const store = await cached(CACHE_KEYS.store(id), CACHE_SECONDS, () => loadStore(id));
   if (!store) throw new HttpError(404, "This store isn't available.");
 
   const { tables, reviews, ...rest } = store;
-  const saved = await prisma.favorite.findUnique({ where: { userId_vendorId: { userId: req.session!.userId, vendorId: id } } });
+  const [saved, { deliveryFee }] = await Promise.all([
+    prisma.favorite.findUnique({ where: { userId_vendorId: { userId: req.session!.userId, vendorId: id } } }),
+    getSettings(),
+  ]);
   res.json({
     store: {
       ...withRating(rest),
+      deliveryFee,
       isFavorite: saved !== null,
       // First name and last initial only, e.g. "Juan D."
       reviews: reviews.map(({ resident, ...review }) => ({ ...review, author: shortName(resident.name) })),

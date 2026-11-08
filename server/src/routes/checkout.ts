@@ -19,6 +19,8 @@ const checkoutSchema = z
     fulfillment: z.enum(["DELIVERY", "PICKUP"]),
     addressId: z.string().optional(),
     paymentMethod: z.enum(["COD", "ONLINE"]),
+    /** The e-wallet or card, for online payments */
+    onlineMethod: z.enum(["GCASH", "MAYA", "GRABPAY", "SHOPEEPAY", "COINS", "VISA", "MASTERCARD", "JCB", "AMEX"]).optional(),
     notes: z
       .string()
       .trim()
@@ -86,6 +88,7 @@ checkoutRouter.post("/", async (req, res) => {
           idempotencyKey: input.idempotencyKey,
           fulfillment: input.fulfillment,
           paymentMethod: input.paymentMethod,
+          onlineMethod: input.paymentMethod === "ONLINE" ? (input.onlineMethod ?? null) : null,
           deliveryAddress,
           ...deliveryPin,
           notes: input.notes,

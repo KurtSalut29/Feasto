@@ -39,7 +39,17 @@ export async function buildCart(userId: string) {
     where: { id: { in: lines.map((l) => l.menuItemId) } },
     include: {
       vendor: {
-        select: { id: true, name: true, imageUrl: true, status: true, opensAt: true, closesAt: true, isTemporarilyClosed: true, owner: { select: { disabledAt: true } } },
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          address: true,
+          status: true,
+          opensAt: true,
+          closesAt: true,
+          isTemporarilyClosed: true,
+          owner: { select: { disabledAt: true } },
+        },
       },
     },
   });
@@ -49,7 +59,7 @@ export async function buildCart(userId: string) {
   if (gone.length) await redis.hdel(key(userId), ...gone.map((g) => g.menuItemId));
 
   const groups = new Map<string, {
-    store: { id: string; name: string; imageUrl: string | null; isOpen: boolean };
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -62,7 +72,7 @@ export async function buildCart(userId: string) {
     let group = groups.get(item.vendorId);
     if (!group) {
       group = {
-        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, isOpen: open },
+        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, isOpen: open },
         items: [],
         subtotal: 0,
         problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",

@@ -85,8 +85,10 @@ meRouter.patch("/password", async (req, res) => {
 
 meRouter.get("/notifications", async (req, res) => {
   const userId = req.session!.userId;
+  // The bell shows the latest 30; the notifications page asks for up to 100
+  const take = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
   const [notifications, unread] = await Promise.all([
-    prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 30 }),
+    prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take }),
     prisma.notification.count({ where: { userId, readAt: null } }),
   ]);
   res.json({ notifications, unread });

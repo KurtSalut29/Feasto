@@ -150,7 +150,7 @@ vendorRouter.get("/orders", async (req, res) => {
       include: {
         items: { select: { id: true, name: true, quantity: true, unitPrice: true } },
         rider: { select: { name: true, phone: true } },
-        checkout: { select: { paymentMethod: true, paymentStatus: true, deliveryAddress: true, notes: true, resident: { select: { name: true, phone: true } } } },
+        checkout: { select: { paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, notes: true, resident: { select: { name: true, phone: true } } } },
       },
     }),
     prisma.order.groupBy({ by: ["status"], where: { vendorId, status: { not: "AWAITING_PAYMENT" } }, _count: true }),
