@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Heart, MapPin, Store, type LucideIcon } from "lucide-react";
+import { CalendarDays, ChevronRight, Heart, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,6 +10,7 @@ import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
 import type { Address, StoreSections, StoreSummary } from "@/lib/types";
 import { CategoryGrid } from "./category-grid";
+import { HomeHero } from "./home-hero";
 import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreSearch } from "./stores/store-browse";
 
 export const metadata: Metadata = { title: "Home" };
@@ -37,24 +38,10 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
     serverApi<StoreSections>("/stores/sections"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
-  const address = addresses.find((a) => a.isDefault);
 
   return (
     <>
-      <h1 className="text-[22px] font-bold tracking-tight text-ink">Hi, {user.name.split(" ")[0]}!</h1>
-      <p className="mt-0.5 text-sm text-muted">What would you like to eat today?</p>
-
-      <Link
-        href="/resident/addresses"
-        className="mt-4 flex items-center gap-3 rounded-2xl bg-brand-50 px-4 py-3 transition hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-brand-500"
-      >
-        <MapPin className="size-5 shrink-0 text-brand-600" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block text-xs font-medium text-brand-700">Deliver to {address ? address.label : ""}</span>
-          <span className="block truncate text-sm font-semibold text-ink">{address ? address.details : "Add a delivery address"}</span>
-        </span>
-        <ChevronRight className="size-5 text-brand-700" aria-hidden />
-      </Link>
+      <HomeHero firstName={user.name.split(" ")[0]} addresses={addresses} />
 
       <div className="mt-4">
         <StoreSearch filters={NO_FILTERS} />

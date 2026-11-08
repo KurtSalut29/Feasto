@@ -57,17 +57,23 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
 
   return (
     <>
-      <div className="relative -mx-4 -mt-5">
-        <StoreCover imageUrl={store.imageUrl} Icon={TypeIcon} className="aspect-[16/9]" eager />
+      {/* The store's logo in a circle, with its name, hours and description centered under it */}
+      <div className="relative -mx-4 -mt-5 px-4 pt-7">
+        <div aria-hidden className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-brand-50 to-white" />
         <div className="absolute top-3 right-3">
           <FavoriteButton key={String(store.isFavorite)} storeId={store.id} storeName={store.name} isFavorite={store.isFavorite} />
         </div>
+        <StoreCover
+          imageUrl={store.imageUrl}
+          Icon={TypeIcon}
+          eager
+          className="mx-auto size-28 rounded-full shadow-[0_10px_24px_-12px_rgba(178,58,0,0.55)] ring-4 ring-white"
+        />
       </div>
 
-      {/* The name card overlaps the photo a little */}
-      <div className="relative -mx-4 -mt-6 rounded-t-3xl bg-white px-4 pt-5">
-        <h1 className="text-2xl leading-tight font-bold tracking-tight text-ink">{store.name}</h1>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      <div className="text-center">
+        <h1 className="mt-3 text-2xl leading-tight font-bold tracking-tight text-balance text-ink">{store.name}</h1>
+        <p className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm">
           <span className={`inline-flex items-center gap-1.5 font-semibold ${open ? "text-emerald-700" : "text-gray-600"}`}>
             <span className={`size-2 rounded-full ${open ? "bg-emerald-500" : "bg-gray-400"}`} aria-hidden />
             {status}
@@ -80,8 +86,10 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
             {STORE_TYPE_LABEL[store.storeType]}
           </span>
         </p>
-        {store.description && <p className="mt-3 text-[15px] leading-relaxed text-ink">{store.description}</p>}
+        {store.description && <p className="mx-auto mt-2.5 max-w-sm text-[15px] leading-relaxed text-pretty text-muted">{store.description}</p>}
+      </div>
 
+      <div>
         <dl className="mt-4 grid auto-cols-fr grid-flow-col divide-x divide-line rounded-2xl border border-line py-3 text-center">
           <Fact
             jumpTo="reviews"

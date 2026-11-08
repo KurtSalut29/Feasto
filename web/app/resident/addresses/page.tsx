@@ -8,21 +8,23 @@ import { AddressManager } from "./address-manager";
 
 export const metadata: Metadata = { title: "Delivery addresses" };
 
-export default function AddressesPage() {
+export default function AddressesPage({ searchParams }: PageProps<"/resident/addresses">) {
   return (
     <Suspense fallback={<MobileSkeleton />}>
-      <Addresses />
+      <Addresses searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Addresses() {
+async function Addresses({ searchParams }: Pick<PageProps<"/resident/addresses">, "searchParams">) {
   await requireRole("RESIDENT");
+  // ?add=1 (from Home's address switcher) opens the new-address form right away
+  const { add } = await searchParams;
   const { addresses } = await serverApi<{ addresses: Address[] }>("/me/addresses");
   return (
     <>
       <MobileHeading title="Delivery addresses" subtitle="Where riders bring your orders." />
-      <AddressManager addresses={addresses} />
+      <AddressManager key={String(add)} addresses={addresses} startAdding={add === "1"} />
     </>
   );
 }

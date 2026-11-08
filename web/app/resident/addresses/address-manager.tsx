@@ -108,13 +108,15 @@ function AddressDialog({
   );
 }
 
-export function AddressManager({ addresses }: { addresses: Address[] }) {
+export function AddressManager({ addresses, startAdding = false }: { addresses: Address[]; startAdding?: boolean }) {
   const router = useRouter();
-  const [editing, setEditing] = useState<Address | "new" | null>(null);
+  const [editing, setEditing] = useState<Address | "new" | null>(startAdding ? "new" : null);
 
   const done = () => {
     setEditing(null);
-    router.refresh();
+    // Drop ?add=1 so a reload doesn't open the form again
+    if (startAdding) router.replace("/resident/addresses");
+    else router.refresh();
   };
 
   return (

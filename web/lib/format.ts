@@ -74,6 +74,23 @@ export function greeting() {
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
+export type MealTime = "breakfast" | "lunch" | "merienda" | "dinner" | "late";
+
+/** Which meal it is now in Manila: breakfast 5–10, lunch 10–2, merienda 2–5, dinner 5–9, then late night */
+export function mealTime(): MealTime {
+  const hour = Number(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila", hour: "numeric", hourCycle: "h23" }));
+  if (hour >= 5 && hour < 10) return "breakfast";
+  if (hour >= 10 && hour < 14) return "lunch";
+  if (hour >= 14 && hour < 17) return "merienda";
+  if (hour >= 17 && hour < 21) return "dinner";
+  return "late";
+}
+
+/** "Sunday" in Manila */
+export function weekdayLabel() {
+  return new Date().toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "long" });
+}
+
 /** 1250 -> "₱1.3K", 980 -> "₱980" for tight spaces */
 export function compactPeso(value: number) {
   if (value >= 1000) return `₱${(value / 1000).toFixed(value >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;
