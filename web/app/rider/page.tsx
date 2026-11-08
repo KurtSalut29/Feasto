@@ -1,26 +1,25 @@
-import { ArrowRight, Bike, Wallet } from "lucide-react";
+import { ArrowRight, Bike } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ApprovalNotice } from "@/components/app/approval-notice";
 import { ExpiryNotice } from "@/components/app/expiry-notice";
 import { VerificationForm } from "@/components/app/verification-form";
-import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
-import { Badge } from "@/components/ui/badge";
+import { MobileSkeleton } from "@/components/app/mobile-shell";
+import { StepBar } from "@/components/app/step-bar";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, greeting, todayLabel } from "@/lib/format";
-import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { formatPeso } from "@/lib/format";
+import { deliverySteps, orderCode, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
 import { JobsPreview } from "./jobs-preview";
+import { RiderHero, type Totals } from "./rider-hero";
 
 export const metadata: Metadata = { title: "Home" };
 
 /** How many jobs Home shows; the rest are one tap away on the jobs list */
 const PREVIEW_SIZE = 3;
-
-type Totals = { today: { count: number; earnings: number }; allTime: { count: number; earnings: number } };
 
 export default function RiderHomePage() {
   return (
@@ -40,7 +39,7 @@ async function RiderHome() {
     const verification = canEdit ? await serverApi<Verification>("/documents/verification") : null;
     return (
       <>
-        <MobileHeading title={`Hi, ${firstName}!`} subtitle="Welcome to Feasto for riders." />
+        <RiderHero firstName={firstName} line="Welcome to Feasto for riders." />
         <ApprovalNotice
           status={profile.status}
           reviewNote={profile.reviewNote}
@@ -65,54 +64,50 @@ async function RiderHome() {
 
   return (
     <>
-      <div className="mb-4">
-        <p className="text-xs font-semibold tracking-wider text-brand-700 uppercase">{todayLabel()}</p>
-        <h1 className="text-[22px] font-bold tracking-tight text-ink">
-          {greeting()}, {firstName}!
-        </h1>
-      </div>
+      <RiderHero firstName={firstName} online={jobs.online} totals={totals} />
 
       <ExpiryNotice date={profile?.licenseExpiresAt} documentName="driver's license" href="/rider/license" blocked="You can't go online until your renewed license is approved. Tap to send it." />
 
-      {/* Today at a glance */}
-      <Link
-        href="/rider/history"
-        className="mb-4 flex items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_16px_32px_-18px_rgba(178,58,0,0.7)]"
-      >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
-          <Wallet className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-white/80">Earned today</p>
-          <p className="text-2xl leading-tight font-bold">{formatPeso(totals.today.earnings)}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-2xl leading-tight font-bold">{totals.today.count}</p>
-          <p className="text-xs text-white/80">{totals.today.count === 1 ? "delivery" : "deliveries"}</p>
-        </div>
-      </Link>
-
-      {active && (
-        <Link href="/rider/active" className="mb-4 block rounded-2xl border-2 border-brand-500 bg-white p-4 transition hover:bg-brand-50/40">
-          <div className="flex items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-xs font-semibold tracking-wider text-brand-700 uppercase">
-              <Bike className="size-4" aria-hidden />
-              Current delivery
-            </p>
-            <Badge tone={STATUS_TONE[active.status]}>{statusLabel(active.status, "DELIVERY")}</Badge>
-          </div>
-          <p className="mt-2 font-semibold text-ink">
-            {active.vendor.name} <span className="font-normal text-muted">· {orderCode(active.id)}</span>
-          </p>
-          <p className="truncate text-sm text-muted">To {active.checkout.deliveryAddress}</p>
-          <p className="mt-3 flex items-center gap-1 text-sm font-semibold text-brand-700">
-            Continue delivery
-            <ArrowRight className="size-4" aria-hidden />
-          </p>
-        </Link>
-      )}
+      {active && <CurrentDelivery order={active} />}
 
       <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active)} storeName={profile?.vendor?.name ?? null} />
     </>
+  );
+}
+
+/** The delivery the rider is on, with how far along it is, above everything else on Home. */
+function CurrentDelivery({ order }: { order: RiderDelivery }) {
+  const { steps, done } = deliverySteps(order.status);
+  return (
+    <Link
+      href="/rider/active"
+      className="mb-5 block rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4 shadow-[0_10px_24px_-18px_rgba(178,58,0,0.6)] transition hover:border-brand-500/40 focus-visible:outline-2 focus-visible:outline-brand-500"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-xs font-semibold tracking-wider text-brand-700 uppercase">
+          <Bike className="size-4" aria-hidden />
+          Current delivery
+        </p>
+        <span className="text-sm font-bold text-ink tabular-nums">+{formatPeso(order.deliveryFee)}</span>
+      </div>
+      <p className="mt-2 font-semibold text-ink">
+        {order.vendor.name} <span className="font-normal text-muted">· {orderCode(order.id)}</span>
+      </p>
+      <p className="truncate text-sm text-muted">To {order.checkout.deliveryAddress}</p>
+      <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
+        <span className="relative flex size-2.5" aria-hidden>
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
+          <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />
+        </span>
+        {statusLabel(order.status, "DELIVERY")}
+      </p>
+      <div className="mt-2">
+        <StepBar steps={steps} done={done} />
+      </div>
+      <p className="mt-3 flex items-center justify-end gap-1 border-t border-brand-100 pt-3 text-sm font-semibold text-brand-700">
+        Continue delivery
+        <ArrowRight className="size-4" aria-hidden />
+      </p>
+    </Link>
   );
 }

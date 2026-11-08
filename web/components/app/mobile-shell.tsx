@@ -27,7 +27,7 @@ export function MobileShell({
           <header className="sticky top-0 z-20 box-content flex h-14 items-center justify-between gap-3 border-b border-line bg-white/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur">
             <HeaderStart role={role} />
             <div className="flex items-center gap-1">
-              <NotificationBell allHref={role === "RESIDENT" ? "/resident/notifications" : undefined} />
+              <NotificationBell allHref={role === "RESIDENT" || role === "RIDER" ? `/${role.toLowerCase()}/notifications` : undefined} />
               {topBarEnd}
             </div>
           </header>

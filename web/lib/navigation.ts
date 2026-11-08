@@ -42,7 +42,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/rider/map", label: "Map", Icon: MapIcon },
     { href: "/rider/active", label: "Active", Icon: Bike },
     { href: "/rider/history", label: "History", Icon: History },
-    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password"] },
+    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password", "/rider/notifications"] },
   ],
   VENDOR: [
     { href: "/vendor", label: "Overview", Icon: LayoutDashboard, group: "Today" },

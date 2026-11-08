@@ -13,7 +13,7 @@ type Feed = { notifications: AppNotification[]; unread: number };
  * Every recent notification, grouped by day. New ones stay highlighted while the page is open,
  * and count as read on the server as soon as they've been shown.
  */
-export function NotificationFeed() {
+export function NotificationFeed({ emptyText, emptyAction }: { emptyText: string; emptyAction?: { href: string; label: string } }) {
   const [feed, setFeed] = useState<Feed | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -64,10 +64,12 @@ export function NotificationFeed() {
           <BellOff className="size-7" aria-hidden />
         </span>
         <p className="mt-4 font-semibold text-ink">You&apos;re all caught up</p>
-        <p className="mt-1 max-w-xs text-sm text-muted">When a store accepts your order, a rider heads your way or a booking changes, you&apos;ll see it here.</p>
-        <div className="mt-5">
-          <ButtonLink href="/resident">Order something</ButtonLink>
-        </div>
+        <p className="mt-1 max-w-xs text-sm text-muted">{emptyText}</p>
+        {emptyAction && (
+          <div className="mt-5">
+            <ButtonLink href={emptyAction.href}>{emptyAction.label}</ButtonLink>
+          </div>
+        )}
       </div>
     );
   }

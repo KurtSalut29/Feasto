@@ -72,3 +72,10 @@ export function itemsSummary(items: { name: string; quantity: number }[], shown 
   const head = items.slice(0, shown).map((i) => `${i.quantity}× ${i.name}`).join(", ");
   return items.length > shown ? `${head} +${items.length - shown} more` : head;
 }
+
+/** A rider's delivery as steps: from accepting the job to handing it over. */
+export function deliverySteps(status: OrderStatus) {
+  const steps = ["Accepted", "Ready", "Picked up", "Delivered"];
+  const at: Partial<Record<OrderStatus, number>> = { ACCEPTED: 0, PREPARING: 0, READY: 1, PICKED_UP: 2, DELIVERED: 3 };
+  return { steps, done: at[status] ?? 0 };
+}

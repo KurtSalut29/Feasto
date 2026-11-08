@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MobileHeading } from "@/components/app/mobile-shell";
-import { NotificationFeed } from "./notification-feed";
+import { NotificationFeed } from "@/components/app/notification-feed";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -8,7 +8,10 @@ export default function NotificationsPage() {
   return (
     <>
       <MobileHeading title="Notifications" subtitle="Updates on your orders, payments and table bookings." />
-      <NotificationFeed />
+      <NotificationFeed
+        emptyText="When a store accepts your order, a rider heads your way or a booking changes, you'll see it here."
+        emptyAction={{ href: "/resident", label: "Order something" }}
+      />
     </>
   );
 }
