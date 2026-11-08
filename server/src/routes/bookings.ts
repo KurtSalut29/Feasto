@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
-import { CHANNELS, notify, publish } from "../lib/realtime.js";
+import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { manilaTime } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { myVendorId } from "./vendor.js";

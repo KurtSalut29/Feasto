@@ -4,7 +4,7 @@ import type { ApprovalStatus } from "../generated/prisma/client.js";
 import { logActivity, type Actor } from "./activity.js";
 import { prisma } from "./db.js";
 import { HttpError, ValidationError } from "./http.js";
-import { notify } from "./realtime.js";
+import { notify } from "./liveUpdates.js";
 
 /** Philippine mobile numbers: 09XXXXXXXXX or +639XXXXXXXXX */
 export const mobileNumber = z

@@ -1,7 +1,7 @@
 import amqp from "amqplib";
 import { randomUUID } from "node:crypto";
 import { config } from "../config.js";
-import { marshal } from "./marshal.js";
+import { marshal } from "./marshalling.js";
 
 export const QUEUES = {
   /** One message per store order; the worker notifies the store (processed in parallel) */

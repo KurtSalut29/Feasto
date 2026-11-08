@@ -1,7 +1,7 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
-import { recordMarshal, recordUnmarshal } from "./marshal.js";
-import { publish, type QueueChannel, type QueueName } from "./queue.js";
+import { recordMarshal, recordUnmarshal } from "./marshalling.js";
+import { publish, type QueueChannel, type QueueName } from "./rabbitmq.js";
 
 type Tx = Prisma.TransactionClient;
 

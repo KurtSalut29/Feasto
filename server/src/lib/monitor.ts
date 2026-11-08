@@ -2,7 +2,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { logActivity, notifyAdmin } from "./activity.js";
 import { prisma } from "./db.js";
 import { forgetRiderPosition, OPEN_JOB } from "./dispatch.js";
-import { notify } from "./realtime.js";
+import { notify } from "./liveUpdates.js";
 import { redis } from "./redis.js";
 import { daysFromToday, EXPIRING_SOON_DAYS, manilaToday } from "./renewals.js";
 import { getSettings } from "./settings.js";

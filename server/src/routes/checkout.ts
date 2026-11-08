@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
-import { invalidateStore } from "../lib/cache.js";
+import { invalidateStore } from "../lib/redisCache.js";
 import { ONLINE_PAYMENTS, storeRefusing } from "../lib/payments.js";
 import { buildCart, clearCart } from "../lib/cart.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
-import { QUEUES } from "../lib/queue.js";
+import { QUEUES } from "../lib/rabbitmq.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const checkoutRouter = Router();

@@ -6,7 +6,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import { logActivity, type Actor } from "./activity.js";
 import { prisma } from "./db.js";
 import { HttpError } from "./http.js";
-import { notify } from "./realtime.js";
+import { notify } from "./liveUpdates.js";
 
 /** How long before the expiry date people are warned and the admin's monitor lists it. */
 export const EXPIRING_SOON_DAYS = 30;

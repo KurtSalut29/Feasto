@@ -1,6 +1,6 @@
 import type { ActivityCategory, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
-import { notify } from "./realtime.js";
+import { notify } from "./liveUpdates.js";
 
 /** Who did something. Null means Feasto itself did it, like taking an expired license offline. */
 export type Actor = { userId: string; name: string } | null;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CACHE_KEYS, cached, invalidate } from "./cache.js";
+import { CACHE_KEYS, cached, invalidate } from "./redisCache.js";
 import { prisma } from "./db.js";
 
 /** Used until the admin saves their own, and for a freshly reset database. */

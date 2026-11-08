@@ -1,7 +1,7 @@
 import type { JobDispatch, OrderStatus, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
 import { broadcastOrder, orderCode } from "./orders.js";
-import { notify } from "./realtime.js";
+import { notify } from "./liveUpdates.js";
 import { redis } from "./redis.js";
 import { getSettings, type Settings } from "./settings.js";
 

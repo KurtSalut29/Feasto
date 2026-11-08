@@ -6,8 +6,8 @@ import { prisma } from "../lib/db.js";
 import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
-import { CHANNELS } from "../lib/realtime.js";
-import { openStream } from "../lib/sse.js";
+import { CHANNELS } from "../lib/liveUpdates.js";
+import { openStream } from "../lib/liveUpdateStreams.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { newPassword } from "./auth.js";
 

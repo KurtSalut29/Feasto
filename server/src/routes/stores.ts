@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ACTIVE_STORE } from "../lib/accounts.js";
-import { CACHE_KEYS, cached } from "../lib/cache.js";
+import { CACHE_KEYS, cached } from "../lib/redisCache.js";
 import { prisma } from "../lib/db.js";
 import { bboxQuery, distanceKm, inBbox, nearQuery, nextOffset, pageQuery, type LatLng } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";

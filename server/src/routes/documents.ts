@@ -8,7 +8,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import { logActivity, notifyAdmin } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
-import { notify } from "../lib/realtime.js";
+import { notify } from "../lib/liveUpdates.js";
 import { hasExpired, removeDocument } from "../lib/renewals.js";
 import { documentKind, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
