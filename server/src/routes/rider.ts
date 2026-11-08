@@ -8,6 +8,7 @@ import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, orderCode, settlePayment, transition } from "../lib/orders.js";
 import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { hasExpired } from "../lib/renewals.js";
+import { marshal } from "../lib/marshal.js";
 import { redis } from "../lib/redis.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -124,9 +125,10 @@ riderRouter.get("/jobs", async (req, res) => {
       status: true,
       deliveryFee: true,
       createdAt: true,
-      vendor: { select: { name: true, address: true, latitude: true, longitude: true } },
-      items: { select: { quantity: true } },
-      checkout: { select: { deliveryAddress: true, deliveryLat: true, deliveryLng: true } },
+      subtotal: true,
+      vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true } },
+      items: { select: { name: true, quantity: true, unitPrice: true } },
+      checkout: { select: { deliveryAddress: true, deliveryLat: true, deliveryLng: true, paymentMethod: true, onlineMethod: true, paymentStatus: true } },
     },
   });
   // findMany doesn't keep the order of `in`, so put the rows back in the page's order
@@ -183,8 +185,8 @@ riderRouter.get("/active", async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { riderId: req.session!.userId, status: { in: BUSY } },
     include: {
-      vendor: { select: { name: true, address: true, latitude: true, longitude: true, owner: { select: { phone: true } } } },
-      items: { select: { id: true, name: true, quantity: true } },
+      vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
+      items: { select: { id: true, name: true, quantity: true, unitPrice: true } },
       checkout: {
         select: {
           deliveryAddress: true,
@@ -192,6 +194,7 @@ riderRouter.get("/active", async (req, res) => {
           deliveryLng: true,
           notes: true,
           paymentMethod: true,
+          onlineMethod: true,
           paymentStatus: true,
           resident: { select: { name: true, phone: true } },
         },
@@ -239,20 +242,23 @@ const locationSchema = z.object({
 });
 
 /**
- * The rider's phone sends its position every few seconds while delivering.
+ * The rider's phone sends its position every few seconds from accepting a job until it's
+ * delivered, so the customer sees them head to the store and then to their door.
  * It's kept only in Redis (it changes constantly and needn't be stored forever)
  * and pushed to the resident's open order page through Redis pub/sub.
  */
 riderRouter.post("/location", async (req, res) => {
   const { orderId, lat, lng } = parseBody(locationSchema, req.body);
   const order = await prisma.order.findFirst({
-    where: { id: orderId, riderId: req.session!.userId, status: "PICKED_UP" },
-    select: { checkout: { select: { residentId: true } } },
+    where: { id: orderId, riderId: req.session!.userId, status: { in: BUSY } },
+    select: { checkout: { select: { residentId: true } }, vendor: { select: { ownerId: true } } },
   });
-  if (!order) throw new HttpError(409, "Location is only shared while delivering.");
+  if (!order) throw new HttpError(409, "Location is only shared while you have a delivery.");
   const at = new Date().toISOString();
-  await redis.set(locationKey(orderId), JSON.stringify({ lat, lng, at }), "EX", 3600);
-  await publish(CHANNELS.user(order.checkout.residentId), { type: "rider.location", orderId, lat, lng, at });
+  await redis.set(locationKey(orderId), marshal({ lat, lng, at }, { transport: "redis", channel: locationKey(orderId), kind: "rider location" }), "EX", 3600);
+  // The customer follows the rider to their door; the store sees them coming for the pickup
+  const event = { type: "rider.location", orderId, lat, lng, at } as const;
+  await Promise.all([publish(CHANNELS.user(order.checkout.residentId), event), publish(CHANNELS.user(order.vendor.ownerId), event)]);
   res.status(204).end();
 });
 
@@ -264,7 +270,15 @@ riderRouter.get("/history", async (req, res) => {
     where: { riderId: userId, status: "DELIVERED" },
     orderBy: { finishedAt: "desc" },
     take: 50,
-    select: { id: true, finishedAt: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { deliveryAddress: true } } },
+    select: {
+      id: true,
+      finishedAt: true,
+      deliveryFee: true,
+      subtotal: true,
+      vendor: { select: { name: true, imageUrl: true } },
+      items: { select: { quantity: true } },
+      checkout: { select: { deliveryAddress: true, paymentMethod: true } },
+    },
   });
   const [all, today] = await Promise.all([
     prisma.order.aggregate({ where: { riderId: userId, status: "DELIVERED" }, _sum: { deliveryFee: true }, _count: true }),

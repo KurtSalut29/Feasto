@@ -8,6 +8,7 @@ import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { notify } from "../lib/realtime.js";
+import { unmarshal } from "../lib/marshal.js";
 import { redis } from "../lib/redis.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
@@ -41,9 +42,9 @@ ordersRouter.get("/:id", async (req, res) => {
     include: orderInclude,
   });
   if (!order) throw new HttpError(404, "Order not found.");
-  // The rider's last known position, kept in Redis while they deliver
-  const location = order.status === "PICKED_UP" ? await redis.get(`rider-location:${order.id}`) : null;
-  res.json({ order, riderLocation: location ? JSON.parse(location) : null });
+  // The rider's last known position, kept in Redis from accepting the job until it's delivered
+  const location = order.riderId && ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) ? await redis.get(`rider-location:${order.id}`) : null;
+  res.json({ order, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
 });
 
 /** Residents can cancel until the store accepts. If both happen at once, only one wins. */

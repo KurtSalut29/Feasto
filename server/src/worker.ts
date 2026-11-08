@@ -9,6 +9,7 @@ import { startHeartbeat } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/queue.js";
 import { CHANNELS, notify, publish as publishRealtime } from "./lib/realtime.js";
+import { marshal, unmarshal } from "./lib/marshal.js";
 import { redis } from "./lib/redis.js";
 import { reportKey, reportPartsKey, type ReportPart } from "./lib/reports.js";
 
@@ -32,7 +33,7 @@ async function consume<T>(queue: QueueName, handler: (payload: T) => Promise<voi
     if (!message) return;
     busyJobs++;
     try {
-      await handler(JSON.parse(message.content.toString()) as T);
+      await handler(unmarshal<T>(message.content.toString(), { transport: "rabbitmq", channel: queue, kind: queue, messageId: message.properties.messageId ?? null }));
       channel.ack(message);
     } catch (error) {
       console.error(`[${config.instanceId}] ${queue} failed`, error);
@@ -48,6 +49,12 @@ async function consume<T>(queue: QueueName, handler: (payload: T) => Promise<voi
 async function firstTime(key: string) {
   return (await redis.set(`done:${key}`, "1", "EX", 7 * 86400, "NX")) === "OK";
 }
+
+// ---------- A sample from the admin's System page: only unmarshalled, to show the trip ----------
+
+await consume<{ orderCode: string; sentBy: string }>(QUEUES.systemSample, async (sample) => {
+  log(`sample ${sample.orderCode} from ${sample.sentBy} unmarshalled`);
+});
 
 // ---------- Orders: notify the store (one message per store order) ----------
 
@@ -171,7 +178,7 @@ await consume<{ reportId: string; vendorId: string; from: string; to: string }>(
     topDish: dishes[0]?.name ?? null,
     computedBy: config.instanceId,
   };
-  await redis.hset(reportPartsKey(reportId), vendorId, JSON.stringify(part));
+  await redis.hset(reportPartsKey(reportId), vendorId, marshal(part, { transport: "redis", channel: reportPartsKey(reportId), kind: "report part" }));
   // Reduce: HINCRBY is atomic, so exactly one worker sees the last part arrive and finishes up
   const done = await redis.hincrby(reportKey(reportId), "done", 1);
   const total = Number(await redis.hget(reportKey(reportId), "total"));

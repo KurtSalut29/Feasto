@@ -6,6 +6,10 @@ import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, restoreStock, settlePayment, transition } from "../lib/orders.js";
+import { BUSY } from "../lib/dispatch.js";
+import { ONLINE_PAYMENTS } from "../lib/payments.js";
+import { unmarshal } from "../lib/marshal.js";
+import { redis } from "../lib/redis.js";
 import { dailySales } from "../lib/sales.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
@@ -47,9 +51,17 @@ const storeSchema = z
     closesAt: time,
     isTemporarilyClosed: z.boolean(),
     imageUrl: photo,
+    // Left out, the store keeps the ways to pay it already takes
+    acceptsCash: z.boolean().optional(),
+    onlinePayments: z
+      .array(z.enum(ONLINE_PAYMENTS))
+      .max(ONLINE_PAYMENTS.length)
+      .transform((list) => ONLINE_PAYMENTS.filter((m) => list.includes(m)))
+      .optional(),
     ...pinFields,
   })
   .refine((v) => v.closesAt > v.opensAt, { path: ["closesAt"], message: "Closing time must be after opening time." })
+
   .refine(pinIsWhole, PIN_MESSAGE);
 
 vendorRouter.get("/store", async (req, res) => {
@@ -60,6 +72,12 @@ vendorRouter.get("/store", async (req, res) => {
 vendorRouter.patch("/store", async (req, res) => {
   const input = parseBody(storeSchema, req.body);
   const vendorId = await myVendorId(req.session!.userId);
+  if (input.acceptsCash !== undefined || input.onlinePayments !== undefined) {
+    const now = await prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { acceptsCash: true, onlinePayments: true } });
+    const cash = input.acceptsCash ?? now.acceptsCash;
+    const online = input.onlinePayments ?? now.onlinePayments;
+    if (!cash && online.length === 0) throw new HttpError(400, "Take at least one way to pay, so residents can order.");
+  }
   const store = await prisma.vendor.update({ where: { id: vendorId }, data: input });
   await invalidateStore(vendorId);
   res.json({ store });
@@ -132,14 +150,59 @@ vendorRouter.delete("/menu/:id", async (req, res) => {
 // ---------- Orders ----------
 
 const ORDER_TABS = {
+  /** Everything the store is still handling, as one queue: first come, first served */
+  active: ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"],
   new: ["PLACED"],
   preparing: ["ACCEPTED", "PREPARING"],
   ready: ["READY", "PICKED_UP"],
   done: ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"],
 } as const satisfies Record<string, OrderStatus[]>;
 
+/** What the store sees of an order: the dishes (with photos), the rider and the customer */
+const vendorOrderInclude = {
+  items: { select: { id: true, name: true, quantity: true, unitPrice: true, menuItem: { select: { imageUrl: true } } } },
+  rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true } } } },
+  checkout: {
+    select: {
+      paymentMethod: true,
+      onlineMethod: true,
+      paymentStatus: true,
+      deliveryAddress: true,
+      deliveryLat: true,
+      deliveryLng: true,
+      notes: true,
+      resident: { select: { name: true, phone: true } },
+    },
+  },
+} satisfies Prisma.OrderInclude;
+
+/** Where each rider is right now, for orders a rider is on (kept in Redis while they deliver) */
+async function withRiderLocations<T extends { id: string; riderId: string | null; status: OrderStatus }>(orders: T[]) {
+  const riding = orders.filter((o) => o.riderId && BUSY.includes(o.status));
+  const found = riding.length ? await redis.mget(...riding.map((o) => `rider-location:${o.id}`)) : [];
+  const at = new Map(
+    riding.map((o, i) => [
+      o.id,
+      found[i] ? unmarshal<{ lat: number; lng: number; at: string }>(found[i]!, { transport: "redis", channel: `rider-location:${o.id}`, kind: "rider location" }) : null,
+    ]),
+  );
+  return orders.map((o) => ({ ...o, riderLocation: at.get(o.id) ?? null }));
+}
+
+/** One order in full, for the store's order page and printed slip. */
+vendorRouter.get("/orders/:id", async (req, res) => {
+  const vendorId = await myVendorId(req.session!.userId);
+  const order = await prisma.order.findFirst({
+    where: { id: String(req.params.id), vendorId },
+    include: { ...vendorOrderInclude, vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } } },
+  });
+  if (!order) throw new HttpError(404, "Order not found.");
+  const [withLocation] = await withRiderLocations([order]);
+  res.json({ order: withLocation });
+});
+
 vendorRouter.get("/orders", async (req, res) => {
-  const tab = z.enum(["new", "preparing", "ready", "done"]).catch("new").parse(req.query.tab);
+  const tab = z.enum(["active", "new", "preparing", "ready", "done"]).catch("new").parse(req.query.tab);
   const vendorId = await myVendorId(req.session!.userId);
 
   const [orders, counts] = await Promise.all([
@@ -147,11 +210,7 @@ vendorRouter.get("/orders", async (req, res) => {
       where: { vendorId, status: { in: [...ORDER_TABS[tab]] } },
       orderBy: { createdAt: tab === "done" ? "desc" : "asc" },
       take: 100,
-      include: {
-        items: { select: { id: true, name: true, quantity: true, unitPrice: true } },
-        rider: { select: { name: true, phone: true } },
-        checkout: { select: { paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, notes: true, resident: { select: { name: true, phone: true } } } },
-      },
+      include: vendorOrderInclude,
     }),
     prisma.order.groupBy({ by: ["status"], where: { vendorId, status: { not: "AWAITING_PAYMENT" } }, _count: true }),
   ]);
@@ -160,7 +219,7 @@ vendorRouter.get("/orders", async (req, res) => {
 
   res.json({
     tab,
-    orders,
+    orders: await withRiderLocations(orders),
     counts: { new: count(ORDER_TABS.new), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
   });
 });

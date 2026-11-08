@@ -1,5 +1,6 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
+import { recordMarshal, recordUnmarshal } from "./marshal.js";
 import { publish, type QueueChannel, type QueueName } from "./queue.js";
 
 type Tx = Prisma.TransactionClient;
@@ -8,8 +9,11 @@ type Tx = Prisma.TransactionClient;
  * Transactional outbox. Saves an event in the same database transaction as the change
  * it describes, so the change and the event either both happen or neither does.
  */
-export function enqueue(tx: Tx, topic: QueueName, payload: Record<string, unknown>) {
-  return tx.outboxEvent.create({ data: { topic, payload: payload as Prisma.InputJsonObject } });
+export async function enqueue(tx: Tx, topic: QueueName, payload: Record<string, unknown>) {
+  const event = await tx.outboxEvent.create({ data: { topic, payload: payload as Prisma.InputJsonObject } });
+  // Prisma marshals the payload into the JSON column; the event id follows the message to the worker
+  recordMarshal(payload, { transport: "outbox", channel: topic, kind: topic, messageId: event.id });
+  return event;
 }
 
 /**
@@ -31,7 +35,11 @@ export async function relayOutbox(channel: QueueChannel, batchSize = 100) {
       FOR UPDATE SKIP LOCKED`;
     if (events.length === 0) return 0;
 
-    for (const event of events) publish(channel, event.topic, event.payload);
+    for (const event of events) {
+      // Postgres hands the JSON column back as an object (unmarshalled), then it's marshalled again for RabbitMQ
+      recordUnmarshal(JSON.stringify(event.payload), { transport: "outbox", channel: event.topic, kind: event.topic, messageId: event.id });
+      publish(channel, event.topic, event.payload, event.id);
+    }
     await tx.outboxEvent.updateMany({
       where: { id: { in: events.map((e) => e.id) } },
       data: { publishedAt: new Date() },

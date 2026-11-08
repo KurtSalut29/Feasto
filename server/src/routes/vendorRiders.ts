@@ -3,6 +3,7 @@ import { logActivity } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
 import { BUSY, forgetRiderPosition } from "../lib/dispatch.js";
 import { HttpError, parseBody } from "../lib/http.js";
+import { manilaStartOfDay } from "../lib/storeHours.js";
 import { notify } from "../lib/realtime.js";
 import { renewalReviewSchema, reviewRenewal } from "../lib/renewals.js";
 import { documentKind, newRiderCode, reviewRider, reviewSchema } from "../lib/verification.js";
@@ -22,12 +23,14 @@ vendorRidersRouter.get("/riders", async (req, res) => {
   const store = await prisma.vendor.findUniqueOrThrow({
     where: { ownerId: req.session!.userId },
     select: {
+      id: true,
       riderCode: true,
       status: true,
       riders: {
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
+          userId: true,
           vehicleModel: true,
           plateNumber: true,
           licenseNumber: true,
@@ -45,13 +48,32 @@ vendorRidersRouter.get("/riders", async (req, res) => {
       },
     },
   });
+  // How much each rider has delivered for this store, and the order they're on now
+  const userIds = store.riders.map((r) => r.userId);
+  const [allTime, today, busy] = userIds.length
+    ? await Promise.all([
+        prisma.order.groupBy({ by: ["riderId"], where: { vendorId: store.id, riderId: { in: userIds }, status: "DELIVERED" }, _count: { _all: true } }),
+        prisma.order.groupBy({
+          by: ["riderId"],
+          where: { vendorId: store.id, riderId: { in: userIds }, status: "DELIVERED", finishedAt: { gte: manilaStartOfDay() } },
+          _count: { _all: true },
+        }),
+        prisma.order.findMany({ where: { riderId: { in: userIds }, status: { in: BUSY } }, select: { id: true, riderId: true, status: true, vendorId: true } }),
+      ])
+    : [[], [], []];
+  const countOf = (rows: { riderId: string | null; _count: { _all: number } }[], id: string) => rows.find((r) => r.riderId === id)?._count._all ?? 0;
+
   res.json({
     code: store.riderCode,
     storeStatus: store.status,
-    riders: store.riders.map(({ licenseFile, renewals, ...rider }) => {
+    riders: store.riders.map(({ licenseFile, renewals, userId, ...rider }) => {
       const [renewal] = renewals;
+      const job = busy.find((o) => o.riderId === userId);
       return {
         ...rider,
+        deliveries: countOf(allTime, userId),
+        deliveriesToday: countOf(today, userId),
+        currentOrder: job ? { id: job.id, status: job.status, forThisStore: job.vendorId === store.id } : null,
         document: documentKind(licenseFile),
         renewal: renewal ? { id: renewal.id, number: renewal.number, expiresAt: renewal.expiresAt, submittedAt: renewal.submittedAt, document: documentKind(renewal.file) } : null,
       };

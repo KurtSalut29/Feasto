@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { invalidateStore } from "../lib/cache.js";
+import { ONLINE_PAYMENTS, storeRefusing } from "../lib/payments.js";
 import { buildCart, clearCart } from "../lib/cart.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
@@ -20,7 +21,7 @@ const checkoutSchema = z
     addressId: z.string().optional(),
     paymentMethod: z.enum(["COD", "ONLINE"]),
     /** The e-wallet or card, for online payments */
-    onlineMethod: z.enum(["GCASH", "MAYA", "GRABPAY", "SHOPEEPAY", "COINS", "VISA", "MASTERCARD", "JCB", "AMEX"]).optional(),
+    onlineMethod: z.enum(ONLINE_PAYMENTS).optional(),
     notes: z
       .string()
       .trim()
@@ -51,6 +52,10 @@ checkoutRouter.post("/", async (req, res) => {
   const cart = await buildCart(userId);
   if (cart.groups.length === 0) throw new HttpError(400, "Your cart is empty.");
   if (cart.hasProblems) throw new HttpError(409, "Some items in your cart changed. Check your cart and try again.");
+
+  // Each store chooses the ways to pay it takes; one payment covers the whole cart, so every store must take it
+  const refusing = storeRefusing(cart.groups.map((g) => g.store), input.paymentMethod === "COD" ? "COD" : (input.onlineMethod ?? "ONLINE"));
+  if (refusing) throw new HttpError(409, `${refusing.name} doesn't take ${input.paymentMethod === "COD" ? "cash" : "this way to pay"}. Choose another way to pay.`);
 
   let deliveryAddress: string | null = null;
   let deliveryPin: { deliveryLat: number | null; deliveryLng: number | null } = { deliveryLat: null, deliveryLng: null };

@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import express from "express";
 import { config } from "./config.js";
+import { recordUnmarshal } from "./lib/marshal.js";
 import { prisma } from "./lib/db.js";
 import { syncDisabledAccounts, syncPasswordChanges } from "./lib/accounts.js";
 import { countRequest, startHeartbeat } from "./lib/heartbeat.js";
@@ -25,7 +26,19 @@ import { vendorRouter } from "./routes/vendor.js";
 const app = express();
 // Requests arrive through Nginx; trust it to report the visitor's real IP address.
 app.set("trust proxy", 1);
-app.use(express.json());
+// Express unmarshals JSON request bodies; the raw bytes are kept so the System page can show them
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
+app.use((req, _res, next) => {
+  const raw = (req as { rawBody?: Buffer }).rawBody;
+  if (raw?.length) recordUnmarshal(raw.toString("utf8"), { transport: "http", channel: `${req.method} ${req.path}`, kind: "request body" });
+  next();
+});
 app.use(cookieParser());
 
 // Every response says which API copy answered it, so load balancing is visible.

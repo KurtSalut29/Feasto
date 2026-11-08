@@ -1,3 +1,4 @@
+import type { OnlinePayment } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
 import { redis } from "./redis.js";
 import { getSettings } from "./settings.js";
@@ -48,6 +49,8 @@ export async function buildCart(userId: string) {
           opensAt: true,
           closesAt: true,
           isTemporarilyClosed: true,
+          acceptsCash: true,
+          onlinePayments: true,
           owner: { select: { disabledAt: true } },
         },
       },
@@ -59,7 +62,7 @@ export async function buildCart(userId: string) {
   if (gone.length) await redis.hdel(key(userId), ...gone.map((g) => g.menuItemId));
 
   const groups = new Map<string, {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean };
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -72,7 +75,7 @@ export async function buildCart(userId: string) {
     let group = groups.get(item.vendorId);
     if (!group) {
       group = {
-        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, isOpen: open },
+        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
         items: [],
         subtotal: 0,
         problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",

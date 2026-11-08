@@ -17,6 +17,8 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 export const adminToolsRouter = Router();
 adminToolsRouter.use(requireAuth, requireRole("ADMIN"));
 
+/** At most this many stuck orders are read at once */
+const STUCK_LIMIT = 500;
 const PAGE_SIZE = 25;
 const actorOf = (req: Request): Actor => ({ userId: req.session!.userId, name: req.session!.name });
 const documentsQuery = z.object({
@@ -155,16 +157,21 @@ adminToolsRouter.post("/renewals/:id/review", async (req, res) => {
 // ---------- Stuck orders ----------
 
 adminToolsRouter.get("/stuck", async (req, res) => {
-  const { page } = z.object({ page: z.coerce.number().int().min(1).catch(1) }).parse(req.query);
+  const { page, reason } = z
+    .object({
+      page: z.coerce.number().int().min(1).catch(1),
+      reason: z.enum(["NO_STORE_REPLY", "NO_RIDER", "RIDER_NOT_COLLECTING", "ON_THE_ROAD"]).optional().catch(undefined),
+    })
+    .parse(req.query);
   const { stuckMinutes } = await getSettings();
   const where = stuckOrdersWhere(stuckMinutes);
-  const [total, orders, ridersOnline] = await Promise.all([
-    prisma.order.count({ where }),
+  // Why an order is stuck is worked out per order, so the reasons are counted and filtered here.
+  // Stuck orders are few (the admin clears them), so reading them all at once stays cheap.
+  const [all, ridersOnline] = await Promise.all([
     prisma.order.findMany({
       where,
       orderBy: { createdAt: "asc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
+      take: STUCK_LIMIT,
       select: {
         id: true,
         status: true,
@@ -184,17 +191,25 @@ adminToolsRouter.get("/stuck", async (req, res) => {
     }),
     prisma.riderProfile.count({ where: availableRider({ vendorId: null }) }),
   ]);
+  const explained = all.map((order) => {
+    const why = whyStuck(order);
+    const { businessPhone, owner, name } = order.vendor;
+    return { ...order, ...why, code: orderCode(order.id), vendor: { name, phone: businessPhone ?? owner.phone } };
+  });
+  // Longest wait first: it has waited the most, so it gets handled first
+  explained.sort((a, b) => new Date(a.since).getTime() - new Date(b.since).getTime());
+  const counts = { NO_STORE_REPLY: 0, NO_RIDER: 0, RIDER_NOT_COLLECTING: 0, ON_THE_ROAD: 0 };
+  for (const order of explained) counts[order.reason as keyof typeof counts] += 1;
+  const shown = reason ? explained.filter((o) => o.reason === reason) : explained;
+
   res.json({
     stuckMinutes,
     ridersOnline,
     page,
     pageSize: PAGE_SIZE,
-    total,
-    orders: orders.map((order) => {
-      const { reason, since } = whyStuck(order);
-      const { businessPhone, owner, name } = order.vendor;
-      return { ...order, reason, since, code: orderCode(order.id), vendor: { name, phone: businessPhone ?? owner.phone } };
-    }),
+    total: shown.length,
+    counts: { all: explained.length, ...counts },
+    orders: shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
   });
 });
 

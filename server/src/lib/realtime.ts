@@ -1,4 +1,5 @@
 import { prisma } from "./db.js";
+import { marshal } from "./marshal.js";
 import { redis } from "./redis.js";
 
 /**
@@ -26,7 +27,7 @@ export type RealtimeEvent =
   | { type: "session.ended" };
 
 export function publish(channel: string, event: RealtimeEvent) {
-  return redis.publish(channel, JSON.stringify(event));
+  return redis.publish(channel, marshal(event, { transport: "pubsub", channel }));
 }
 
 /** Saves an in-app notification and pushes it live to the user's open pages. */

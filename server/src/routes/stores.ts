@@ -194,6 +194,8 @@ async function loadStore(id: string) {
     where: { id, ...ACTIVE_STORE },
     select: {
       ...storeFields,
+      acceptsCash: true,
+      onlinePayments: true,
       // The newest ones that say something; a bare star rating counts in the breakdown below
       reviews: {
         where: { comment: { not: null } },

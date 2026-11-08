@@ -1,3 +1,4 @@
+import { marshal, unmarshal } from "./marshal.js";
 import { redis } from "./redis.js";
 
 /**
@@ -7,9 +8,9 @@ import { redis } from "./redis.js";
  */
 export async function cached<T>(key: string, ttlSeconds: number, load: () => Promise<T>): Promise<T> {
   const hit = await redis.get(key);
-  if (hit) return JSON.parse(hit) as T;
+  if (hit) return unmarshal<T>(hit, { transport: "redis", channel: key, kind: "cache hit" });
   const value = await load();
-  await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  await redis.set(key, marshal(value, { transport: "redis", channel: key, kind: "cache fill" }), "EX", ttlSeconds);
   return value;
 }
 

@@ -188,6 +188,9 @@ model Vendor {
   closesAt            String // "21:00"
   /// The vendor's manual "closed for now" switch, on top of the opening hours
   isTemporarilyClosed Boolean        @default(false)
+  /// Ways to pay this store takes. A cart's choices are the ones every store in it takes.
+  acceptsCash         Boolean        @default(true)
+  onlinePayments      OnlinePayment[] @default([GCASH, MAYA, GRABPAY, SHOPEEPAY, COINS, VISA, MASTERCARD, JCB, AMEX])
   /// Running totals of all ratings, updated in the same transaction as each new review,
   /// so store lists can show the average without adding up every review
   ratingSum           Int            @default(0)

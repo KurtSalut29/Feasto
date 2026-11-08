@@ -1,4 +1,5 @@
 import { redis } from "./redis.js";
+import { unmarshal } from "./marshal.js";
 
 /**
  * A sales report is computed map-reduce style:
@@ -26,7 +27,7 @@ export async function readReport(id: string) {
   const [meta, parts] = await Promise.all([redis.hgetall(reportKey(id)), redis.hgetall(reportPartsKey(id))]);
   if (!meta.status) return null;
   const rows = Object.values(parts)
-    .map((p) => JSON.parse(p) as ReportPart)
+    .map((p) => unmarshal<ReportPart>(p, { transport: "redis", channel: reportPartsKey(id), kind: "report part" }))
     .sort((a, b) => b.sales - a.sales);
   return {
     id,

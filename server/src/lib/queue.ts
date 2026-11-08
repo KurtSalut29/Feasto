@@ -1,5 +1,7 @@
 import amqp from "amqplib";
+import { randomUUID } from "node:crypto";
 import { config } from "../config.js";
+import { marshal } from "./marshal.js";
 
 export const QUEUES = {
   /** One message per store order; the worker notifies the store (processed in parallel) */
@@ -10,6 +12,8 @@ export const QUEUES = {
   reportRequested: "report.requested",
   /** One store's part of a report, computed by any worker in parallel */
   reportPart: "report.part",
+  /** A sample message from the admin's System page, to show marshalling end to end */
+  systemSample: "system.sample",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -35,7 +39,12 @@ export async function connectQueue(attempts = 10) {
 
 export type QueueChannel = Awaited<ReturnType<typeof connectQueue>>["channel"];
 
-export function publish(channel: QueueChannel, queue: QueueName, message: unknown) {
+/**
+ * Marshals the message (object → JSON → UTF-8 bytes) and sends it. `messageId` travels with it,
+ * so the worker that unmarshals it can be matched to the copy that sent it.
+ */
+export function publish(channel: QueueChannel, queue: QueueName, message: unknown, messageId: string = randomUUID()) {
+  const body = Buffer.from(marshal(message, { transport: "rabbitmq", channel: queue, kind: queue, messageId }));
   // persistent: the message is written to disk, so it is not lost if RabbitMQ restarts
-  channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)), { persistent: true });
+  channel.sendToQueue(queue, body, { persistent: true, messageId, contentType: "application/json" });
 }

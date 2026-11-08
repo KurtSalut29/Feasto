@@ -142,7 +142,7 @@ bookingsRouter.get("/", requireRole("RESIDENT"), async (req, res) => {
     where: { residentId: req.session!.userId },
     orderBy: { startsAt: "desc" },
     take: 50,
-    include: { table: { select: { label: true, vendor: { select: { id: true, name: true, address: true, imageUrl: true } } } } },
+    include: { table: { select: { label: true, vendor: { select: { id: true, name: true, address: true, imageUrl: true, latitude: true, longitude: true } } } } },
   });
   const now = Date.now();
   res.json({ bookings: bookings.map((b) => ({ ...b, upcoming: b.status === "CONFIRMED" && b.startsAt.getTime() > now })) });

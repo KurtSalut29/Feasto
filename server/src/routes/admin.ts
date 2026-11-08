@@ -8,8 +8,10 @@ import { logActivity } from "../lib/activity.js";
 import { invalidateStore } from "../lib/cache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
+import { readTrace } from "../lib/marshal.js";
 import { readHeartbeats } from "../lib/heartbeat.js";
 import { stuckOrdersWhere } from "../lib/monitor.js";
+import { enqueue } from "../lib/outbox.js";
 import { QUEUES } from "../lib/queue.js";
 import { CHANNELS, notify, publish } from "../lib/realtime.js";
 import { redis } from "../lib/redis.js";
@@ -398,6 +400,36 @@ adminRouter.get("/system", async (_req, res) => {
     redis: { up: cache.up, ms: cache.ms, ...(cache.value ?? {}) },
     outboxWaiting: outbox,
   });
+});
+
+// ---------- Marshalling ----------
+
+/** The latest marshal and unmarshal steps from every API copy and worker, newest first. */
+adminRouter.get("/marshalling", async (_req, res) => {
+  const steps = await readTrace();
+  res.json({ servedBy: config.instanceId, steps });
+});
+
+/**
+ * Sends a sample order through the whole path: this API copy marshals it into the outbox,
+ * a worker relays it to RabbitMQ (marshal), and a worker takes it off the queue (unmarshal).
+ */
+adminRouter.post("/marshalling/sample", async (_req, res) => {
+  const sample = {
+    type: "sample.order",
+    orderCode: `#DEMO${Math.floor(Math.random() * 900 + 100)}`,
+    store: "Aling Nena's Carinderia",
+    items: [
+      { name: "Adobong Manok", quantity: 2, unitPrice: 95 },
+      { name: "Garlic Rice", quantity: 2, unitPrice: 25 },
+    ],
+    total: 240,
+    paid: false,
+    sentBy: config.instanceId,
+    sentAt: new Date().toISOString(),
+  };
+  const event = await prisma.$transaction((tx) => enqueue(tx, QUEUES.systemSample, sample));
+  res.status(201).json({ messageId: event.id, sample });
 });
 
 // ---------- Disable / enable accounts ----------
