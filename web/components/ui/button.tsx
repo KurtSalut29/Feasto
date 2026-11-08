@@ -15,6 +15,9 @@ const variants = {
 const base = `inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition
   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500`;
 
+/** The classes of a Button, for elements that only need to look like one. */
+export const buttonClass = (variant: keyof typeof variants = "primary") => `${base} ${variants[variant]}`;
+
 /** A link that looks like a Button. */
 export function ButtonLink({
   href,

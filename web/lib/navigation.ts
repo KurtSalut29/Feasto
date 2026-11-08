@@ -88,6 +88,14 @@ export function parentPage(role: Role, pathname: string) {
   return parent.split("/").length > 1 && parent ? parent : items[0].href;
 }
 
+/**
+ * Pages Back should never return to from `pathname`, because they no longer make sense:
+ * after an order is placed, the cart is empty and checkout has nothing left to pay for.
+ */
+export function isDeadEnd(pathname: string, target: string) {
+  return pathname.startsWith("/resident/orders/") && (target === "/resident/cart" || target === "/resident/checkout");
+}
+
 export function activeHref(items: NavItem[], pathname: string) {
   return items.slice(1).find((item) => matches(item, pathname))?.href ?? items[0].href;
 }

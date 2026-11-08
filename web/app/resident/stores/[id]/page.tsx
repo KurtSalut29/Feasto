@@ -4,13 +4,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { FavoriteButton } from "@/components/app/favorite-button";
+import { JumpLink } from "@/components/app/jump-link";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { Stars } from "@/components/app/rating";
 import { StoreCover } from "@/components/app/store-card";
 import { storeState } from "@/components/app/store-status";
 import { FeastoMap } from "@/components/map/feasto-map";
 import { Alert } from "@/components/ui/alert";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, formatTime } from "@/lib/format";
@@ -83,7 +84,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
 
         <dl className="mt-4 grid auto-cols-fr grid-flow-col divide-x divide-line rounded-2xl border border-line py-3 text-center">
           <Fact
-            href="#reviews"
+            jumpTo="reviews"
             label={store.rating !== null ? `${store.ratingCount} ${store.ratingCount === 1 ? "rating" : "ratings"}` : "No ratings yet"}
             value={
               store.rating !== null ? (
@@ -107,10 +108,10 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
               Book a table
             </ButtonLink>
           )}
-          <ButtonLink href="#info" variant="secondary" className="flex-1 px-3">
+          <JumpLink to="info" className={`${buttonClass("secondary")} flex-1 px-3`}>
             <MapPin className="size-5 text-brand-600" aria-hidden />
             Hours &amp; map
-          </ButtonLink>
+          </JumpLink>
         </div>
       </div>
 
@@ -141,17 +142,17 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
   );
 }
 
-function Fact({ value, label, href }: { value: ReactNode; label: string; href?: string }) {
+function Fact({ value, label, jumpTo }: { value: ReactNode; label: string; jumpTo?: string }) {
   const body = (
     <>
       <dt className="mt-0.5 text-xs text-muted">{label}</dt>
       <dd className="text-[15px] font-bold text-ink">{value}</dd>
     </>
   );
-  return href ? (
-    <a href={href} className="flex flex-col-reverse px-2 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-brand-500">
+  return jumpTo ? (
+    <JumpLink to={jumpTo} className="flex flex-col-reverse px-2 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-brand-500">
       {body}
-    </a>
+    </JumpLink>
   ) : (
     <div className="flex flex-col-reverse px-2">{body}</div>
   );
@@ -189,7 +190,7 @@ function StoreInfo({
   homePin: ReturnType<typeof pinOf>;
 }) {
   return (
-    <section id="info" aria-labelledby="info-heading" className="mt-10 scroll-mt-20">
+    <section id="info" tabIndex={-1} aria-labelledby="info-heading" className="mt-10 scroll-mt-20 outline-none">
       <h2 id="info-heading" className="text-xl font-bold text-ink">
         Store info
       </h2>
@@ -268,7 +269,7 @@ function Reviews({ store }: { store: StoreDetail }) {
   const breakdown = store.ratingBreakdown;
   const most = Math.max(1, ...Object.values(breakdown));
   return (
-    <section id="reviews" aria-labelledby="reviews-heading" className="mt-10 scroll-mt-20">
+    <section id="reviews" tabIndex={-1} aria-labelledby="reviews-heading" className="mt-10 scroll-mt-20 outline-none">
       <h2 id="reviews-heading" className="text-xl font-bold text-ink">
         Ratings &amp; reviews
       </h2>

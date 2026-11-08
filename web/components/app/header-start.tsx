@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { isTabPage, parentPage } from "@/lib/navigation";
+import { isDeadEnd, isTabPage, parentPage } from "@/lib/navigation";
 import { ROLE_HOME } from "@/lib/roles";
 import { BackButton, useCountPages } from "./back-button";
 
@@ -28,8 +28,7 @@ function WithBack({ role }: { role: MobileRole }) {
   if (isTabPage(role, pathname)) return <Logo role={role} />;
   return (
     <div className="flex items-center gap-1">
-      {/* After checkout the page before an order is the emptied cart, so an order always goes back to the list */}
-      <BackButton fallback={parentPage(role, pathname)} always={pathname.startsWith("/resident/orders/")} />
+      <BackButton fallback={parentPage(role, pathname)} isMain={(path) => isTabPage(role, path)} skip={(target) => isDeadEnd(pathname, target)} />
       <Logo role={role} />
     </div>
   );

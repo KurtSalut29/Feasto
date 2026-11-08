@@ -27,6 +27,8 @@ export function CategoryTabs({ tabs }: { tabs: { label: string; count: number; h
           <li key={tab.label}>
             <Link
               href={tab.href}
+              // Switching kinds is like changing a filter: it doesn't add a step for Back to undo
+              replace
               aria-current={tab.active ? "page" : undefined}
               className={`-mb-px flex items-center gap-1.5 border-b-2 py-2.5 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
                 tab.active ? "border-brand-600 text-ink" : "border-transparent text-muted hover:text-ink"
