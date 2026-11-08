@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 export function CancelBookingButton({ bookingId, storeName, when }: { bookingId: string; storeName: string; when: string }) {
   const router = useRouter();

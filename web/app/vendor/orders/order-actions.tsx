@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import type { Fulfillment, JobDispatch, OrderStatus } from "@/lib/types";
 
 type Step = "accept" | "preparing" | "ready" | "complete";

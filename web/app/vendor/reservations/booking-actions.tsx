@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /** Mark a confirmed booking as completed, no-show, or cancel it. */
 export function BookingActions({ bookingId, started }: { bookingId: string; started: boolean }) {

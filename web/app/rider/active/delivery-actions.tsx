@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { uploadPhoto } from "@/components/ui/image-upload";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import type { OrderStatus } from "@/lib/types";
 
 export function DeliveryActions({ orderId, status }: { orderId: string; status: OrderStatus }) {

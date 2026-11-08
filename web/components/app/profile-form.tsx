@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 
 /** Edit name and mobile number. The email is the login, so it stays fixed. */
 export function ProfileForm({ name, phone, email }: { name: string; phone: string | null; email: string }) {

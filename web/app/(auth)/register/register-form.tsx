@@ -22,7 +22,7 @@ import { PasswordStrength } from "@/components/ui/password-strength";
 import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import type { LatLng } from "@/lib/geo";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /**
  * Data from the API for a URL that changes as the person uses the page (e.g. the part of

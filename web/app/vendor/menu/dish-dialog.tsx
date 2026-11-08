@@ -8,7 +8,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import type { MenuItem } from "@/lib/types";
 
 type Values = {

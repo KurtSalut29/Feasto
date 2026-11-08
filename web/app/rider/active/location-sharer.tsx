@@ -4,7 +4,7 @@ import { LocateFixed, Route } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getRoute } from "@/components/map/map-engine";
 import { setDemoPosition, useGeolocation } from "@/components/map/use-my-location";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import { distanceKm, formatDistance, pathKm, pointAlong, type LatLng } from "@/lib/geo";
 
 /** How often the phone's real GPS position is sent */

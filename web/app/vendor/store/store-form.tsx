@@ -16,7 +16,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { formatTime } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";

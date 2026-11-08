@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLiveEvent } from "@/components/app/live-updates";
 import { groupByDay, NOTIFICATIONS_READ, NotificationItem, type AppNotification } from "@/components/app/notification-list";
 import { ButtonLink } from "@/components/ui/button";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 type Feed = { notifications: AppNotification[]; unread: number };
 

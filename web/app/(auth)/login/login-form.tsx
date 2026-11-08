@@ -6,7 +6,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { AUTH_BUTTON } from "../auth-ui";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 

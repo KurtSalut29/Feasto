@@ -3,7 +3,7 @@
 import { LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /** "Add" button that turns into a − 2 + stepper. Saves each change to the cart. */
 export function QuantityControl({

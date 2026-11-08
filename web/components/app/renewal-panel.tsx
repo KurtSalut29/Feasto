@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { daysLeft, formatDate } from "@/lib/format";
 import type { RenewalInfo } from "@/lib/verification-fields";
 import { DocumentPreview } from "./document-preview";

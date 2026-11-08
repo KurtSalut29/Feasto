@@ -3,7 +3,7 @@
 import { Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /** Heart that saves a store to the resident's favorites. Changes instantly, then syncs. */
 export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { storeId: string; storeName: string; isFavorite: boolean; plain?: boolean }) {

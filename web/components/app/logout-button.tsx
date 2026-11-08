@@ -4,7 +4,7 @@ import { LogOut } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /**
  * Log out button that asks for confirmation first.

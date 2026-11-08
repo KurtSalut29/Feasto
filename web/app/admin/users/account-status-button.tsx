@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /** Disable (with confirmation) or re-enable an account. */
 export function AccountStatusButton({ userId, name, disabled }: { userId: string; name: string; disabled: boolean }) {

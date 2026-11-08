@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextareaField } from "@/components/ui/textarea-field";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import { formatTime, manilaDate } from "@/lib/format";
 
 type Slot = { time: string; available: boolean; tablesLeft: number };

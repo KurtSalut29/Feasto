@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import { formatPeso } from "@/lib/format";
 import type { Address, Cart, Fulfillment, PaymentMethod } from "@/lib/types";
 

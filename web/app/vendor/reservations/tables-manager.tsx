@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import type { DiningTable } from "@/lib/types";
 
 function TableDialog({ table, nextLabel, onClose, onSaved }: { table?: DiningTable; nextLabel: string; onClose: () => void; onSaved: () => void }) {

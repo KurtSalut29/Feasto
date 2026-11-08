@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 /** Online/Offline switch in the rider's top bar. Only approved riders can go online. */
 export function AvailabilityToggle({ online: initial, approved }: { online: boolean; approved: boolean }) {

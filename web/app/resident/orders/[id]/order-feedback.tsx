@@ -7,7 +7,7 @@ import { useState, type FormEvent } from "react";
 import { Stars } from "@/components/app/rating";
 import { Button } from "@/components/ui/button";
 import { TextareaField } from "@/components/ui/textarea-field";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 const LABELS = ["", "Bad", "Not great", "Okay", "Good", "Excellent!"];
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useGeolocation } from "@/components/map/use-my-location";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 const SEND_EVERY_MS = 15_000;
 

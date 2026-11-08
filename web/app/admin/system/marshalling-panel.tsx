@@ -4,7 +4,7 @@ import { ArrowDown, ArrowRight, ArrowUp, Binary, Braces, FileJson, Pause, Play, 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 type Transport = "rabbitmq" | "outbox" | "pubsub" | "redis" | "http";
 type Step = {

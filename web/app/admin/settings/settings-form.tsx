@@ -7,7 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 
 export type PlatformSettings = { deliveryFee: number; storeRiderSeconds: number; riderWaveSeconds: number; stuckMinutes: number };
 type Key = keyof PlatformSettings;

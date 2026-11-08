@@ -3,7 +3,7 @@
 import { Bell, BellOff, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import { useLiveEvent } from "./live-updates";
 import { groupByDay, NOTIFICATIONS_READ, NotificationItem, type AppNotification } from "./notification-list";
 

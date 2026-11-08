@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 
 type Reason = "NO_STORE_REPLY" | "NO_RIDER" | "RIDER_NOT_COLLECTING" | "ON_THE_ROAD";
 

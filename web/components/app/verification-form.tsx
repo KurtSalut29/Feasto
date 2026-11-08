@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
-import { apiRequest, type FieldErrors } from "@/lib/api-client";
+import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { PERMIT_FIELDS, RIDER_LICENSE_FIELDS, RIDER_PERSONAL_FIELDS, STORE_CODE_FIELD, type Verification } from "@/lib/verification-fields";
 import { DocumentPreview } from "./document-preview";
 import { DocumentPicker, uploadDocument } from "./document-upload";

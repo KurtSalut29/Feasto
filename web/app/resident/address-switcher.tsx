@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronRight, LoaderCircle, MapPin, Plus, Settings2
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import type { Address } from "@/lib/types";
 
 const chipClass =

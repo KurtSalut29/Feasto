@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
-import { apiRequest } from "@/lib/api-client";
+import { apiRequest } from "@/lib/browser-api";
 import { formatPeso } from "@/lib/format";
 import type { MenuItem } from "@/lib/types";
 
