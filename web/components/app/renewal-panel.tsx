@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { daysLeft, formatDate } from "@/lib/format";
 import type { RenewalInfo } from "@/lib/verification-fields";
 import { DocumentPreview } from "./document-preview";
@@ -72,6 +73,7 @@ export function RenewalPanel({ data }: { data: RenewalInfo }) {
     }
     setFile(null);
     setOpened(false);
+    toast.success(`Renewed ${documentName.toLowerCase()} sent`, "It will be reviewed soon. We'll let you know the result.");
     router.refresh();
   }
 

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Disable (with confirmation) or re-enable an account. */
 export function AccountStatusButton({ userId, name, disabled }: { userId: string; name: string; disabled: boolean }) {
@@ -21,6 +22,8 @@ export function AccountStatusButton({ userId, name, disabled }: { userId: string
     setBusy(false);
     if (!result.ok) return setError(result.error);
     setConfirming(false);
+    if (nextDisabled) toast.success(`${name}'s account is disabled`, "They can't log in until you enable it again.");
+    else toast.success(`${name}'s account is enabled`, "They can log in again.");
     router.refresh();
   }
 

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Mark a confirmed booking as completed, no-show, or cancel it. */
 export function BookingActions({ bookingId, started }: { bookingId: string; started: boolean }) {
@@ -15,6 +16,9 @@ export function BookingActions({ bookingId, started }: { bookingId: string; star
     const result = await apiRequest(`/vendor/bookings/${bookingId}/status`, { method: "POST", body: { status } });
     setBusy(null);
     if (!result.ok) return setError(result.error);
+    if (status === "COMPLETED") toast.success("Booking completed", "Thanks for serving them.");
+    else if (status === "NO_SHOW") toast.info("Marked as no-show", "The table is free again.");
+    else toast.info("Booking cancelled", "The resident was told, and the table is free again.");
     router.refresh();
   }
 

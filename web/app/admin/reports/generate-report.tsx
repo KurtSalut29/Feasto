@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { manilaDate } from "@/lib/format";
 
 const PRESETS = { today: 0, week: 6, month: 29 } as const;
@@ -43,6 +44,7 @@ export function GenerateReport() {
           });
           setBusy(false);
           if (!result.ok) return setError(result.error);
+          toast.info("Making your report", "The workers are adding up each store's sales. It shows here in a few seconds.");
           router.push(`/admin/reports?id=${result.data.id}`);
         }}
       >

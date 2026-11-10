@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import { ServiceWorkerRegistration } from "@/components/app/install-app";
+import { Toaster } from "@/components/ui/toast";
 import { SIDEBAR_INIT_SCRIPT } from "@/lib/sidebar";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full font-sans">
         {children}
+        <Toaster />
         <ServiceWorkerRegistration />
       </body>
     </html>

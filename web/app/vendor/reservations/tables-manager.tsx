@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { DiningTable } from "@/lib/types";
 
 function TableDialog({ table, nextLabel, onClose, onSaved }: { table?: DiningTable; nextLabel: string; onClose: () => void; onSaved: () => void }) {
@@ -32,6 +33,7 @@ function TableDialog({ table, nextLabel, onClose, onSaved }: { table?: DiningTab
       setFieldErrors(result.fieldErrors ?? {});
       return;
     }
+    toast.success(table ? `${label} updated` : `${label} added`, table ? undefined : "Residents can book it now.");
     onSaved();
   }
 
@@ -117,6 +119,7 @@ export function TablesManager({
                           setError(undefined);
                           const result = await apiRequest(`/vendor/tables/${table.id}`, { method: "DELETE" });
                           if (!result.ok) return setError(result.error);
+                          toast.success(`${table.label} removed`);
                           router.refresh();
                         }}
                       >

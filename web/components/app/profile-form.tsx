@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Edit name and mobile number. The email is the login, so it stays fixed. */
 export function ProfileForm({ name, phone, email }: { name: string; phone: string | null; email: string }) {
@@ -31,6 +32,7 @@ export function ProfileForm({ name, phone, email }: { name: string; phone: strin
     }
     setFieldErrors({});
     setSaved(true);
+    toast.success("Profile saved");
     router.refresh();
   }
 

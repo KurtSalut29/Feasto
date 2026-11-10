@@ -1,9 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react";
+import { toast, type ToastTone } from "@/components/ui/toast";
 
 export type LiveEvent =
   | { type: "notification"; notification: { id: string; title: string; body: string; link: string | null; createdAt: string } }
@@ -27,17 +26,22 @@ export function useLiveEvent(listener: Listener) {
   useEffect(() => subscribe?.((event) => latest.current(event)), [subscribe]);
 }
 
-type Toast = { id: string; title: string; body: string; link: string | null };
+/** Green for good news, red for something that went wrong, orange for everything else */
+function toneOf(title: string): ToastTone {
+  if (/fail|reject|declin|cancel|expired|suspend|disabled|no-show|couldn/i.test(title)) return "error";
+  if (/remind|expir|soon|waiting|stuck/i.test(title)) return "warning";
+  if (/accept|approv|ready|deliver|received|paid|picked up|confirmed|welcome/i.test(title)) return "success";
+  return "info";
+}
 
 /**
  * Keeps one live connection (Server-Sent Events) open for the signed-in user.
  * Whenever something changes on the server, the visible page re-fetches its data,
- * and new notifications pop up as toasts.
+ * and new notifications pop up as Feasto toast messages.
  */
 export function LiveUpdates({ children }: { children: ReactNode }) {
   const router = useRouter();
   const listeners = useRef(new Set<Listener>());
-  const [toasts, setToasts] = useState<Toast[]>([]);
   const [subscribe] = useState(() => (listener: Listener) => {
     listeners.current.add(listener);
     return () => {
@@ -66,10 +70,8 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
       }
       if (event.type === "rider.location") return; // too frequent to refresh the whole page
       if (event.type === "notification") {
-        const { id, title, body, link } = event.notification;
-        // One at a time: on a phone, stacked toasts would cover the page
-        setToasts([{ id, title, body, link }]);
-        setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 6000);
+        const { title, body, link } = event.notification;
+        toast.show({ tone: toneOf(title), title, description: body, action: link ? { label: "View", href: link } : undefined, duration: 6000 });
       }
       refreshSoon();
     };
@@ -82,33 +84,6 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
   return (
     <LiveContext value={subscribe}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-3 z-50 flex flex-col items-center gap-2 px-4">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-2xl border border-line bg-white p-4 shadow-lg"
-          >
-            <span className="mt-1 size-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-ink">{toast.title}</p>
-              <p className="mt-0.5 text-sm text-muted">{toast.body}</p>
-              {toast.link && (
-                <Link href={toast.link} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline">
-                  View
-                </Link>
-              )}
-            </div>
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={() => setToasts((current) => current.filter((t) => t.id !== toast.id))}
-              className="rounded-lg p-1 text-muted hover:bg-canvas"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          </div>
-        ))}
-      </div>
     </LiveContext>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 export function AcceptJobButton({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -24,6 +25,7 @@ export function AcceptJobButton({ orderId }: { orderId: string }) {
             router.refresh(); // the job may be gone; show the current list
             return;
           }
+          toast.success("Job accepted!", "Head to the store to pick up the order. The map shows the way.");
           router.push("/rider/active");
         }}
       >

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { MobileShell } from "@/components/app/mobile-shell";
 import { serverApi } from "@/lib/server-api";
+import { LiveOrderBar } from "./live-order-bar";
 
 export default function ResidentLayout({ children }: { children: ReactNode }) {
   return (
@@ -15,6 +16,9 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
       }
     >
       {children}
+      <Suspense fallback={null}>
+        <LiveOrderBar />
+      </Suspense>
     </MobileShell>
   );
 }

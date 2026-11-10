@@ -9,6 +9,7 @@ import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { MenuItem } from "@/lib/types";
 
 type Values = {
@@ -72,6 +73,7 @@ export function DishDialog({
       setFieldErrors(result.fieldErrors ?? {});
       return;
     }
+    toast.success(item ? `${values.name} updated` : `${values.name} added to your menu`, item ? "Residents see the changes right away." : "Residents can order it now.");
     onSaved();
   }
 

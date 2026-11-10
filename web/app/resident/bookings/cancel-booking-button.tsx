@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 export function CancelBookingButton({ bookingId, storeName, when }: { bookingId: string; storeName: string; when: string }) {
   const router = useRouter();
@@ -40,6 +41,7 @@ export function CancelBookingButton({ bookingId, storeName, when }: { bookingId:
               setBusy(false);
               if (!result.ok) return setError(result.error);
               setOpen(false);
+              toast.success("Booking cancelled", "The table is free for others now. You can book again anytime.");
               router.refresh();
             }}
           >

@@ -4,7 +4,9 @@ import { Bike, MapPin, Store } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
+import { DeliveryFeeLine } from "@/components/app/delivery-fee";
 import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
+import { useApiData } from "@/components/app/use-api-data";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -14,6 +16,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
 import type { Address, Cart, Fulfillment, PaymentMethod } from "@/lib/types";
 
@@ -83,7 +86,13 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
   const [error, setError] = useState<string>();
 
   const stores = cart.groups.length;
-  const deliveryTotal = fulfillment === "DELIVERY" ? cart.deliveryFeePerStore * stores : 0;
+  // Each store's fee follows its distance to the chosen address: price it again when the address changes
+  const [quoteKey, setQuoteKey] = useState(0);
+  const otherAddress = fulfillment === "DELIVERY" && addressId && addressId !== cart.delivery.addressId;
+  const { data: quoted } = useApiData<{ cart: Cart }>(otherAddress ? `/cart?addressId=${addressId}` : null, quoteKey);
+  const priced = !otherAddress ? cart : quoted?.cart.delivery.addressId === addressId ? quoted.cart : null;
+  const quoteOf = (storeId: string) => priced?.groups.find((g) => g.store.id === storeId)?.delivery ?? null;
+  const deliveryTotal = fulfillment === "DELIVERY" ? (priced?.delivery.total ?? 0) : 0;
   const total = cart.itemsTotal + deliveryTotal;
 
   async function placeOrder() {
@@ -98,7 +107,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         paymentMethod,
         onlineMethod: pay === "COD" ? undefined : pay,
         notes,
-        expectedDeliveryFee: cart.deliveryFeePerStore,
+        expectedDeliveryFee: deliveryTotal,
         simulatePaymentFailure: paymentMethod === "ONLINE" && simulateFailure,
       },
     });
@@ -106,9 +115,19 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
       setPlacing(false);
       setError(result.fieldErrors?.addressId?.[0] ?? result.error);
       router.refresh(); // the fee or the cart may have changed
+      setQuoteKey((k) => k + 1);
       return;
     }
     const { orderIds } = result.data;
+    const names = cart.groups.map((g) => g.store.name);
+    const storesText = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+    toast.success(
+      orderIds.length === 1 ? "Order placed!" : `${orderIds.length} orders placed!`,
+      paymentMethod === "ONLINE"
+        ? `We're confirming your ${PAYMENT_OPTIONS.find((o) => o.value === pay)?.name ?? "online"} payment. ${storesText} will get the order once it's through.`
+        : `${storesText} got your order. We'll tell you as soon as it's accepted.`,
+      { duration: 6500 },
+    );
     router.replace(orderIds.length === 1 ? `/resident/orders/${orderIds[0]}` : "/resident/orders");
   }
 
@@ -192,7 +211,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
           holder={holder}
           phone={phone}
           delivery={fulfillment === "DELIVERY"}
-          parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? cart.deliveryFeePerStore : 0) }))}
+          parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? (quoteOf(g.store.id)?.fee ?? 0) : 0) }))}
         />
         {paymentMethod === "ONLINE" && (
           <div className="mt-3">
@@ -253,13 +272,19 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
             <span className="text-ink tabular-nums">{formatPeso(cart.itemsTotal)}</span>
           </li>
           <li className="flex justify-between gap-3">
-            <span className="text-muted">
-              {fulfillment === "DELIVERY"
-                ? `Delivery (${formatPeso(cart.deliveryFeePerStore)} × ${stores} ${stores === 1 ? "store" : "stores"})`
-                : "Delivery"}
+            <span className="text-muted">{fulfillment === "DELIVERY" && stores > 1 ? `Delivery (${stores} stores)` : "Delivery"}</span>
+            <span className="text-ink tabular-nums">
+              {fulfillment !== "DELIVERY" ? "Free" : priced ? formatPeso(deliveryTotal) : "Working it out…"}
             </span>
-            <span className="text-ink">{fulfillment === "DELIVERY" ? formatPeso(deliveryTotal) : "Free"}</span>
           </li>
+          {fulfillment === "DELIVERY" && priced && (
+            <li className="space-y-2 rounded-xl bg-canvas px-3 py-2.5">
+              {cart.groups.map((g) => {
+                const quote = quoteOf(g.store.id);
+                return quote ? <DeliveryFeeLine key={g.store.id} storeName={stores > 1 ? g.store.name : undefined} quote={quote} /> : null;
+              })}
+            </li>
+          )}
         </ul>
         <div className="mt-3 flex justify-between border-t border-line pt-3 text-lg font-bold text-ink">
           <span>Total</span>
@@ -273,7 +298,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         <Button
           className="w-full shadow-lg"
           loading={placing}
-          disabled={fulfillment === "DELIVERY" && !addressId}
+          disabled={fulfillment === "DELIVERY" && (!addressId || !priced)}
           onClick={placeOrder}
         >
           {placing ? "Placing order…" : `Place order · ${formatPeso(total)}`}

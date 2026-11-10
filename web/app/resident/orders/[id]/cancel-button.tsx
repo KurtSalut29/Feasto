@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 export function CancelOrderButton({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -32,6 +33,7 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
               setBusy(false);
               if (!result.ok) return setError(result.error);
               setOpen(false);
+              toast.success("Order cancelled", "The store won't prepare it. If you paid online, the money goes back to you.");
               router.refresh();
             }}
           >

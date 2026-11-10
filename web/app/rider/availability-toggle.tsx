@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Online/Offline switch in the rider's top bar. Only approved riders can go online. */
 export function AvailabilityToggle({ online: initial, approved }: { online: boolean; approved: boolean }) {
@@ -32,8 +33,14 @@ export function AvailabilityToggle({ online: initial, approved }: { online: bool
         setBusy(true);
         const result = await apiRequest("/rider/availability", { method: "PATCH", body: { isOnline: next } });
         setBusy(false);
-        if (!result.ok) setOnline(!next);
-        else router.refresh();
+        if (!result.ok) {
+          setOnline(!next);
+          toast.error(next ? "Couldn't go online" : "Couldn't go offline", result.error);
+          return;
+        }
+        if (next) toast.success("You're online", "New delivery jobs near you will show up here.");
+        else toast.info("You're offline", "You won't get new jobs until you go online again.");
+        router.refresh();
       }}
       className={`inline-flex h-8 items-center gap-2 rounded-full pr-1 pl-3 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
         online ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"

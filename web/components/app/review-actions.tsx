@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { ApprovalStatus } from "@/lib/types";
 
 type Decision = "APPROVED" | "REJECTED" | "SUSPENDED";
@@ -49,6 +50,9 @@ export function ReviewActions({
     }
     setAsking(null);
     setNote("");
+    if (decision === "APPROVED") toast.success(`${name} approved`, `They can start using Feasto as a ${kind === "stores" ? "store" : "rider"} now.`);
+    else if (decision === "REJECTED") toast.info(`${name} rejected`, "They were told why, so they can fix it and apply again.");
+    else toast.info(`${name} suspended`, "They can't take orders until it's lifted.");
     router.refresh();
   }
 

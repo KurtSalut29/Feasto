@@ -8,6 +8,7 @@ import { Stars } from "@/components/app/rating";
 import { Button } from "@/components/ui/button";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 const LABELS = ["", "Bad", "Not great", "Okay", "Good", "Excellent!"];
 
@@ -49,6 +50,7 @@ export function RateOrder({
     const result = await apiRequest(`/orders/${orderId}/review`, { method: "POST", body: { rating, comment: comment.trim() || undefined } });
     setBusy(false);
     if (!result.ok) return setError(result.error);
+    toast.success("Thanks for rating!", `Your ${rating}-star review helps ${storeName} and other residents.`);
     router.refresh();
   }
 
@@ -119,6 +121,7 @@ export function ReorderButton({ orderId, compact }: { orderId: string; /** A sma
       // Say what's missing, then let them continue to the cart themselves
       return setMessage(`Added to cart. Not available right now: ${result.data.skipped.join(", ")}.`);
     }
+    toast.success("Added to your cart", "Check the items, then check out when you're ready.");
     router.push("/resident/cart");
   }
 

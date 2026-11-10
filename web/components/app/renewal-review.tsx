@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Approve or reject a renewed document. `path` is where the decision goes: the admin's or a store's route. */
 export function RenewalReview({ path, name }: { path: string; name: string }) {
@@ -27,6 +28,8 @@ export function RenewalReview({ path, name }: { path: string; name: string }) {
     }
     setAsking(false);
     setNote("");
+    if (decision === "APPROVED") toast.success(`${name}'s renewal approved`, "The new expiry date is saved.");
+    else toast.info(`${name}'s renewal rejected`, "They were told why and can upload it again.");
     router.refresh();
   }
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
 import type { MenuItem } from "@/lib/types";
 
@@ -94,6 +95,8 @@ export function StoreMenu({
       setMessage(result.error);
       return false;
     }
+    if (previous === 0 && next > 0) toast.success(`${item.name} added to your cart`, undefined, { action: { label: "View cart", href: "/resident/cart" }, duration: 3000 });
+    else if (next === 0) toast.info(`${item.name} removed from your cart`, undefined, { duration: 3000 });
     router.refresh(); // the cart badge in the top bar
     return true;
   }

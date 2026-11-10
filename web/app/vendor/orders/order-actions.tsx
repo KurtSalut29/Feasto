@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { Fulfillment, JobDispatch, OrderStatus } from "@/lib/types";
 
 type Step = "accept" | "preparing" | "ready" | "complete";
@@ -51,6 +52,16 @@ export function OrderActions({
       setError(result.fieldErrors?.reason?.[0] ?? result.error);
       return false;
     }
+    const done = {
+      accept: ["Order accepted", "The resident was told. Start preparing when you're ready."],
+      preparing: ["Marked as preparing", "The resident can see you're cooking it."],
+      ready: ["Ready for pickup", "We're telling the rider (or the resident, for pickup) that it's ready."],
+      complete: ["Order completed", "Nice! It's moved to your history."],
+      reject: ["Order declined", "The resident was told why. Any online payment is refunded."],
+    } as const;
+    const [title, description] = done[step];
+    if (step === "reject") toast.info(title, description);
+    else toast.success(title, description);
     router.refresh();
     return true;
   }

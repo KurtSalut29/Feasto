@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 type Transport = "rabbitmq" | "outbox" | "pubsub" | "redis" | "http";
 type Step = {
@@ -115,6 +116,7 @@ export function MarshallingPanel() {
     const result = await apiRequest<{ messageId: string }>("/admin/marshalling/sample", { method: "POST", body: {} });
     setSending(false);
     if (!result.ok) return setError(result.error);
+    toast.info("Sample message sent", "Watch its trip below: outbox, RabbitMQ, then a worker.");
     setTransport(null);
     setLive(true);
     // Follow the sample: choose its first step as soon as it shows up

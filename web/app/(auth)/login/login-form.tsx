@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { AUTH_BUTTON } from "../auth-ui";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 
@@ -36,6 +37,7 @@ export function LoginForm() {
     // A full page load (not router.replace) after signing in: Next.js keeps visited pages
     // alive in the background, so this clears the old form, its loading state and the
     // typed password, and makes the next visit to /login or /register check the new session.
+    toast.later({ tone: "success", title: `Welcome back, ${result.data.user.name.split(" ")[0]}!`, description: "You're logged in." });
     window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 

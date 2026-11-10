@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { pinOf, type LatLng } from "@/lib/geo";
 import type { Address } from "@/lib/types";
 
@@ -51,6 +52,7 @@ function AddressDialog({
       setFieldErrors(result.fieldErrors ?? {});
       return;
     }
+    toast.success(address ? "Address updated" : "Address added", address ? undefined : "You can choose it when you check out.");
     onSaved();
   }
 
@@ -164,7 +166,9 @@ export function AddressManager({ addresses, startAdding = false }: { addresses: 
                     <button
                       type="button"
                       onClick={async () => {
-                        await apiRequest(`/me/addresses/${address.id}`, { method: "DELETE" });
+                        const result = await apiRequest(`/me/addresses/${address.id}`, { method: "DELETE" });
+                        if (!result.ok) return toast.error(`Couldn't delete ${address.label}`, result.error);
+                        toast.success(`${address.label} deleted`);
                         router.refresh();
                       }}
                       aria-label={`Delete ${address.label}`}

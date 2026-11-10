@@ -4,6 +4,7 @@ import { LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** "Add" button that turns into a − 2 + stepper. Saves each change to the cart. */
 export function QuantityControl({
@@ -36,6 +37,7 @@ export function QuantityControl({
       setError(result.error);
       return;
     }
+    if (next === 0) toast.info(`${name} removed from your cart`, undefined, { duration: 3000 });
     router.refresh(); // updates the cart badge and totals
   }
 

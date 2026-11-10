@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 const EMPTY = { currentPassword: "", newPassword: "", confirm: "" };
 
@@ -43,6 +44,7 @@ export function PasswordForm() {
     setFieldErrors({});
     setValues(EMPTY);
     setSaved(true);
+    toast.success("Password changed", "Use the new one the next time you log in. Your other devices were logged out.");
   }
 
   return (

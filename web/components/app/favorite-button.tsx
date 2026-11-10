@@ -4,6 +4,7 @@ import { Heart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** Heart that saves a store to the resident's favorites. Changes instantly, then syncs. */
 export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { storeId: string; storeName: string; isFavorite: boolean; plain?: boolean }) {
@@ -17,8 +18,13 @@ export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { stor
     setBusy(true);
     const result = await apiRequest(`/stores/${storeId}/favorite`, { method: next ? "PUT" : "DELETE" });
     setBusy(false);
-    if (!result.ok) setSaved(!next);
-    else router.refresh();
+    if (!result.ok) {
+      setSaved(!next);
+      return toast.error(next ? `Couldn't save ${storeName}` : `Couldn't remove ${storeName}`, result.error);
+    }
+    if (next) toast.success(`${storeName} saved`, "Find it anytime under Saved.", { action: { label: "See saved stores", href: "/resident/saved" }, duration: 3500 });
+    else toast.info(`${storeName} removed from Saved`, undefined, { duration: 3000 });
+    router.refresh();
   }
 
   return (

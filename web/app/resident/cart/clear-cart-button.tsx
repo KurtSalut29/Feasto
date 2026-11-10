@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 export function ClearCartButton() {
   const router = useRouter();
@@ -13,8 +14,10 @@ export function ClearCartButton() {
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        await apiRequest("/cart", { method: "DELETE" });
+        const result = await apiRequest("/cart", { method: "DELETE" });
         setBusy(false);
+        if (!result.ok) return toast.error("Couldn't clear your cart", result.error);
+        toast.success("Cart cleared");
         router.refresh();
       }}
       className="shrink-0 rounded-lg px-2 py-1 text-sm font-semibold text-muted hover:bg-canvas hover:text-red-600"

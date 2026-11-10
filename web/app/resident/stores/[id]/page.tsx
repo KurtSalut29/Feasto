@@ -1,4 +1,5 @@
 import { Banknote, Bike, CalendarDays, ChevronRight, Clock, MapPin, MessageSquareText, Star, Store, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react";
+import { distanceText, feeParts } from "@/components/app/delivery-fee";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -108,7 +109,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
             }
           />
           {distance !== null && address && <Fact label={`from ${address.label}`} value={formatDistance(distance)} />}
-          <Fact label="delivery fee" value={formatPeso(store.deliveryFee)} />
+          <Fact label={store.delivery ? `delivery to ${store.delivery.addressLabel}` : "delivery from"} value={formatPeso(store.deliveryFee)} />
         </dl>
 
         <div className="mt-3 flex gap-2">
@@ -248,7 +249,14 @@ function StoreInfo({
             </span>
           </InfoRow>
           <InfoRow Icon={Bike} label="Delivery">
-            {formatPeso(store.deliveryFee)} per store
+            {store.delivery ? (
+              <>
+                {formatPeso(store.delivery.fee)} to {store.delivery.addressLabel} · {distanceText(store.delivery)}
+                <span className="mt-0.5 block text-xs text-gray-500">{feeParts(store.delivery).join(" + ")}</span>
+              </>
+            ) : (
+              `From ${formatPeso(store.deliveryFee)}, depending on how far you are. Add an address to see your fee.`
+            )}
           </InfoRow>
           <InfoRow Icon={Store} label="Pickup">
             Free. Collect it at the store when it&apos;s ready.

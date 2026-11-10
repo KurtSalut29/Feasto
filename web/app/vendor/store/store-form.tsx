@@ -17,6 +17,7 @@ import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { formatTime } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
@@ -211,8 +212,10 @@ export function StoreForm({ initial, permit }: { initial: StoreSettings; permit?
     if (!result.ok) {
       setError(result.fieldErrors ? "Please fix the highlighted fields." : result.error);
       setFieldErrors(result.fieldErrors ?? {});
+      toast.error("Your store wasn't saved", result.fieldErrors ? "Some fields need fixing. They're marked in red." : result.error);
       return;
     }
+    toast.success("Store saved", "Residents see the changes right away.");
     setSavedValues(values);
     setJustSaved(true);
     router.refresh();

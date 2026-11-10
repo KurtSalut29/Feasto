@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { formatTime, manilaDate } from "@/lib/format";
 
 type Slot = { time: string; available: boolean; tablesLeft: number };
@@ -66,6 +67,7 @@ export function BookingForm({ vendorId, storeName, maxPartySize }: { vendorId: s
       pick(() => undefined);
       return;
     }
+    toast.success("Table booked!", "See the details in Bookings. Show your booking code at the store.");
     router.replace(`/resident/bookings?booked=${result.data.booking.id}`);
   }
 

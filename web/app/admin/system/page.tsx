@@ -24,6 +24,9 @@ type Instance = {
   liveConnections?: number;
   busyJobs?: number;
   parallelJobs?: number;
+  /** How many workers were started, and on how many CPUs */
+  workerCount?: number;
+  cpuCount?: number;
 };
 type SystemStatus = {
   servedBy: string;
@@ -99,6 +102,10 @@ async function SystemMonitor() {
   const services = [status.rabbitmq.up, status.postgres.up, status.redis.up];
   const problems = apis.length - apisUp + (workers.length - workersUp) + services.filter((up) => !up).length;
   const waiting = status.rabbitmq.queues.reduce((n, q) => n + q.waiting, 0);
+  const cpus = workers.find((w) => w.online && w.cpuCount)?.cpuCount;
+  const workersNote = cpus
+    ? `One worker per CPU: the server has ${cpus} ${cpus === 1 ? "CPU" : "CPUs"}, so ${workers.find((w) => w.online)?.workerCount ?? workers.length} workers started. Each takes jobs from the queues and handles up to ${workers[0]?.parallelJobs ?? 5} at once.`
+    : "Take jobs from the queues; each handles several at once.";
 
   const instanceCard = (i: Instance) => {
     const load = i.role === "worker" && i.parallelJobs ? (i.busyJobs ?? 0) / i.parallelJobs : null;
@@ -174,7 +181,12 @@ async function SystemMonitor() {
           <ArrowRight className="mx-auto size-4 rotate-90 text-gray-400 md:rotate-0" aria-hidden />
           <FlowNode Icon={Inbox} name="RabbitMQ" detail={`${status.rabbitmq.queues.length} queues`} up={status.rabbitmq.up} />
           <ArrowRight className="mx-auto size-4 rotate-90 text-gray-400 md:rotate-0" aria-hidden />
-          <FlowNode Icon={Workflow} name={`Workers × ${workers.length}`} detail={`${workersUp} of ${workers.length} online`} up={workersUp === workers.length} />
+          <FlowNode
+            Icon={Workflow}
+            name={`Workers × ${workers.length}`}
+            detail={`${workersUp} of ${workers.length} online${cpus ? ` · ${cpus} CPUs` : ""}`}
+            up={workersUp === workers.length}
+          />
         </div>
       </section>
 
@@ -182,8 +194,8 @@ async function SystemMonitor() {
         <ul className="grid gap-3 p-5 md:grid-cols-3">{apis.map(instanceCard)}</ul>
       </Card>
 
-      <Card title="Workers" description="Take jobs from the queues; each handles several at once." Icon={Workflow} className="mt-6">
-        <ul className="grid gap-3 p-5 md:grid-cols-3">{workers.map(instanceCard)}</ul>
+      <Card title="Workers" description={workersNote} Icon={Workflow} className="mt-6">
+        <ul className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">{workers.map(instanceCard)}</ul>
       </Card>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">

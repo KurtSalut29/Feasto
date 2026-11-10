@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 type Reason = "NO_STORE_REPLY" | "NO_RIDER" | "RIDER_NOT_COLLECTING" | "ON_THE_ROAD";
 
@@ -28,6 +29,8 @@ export function StuckActions({ orderId, code, reason, riderName }: { orderId: st
     if (!result.ok) return setError(result.error);
     const { reached } = result.data;
     setDone(reached === 0 ? "No riders are available right now. It stays open to everyone." : `Asked ${reached} ${reached === 1 ? "rider" : "riders"}. It's open to everyone now.`);
+    if (reached === 0) toast.warning("No free riders right now", "The order stays open, so the first rider to come online can take it.");
+    else toast.success(`Asked ${reached} ${reached === 1 ? "rider" : "riders"}`, "The order is open to every rider now.");
     router.refresh();
   }
 
@@ -38,6 +41,7 @@ export function StuckActions({ orderId, code, reason, riderName }: { orderId: st
     setBusy(null);
     if (!result.ok) return setError(result.error);
     setDialog(null);
+    toast.success("Rider taken off the order", "It's open for another rider to take.");
     router.refresh();
   }
 
@@ -48,6 +52,7 @@ export function StuckActions({ orderId, code, reason, riderName }: { orderId: st
     setBusy(null);
     if (!result.ok) return setError(result.fieldErrors?.reason?.[0] ?? result.error);
     setDialog(null);
+    toast.success("Order cancelled", "The resident and the store can see it was cancelled, with your reason.");
     router.refresh();
   }
 

@@ -3,6 +3,7 @@
 import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
+import { toast } from "./toast";
 
 const MAX_SIDE = 1200;
 
@@ -50,6 +51,7 @@ export function ImageUpload({
     setUploading(true);
     try {
       onChange(await uploadPhoto(file));
+      toast.success("Photo uploaded", "Remember to save to keep it.", { duration: 3000 });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try another photo.");
     } finally {

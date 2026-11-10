@@ -123,8 +123,9 @@ export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "match
   /** The ways to pay the store takes */
   acceptsCash: boolean;
   onlinePayments: OnlinePayment[];
-  /** Per store, when delivered */
+  /** Delivery from this store to the resident's address now (the base fee without an address) */
   deliveryFee: number;
+  delivery: (DeliveryQuote & { addressLabel: string }) | null;
   /** How many residents gave 1 to 5 stars */
   ratingBreakdown: Record<"1" | "2" | "3" | "4" | "5", number>;
   menuItems: MenuItem[];
@@ -136,16 +137,35 @@ export type SalesDay = { date: string; orders: number; sales: number };
 
 export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STORE_CLOSED" | "STORE_UNAVAILABLE";
 
+/** One store's delivery fee to an address, and how it was worked out (server/src/lib/deliveryFee.ts) */
+export type DeliveryQuote = {
+  fee: number;
+  /** Road distance in km; null when the store or the address has no map pin */
+  km: number | null;
+  byRoad: boolean;
+  base: number;
+  baseKm: number;
+  extraKm: number;
+  perKm: number;
+  distanceFee: number;
+  peakFee: number;
+  /** "Lunch rush" or "Dinner rush" while it applies */
+  peak: string | null;
+};
+
 export type Cart = {
   groups: {
     store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
     subtotal: number;
     problem: CartProblem | null;
+    /** This store's delivery to the address below; null when the resident has no address yet */
+    delivery: DeliveryQuote | null;
   }[];
   itemCount: number;
   itemsTotal: number;
-  deliveryFeePerStore: number;
+  /** The address the fees were priced for, and all stores' fees together */
+  delivery: { addressId: string | null; addressLabel: string | null; total: number; baseFee: number };
   hasProblems: boolean;
 };
 
@@ -170,6 +190,8 @@ export type PaymentMethod = "COD" | "ONLINE";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 type OrderBase = {
+  /** Road distance that set the delivery fee, when ordered */
+  deliveryKm?: string | null;
   id: string;
   status: OrderStatus;
   fulfillment: Fulfillment;

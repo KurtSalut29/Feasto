@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { Address } from "@/lib/types";
 
 const chipClass =
@@ -50,6 +51,7 @@ export function AddressSwitcher({ addresses }: { addresses: Address[] }) {
     });
     setBusy(null);
     if (!result.ok) return setError(result.error);
+    toast.success(`Delivering to ${address.label}`, "Stores, distances and delivery fees now use this address.");
     close();
     router.refresh();
   }

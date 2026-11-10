@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { uploadPhoto } from "@/components/ui/image-upload";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { OrderStatus } from "@/lib/types";
 
 export function DeliveryActions({ orderId, status }: { orderId: string; status: OrderStatus }) {
@@ -20,6 +21,8 @@ export function DeliveryActions({ orderId, status }: { orderId: string; status: 
     const result = await apiRequest(`/rider/active/${orderId}/${path}`, { method: "POST", body });
     setBusy(false);
     if (!result.ok) return setError(result.error);
+    if (path === "picked-up") toast.success("Pickup confirmed", "Now bring it to the customer. They can see you on their map.");
+    else toast.success("Delivered! Nice work.", "The delivery fee was added to today's earnings.", { duration: 5000 });
     router.refresh();
   }
 

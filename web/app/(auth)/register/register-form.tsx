@@ -23,6 +23,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import type { LatLng } from "@/lib/geo";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
@@ -229,7 +230,15 @@ export function RegisterForm() {
       return;
     }
     // The account now exists. If this upload fails, Home asks for the document again.
-    if (documentFile) await uploadDocument(documentFile).catch(() => undefined);
+    const uploaded = documentFile ? await uploadDocument(documentFile).then(() => true, () => false) : true;
+    const role = result.data.user.role;
+    toast.later(
+      role === "RESIDENT"
+        ? { tone: "success", title: "Your account is ready!", description: "Welcome to Feasto. Pick a store near you to order." }
+        : uploaded
+          ? { tone: "success", title: "Account created", description: "Feasto will review your details. We'll let you know when you're approved." }
+          : { tone: "warning", title: "Account created, but the document didn't upload", description: "Upload it again from your home page so Feasto can review you." },
+    );
     // A full page load (not router.replace) after signing in: Next.js keeps visited pages
     // alive in the background, so this clears the old form, its loading state and the
     // typed password, and makes the next visit to /login or /register check the new session.

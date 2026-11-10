@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 
 /** The store's code for its riders, with Copy and "make a new one". */
 export function RiderCode({ code }: { code: string }) {
@@ -22,6 +23,7 @@ export function RiderCode({ code }: { code: string }) {
     setBusy(false);
     if (!result.ok) return setError(result.error);
     setAsking(false);
+    toast.success("New rider code made", "Share it with riders you want to join. The old code no longer works.");
     router.refresh();
   }
 
@@ -155,6 +157,7 @@ export function RemoveRiderButton({ id, name }: { id: string; name: string }) {
     setBusy(false);
     if (!result.ok) return setError(result.error);
     setAsking(false);
+    toast.success(`${name} is no longer your rider`, "They can apply to Feasto as a free rider.");
     router.refresh();
   }
 

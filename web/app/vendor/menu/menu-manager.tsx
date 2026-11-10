@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiRequest } from "@/lib/browser-api";
+import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
 import type { MenuItem } from "@/lib/types";
 import { DishDialog } from "./dish-dialog";
@@ -51,8 +52,14 @@ function AvailabilityToggle({ item, onChanged }: { item: MenuItem; onChanged: ()
           setBusy(true);
           const result = await apiRequest(`/vendor/menu/${item.id}`, { method: "PATCH", body: { isAvailable: next } });
           setBusy(false);
-          if (!result.ok) setOn(!next);
-          else onChanged();
+          if (!result.ok) {
+            setOn(!next);
+            toast.error(`Couldn't change ${item.name}`, result.error);
+            return;
+          }
+          if (next) toast.success(`${item.name} is on the menu`, "Residents can order it again.", { duration: 3000 });
+          else toast.info(`${item.name} is hidden`, "Residents won't see it until you turn it back on.", { duration: 3500 });
+          onChanged();
         }}
         className={`relative h-6 w-11 shrink-0 rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
           on ? "bg-emerald-600" : "bg-gray-300"
@@ -302,8 +309,10 @@ export function MenuManager({ items }: { items: MenuItem[] }) {
             onClick={async () => {
               if (!deleting) return;
               setBusy(true);
-              await apiRequest(`/vendor/menu/${deleting.id}`, { method: "DELETE" });
+              const result = await apiRequest(`/vendor/menu/${deleting.id}`, { method: "DELETE" });
               setBusy(false);
+              if (!result.ok) return toast.error(`Couldn't delete ${deleting.name}`, result.error);
+              toast.success(`${deleting.name} deleted`, "It's no longer on your menu.");
               setDeleting(null);
               refresh();
             }}

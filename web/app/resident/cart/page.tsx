@@ -1,4 +1,5 @@
 import { ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { DeliveryFeeLine } from "@/components/app/delivery-fee";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -56,7 +57,7 @@ async function ResidentCart() {
   }
 
   const stores = cart.groups.length;
-  const delivery = cart.deliveryFeePerStore * stores;
+  const delivery = cart.delivery.addressId ? cart.delivery.total : cart.delivery.baseFee * stores;
 
   return (
     <>
@@ -88,7 +89,7 @@ async function ResidentCart() {
             <li className="flex gap-2">
               <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-700">3</span>
               <span>
-                Each order comes with its own rider ({formatPeso(cart.deliveryFeePerStore)} each). Online, you pay once for all; with cash, you pay each rider their part.
+                Each order comes with its own rider, and each delivery fee follows how far that store is from you. Online, you pay once for all; with cash, you pay each rider their part.
               </span>
             </li>
           </ol>
@@ -139,6 +140,11 @@ async function ResidentCart() {
               <span className="text-muted">Subtotal</span>
               <span className="font-semibold text-ink tabular-nums">{formatPeso(group.subtotal)}</span>
             </div>
+            {group.delivery && (
+              <div className="border-t border-dashed border-line bg-canvas/60 px-4 py-2.5">
+                <DeliveryFeeLine quote={group.delivery} />
+              </div>
+            )}
           </section>
         ))}
       </div>
@@ -151,7 +157,9 @@ async function ResidentCart() {
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted">
-              Delivery ({formatPeso(cart.deliveryFeePerStore)} × {stores} {stores === 1 ? "store" : "stores"})
+              {cart.delivery.addressId
+                ? `Delivery to ${cart.delivery.addressLabel}${stores > 1 ? ` (${stores} stores)` : ""}`
+                : `Delivery (from ${formatPeso(cart.delivery.baseFee)} per store)`}
             </dt>
             <dd className="text-ink tabular-nums">{formatPeso(delivery)}</dd>
           </div>
@@ -160,7 +168,10 @@ async function ResidentCart() {
             <dd className="tabular-nums">{formatPeso(cart.itemsTotal + delivery)}</dd>
           </div>
         </dl>
-        <p className="mt-2 text-xs text-muted">Pickup is free: choose it at checkout to pay {formatPeso(cart.itemsTotal)} only.</p>
+        <p className="mt-2 text-xs text-muted">
+          The delivery fee depends on the distance by road{cart.groups.some((g) => g.delivery?.peak) ? " and the rush hour" : ""}. Pickup is free: choose it at checkout to pay{" "}
+          {formatPeso(cart.itemsTotal)} only.
+        </p>
       </section>
 
       {/* Room so the bar below never covers the total */}

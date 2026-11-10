@@ -65,6 +65,27 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
       </div>
 
       <div className="space-y-4">
+        {/* Live tracking comes first: it's what the resident opens this page for */}
+        {onTheWay && (
+          <RiderTracking
+            orderId={order.id}
+            initial={riderLocation}
+            store={pinOf(order.vendor.latitude, order.vendor.longitude)}
+            storeName={order.vendor.name}
+            home={pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng)}
+            homeAddress={order.checkout.deliveryAddress}
+            rider={
+              order.rider && {
+                name: order.rider.name,
+                phone: order.rider.phone,
+                vehicle: order.rider.riderProfile
+                  ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
+                  : null,
+              }
+            }
+            pickedUp={order.status === "PICKED_UP"}
+          />
+        )}
         {order.status === "AWAITING_PAYMENT" && (
           <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-amber-900">
             <LoaderCircle className="size-5 animate-spin" aria-hidden />
@@ -106,28 +127,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </Section>
         )}
 
-        {onTheWay && (
-          <RiderTracking
-            orderId={order.id}
-            initial={riderLocation}
-            store={pinOf(order.vendor.latitude, order.vendor.longitude)}
-            storeName={order.vendor.name}
-            home={pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng)}
-            homeAddress={order.checkout.deliveryAddress}
-            rider={
-              order.rider && {
-                name: order.rider.name,
-                phone: order.rider.phone,
-                vehicle: order.rider.riderProfile
-                  ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
-                  : null,
-              }
-            }
-            pickedUp={order.status === "PICKED_UP"}
-          />
-        )}
 
-        {/* While it's on the way, the rider is shown with the live map above */}
+        {/* While it's on the way, the rider is shown with the live map at the top */}
         {order.rider && !dropped && !onTheWay && (
           <Section title="Your rider">
             <div className="flex items-center gap-3">
@@ -169,7 +170,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </ul>
           <div className="mt-3 space-y-1 border-t border-line pt-3 text-[15px]">
             <div className="flex justify-between">
-              <span className="text-muted">Delivery fee</span>
+              <span className="text-muted">Delivery fee{order.deliveryKm ? ` (${Number(order.deliveryKm).toFixed(1)} km)` : ""}</span>
               <span className="text-ink">{Number(order.deliveryFee) ? formatPeso(order.deliveryFee) : "Free"}</span>
             </div>
             <div className="flex justify-between font-bold text-ink">
