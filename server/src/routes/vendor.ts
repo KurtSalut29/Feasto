@@ -3,7 +3,9 @@ import { z } from "zod";
 import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
 import type { OrderStatus, Prisma } from "../generated/prisma/client.js";
 import { invalidateStore } from "../lib/redisCache.js";
+import { autoCancelAt } from "../lib/autoCancel.js";
 import { prisma } from "../lib/db.js";
+import { getSettings } from "../lib/settings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { BUSY } from "../lib/dispatch.js";
@@ -217,9 +219,11 @@ vendorRouter.get("/orders", async (req, res) => {
   const count = (statuses: readonly OrderStatus[]) =>
     counts.filter((c) => statuses.includes(c.status)).reduce((n, c) => n + c._count, 0);
 
+  // When each waiting order will be cancelled by itself, so the store sees the deadline
+  const { autoCancelMinutes } = await getSettings();
   res.json({
     tab,
-    orders: await withRiderLocations(orders),
+    orders: (await withRiderLocations(orders)).map((o) => ({ ...o, autoCancel: autoCancelAt(o, autoCancelMinutes) })),
     counts: { new: count(ORDER_TABS.new), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
   });
 });

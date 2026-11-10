@@ -123,10 +123,12 @@ The permits and licenses in the demo are made-up samples marked SAMPLE ONLY (`se
 | Role | Email | What to show |
 |---|---|---|
 | Admin | `admin@feasto.com` | 3 approvals waiting, 1 renewal to check, expired and expiring documents, stuck orders, activity log, settings, sales chart, reports, system monitor, disable a user |
-| Resident | `juan@feasto.com` | Saved stores, an order being prepared, past orders to rate and order again, a table booking |
+| Resident | `juan@feasto.com` | Saved stores, an order being prepared with rider Jessa on the live map, past orders to rate and order again, a table booking |
 | Vendor | `nena@feasto.com` | Aling Nena's Carinderia: 2 new orders waiting, sales chart, ratings; own riders: Mark approved, Leo waiting for approval |
 | Vendor | `remy@feasto.com` | Lola Remy's Kitchen: tables and bookings, a ready order waiting for a rider |
 | Rider | `pedro@feasto.com` | Online, 2 ready jobs waiting, earnings history |
+
+Orders the store doesn't accept, and jobs no rider takes, are cancelled by themselves after 10 minutes (Admin → Settings), so the waiting orders and jobs above are there for about 9 minutes after the reset. To show them later, place a new order.
 
 Other demo accounts: vendors `marco@`, `bea@`, `ramon@`, `kim@`, `ben@`, `sofia@`, `lorna@`, `carlos@`;
 free riders `jessa@` (license expiring soon), `ariel@` (license expired) and `rico@` (pending); Aling Nena's riders `mark@` and `leo@` (pending); residents `maria@`, `carlo@`, `andrea@`,
@@ -158,6 +160,7 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Parallel processing** | One worker process per CPU (`server/src/workers.ts`, `os.availableParallelism()`; `WORKER_COUNT` in `.env` overrides it), each handling 5 jobs at once | Admin → System shows "One worker per CPU". Order from 3 stores in one checkout: all 3 stores are notified in ~1× the time, not 3× |
 | **Map-reduce** | Sales report split into one job per store, combined at the end | Admin → Reports: "Computed in 0.96 s · 19 store jobs on worker-1 to worker-4" |
 | **Message queue + outbox** | Checkout writes events in the same DB transaction; workers relay them to RabbitMQ | Admin → System shows queues and "events waiting to be sent" |
+| **Auto-cancel (self-healing)** | Every worker checks every 15 s for orders no store accepted, or no rider took, within the admin's time (10 min); one worker cancels each (conditional update), puts the stock back, refunds and tells the resident and the store | Place an order and don't accept it: after 10 minutes it's cancelled and both get a notification. Admin → Activity log shows "Feasto (automatic)" |
 | **Saga (distributed transaction)** | Online payment fails → orders cancelled and stock restored automatically | At checkout choose Online payment and turn on "Demo: make the payment fail" |
 | **Idempotency** | Each checkout carries a one-time key | Double-clicking "Place order" never creates two orders |
 | **Concurrency control** | Conditional updates and unique indexes | 10 buyers for the last item → 1 order; 5 riders accept one job → 1 gets it; 100 bookings for one table → 1 (`loadtest/booking-race.js`) |

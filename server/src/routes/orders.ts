@@ -4,7 +4,9 @@ import { Prisma } from "../generated/prisma/client.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
 import { invalidateStore } from "../lib/redisCache.js";
 import { readCartQuantities, setCartQuantity } from "../lib/cart.js";
+import { autoCancelAt } from "../lib/autoCancel.js";
 import { prisma } from "../lib/db.js";
+import { getSettings } from "../lib/settings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { notify } from "../lib/liveUpdates.js";
@@ -44,7 +46,9 @@ ordersRouter.get("/:id", async (req, res) => {
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   // The rider's last known position, kept in Redis from accepting the job until it's delivered
   const location = order.riderId && ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) ? await redis.get(`rider-location:${order.id}`) : null;
-  res.json({ order, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
+  // When it will be cancelled by itself if nobody takes it, so the resident knows what to expect
+  const autoCancel = autoCancelAt(order, (await getSettings()).autoCancelMinutes);
+  res.json({ order, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
 });
 
 /** Residents can cancel until the store accepts. If both happen at once, only one wins. */

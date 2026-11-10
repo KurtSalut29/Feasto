@@ -652,12 +652,31 @@ async function main() {
   // ----- Live orders right now -----
   const byName = (name: string) => stores.find((s) => s.seed.name === name)!;
   const ago = (m: number) => new Date(Date.now() - minutes(m));
-  await createOrder({ store: byName("Aling Nena's Carinderia"), resident: residents[1], createdAt: ago(4), status: "PLACED", fulfillment: "DELIVERY" });
-  await createOrder({ store: byName("Aling Nena's Carinderia"), resident: residents[2], createdAt: ago(2), status: "PLACED", fulfillment: "PICKUP" });
-  await createOrder({ store: byName("Aling Nena's Carinderia"), resident: residents[4], createdAt: ago(12), status: "PREPARING", fulfillment: "DELIVERY" });
-  await createOrder({ store: byName("Burger Barn"), resident: juan, createdAt: ago(9), status: "PREPARING", fulfillment: "DELIVERY", paymentMethod: "ONLINE" });
-  await createOrder({ store: byName("Lola Remy's Kitchen"), resident: residents[3], createdAt: ago(26), status: "READY", fulfillment: "DELIVERY" });
-  await createOrder({ store: byName("Isla Grill & Seafood"), resident: residents[5], createdAt: ago(31), status: "READY", fulfillment: "DELIVERY" });
+  // Orders and jobs nobody has taken are cancelled by themselves after the admin's auto-cancel time
+  // (10 minutes by default), so these start fresh: the store and the riders have about 9 minutes.
+  const startFresh = (order: { id: string }, status: OrderStatus) =>
+    prisma.order.update({
+      where: { id: order.id },
+      data: status === "PLACED" ? { createdAt: ago(1) } : { acceptedAt: ago(1), ...(status === "READY" && { readyAt: ago(0.5) }) },
+    });
+  const live: [Parameters<typeof createOrder>[0], OrderStatus][] = [
+    [{ store: byName("Aling Nena's Carinderia"), resident: residents[1], createdAt: ago(4), status: "PLACED", fulfillment: "DELIVERY" }, "PLACED"],
+    [{ store: byName("Aling Nena's Carinderia"), resident: residents[2], createdAt: ago(2), status: "PLACED", fulfillment: "PICKUP" }, "PLACED"],
+    [{ store: byName("Aling Nena's Carinderia"), resident: residents[4], createdAt: ago(12), status: "PREPARING", fulfillment: "DELIVERY" }, "PREPARING"],
+    [{ store: byName("Lola Remy's Kitchen"), resident: residents[3], createdAt: ago(26), status: "READY", fulfillment: "DELIVERY" }, "READY"],
+    [{ store: byName("Isla Grill & Seafood"), resident: residents[5], createdAt: ago(31), status: "READY", fulfillment: "DELIVERY" }, "READY"],
+  ];
+  for (const [opts, status] of live) await startFresh(await createOrder(opts), status);
+
+  // Juan's Burger Barn order already has a rider (Jessa) heading to the store, so live tracking
+  // shows right away. With a rider it's never cancelled by itself.
+  const jessa = riders[RIDERS.findIndex((r) => r.email === "jessa@feasto.com")]!;
+  const barn = byName("Burger Barn");
+  const tracked = await createOrder({ store: barn, resident: juan, createdAt: ago(9), status: "PREPARING", fulfillment: "DELIVERY", paymentMethod: "ONLINE", rider: jessa });
+  if (barn.vendor.latitude != null && barn.vendor.longitude != null) {
+    const at = { lat: barn.vendor.latitude + 0.0021, lng: barn.vendor.longitude - 0.0016, at: new Date().toISOString() };
+    await redis.set(`rider-location:${tracked.id}`, JSON.stringify(at), "EX", 3600);
+  }
   // Juan's past orders that are easy to find, rated and unrated
   await createOrder({ store: byName("Kape Kanto"), resident: juan, createdAt: manilaAt(1, "08:40"), status: "DELIVERED", fulfillment: "DELIVERY", review: false });
   await createOrder({ store: byName("Sweet Spot Desserts"), resident: juan, createdAt: manilaAt(2, "15:10"), status: "COMPLETED", fulfillment: "PICKUP", review: true });

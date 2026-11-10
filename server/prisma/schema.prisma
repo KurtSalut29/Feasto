@@ -299,6 +299,8 @@ model PlatformSettings {
   riderWaveSeconds  Int      @default(30)
   /// How long an order waits for a store or rider before the admin is told
   stuckMinutes      Int      @default(15)
+  /// An order the store didn't accept, or no rider took, in this many minutes is cancelled by itself (0 = never)
+  autoCancelMinutes Int      @default(10)
   updatedAt         DateTime @updatedAt
 }
 

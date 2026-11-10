@@ -8,6 +8,7 @@ import { broadcastOrder, orderCode, restoreStock, settlePayment } from "./lib/or
 import { enqueue, relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
+import { autoCancelStaleOrders } from "./lib/autoCancel.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/rabbitmq.js";
 import { CHANNELS, notify, publish as publishRealtime } from "./lib/liveUpdates.js";
 import { marshal, unmarshal } from "./lib/marshalling.js";
@@ -226,6 +227,21 @@ const dispatchTimer = setInterval(async () => {
   }
 }, 1000);
 
+// ---------- Orders nobody took: cancelled by themselves ----------
+
+let cancelling = false;
+const autoCancelTimer = setInterval(async () => {
+  if (cancelling) return;
+  cancelling = true;
+  try {
+    await autoCancelStaleOrders(log);
+  } catch (error) {
+    console.error(`[${config.instanceId}] auto-cancel failed`, error);
+  } finally {
+    cancelling = false;
+  }
+}, 15_000);
+
 // ---------- Expiring documents and stuck orders ----------
 
 let monitoring = false;
@@ -253,6 +269,7 @@ async function shutdown() {
   log("shutting down");
   clearInterval(relayTimer);
   clearInterval(dispatchTimer);
+  clearInterval(autoCancelTimer);
   clearInterval(monitorTimer);
   stopHeartbeat();
   await channel.close();

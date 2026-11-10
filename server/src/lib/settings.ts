@@ -25,6 +25,8 @@ export const DEFAULT_SETTINGS = {
   storeRiderSeconds: 60,
   riderWaveSeconds: 30,
   stuckMinutes: 15,
+  /** Orders no store accepted, or no rider took, are cancelled by themselves after this (0 = off) */
+  autoCancelMinutes: 10,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -89,6 +91,10 @@ export const settingsSchema = z.object({
   storeRiderSeconds: whole(10, 600, "seconds"),
   riderWaveSeconds: whole(10, 300, "seconds"),
   stuckMinutes: whole(1, 240, "minutes"),
+  autoCancelMinutes: z
+    .number("Enter 0 to turn it off, or 3 to 120 minutes.")
+    .int("Enter 0 to turn it off, or 3 to 120 minutes.")
+    .refine((v) => v === 0 || (v >= 3 && v <= 120), "Enter 0 to turn it off, or 3 to 120 minutes."),
 });
 
 /**
@@ -99,7 +105,7 @@ export function getSettings(): Promise<Settings> {
   return cached(CACHE_KEYS.settings, 60, async () => {
     const row = await prisma.platformSettings.findUnique({ where: { id: 1 } });
     if (!row) return DEFAULT_SETTINGS;
-    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes } = row;
+    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes } = row;
     const saved = peakHours.safeParse(row.peakHours);
     return {
       deliveryFee: Number(deliveryFee),
@@ -110,6 +116,7 @@ export function getSettings(): Promise<Settings> {
       storeRiderSeconds,
       riderWaveSeconds,
       stuckMinutes,
+      autoCancelMinutes,
     };
   });
 }
