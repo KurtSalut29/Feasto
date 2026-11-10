@@ -283,8 +283,16 @@ model ActivityLog {
 /// What the admin can change without a new release. There's only ever one row, with id 1.
 model PlatformSettings {
   id                Int      @id @default(1)
-  /// Per store in a checkout. Orders keep the fee they were placed with.
+  /// Base delivery fee per store, covering the first `deliveryBaseKm` km. Orders keep the fee they were placed with.
   deliveryFee       Decimal  @default(49) @db.Decimal(10, 2)
+  /// How many kilometres (by road) the base fee covers
+  deliveryBaseKm    Decimal  @default(2) @db.Decimal(4, 1)
+  /// Added for every kilometre (or part of one) after that
+  deliveryPerKm     Decimal  @default(8) @db.Decimal(10, 2)
+  /// Added during the rush hours below, when riders are busiest
+  deliveryPeakFee   Decimal  @default(10) @db.Decimal(10, 2)
+  /// The rush hours the admin set: [{ name, from: "11:00", to: "13:00", days: [0..6] }], Manila time, 0 = Sunday
+  peakHours         Json     @default("[{\"name\":\"Lunch rush\",\"from\":\"11:00\",\"to\":\"13:00\",\"days\":[0,1,2,3,4,5,6]},{\"name\":\"Dinner rush\",\"from\":\"17:00\",\"to\":\"20:00\",\"days\":[0,1,2,3,4,5,6]}]")
   /// How long a store's own riders have a job to themselves
   storeRiderSeconds Int      @default(60)
   /// The wait between waves of free riders
@@ -351,6 +359,8 @@ model Order {
   fulfillment      Fulfillment
   subtotal         Decimal     @db.Decimal(10, 2)
   deliveryFee      Decimal     @default(0) @db.Decimal(10, 2)
+  /// Road distance from the store to the resident when it was ordered, which set the fee
+  deliveryKm       Decimal?    @db.Decimal(5, 1)
   rejectReason     String?
   /// Photo the rider took at the door, under /uploads/
   deliveryPhotoUrl String?

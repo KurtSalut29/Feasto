@@ -9,8 +9,10 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 export const cartRouter = Router();
 cartRouter.use(requireAuth, requireRole("RESIDENT"));
 
+/** `?addressId=` prices each store's delivery to that address (checkout, when the resident picks one) */
 cartRouter.get("/", async (req, res) => {
-  res.json({ cart: await buildCart(req.session!.userId) });
+  const addressId = typeof req.query.addressId === "string" && req.query.addressId ? req.query.addressId : undefined;
+  res.json({ cart: await buildCart(req.session!.userId, addressId) });
 });
 
 /** A lighter call for the cart badge: just the number of items. */

@@ -172,7 +172,7 @@ authRouter.post("/register", async (req, res) => {
       if (uniqueViolationField(error).includes("licenseNumber")) {
         throw new ValidationError({ licenseNumber: ["This license number is already registered to another rider."] });
       }
-      if (uniqueViolationField(error).includes("riderCode")) throw new HttpError(409, "Something went wrong. Please try again.");
+      if (uniqueViolationField(error).includes("riderCode")) throw new HttpError(409, "Two sign-ups happened at the same moment. Tap Create account again.");
       throw new ValidationError({ email: ["An account with this email already exists."] });
     }
     throw error;

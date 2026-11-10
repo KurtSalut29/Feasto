@@ -31,6 +31,8 @@ export const config = {
   orderProcessingDelayMs: Number(process.env.ORDER_PROCESSING_DELAY_MS ?? 800),
   paymentDelayMs: Number(process.env.PAYMENT_DELAY_MS ?? 1500),
   reportPartDelayMs: Number(process.env.REPORT_PART_DELAY_MS ?? 300),
+  // Mapbox, for road distances that set the delivery fee. Without it, distances are estimated.
+  mapboxToken: process.env.MAPBOX_TOKEN ?? "",
   // Name shown in responses and logs so you can see which copy handled the work.
   instanceId: process.env.INSTANCE_ID ?? os.hostname(),
 };

@@ -21,7 +21,7 @@ vendorRouter.use(requireAuth, requireRole("VENDOR"));
 /** The signed-in vendor's store id. */
 export async function myVendorId(userId: string) {
   const vendor = await prisma.vendor.findUnique({ where: { ownerId: userId }, select: { id: true } });
-  if (!vendor) throw new HttpError(404, "Store not found.");
+  if (!vendor) throw new HttpError(404, "We couldn't find this store.");
   return vendor.id;
 }
 
@@ -130,7 +130,7 @@ vendorRouter.patch("/menu/:id", async (req, res) => {
     where: { id: String(req.params.id), vendorId, deletedAt: null },
     data: input,
   });
-  if (count === 0) throw new HttpError(404, "Dish not found.");
+  if (count === 0) throw new HttpError(404, "We couldn't find this dish. It may have been deleted.");
   await invalidateStore(vendorId);
   res.json({ ok: true });
 });
@@ -142,7 +142,7 @@ vendorRouter.delete("/menu/:id", async (req, res) => {
     where: { id: String(req.params.id), vendorId, deletedAt: null },
     data: { deletedAt: new Date(), isAvailable: false },
   });
-  if (count === 0) throw new HttpError(404, "Dish not found.");
+  if (count === 0) throw new HttpError(404, "We couldn't find this dish. It may have been deleted.");
   await invalidateStore(vendorId);
   res.status(204).end();
 });
@@ -196,7 +196,7 @@ vendorRouter.get("/orders/:id", async (req, res) => {
     where: { id: String(req.params.id), vendorId },
     include: { ...vendorOrderInclude, vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } } },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   const [withLocation] = await withRiderLocations([order]);
   res.json({ order: withLocation });
 });
@@ -237,7 +237,7 @@ async function vendorStep(
 ) {
   const vendorId = await myVendorId(userId);
   const order = await prisma.order.findFirst({ where: { id: orderId, vendorId }, select: { checkoutId: true, fulfillment: true } });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   if (options.pickupOnly && order.fulfillment !== "PICKUP") throw new HttpError(400, "Delivery orders are completed by the rider.");
 
   await prisma.$transaction(async (tx) => {

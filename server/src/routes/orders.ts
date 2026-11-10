@@ -41,7 +41,7 @@ ordersRouter.get("/:id", async (req, res) => {
     where: { id: String(req.params.id), checkout: { residentId: req.session!.userId } },
     include: orderInclude,
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   // The rider's last known position, kept in Redis from accepting the job until it's delivered
   const location = order.riderId && ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) ? await redis.get(`rider-location:${order.id}`) : null;
   res.json({ order, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
@@ -54,7 +54,7 @@ ordersRouter.post("/:id/cancel", async (req, res) => {
     where: { id, checkout: { residentId: req.session!.userId } },
     select: { checkoutId: true, vendor: { select: { ownerId: true, name: true } } },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const vendorId = await prisma.$transaction(async (tx) => {
     await transition(tx, id, ["PLACED", "AWAITING_PAYMENT"], "CANCELLED", { finishedAt: new Date(), rejectReason: "Cancelled by the resident" });
@@ -90,7 +90,7 @@ ordersRouter.post("/:id/review", async (req, res) => {
     where: { id, checkout: { residentId } },
     select: { status: true, vendorId: true, vendor: { select: { ownerId: true } } },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   if (order.status !== "DELIVERED" && order.status !== "COMPLETED") {
     throw new HttpError(400, "You can rate an order once you've received it.");
   }
@@ -139,7 +139,7 @@ ordersRouter.post("/:id/reorder", async (req, res) => {
       },
     },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const inCart = new Map((await readCartQuantities(userId)).map((l) => [l.menuItemId, l.quantity]));
   const added: string[] = [];

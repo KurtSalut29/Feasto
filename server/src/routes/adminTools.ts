@@ -217,7 +217,7 @@ adminToolsRouter.get("/stuck", async (req, res) => {
 adminToolsRouter.post("/stuck/:id/ask-riders", async (req, res) => {
   const id = String(req.params.id);
   const order = await prisma.order.findUnique({ where: { id }, select: { vendorId: true, vendor: { select: { name: true } } } });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const code = orderCode(id);
   await prisma.$transaction(async (tx) => {
@@ -245,7 +245,7 @@ adminToolsRouter.post("/stuck/:id/release-rider", async (req, res) => {
     where: { id },
     select: { riderId: true, rider: { select: { name: true } }, vendor: { select: { name: true, ownerId: true } }, checkout: { select: { residentId: true } } },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   const { riderId, rider, vendor, checkout } = order;
   if (!riderId) throw new HttpError(409, "This order has no rider now. Refresh to see the latest.");
 
@@ -279,7 +279,7 @@ adminToolsRouter.post("/orders/:id/cancel", async (req, res) => {
     where: { id },
     select: { status: true, checkoutId: true, riderId: true, vendor: { select: { name: true, ownerId: true } }, checkout: { select: { residentId: true } } },
   });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const code = orderCode(id);
   const vendorId = await prisma.$transaction(async (tx) => {
@@ -341,25 +341,39 @@ adminToolsRouter.get("/settings", async (_req, res) => {
   res.json({ settings: await getSettings() });
 });
 
-const SETTING_WORDS: Record<keyof Settings, { label: string; show: (value: number) => string }> = {
-  deliveryFee: { label: "Delivery fee", show: (value) => `₱${value}` },
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const daysInWords = (days: number[]) =>
+  days.length === 7 ? "every day" : days.join() === "1,2,3,4,5" ? "weekdays" : days.join() === "0,6" ? "weekends" : days.map((d) => DAY_SHORT[d]).join(", ");
+
+const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Settings[K]) => string } } = {
+  deliveryFee: { label: "Base delivery fee", show: (value) => `₱${value}` },
+  deliveryBaseKm: { label: "Km the base fee covers", show: (value) => `${value} km` },
+  deliveryPerKm: { label: "Price per extra km", show: (value) => `₱${value}` },
+  deliveryPeakFee: { label: "Rush-hour add-on", show: (value) => `₱${value}` },
+  peakHours: {
+    label: "Rush hours",
+    show: (list) => (list.length ? list.map((w) => `${w.name} ${w.from}–${w.to} (${daysInWords(w.days)})`).join(", ") : "none"),
+  },
   storeRiderSeconds: { label: "Store riders' turn", show: (value) => `${value} s` },
   riderWaveSeconds: { label: "Time between waves", show: (value) => `${value} s` },
   stuckMinutes: { label: "Stuck after", show: (value) => `${value} min` },
 };
 
+const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);
+
 adminToolsRouter.put("/settings", async (req, res) => {
   const next = parseBody(settingsSchema, req.body);
   const previous = await getSettings();
-  const changes = (Object.keys(next) as (keyof Settings)[]).filter((key) => next[key] !== previous[key]);
+  const changes = (Object.keys(next) as (keyof Settings)[]).filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]));
   if (changes.length > 0) {
     await prisma.$transaction(async (tx) => {
-      await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, ...next }, update: next });
+      const row = { ...next, peakHours: next.peakHours as Prisma.InputJsonValue };
+      await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });
       await logActivity(tx, actorOf(req), {
         category: "SETTINGS",
         action: "Changed settings",
         target: "Feasto settings",
-        detail: changes.map((key) => `${SETTING_WORDS[key].label}: ${SETTING_WORDS[key].show(previous[key])} → ${SETTING_WORDS[key].show(next[key])}`).join("; "),
+        detail: changes.map((key) => `${SETTING_WORDS[key].label}: ${show(key, previous[key])} → ${show(key, next[key])}`).join("; "),
       });
     });
     await clearSettingsCache();

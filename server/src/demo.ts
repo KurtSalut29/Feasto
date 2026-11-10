@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import type { DiningTable, Fulfillment, MenuItem, OrderStatus, PaymentMethod, StoreType, User, Vendor } from "./generated/prisma/client.js";
 import { hashPassword } from "./lib/auth.js";
+import { priceDelivery } from "./lib/deliveryFee.js";
+import { distanceKm } from "./lib/geo.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
 import { daysFromToday } from "./lib/renewals.js";
@@ -562,7 +564,13 @@ async function main() {
       quantity: between(1, Number(item.price) < 60 ? 3 : 2),
     }));
     const subtotal = lines.reduce((n, l) => n + Number(l.item.price) * l.quantity, 0);
-    const deliveryFee = fulfillment === "DELIVERY" ? DEFAULT_SETTINGS.deliveryFee : 0;
+    // Priced like a real checkout: by the distance from the store (road ≈ 1.3× the straight line) and the hour
+    const km =
+      store.vendor.latitude != null && store.vendor.longitude != null
+        ? Math.round(distanceKm({ lat: store.vendor.latitude, lng: store.vendor.longitude }, { lat: resident.latitude, lng: resident.longitude }) * 1.3 * 10) / 10
+        : null;
+    const deliveryFee = fulfillment === "DELIVERY" ? priceDelivery(km, DEFAULT_SETTINGS, createdAt).fee : 0;
+    const deliveryKm = fulfillment === "DELIVERY" ? km : null;
     const finished = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"].includes(status);
     const failed = status === "REJECTED" || status === "CANCELLED";
     const reached = (step: OrderStatus[]) => step.includes(status);
@@ -595,6 +603,7 @@ async function main() {
         ...(["ACCEPTED", "PREPARING", "READY"].includes(status) && !rider && { dispatch: "EVERYONE" as const }),
         subtotal,
         deliveryFee,
+        deliveryKm,
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
         acceptedAt: !failed && status !== "PLACED" ? at(3) : null,
         readyAt: reached(["READY", "PICKED_UP", "DELIVERED", "COMPLETED"]) ? at(between(15, 25)) : null,

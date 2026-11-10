@@ -21,7 +21,7 @@ const locationKey = (orderId: string) => `rider-location:${orderId}`;
 
 async function riderProfile(userId: string) {
   const profile = await prisma.riderProfile.findUnique({ where: { userId } });
-  if (!profile) throw new HttpError(404, "Rider profile not found.");
+  if (!profile) throw new HttpError(404, "We couldn't find this rider's details.");
   return profile;
 }
 
@@ -221,7 +221,7 @@ riderRouter.post("/active/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
   const { photoUrl } = parseBody(deliveredSchema, req.body);
   const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId }, select: { checkoutId: true, vendor: { select: { ownerId: true } } } });
-  if (!order) throw new HttpError(404, "Order not found.");
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   await prisma.$transaction(async (tx) => {
     await transition(tx, id, ["PICKED_UP"], "DELIVERED", { finishedAt: new Date(), deliveryPhotoUrl: photoUrl }, { riderId: req.session!.userId });
     await settlePayment(tx, order.checkoutId); // cash collected by the rider

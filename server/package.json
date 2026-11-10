@@ -7,9 +7,10 @@
   "scripts": {
     "dev:api": "tsx watch src/api.ts",
     "dev:worker": "tsx watch src/worker.ts",
+    "dev:workers": "tsx src/workers.ts",
     "build": "prisma generate && tsc",
     "start:api": "node dist/api.js",
-    "start:worker": "node dist/worker.js",
+    "start:worker": "node dist/workers.js",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx src/seed.ts",

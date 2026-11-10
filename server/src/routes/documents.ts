@@ -75,7 +75,7 @@ documentsRouter.get("/store/:id", async (req, res) => {
   const store = await prisma.vendor.findUnique({ where: { id: String(req.params.id) }, select: { ownerId: true, permitFile: true } });
   const allowed = req.session!.role === "ADMIN" || store?.ownerId === req.session!.userId;
   // The same answer for "not yours" and "doesn't exist", so ids can't be probed
-  if (!store?.permitFile || !allowed) throw new HttpError(404, "Document not found.");
+  if (!store?.permitFile || !allowed) throw new HttpError(404, "We couldn't find this document. It may have been replaced or removed.");
   await sendDocument(res, store.permitFile);
 });
 
@@ -86,7 +86,7 @@ documentsRouter.get("/rider/:id", async (req, res) => {
   });
   const userId = req.session!.userId;
   const allowed = req.session!.role === "ADMIN" || rider?.userId === userId || rider?.vendor?.ownerId === userId;
-  if (!rider?.licenseFile || !allowed) throw new HttpError(404, "Document not found.");
+  if (!rider?.licenseFile || !allowed) throw new HttpError(404, "We couldn't find this document. It may have been replaced or removed.");
   await sendDocument(res, rider.licenseFile);
 });
 
@@ -178,7 +178,7 @@ documentsRouter.put(
     } catch (error) {
       await removeDocument(name);
       // Two uploads at the same moment: the unique index lets one in
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new HttpError(409, "Please try again.");
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new HttpError(409, "Another upload of this document was still finishing. Upload it again.");
       throw error;
     }
     await removeDocument(open?.file);
@@ -226,7 +226,7 @@ documentsRouter.get("/renewal/:id/file", async (req, res) => {
   });
   const userId = req.session!.userId;
   const allowed = req.session!.role === "ADMIN" || renewal?.vendor?.ownerId === userId || renewal?.rider?.userId === userId || renewal?.rider?.vendor?.ownerId === userId;
-  if (!renewal?.file || !allowed) throw new HttpError(404, "Document not found.");
+  if (!renewal?.file || !allowed) throw new HttpError(404, "We couldn't find this document. It may have been replaced or removed.");
   await sendDocument(res, renewal.file);
 });
 

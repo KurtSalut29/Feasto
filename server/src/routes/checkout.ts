@@ -28,7 +28,8 @@ const checkoutSchema = z
       .max(200)
       .optional()
       .transform((v) => v || null),
-    /** The fee the page showed. If the admin changed it since, the resident sees the new total first. */
+    /** The delivery fees the page showed, all stores together. If they changed since (the rush
+     *  started, the admin changed the prices), the resident sees the new total first. */
     expectedDeliveryFee: z.number().optional(),
     /** Demo switch: make the simulated online payment fail to show the saga undoing the order */
     simulatePaymentFailure: z.boolean().optional(),
@@ -49,7 +50,7 @@ checkoutRouter.post("/", async (req, res) => {
     return;
   }
 
-  const cart = await buildCart(userId);
+  const cart = await buildCart(userId, input.fulfillment === "DELIVERY" ? input.addressId : undefined);
   if (cart.groups.length === 0) throw new HttpError(400, "Your cart is empty.");
   if (cart.hasProblems) throw new HttpError(409, "Some items in your cart changed. Check your cart and try again.");
 
@@ -66,11 +67,15 @@ checkoutRouter.post("/", async (req, res) => {
     deliveryPin = { deliveryLat: address.latitude, deliveryLng: address.longitude };
   }
 
-  const deliveryFee = input.fulfillment === "DELIVERY" ? cart.deliveryFeePerStore : 0;
-  if (input.fulfillment === "DELIVERY" && input.expectedDeliveryFee !== undefined && input.expectedDeliveryFee !== deliveryFee) {
-    throw new HttpError(409, `The delivery fee is now ₱${deliveryFee} per store. Check the new total and place your order again.`);
+  // Each store's fee was priced for the distance from it to this address
+  const delivery = input.fulfillment === "DELIVERY";
+  const feeOf = (group: (typeof cart.groups)[number]) => (delivery ? (group.delivery?.fee ?? cart.delivery.baseFee) : 0);
+  const deliveryTotal = Math.round(cart.groups.reduce((n, g) => n + feeOf(g), 0) * 100) / 100;
+  if (delivery && input.expectedDeliveryFee !== undefined && Math.abs(input.expectedDeliveryFee - deliveryTotal) > 0.001) {
+    const why = cart.groups.some((g) => g.delivery?.peak) ? " The rush-hour add-on now applies." : "";
+    throw new HttpError(409, `The delivery fee changed to ₱${deliveryTotal}.${why} Check the new total, then place your order again.`);
   }
-  const total = cart.itemsTotal + deliveryFee * cart.groups.length;
+  const total = cart.itemsTotal + deliveryTotal;
 
   try {
     const checkout = await prisma.$transaction(async (tx) => {
@@ -105,7 +110,8 @@ checkoutRouter.post("/", async (req, res) => {
               fulfillment: input.fulfillment,
               status: input.paymentMethod === "ONLINE" ? "AWAITING_PAYMENT" : "PLACED",
               subtotal: group.subtotal,
-              deliveryFee,
+              deliveryFee: feeOf(group),
+              deliveryKm: delivery ? (group.delivery?.km ?? null) : null,
               items: {
                 create: group.items.map((item) => ({
                   menuItemId: item.menuItemId,

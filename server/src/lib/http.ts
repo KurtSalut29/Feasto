@@ -36,14 +36,14 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     return;
   }
   if (error?.type === "entity.too.large") {
-    res.status(413).json({ error: "That file is too big." });
+    res.status(413).json({ error: "That file is too big. Photos can be up to 4 MB and documents up to 5 MB." });
     return;
   }
   // Errors from Express itself, such as a request body that isn't valid JSON
   if (typeof error?.status === "number" && error.status < 500) {
-    res.status(error.status).json({ error: "Invalid request." });
+    res.status(error.status).json({ error: "Feasto couldn't read what was sent. Refresh the page and try again." });
     return;
   }
   console.error(error);
-  res.status(500).json({ error: "Something went wrong. Please try again." });
+  res.status(500).json({ error: "Something went wrong on Feasto's side, so nothing was saved. Please try again in a minute." });
 };

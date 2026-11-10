@@ -149,7 +149,7 @@ meRouter.patch("/addresses/:id", requireRole("RESIDENT"), async (req, res) => {
 
   await prisma.$transaction(async (tx) => {
     const existing = await tx.address.findFirst({ where: { id, userId } });
-    if (!existing) throw new HttpError(404, "Address not found.");
+    if (!existing) throw new HttpError(404, "We couldn't find this address. It may have been deleted.");
     if (input.isDefault) await tx.address.updateMany({ where: { userId }, data: { isDefault: false } });
     await tx.address.update({
       where: { id },
@@ -165,7 +165,7 @@ meRouter.delete("/addresses/:id", requireRole("RESIDENT"), async (req, res) => {
 
   await prisma.$transaction(async (tx) => {
     const existing = await tx.address.findFirst({ where: { id, userId } });
-    if (!existing) throw new HttpError(404, "Address not found.");
+    if (!existing) throw new HttpError(404, "We couldn't find this address. It may have been deleted.");
     await tx.address.delete({ where: { id } });
     // Keep one default if any addresses remain
     if (existing.isDefault) {

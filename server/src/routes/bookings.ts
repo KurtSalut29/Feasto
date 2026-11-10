@@ -195,7 +195,7 @@ vendorBookingsRouter.patch("/tables/:id", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   await assertLabelFree(vendorId, input.label, String(req.params.id));
   const { count } = await prisma.diningTable.updateMany({ where: { id: String(req.params.id), vendorId, isActive: true }, data: input });
-  if (count === 0) throw new HttpError(404, "Table not found.");
+  if (count === 0) throw new HttpError(404, "We couldn't find this table. It may have been removed.");
   res.json({ ok: true });
 });
 
@@ -206,7 +206,7 @@ vendorBookingsRouter.delete("/tables/:id", async (req, res) => {
   if (upcoming > 0) throw new HttpError(409, `This table has ${upcoming} upcoming ${upcoming === 1 ? "booking" : "bookings"}. Cancel them first.`);
   // Hidden rather than deleted, because past bookings point to it
   const { count } = await prisma.diningTable.updateMany({ where: { id, vendorId, isActive: true }, data: { isActive: false } });
-  if (count === 0) throw new HttpError(404, "Table not found.");
+  if (count === 0) throw new HttpError(404, "We couldn't find this table. It may have been removed.");
   res.status(204).end();
 });
 

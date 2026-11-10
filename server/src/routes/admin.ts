@@ -338,7 +338,7 @@ adminRouter.get("/reports", async (_req, res) => {
 
 adminRouter.get("/reports/:id", async (req, res) => {
   const report = await readReport(String(req.params.id));
-  if (!report) throw new HttpError(404, "Report not found.");
+  if (!report) throw new HttpError(404, "We couldn't find this report. It may have expired; generate a new one.");
   res.json({ report });
 });
 
@@ -441,7 +441,7 @@ adminRouter.post("/users/:id/status", async (req, res) => {
   const { disabled } = parseBody(disableSchema, req.body);
   const id = String(req.params.id);
   const user = await prisma.user.findUnique({ where: { id }, select: { name: true, role: true, vendor: { select: { id: true } } } });
-  if (!user) throw new HttpError(404, "User not found.");
+  if (!user) throw new HttpError(404, "We couldn't find this account.");
   if (user.role === "ADMIN") throw new HttpError(400, "Admin accounts can't be disabled.");
 
   await prisma.$transaction(async (tx) => {

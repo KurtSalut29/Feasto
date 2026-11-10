@@ -48,7 +48,7 @@ export async function reviewRenewal(id: string, { decision, note }: z.infer<type
   if ("vendorId" in by) {
     if (!rider || rider.vendorId !== by.vendorId) throw new HttpError(404, "This renewal isn't from one of your riders.");
   } else {
-    if (!renewal) throw new HttpError(404, "Renewal not found.");
+    if (!renewal) throw new HttpError(404, "We couldn't find this renewal. It may have been reviewed already.");
     if (rider?.vendorId) throw new HttpError(403, `${rider.vendor?.name ?? "The rider's store"} reviews this rider's license.`);
   }
   const approved = decision === "APPROVED";

@@ -44,10 +44,14 @@ export function startHeartbeat(role: "api" | "worker", extra: () => Record<strin
 export async function readHeartbeats() {
   const raw = await redis.hgetall(KEY);
   const now = Date.now();
-  return Object.entries(raw)
-    .map(([instance, json]) => {
-      const data = JSON.parse(json) as { role: string; at: string } & Record<string, unknown>;
-      return { instance, ...data, online: now - new Date(data.at).getTime() < 15_000 };
-    })
+  const rows = Object.entries(raw).map(([instance, json]) => {
+    const data = JSON.parse(json) as { role: string; at: string } & Record<string, unknown>;
+    return { instance, ...data, online: now - new Date(data.at).getTime() < 15_000 };
+  });
+  // A copy gone for over 10 minutes was removed (e.g. fewer CPUs now means fewer workers): forget it
+  const gone = rows.filter((r) => now - new Date(r.at).getTime() > 10 * 60_000);
+  if (gone.length) await redis.hdel(KEY, ...gone.map((r) => r.instance));
+  return rows
+    .filter((r) => !gone.includes(r))
     .sort((a, b) => a.role.localeCompare(b.role) || a.instance.localeCompare(b.instance));
 }

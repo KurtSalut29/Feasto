@@ -5,6 +5,7 @@ import { CACHE_KEYS, cached } from "../lib/redisCache.js";
 import { prisma } from "../lib/db.js";
 import { bboxQuery, distanceKm, inBbox, nearQuery, nextOffset, pageQuery, type LatLng } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
+import { quoteDelivery } from "../lib/deliveryFee.js";
 import { getSettings } from "../lib/settings.js";
 import { isStoreOpen } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
@@ -238,14 +239,22 @@ storesRouter.get("/:id", async (req, res) => {
   if (!store) throw new HttpError(404, "This store isn't available.");
 
   const { tables, reviews, ...rest } = store;
-  const [saved, { deliveryFee }] = await Promise.all([
+  const [saved, settings, home] = await Promise.all([
     prisma.favorite.findUnique({ where: { userId_vendorId: { userId: req.session!.userId, vendorId: id } } }),
     getSettings(),
+    prisma.address.findFirst({
+      where: { userId: req.session!.userId },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+      select: { label: true, latitude: true, longitude: true },
+    }),
   ]);
+  // What delivery from this store to the resident's address costs now
+  const delivery = home ? { ...(await quoteDelivery(store, home, settings)), addressLabel: home.label } : null;
   res.json({
     store: {
       ...withRating(rest),
-      deliveryFee,
+      deliveryFee: delivery?.fee ?? settings.deliveryFee,
+      delivery,
       isFavorite: saved !== null,
       // First name and last initial only, e.g. "Juan D."
       reviews: reviews.map(({ resident, ...review }) => ({ ...review, author: shortName(resident.name) })),

@@ -31,7 +31,7 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
 export function requireRole(...roles: Role[]): RequestHandler {
   return (req, _res, next) => {
     if (!req.session || !roles.includes(req.session.role)) {
-      throw new HttpError(403, "You don't have access to this.");
+      throw new HttpError(403, "This part of Feasto is for another kind of account. Log in with the right account to continue.");
     }
     next();
   };

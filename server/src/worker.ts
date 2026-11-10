@@ -1,4 +1,5 @@
 import type { ConsumeMessage } from "amqplib";
+import { availableParallelism } from "node:os";
 import { config } from "./config.js";
 import { invalidateStore } from "./lib/redisCache.js";
 import { runDueDispatches } from "./lib/dispatch.js";
@@ -242,7 +243,10 @@ async function monitor() {
 const monitorTimer = setInterval(monitor, 60_000);
 void monitor();
 
-const stopHeartbeat = startHeartbeat("worker", () => ({ busyJobs, parallelJobs: PARALLEL_JOBS }));
+// How many workers were started and on how many CPUs (set by workers.ts), for the System page
+const workerCount = Number(process.env.WORKER_COUNT ?? 1);
+const cpuCount = Number(process.env.CPU_COUNT ?? availableParallelism());
+const stopHeartbeat = startHeartbeat("worker", () => ({ busyJobs, parallelJobs: PARALLEL_JOBS, workerCount, cpuCount }));
 log(`worker ready, handling up to ${PARALLEL_JOBS} jobs in parallel`);
 
 async function shutdown() {

@@ -138,7 +138,7 @@ export async function reviewRider(
     if (!rider || rider.vendorId !== by.vendorId) throw new HttpError(404, "This rider isn't part of your store.");
     if (rider.suspendedByAdmin) throw new HttpError(403, "The Feasto admin suspended this rider, so only the admin can lift it.");
   } else {
-    if (!rider) throw new HttpError(404, "Rider not found.");
+    if (!rider) throw new HttpError(404, "We couldn't find this rider.");
     if (rider.vendorId && decision !== "SUSPENDED" && !rider.suspendedByAdmin) {
       throw new HttpError(403, `${rider.vendor?.name ?? "The rider's store"} reviews this rider.`);
     }
