@@ -23,8 +23,9 @@ riders, watches every order, runs sales reports and monitors the servers.
 ```
                       ┌──► api-1 ┐        ┌─► PostgreSQL  (data, transactions, unique rules)
 Browser ─► Next.js ─► Nginx ──► api-2 ├────────┼─► Redis       (cache, cart, locks, live messages, heartbeats)
-   ▲        :3000     :8080 └──► api-3 ┘        └─► RabbitMQ ─┬─► worker-1 ┐ orders, payments,
-   │                                                         └─► worker-2 ┘ report jobs (in parallel)
+   ▲        :3000     :8080 └──► api-3 ┘        └─► RabbitMQ ─┬─► worker-1 ┐ one worker per CPU
+   │                                                         ├─►   ...    │ (4 CPUs → 4 workers):
+   │                                                         └─► worker-N ┘ orders, payments, reports
    └──── live updates (Server-Sent Events) ◄── any API copy ◄── Redis pub/sub ◄── workers / other copies
 ```
 
@@ -152,15 +153,15 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | Concept | Where in Feasto | Demo |
 |---|---|---|
 | **Load balancing / horizontal scaling** | Nginx round-robin over 3 API copies | Refresh http://localhost:8080/api/health and watch `instance` rotate; run `loadtest/compare.ps1` (1 copy: 406 req/s → 3 copies: 840 req/s) |
-| **Fault tolerance** | Nginx skips a dead copy; workers share queues; heartbeats | `docker compose stop api-2` (or `worker-2`) while using the app, open Admin → System, then `docker compose start api-2` |
+| **Fault tolerance** | Nginx skips a dead copy; workers share queues and a crashed worker is started again; heartbeats | `docker compose stop api-2` while using the app, open Admin → System, then `docker compose start api-2`. For a worker: `docker compose exec worker pkill -f dist/worker.js` and watch it come back |
 | **Stateless sessions** | Signed login cookie that every copy can check | The `X-Served-By` header changes between requests while you stay logged in |
-| **Parallel processing** | Worker handles 5 jobs at once; 2 workers | Order from 3 stores in one checkout: all 3 stores are notified in ~1× the time, not 3× |
-| **Map-reduce** | Sales report split into one job per store, combined at the end | Admin → Reports: "Computed in 0.96 s · 19 store jobs on worker-1 + worker-2" |
+| **Parallel processing** | One worker process per CPU (`server/src/workers.ts`, `os.availableParallelism()`; `WORKER_COUNT` in `.env` overrides it), each handling 5 jobs at once | Admin → System shows "One worker per CPU". Order from 3 stores in one checkout: all 3 stores are notified in ~1× the time, not 3× |
+| **Map-reduce** | Sales report split into one job per store, combined at the end | Admin → Reports: "Computed in 0.96 s · 19 store jobs on worker-1 to worker-4" |
 | **Message queue + outbox** | Checkout writes events in the same DB transaction; workers relay them to RabbitMQ | Admin → System shows queues and "events waiting to be sent" |
 | **Saga (distributed transaction)** | Online payment fails → orders cancelled and stock restored automatically | At checkout choose Online payment and turn on "Demo: make the payment fail" |
 | **Idempotency** | Each checkout carries a one-time key | Double-clicking "Place order" never creates two orders |
 | **Concurrency control** | Conditional updates and unique indexes | 10 buyers for the last item → 1 order; 5 riders accept one job → 1 gets it; 100 bookings for one table → 1 (`loadtest/booking-race.js`) |
-| **Proximity dispatch** | A store's riders get its job first (1 minute by default), then the 3 nearest free riders, after a wait the next 5, after another wait everyone. The admin sets both waits in Settings. Rider positions live in a Redis geo index; each job's next step is in PostgreSQL, and workers claim due steps with `SKIP LOCKED` | Two riders use "Demo: place me at the map's center" near and far from a store; accept an order as the vendor: the near one gets it first. `docker compose logs -f worker worker-2` shows each step. Stop `worker` mid-way: `worker-2` carries on |
+| **Proximity dispatch** | A store's riders get its job first (1 minute by default), then the 3 nearest free riders, after a wait the next 5, after another wait everyone. The admin sets both waits in Settings. Rider positions live in a Redis geo index; each job's next step is in PostgreSQL, and workers claim due steps with `SKIP LOCKED` | Two riders use "Demo: place me at the map's center" near and far from a store; accept an order as the vendor: the near one gets it first. `docker compose logs -f worker` shows each step and which worker took it. Kill one mid-way (`docker compose exec worker pkill -o -f dist/worker.js`): the others carry on and it starts again |
 | **Distributed lock** | Redis `SET NX` per rider | A rider can't grab two jobs with quick double taps |
 | **Paging and spatial queries** | Rider jobs are filtered, sorted by distance and paged inside PostgreSQL; the store list is paged from the Redis cache; both maps load only what's on screen | Rider → Home shows the 3 nearest jobs, "See all" → sort/"Within 2 km"/"Show more"; pan the Map and watch it load only that area |
 | **Shared cache** | Store list and menus cached in Redis, cleared on change | Edit a price as a vendor; every API copy shows the new price immediately |
@@ -169,7 +170,7 @@ After changing `server/prisma/schema.prisma`: `npm run db:migrate -- --name desc
 | **Session revocation** | Logins are stateless signed cookies, so disabled accounts are kept in a Redis set that all 3 API copies check on every request | Admin → Users → Disable a resident who is logged in elsewhere: their open page logs out within a second |
 | **Atomic counters** | Each rating updates the store's rating total in the same transaction; a unique index allows one rating per order | Rate an order from two tabs at once: only one rating is saved |
 | **Shared file storage** | Photos on a Docker volume used by all copies, served by Nginx | Upload a dish photo; it loads no matter which copy serves the page |
-| **Shared settings** | The delivery fee and wave timings are in PostgreSQL with a copy in Redis. Saving clears that copy for all 3 API copies and both workers at once | Admin → Settings: change the fee and open the cart. The next job's waves use the new timing right away |
+| **Shared settings** | The delivery prices and wave timings are in PostgreSQL with a copy in Redis. Saving clears that copy for all 3 API copies and both workers at once | Admin → Settings: change the fee and open the cart. The next job's waves use the new timing right away |
 | **Once-only background checks** | Both workers check expiring documents and stuck orders each minute. `UPDATE ... RETURNING` and Redis `SET NX` make sure each reminder or action still happens once | Admin → Stuck orders shows waiting orders; with two workers running, the admin's notification arrives once |
 | **One admin, enforced by the database** | A partial unique index on `User.role` refuses a second admin, however it's attempted | In `psql`, try to make another user an admin: PostgreSQL refuses |
 | **Private shared files** | Permits and licenses on a second volume that all API copies share but Nginx can't see; each download goes through a permission check | Admin → Approvals opens a license; a different store gets "not found" for the same link |

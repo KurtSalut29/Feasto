@@ -14,6 +14,8 @@ x-server-env: &server-env
   JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
   UPLOAD_DIR: /app/uploads
   DOCUMENT_DIR: /app/documents
+  # Road distances for the delivery fee (optional: without it, distances are estimated)
+  MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
 
 # Settings shared by the three API copies.
 x-api: &api
@@ -131,24 +133,20 @@ services:
       <<: *server-env
       INSTANCE_ID: api-3
 
-  # Two workers share the RabbitMQ queues, so jobs (orders, payments, report parts)
-  # are spread across them and keep flowing if one stops.
+  # The workers: workers.js starts one worker process per CPU Docker gives it (4 CPUs →
+  # worker-1 to worker-4), not a fixed number. They share the RabbitMQ queues, so jobs
+  # (orders, payments, report parts) spread across all of them, and a crashed one is
+  # started again. Set WORKER_COUNT in .env to choose the number yourself.
   worker:
     <<: *api
-    command: ["node", "dist/worker.js"]
+    command: ["node", "dist/workers.js"]
+    # Several Node processes share this container, so it gets more memory than one API copy
+    mem_limit: 1g
     environment:
       <<: *server-env
-      INSTANCE_ID: worker-1
+      INSTANCE_ID: workers
+      WORKER_COUNT: ${WORKER_COUNT:-}
     # Workers never read permits or licenses
-    volumes:
-      - uploads:/app/uploads
-
-  worker-2:
-    <<: *api
-    command: ["node", "dist/worker.js"]
-    environment:
-      <<: *server-env
-      INSTANCE_ID: worker-2
     volumes:
       - uploads:/app/uploads
 
