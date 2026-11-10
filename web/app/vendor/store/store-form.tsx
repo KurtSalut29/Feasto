@@ -11,7 +11,6 @@ import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ImageUpload } from "@/components/ui/image-upload";
 import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
@@ -22,6 +21,7 @@ import { formatTime } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { OnlinePayment, StoreType } from "@/lib/types";
+import { CoverPhotoField } from "./cover-photo-field";
 
 export type StoreSettings = {
   name: string;
@@ -247,8 +247,10 @@ export function StoreForm({ initial, permit }: { initial: StoreSettings; permit?
         <form id={FORM_ID} onSubmit={save} noValidate className="space-y-6">
           <div id="details" className="scroll-mt-6">
             <Card title="Store details" description="What residents see on your store page." Icon={Store}>
-              <div className="grid gap-5 p-5 md:grid-cols-[220px_minmax(0,1fr)]">
-                <ImageUpload label="Cover photo" value={values.imageUrl} onChange={(url) => set("imageUrl", url)} />
+              <div className="border-b border-line p-5">
+                <CoverPhotoField value={values.imageUrl} onChange={(url) => set("imageUrl", url)} storeName={values.name} />
+              </div>
+              <div className="p-5">
                 <div className="min-w-0 space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <TextField label="Store name" value={values.name} onChange={(e) => set("name", e.target.value)} error={err("name")} />

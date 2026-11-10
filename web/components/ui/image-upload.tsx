@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
+import { Camera, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { toast } from "./toast";
@@ -86,13 +86,18 @@ export function ImageUpload({
         </button>
         {value && !uploading && (
           <div className={`flex gap-2 ${shape === "wide" ? "items-center gap-x-5" : "flex-col"}`}>
-            <button type="button" onClick={() => input.current?.click()} className="text-sm font-semibold text-brand-700 hover:underline">
-              Change
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <Camera className="size-4" aria-hidden />
+              Change photo
             </button>
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-red-600"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-3 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-brand-500"
             >
               <Trash2 className="size-4" aria-hidden />
               Remove
