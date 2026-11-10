@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Clock, Hourglass, Route, Sun, Wallet } from "lucide-react";
+import { Bike, Clock, Hourglass, Route, Sun, TimerOff, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -23,6 +23,8 @@ export type PlatformSettings = {
   storeRiderSeconds: number;
   riderWaveSeconds: number;
   stuckMinutes: number;
+  /** Orders no store accepted, or no rider took, are cancelled by themselves after this (0 = off) */
+  autoCancelMinutes: number;
 };
 type Key = Exclude<keyof PlatformSettings, "peakHours">;
 
@@ -85,6 +87,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     storeRiderSeconds: String(initial.storeRiderSeconds),
     riderWaveSeconds: String(initial.riderWaveSeconds),
     stuckMinutes: String(initial.stuckMinutes),
+    autoCancelMinutes: String(initial.autoCancelMinutes),
   });
   const [peakHours, setPeakHours] = useState<PeakWindow[]>(initial.peakHours);
   const [saving, setSaving] = useState(false);
@@ -123,6 +126,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         storeRiderSeconds: number("storeRiderSeconds"),
         riderWaveSeconds: number("riderWaveSeconds"),
         stuckMinutes: number("stuckMinutes"),
+        autoCancelMinutes: number("autoCancelMinutes"),
       },
     });
     setSaving(false);
@@ -186,9 +190,41 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         </div>
       </Card>
 
-      <Card title="Stuck orders" Icon={Hourglass} description="When an order counts as stuck and you get a notification.">
-        <div className="p-5">
-          <TextField label="Stuck after (minutes)" min="1" icon={Hourglass} className="sm:max-w-xs" hint="1 to 240. How long an order can wait for a store or rider." {...field("stuckMinutes")} />
+      <Card
+        title="Orders that wait too long"
+        Icon={Hourglass}
+        description="Feasto cancels orders nobody took by itself, and tells you only about the ones it can't fix."
+      >
+        <div className="space-y-4 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Cancel automatically after (minutes)"
+              min="0"
+              icon={TimerOff}
+              hint="0 turns it off, or 3 to 120. If the store hasn't accepted the order, or no rider took the delivery, it's cancelled and the resident and the store are told why."
+              {...field("autoCancelMinutes")}
+            />
+            <TextField
+              label="Tell me after (minutes)"
+              min="1"
+              icon={Hourglass}
+              hint="1 to 240. For orders a rider already has (picked up but not delivered, or not collected), which Feasto doesn't cancel."
+              {...field("stuckMinutes")}
+            />
+          </div>
+          <ol className="grid gap-2 text-sm sm:grid-cols-3">
+            {[
+              ["Store didn't accept", Number(values.autoCancelMinutes) ? `Cancelled after ${values.autoCancelMinutes} min` : "Waits for you"],
+              ["No rider took it", Number(values.autoCancelMinutes) ? `Cancelled after ${values.autoCancelMinutes} min` : "Waits for you"],
+              ["Rider has it, but it's late", `You're told after ${values.stuckMinutes || "…"} min`],
+            ].map(([what, then]) => (
+              <li key={what} className="rounded-xl bg-canvas px-3 py-2.5">
+                <p className="font-semibold text-ink">{what}</p>
+                <p className="text-muted">{then}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="text-sm text-muted">The stock goes back and online payments are refunded. Every automatic cancel is in the activity log as &quot;Feasto (automatic)&quot;.</p>
         </div>
       </Card>
 

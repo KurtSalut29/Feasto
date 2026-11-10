@@ -1,4 +1,4 @@
-import { Banknote, Bike, ChevronRight, CreditCard, MapPin, MessageSquareText, Phone, Printer, Store } from "lucide-react";
+import { Banknote, Bike, ChevronRight, CreditCard, MapPin, MessageSquareText, Phone, Printer, Store, TimerReset } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatClock, formatPeso } from "@/lib/format";
@@ -73,6 +73,20 @@ export function OrderPanel({
       {/* The next step, where the eye lands first */}
       <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-3.5">
         <p className="mb-2 text-[11px] font-semibold tracking-wider text-brand-700 uppercase">Next step</p>
+        {order.autoCancel && (
+          <p className="mb-2.5 flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+            <TimerReset className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+            {order.autoCancel.why === "NO_STORE_REPLY" ? (
+              <span>
+                Accept by <strong>{formatClock(order.autoCancel.at)}</strong>, or Feasto cancels it by itself and tells the customer.
+              </span>
+            ) : (
+              <span>
+                No rider yet. If none takes it by <strong>{formatClock(order.autoCancel.at)}</strong>, Feasto cancels it and tells you and the customer.
+              </span>
+            )}
+          </p>
+        )}
         <OrderActions
           orderId={order.id}
           status={order.status}

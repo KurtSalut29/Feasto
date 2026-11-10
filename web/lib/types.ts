@@ -232,7 +232,11 @@ export type ResidentOrder = OrderBase & {
 /** How far a delivery job has spread among riders. */
 export type JobDispatch = "NEW" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYONE";
 
+/** When a waiting order will be cancelled by itself, and why (no store reply, or no rider) */
+export type AutoCancel = { at: string; why: "NO_STORE_REPLY" | "NO_RIDER" } | null;
+
 export type VendorOrder = Omit<OrderBase, "items"> & {
+  autoCancel?: AutoCancel;
   dispatch: JobDispatch;
   /** Each dish, with its menu photo */
   items: (OrderBase["items"][number] & { menuItem?: { imageUrl: string | null } | null })[];

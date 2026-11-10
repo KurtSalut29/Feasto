@@ -1,4 +1,4 @@
-import { Bike, LoaderCircle, MapPin, Phone, ReceiptText, Store } from "lucide-react";
+import { Bike, LoaderCircle, MapPin, Phone, ReceiptText, Store, TimerReset } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -10,11 +10,11 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
-import { formatDateTime, formatPeso } from "@/lib/format";
+import { formatClock, formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { hasReceipt, orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { OrderStatus, ResidentOrder } from "@/lib/types";
+import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
 
@@ -45,7 +45,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, "params">) {
   await requireRole("RESIDENT");
   const { id } = await params;
-  const { order, riderLocation } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation }>(`/orders/${id}`);
+  const { order, riderLocation, autoCancel } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation; autoCancel: AutoCancel }>(`/orders/${id}`);
   const total = Number(order.subtotal) + Number(order.deliveryFee);
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
   const received = order.status === "DELIVERED" || order.status === "COMPLETED";
@@ -85,6 +85,25 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             }
             pickedUp={order.status === "PICKED_UP"}
           />
+        )}
+        {/* What happens if nobody takes it, so the resident isn't left wondering */}
+        {autoCancel && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+            <TimerReset className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+            <p>
+              {autoCancel.why === "NO_STORE_REPLY" ? (
+                <>
+                  If {order.vendor.name} doesn&apos;t accept it by <strong>{formatClock(autoCancel.at)}</strong>, Feasto cancels it by itself and tells you.{" "}
+                  {order.checkout.paymentMethod === "COD" ? "You won't pay anything." : "Your payment is refunded."}
+                </>
+              ) : (
+                <>
+                  Finding a rider. If none is free by <strong>{formatClock(autoCancel.at)}</strong>, Feasto cancels it by itself and tells you and the store.{" "}
+                  {order.checkout.paymentMethod === "COD" ? "You won't pay anything." : "Your payment is refunded."}
+                </>
+              )}
+            </p>
+          </div>
         )}
         {order.status === "AWAITING_PAYMENT" && (
           <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-amber-900">
