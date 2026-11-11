@@ -84,7 +84,7 @@ export function DishDialog({
       <form onSubmit={save} noValidate className="space-y-4">
         {error && <Alert tone="error">{error}</Alert>}
         <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
-          <ImageUpload label="Photo" shape="square" value={values.imageUrl} onChange={(url) => set("imageUrl", url)} />
+          <ImageUpload label="Photo" shape="square" use="dish" value={values.imageUrl} onChange={(url) => set("imageUrl", url)} />
           <div className="space-y-4">
             <TextField label="Dish name" value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Chicken Adobo" autoFocus error={err("name")} />
             <TextField

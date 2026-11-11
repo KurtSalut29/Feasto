@@ -9,6 +9,9 @@ import docx
 from docx.oxml.ns import qn
 from PIL import Image
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from present import present, save as save_presented
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "web", "public", "Feasto_Categories")
@@ -55,7 +58,12 @@ def photo(src, name):
         im = im.convert("RGB")
     im.thumbnail((1000, 1000))
     file = f"{name}.jpg"
-    im.save(os.path.join(PHOTOS, file), quality=80, optimize=True)
+    # Fitted for the app's frames (logos kept whole, posters uncut): see present.py
+    shown = present(im, file)
+    if shown:
+        save_presented(shown, os.path.join(PHOTOS, file))
+    else:
+        im.save(os.path.join(PHOTOS, file), quality=80, optimize=True)
     return file
 
 def money(text):

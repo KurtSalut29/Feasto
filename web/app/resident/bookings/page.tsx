@@ -90,12 +90,12 @@ function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBo
       <div className="relative">
         {store.imageUrl ? (
           <>
-            <StoreCover imageUrl={store.imageUrl} className="h-28 w-full" eager />
+            <StoreCover imageUrl={store.imageUrl} className="aspect-[2/1] w-full" eager />
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
         ) : (
           // No photo: Feasto orange, so the ticket still looks finished
-          <div aria-hidden className="h-28 w-full bg-gradient-to-br from-brand-500 to-brand-700">
+          <div aria-hidden className="aspect-[2/1] w-full bg-gradient-to-br from-brand-500 to-brand-700">
             <CalendarDays className="absolute top-3 right-4 size-16 text-white/15" />
           </div>
         )}

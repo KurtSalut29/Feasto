@@ -3,27 +3,38 @@
 import { Camera, ImagePlus, LoaderCircle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
+import { type PhotoUse, presentPhoto } from "@/lib/present-photo";
 import { toast } from "./toast";
 
 const MAX_SIDE = 1200;
 
-/** Shrinks a photo in the browser so uploads from phones are small and fast. */
-export async function resizePhoto(file: File, maxSide = MAX_SIDE): Promise<Blob> {
+/**
+ * Shrinks a photo in the browser so uploads from phones are small and fast. With a `use`, a store
+ * logo or a dish poster is also fitted to the app's frames first (see lib/present-photo.ts).
+ */
+export async function resizePhoto(file: File, maxSide = MAX_SIDE, use?: PhotoUse): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const fitted = use ? presentPhoto(bitmap, bitmap.width, bitmap.height, use) : null;
+  const scale = fitted ? 1 : Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = fitted ?? document.createElement("canvas");
+  if (!fitted) {
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d")!;
+    // A transparent PNG logo goes on white, not black
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  }
   return new Promise((resolve, reject) =>
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("resize failed"))), "image/jpeg", 0.85),
   );
 }
 
 /** Shrinks and uploads a photo, returning its /uploads/... URL. Throws with a message to show on failure. */
-export async function uploadPhoto(file: File): Promise<string> {
+export async function uploadPhoto(file: File, use?: PhotoUse): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Choose a photo (JPG, PNG or WebP).");
-  const body = await resizePhoto(file);
+  const body = await resizePhoto(file, MAX_SIDE, use);
   const response = await fetch("/api/uploads", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body });
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error ?? "Upload failed. Try another photo.");
@@ -36,11 +47,14 @@ export function ImageUpload({
   value,
   onChange,
   shape = "wide",
+  use,
 }: {
   label: string;
   value: string | null;
   onChange: (url: string | null) => void;
   shape?: "wide" | "square";
+  /** Fits the photo to where it shows (a store logo, a dish poster) before uploading */
+  use?: PhotoUse;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -50,7 +64,7 @@ export function ImageUpload({
     setError(undefined);
     setUploading(true);
     try {
-      onChange(await uploadPhoto(file));
+      onChange(await uploadPhoto(file, use));
       toast.success("Photo uploaded", "Remember to save to keep it.", { duration: 3000 });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try another photo.");
@@ -59,7 +73,7 @@ export function ImageUpload({
     }
   }
 
-  const box = shape === "wide" ? "aspect-[16/6] w-full" : "size-28";
+  const box = shape === "wide" ? "aspect-[16/9] w-full" : "size-28";
 
   return (
     <div>

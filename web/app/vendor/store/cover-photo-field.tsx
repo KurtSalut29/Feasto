@@ -26,7 +26,7 @@ export function CoverPhotoField({ value, onChange, storeName }: { value: string 
     setError(undefined);
     setUploading(true);
     try {
-      onChange(await uploadPhoto(file));
+      onChange(await uploadPhoto(file, "store"));
       setRemoved(null);
       toast.success("Cover photo uploaded", "Save your store to show it to residents.", { duration: 3500 });
     } catch (e) {
@@ -113,7 +113,7 @@ export function CoverPhotoField({ value, onChange, storeName }: { value: string 
       <div className="min-w-0 space-y-3">
         <div>
           <p className="text-sm font-semibold text-ink">Cover photo</p>
-          <p className="mt-0.5 text-sm text-muted">Residents see it in the store list and at the top of your store page. A bright, close photo of your best dish works best.</p>
+          <p className="mt-0.5 text-sm text-muted">Residents see it in the store list and at the top of your store page. A bright, close photo of your best dish works well, and so does your logo: it&apos;s fitted so it shows whole everywhere.</p>
         </div>
 
         {/* The actions, each saying what it does */}

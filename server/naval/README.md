@@ -102,4 +102,22 @@ pip install python-docx Pillow openlocationcode
 python server/naval/source/build_naval.py
 ```
 
-It rewrites `stores.json` and `photos/` (photos are shrunk to at most 1000 px).
+It rewrites `stores.json` and `photos/` (photos are shrunk to at most 1000 px, then fitted by
+`source/present.py`).
+
+## How the photos are fitted
+
+The app shows a store's picture in circles, squares, 4:3 cards and 16:9 banners, always filling
+the frame, so `source/present.py` prepares each one to survive all of them:
+
+- **Logos** are trimmed to what's drawn and centred on a 16:9 canvas of their own background
+  colour, small enough to stay whole in the circle at the top of the store page.
+- **Badges** (a logo printed on a busy rectangle, like Dayka's and TJ's) become a rounded card on
+  their own colour.
+- **Food photos** used as covers (JAM JAY, Antonio's, Marb Marb, …) stay as they are.
+- **Dish posters** (El Pomar's, with prices on them) and very tall pictures are shown whole over a
+  blurred copy of themselves; other food photos stay as they are.
+
+Which stores use a food photo, and the two pictures that needed a hand crop (Cusina De Salas,
+TJ), are listed at the top of `present.py`. Photos that stores upload themselves get the same
+treatment in the browser (`web/lib/present-photo.ts`).
