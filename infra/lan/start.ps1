@@ -52,6 +52,8 @@ $env:SITE_ADDRESS = $site
 $ErrorActionPreference = "Continue"  # docker prints its progress on stderr
 docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
 if ($LASTEXITCODE -ne 0) { throw "docker compose failed." }
+# Caddy reads its settings only when it starts, and they may have changed
+docker compose -f docker-compose.yml -f docker-compose.lan.yml restart caddy
 
 Write-Host ""
 Write-Host "Feasto is running on this laptop. On the same WiFi, open:" -ForegroundColor Green

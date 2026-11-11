@@ -65,7 +65,9 @@ once, so keep the room on the WiFi address. If the Mapbox token has URL restrict
 `https://*.trycloudflare.com` too.
 
 **Show the performance**: Admin → System lists this laptop's API copies and its workers (one per
-CPU) with what each is doing; run the load test (`loadtest/README.md`) while everyone is ordering.
+CPU) with what each is doing; run the classroom load test (`loadtest/README.md`, part 3) to show
+how it holds 50 to 200 people at once. The web app runs as 2 copies (`WEB_COPIES` in `.env`);
+on a laptop with more memory for Docker, 3 can be faster.
 
 # Cloud server
 

@@ -36,6 +36,9 @@ services:
         API_URL: http://nginx
         NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
     restart: unless-stopped
+    # Each copy renders pages on one CPU core; Caddy spreads visitors over them
+    deploy:
+      replicas: ${WEB_COPIES:-2}
     environment:
       API_URL: http://nginx
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}

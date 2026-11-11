@@ -44,6 +44,30 @@ time in the same instant. Expected output: `bookings_succeeded: 1` and `bookings
 The database's unique index on (table, time) is what guarantees this, no matter which of the
 three API copies each request lands on.
 
+## 3. A class using the app at once (the classroom setup)
+
+With the classroom setup running (`.\infra\lan\start.ps1`), this opens full pages the way phones
+do (Home, a store, My orders) with a 2–5 second pause between taps. It only reads: it logs in as
+`resident@feasto.com` and orders nothing.
+
+```powershell
+docker run --rm --network feasto_default -v "${PWD}\loadtest:/scripts" -e VUS=50 -e DURATION=60s `
+  grafana/k6:1.3.0 run /scripts/classroom.js
+```
+
+Measured on the same laptop (Docker: 4 CPUs / 3 GB, and k6 itself runs inside that too, so phones
+would see better), 2 copies of the web app, 60 seconds each:
+
+| Users at once | Typical page | Home page, slowest 5% | Requests per second | Errors |
+|---|---|---|---|---|
+| 50 | 34 ms | 3.1 s | 23 | 0% |
+| 100 | 41 ms | 5.7 s | 42 | 0% |
+| 200 | 79 ms | 8.8 s | 61 | 0% |
+
+The slowest pages are the first Home page loads when everyone opens the app in the same second.
+The web app renders pages and is the busiest part (Admin → System shows the API side); with one
+copy instead of two, 200 users were twice as slow.
+
 ## Running browse.js on its own
 
 ```powershell
