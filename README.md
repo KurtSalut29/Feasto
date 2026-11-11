@@ -139,6 +139,12 @@ free riders `jessa@` (license expiring soon), `ariel@` (license expired) and `ri
 Food photos come from [TheMealDB](https://www.themealdb.com) and [TheCocktailDB](https://www.thecocktaildb.com),
 used for this school project (`server/demo/photos`).
 
+## Real Naval stores and deployment
+
+- `docker compose --profile tools run --rm --build naval` replaces everything with the 39 real food
+  stores of Naval (menus, photos, hours, map pins). Details and store log-ins: [server/naval/README.md](server/naval/README.md).
+- To put Feasto on a cloud server with HTTPS for everyone to use: [DEPLOY.md](DEPLOY.md).
+
 ## Working on the backend without Docker rebuilds
 
 Keep `postgres`, `redis` and `rabbitmq` running in Docker and run the API on your machine with live reload:

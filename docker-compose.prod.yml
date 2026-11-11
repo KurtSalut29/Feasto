@@ -1,0 +1,63 @@
+# Production on a cloud server, on top of docker-compose.yml (see DEPLOY.md):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Adds the web app and Caddy (HTTPS), makes login cookies HTTPS-only, and closes every port
+# except 80 and 443, so the database, Redis and RabbitMQ can't be reached from the internet.
+
+x-prod-env: &prod-env
+  COOKIE_SECURE: "true"
+
+services:
+  postgres:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  rabbitmq:
+    ports: !reset []
+  nginx:
+    ports: !reset []
+
+  api-1:
+    environment:
+      <<: *prod-env
+  api-2:
+    environment:
+      <<: *prod-env
+  api-3:
+    environment:
+      <<: *prod-env
+  worker:
+    environment:
+      <<: *prod-env
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_URL: http://nginx
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+    restart: unless-stopped
+    environment:
+      API_URL: http://nginx
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+    depends_on:
+      - nginx
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env, e.g. 203.0.113.10.sslip.io}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - nginx
+
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,4920 @@
+[
+ {
+  "slug": "dayka",
+  "email": "dayka@feasto.com",
+  "name": "Dayka Bakeshop",
+  "storeType": "BAKERY",
+  "description": "A popular regional bakery known for freshly baked local Filipino breads and pastries straight from the oven.",
+  "address": "P. Inocentes Street, Naval, Biliran",
+  "opensAt": "05:00",
+  "closesAt": "21:00",
+  "latitude": 11.5611,
+  "longitude": 124.3936,
+  "cover": "dayka-cover.jpg",
+  "menu": [
+   {
+    "name": "Spanish bread",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Sweet roll filled with a rich butter and breadcrumb paste.",
+    "photo": "dayka-01.jpg"
+   },
+   {
+    "name": "Cheese bread",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Soft bread roll finished with sugar and grated cheese.",
+    "photo": "dayka-02.jpg"
+   },
+   {
+    "name": "Pande Coco",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Baked sweet bread filled with sweet grated coconut meat.",
+    "photo": "dayka-03.jpg"
+   },
+   {
+    "name": "Everlasting",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Traditional local Filipino baked pastry.",
+    "photo": "dayka-04.jpg"
+   },
+   {
+    "name": "Tire bread",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Chewy and sweet local favorite bread variety.",
+    "photo": null
+   },
+   {
+    "name": "Bohol",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Classic regional baked bread.",
+    "photo": "dayka-06.jpg"
+   },
+   {
+    "name": "Papaya",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Local specialty bread product.",
+    "photo": null
+   },
+   {
+    "name": "Corn bread",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Sweet and savory corn-flavored bread.",
+    "photo": null
+   },
+   {
+    "name": "Hopia",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Flaky pastry filled with sweet mung bean or purple yam paste.",
+    "photo": "dayka-09.jpg"
+   },
+   {
+    "name": "Pigpie",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Traditional baked local pie pastry.",
+    "photo": null
+   },
+   {
+    "name": "Crinkles",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Soft chocolate cookie coated in powdered sugar.",
+    "photo": "dayka-11.jpg"
+   },
+   {
+    "name": "Ensaymada",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Soft sweet bread topped with butter, sugar, and cheese.",
+    "photo": "dayka-12.jpg"
+   },
+   {
+    "name": "Banana cake",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Moist and sweet banana-flavored baked treat.",
+    "photo": "dayka-13.jpg"
+   },
+   {
+    "name": "Donut",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Sweet fried ring pastry coated in sugar.",
+    "photo": "dayka-14.jpg"
+   },
+   {
+    "name": "Shakoy",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Twisted deep-fried sweet dough snack (lubid-lubid).",
+    "photo": "dayka-15.jpg"
+   },
+   {
+    "name": "Botchi",
+    "category": "Pastries / Breads",
+    "price": 5.0,
+    "description": "Crispy fried sweet rice ball filled with mung bean.",
+    "photo": null
+   },
+   {
+    "name": "Slice Bread",
+    "category": "Loaves",
+    "price": 45.0,
+    "description": "Standard white sandwich bread loaf.",
+    "photo": "dayka-17.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "sophias",
+  "email": "sophias@feasto.com",
+  "name": "Sophia's Bread & Pastries",
+  "storeType": "BAKERY",
+  "description": "A well-known local bakeshop in Naval offering freshly baked breads, pastries and daily breakfast items.",
+  "address": "Vicentillo Street, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "19:00",
+  "latitude": 11.5626,
+  "longitude": 124.3955,
+  "cover": "sophias-cover.jpg",
+  "menu": [
+   {
+    "name": "Pan de Sal",
+    "category": "Daily Breads",
+    "price": 3.0,
+    "description": "Classic, warm Filipino yeast rolls baked fresh throughout the day.",
+    "photo": "sophias-01.jpg"
+   },
+   {
+    "name": "Spanish Bread",
+    "category": "Daily Breads",
+    "price": 5.0,
+    "description": "Soft rolled pastry filled with sweet butter and breadcrumb filling.",
+    "photo": "sophias-02.jpg"
+   },
+   {
+    "name": "Ensaymada",
+    "category": "Pastries",
+    "price": 15.0,
+    "description": "Soft bread topped with butter, sugar, and grated cheese.",
+    "photo": "sophias-03.jpg"
+   },
+   {
+    "name": "Pan de Coco",
+    "category": "Pastries",
+    "price": 7.0,
+    "description": "Baked sweet bread filled with sweet grated coconut meat.",
+    "photo": "sophias-04.jpg"
+   },
+   {
+    "name": "Sliced Loaf Bread",
+    "category": "Loaves",
+    "price": 48.0,
+    "description": "Soft sandwich white bread loaf.",
+    "photo": "sophias-05.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "tj",
+  "email": "tj@feasto.com",
+  "name": "TJ Breadhaus and Cafe",
+  "storeType": "BAKERY",
+  "description": "A cozy neighborhood bakeshop and cafe offering specialty coffees, baked goods, light snacks and customized cakes.",
+  "address": "Corner Magallanes Street, Naval, Biliran",
+  "opensAt": "07:00",
+  "closesAt": "20:00",
+  "latitude": 11.5606,
+  "longitude": 124.3944,
+  "cover": "tj-cover.jpg",
+  "menu": [
+   {
+    "name": "Cheese Cupcakes",
+    "category": "Pastries",
+    "price": 15.0,
+    "description": "Moist, sweet cupcakes topped with shredded cheese.",
+    "photo": "tj-01.jpg"
+   },
+   {
+    "name": "Chocolate Lava Cake",
+    "category": "Desserts",
+    "price": 85.0,
+    "description": "Warm chocolate cake with a molten fudge center.",
+    "photo": null
+   },
+   {
+    "name": "Ensaymada",
+    "category": "Pastries",
+    "price": 5.0,
+    "description": "Soft, sweet brioche bun brushed with butter and generously topped with sugar and grated cheese.",
+    "photo": "tj-03.jpg"
+   },
+   {
+    "name": "Pineapple Pie",
+    "category": "Desserts / Bakery",
+    "price": 5.0,
+    "description": "Classic Filipino-style pastry baked with a sweet and tangy pineapple filling.",
+    "photo": "tj-04.jpg"
+   },
+   {
+    "name": "Pig Pie",
+    "category": "Pastries",
+    "price": 5.0,
+    "description": "Traditional bakery-style sweet bread stuffed with a rich, savory scallion and caramelized onion filling.",
+    "photo": "tj-05.jpg"
+   },
+   {
+    "name": "Peanut Butter",
+    "category": "Spreads / Bakery",
+    "price": 95.0,
+    "description": "Creamy, sweet homemade peanut butter spread—a classic pair for hot pandesal and toasted bread.",
+    "photo": "tj-06.jpg"
+   },
+   {
+    "name": "Sliced Bread",
+    "category": "Bakery / Bread",
+    "price": 45.0,
+    "description": "Freshly baked, soft white loaf bread, sliced into convenient portions for daily sandwiches and toast.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "purple-yam",
+  "email": "purple-yam@feasto.com",
+  "name": "Purple Yam Naval",
+  "storeType": "DESSERTS",
+  "description": "Famous for ube-flavored cakes, pastries and sweet desserts made from real purple yam. Open Monday to Saturday.",
+  "address": "Vicentillo Street, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "18:30",
+  "latitude": 11.5631,
+  "longitude": 124.3964,
+  "cover": "purple-yam-cover.jpg",
+  "menu": [
+   {
+    "name": "Ube Cake (Whole)",
+    "category": "Specialty Cakes",
+    "price": 450.0,
+    "description": "Signature layered sponge cake infused with real ube halaya.",
+    "photo": "purple-yam-01.jpg"
+   },
+   {
+    "name": "Ube Halaya Jar",
+    "category": "Sweets & Spreads",
+    "price": 160.0,
+    "description": "Creamy homemade purple yam jam spread.",
+    "photo": "purple-yam-02.jpg"
+   },
+   {
+    "name": "Ube Ensaymada",
+    "category": "Pastries",
+    "price": 35.0,
+    "description": "Soft ensaymada topped with rich ube frosting and cheese.",
+    "photo": "purple-yam-03.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "belles",
+  "email": "belles@feasto.com",
+  "name": "Belle's Cakes and Pastries",
+  "storeType": "DESSERTS",
+  "description": "A custom cake boutique for personalized celebration cakes, cupcakes, dessert buffets and handcrafted pastries. Open Monday to Saturday.",
+  "address": "P.I. Garcia Street, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "18:00",
+  "latitude": 11.5598,
+  "longitude": 124.3958,
+  "cover": "belles-cover.jpg",
+  "menu": [
+   {
+    "name": "Customized Birthday Cake",
+    "category": "Customized Orders",
+    "price": 850.0,
+    "description": "Tailor-made fondant or buttercream birthday cakes.",
+    "photo": "belles-01.jpg"
+   },
+   {
+    "name": "Assorted Cupcakes (Box of 6)",
+    "category": "Pastries",
+    "price": 240.0,
+    "description": "Box of cupcakes in vanilla, chocolate, and red velvet flavors.",
+    "photo": "belles-02.jpg"
+   },
+   {
+    "name": "Dessert Buffet Package",
+    "category": "Catering Services",
+    "price": 3500.0,
+    "description": "50-piece dessert spread for celebrations and events.",
+    "photo": "belles-03.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "jam-jay",
+  "email": "jam-jay@feasto.com",
+  "name": "JAM JAY JABBY Eatery",
+  "storeType": "CARINDERIA",
+  "description": "Popular local eatery in Naval serving affordable, authentic home-cooked Filipino viands (lutong bahay), vegetable dishes and traditional main courses.",
+  "address": "Padre Inocentes Garcia St, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "19:00",
+  "latitude": 11.5601,
+  "longitude": 124.3949,
+  "cover": "jam-jay-cover.jpg",
+  "menu": [
+   {
+    "name": "Ginataang Langka",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Young green jackfruit cooked in rich coconut milk with spices and chili.",
+    "estimated": true,
+    "photo": "jam-jay-01.jpg"
+   },
+   {
+    "name": "Kalabasa",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed squash with string beans or local greens in a savory garlic broth.",
+    "estimated": true,
+    "photo": "jam-jay-02.jpg"
+   },
+   {
+    "name": "Paklay",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Traditional Visayan sautéed pork and beef innards cooked with ginger and peppers.",
+    "estimated": true,
+    "photo": "jam-jay-03.jpg"
+   },
+   {
+    "name": "Ampalaya",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed bitter melon with scrambled eggs, garlic, and onions.",
+    "estimated": true,
+    "photo": "jam-jay-04.jpg"
+   },
+   {
+    "name": "Bicol Express",
+    "category": "Main Course",
+    "price": 50,
+    "description": "Spicy pork dish stewed in thick coconut cream with chili peppers and shrimp paste.",
+    "estimated": true,
+    "photo": "jam-jay-05.jpg"
+   },
+   {
+    "name": "Paksiw Bangus",
+    "category": "Main Course / Seafood",
+    "price": 55,
+    "description": "Milkfish simmered in vinegar, garlic, ginger, finger chilies, and vegetables.",
+    "estimated": true,
+    "photo": "jam-jay-06.jpg"
+   },
+   {
+    "name": "Adobong Atay",
+    "category": "Main Course",
+    "price": 45,
+    "description": "Pork/chicken liver braised in soy sauce, vinegar, garlic, and bay leaves.",
+    "estimated": true,
+    "photo": "jam-jay-07.jpg"
+   },
+   {
+    "name": "Hotdog",
+    "category": "Short Orders / Breakfast",
+    "price": 20,
+    "description": "Pan-fried Filipino red hotdog.",
+    "estimated": true,
+    "photo": "jam-jay-08.jpg"
+   },
+   {
+    "name": "Sunny Egg",
+    "category": "Short Orders / Breakfast",
+    "price": 20,
+    "description": "Fried sunny-side up chicken egg.",
+    "estimated": true,
+    "photo": "jam-jay-09.jpg"
+   },
+   {
+    "name": "Tortang Hipon",
+    "category": "Seafood / Egg",
+    "price": 40,
+    "description": "Pan-fried savory omelet mixed with seasoned fresh small shrimps.",
+    "estimated": true,
+    "photo": "jam-jay-10.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "antonios",
+  "email": "antonios@feasto.com",
+  "name": "Antonio's Travelers Eatery",
+  "storeType": "CARINDERIA",
+  "description": "A convenient dining spot for travelers and locals with budget-friendly breakfast specials, classic Filipino stews and vegetable dishes.",
+  "address": "P. Inocentes St, Padre Inocentes Garcia, Naval, Biliran",
+  "opensAt": "07:00",
+  "closesAt": "20:00",
+  "latitude": 11.5608,
+  "longitude": 124.3925,
+  "cover": "antonios-cover.jpg",
+  "menu": [
+   {
+    "name": "Egg",
+    "category": "Short Orders / Breakfast",
+    "price": 20,
+    "description": "Fresh chicken egg cooked to order (fried or scrambled).",
+    "estimated": true,
+    "photo": "antonios-01.jpg"
+   },
+   {
+    "name": "Hotdog",
+    "category": "Short Orders / Breakfast",
+    "price": 20,
+    "description": "Pan-fried juicy red hotdog.",
+    "estimated": true,
+    "photo": "antonios-02.jpg"
+   },
+   {
+    "name": "Turtang Talong",
+    "category": "Vegetables / Egg",
+    "price": 25,
+    "description": "Grilled eggplant dipped in beaten egg mixture and pan-fried until golden.",
+    "estimated": true,
+    "photo": "antonios-03.jpg"
+   },
+   {
+    "name": "Chopsuey",
+    "category": "Vegetables",
+    "price": 30,
+    "description": "Stir-fried mixed vegetables with pork strips in a savory thick sauce.",
+    "estimated": true,
+    "photo": "antonios-04.jpg"
+   },
+   {
+    "name": "Pansit",
+    "category": "Noodles / Short Orders",
+    "price": 30,
+    "description": "Filipino stir-fried noodles with crisp vegetables and savory seasoning.",
+    "estimated": true,
+    "photo": "antonios-05.jpg"
+   },
+   {
+    "name": "Sitaw",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed yardlong string beans with garlic, onions, and pork accents.",
+    "estimated": true,
+    "photo": "antonios-06.jpg"
+   },
+   {
+    "name": "Kalabasa",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed pumpkin/squash dish cooked savory local style.",
+    "estimated": true,
+    "photo": "antonios-07.jpg"
+   },
+   {
+    "name": "Menudo",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Classic Filipino stew with diced pork, liver, potatoes, and carrots in tomato sauce.",
+    "estimated": true,
+    "photo": "antonios-08.jpg"
+   },
+   {
+    "name": "Bangus",
+    "category": "Main Course / Seafood",
+    "price": 60,
+    "description": "Milkfish dish prepared fried",
+    "estimated": true,
+    "photo": "antonios-09.jpg"
+   },
+   {
+    "name": "Adobong Baboy",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Tender pork chunks braised in soy sauce, vinegar, garlic, and black pepper.",
+    "estimated": true,
+    "photo": "antonios-10.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "marb-marb",
+  "email": "marb-marb@feasto.com",
+  "name": "Marb Marb Eatery",
+  "storeType": "CARINDERIA",
+  "description": "A well-known neighborhood eatery along P.I. Garcia Street with hearty Filipino homestyle cooking, fresh fish specials and budget meals.",
+  "address": "P.I. Garcia St, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "19:30",
+  "latitude": 11.5594,
+  "longitude": 124.3951,
+  "cover": "marb-marb-cover.jpg",
+  "menu": [
+   {
+    "name": "Guisadong Sitaw",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed yardlong string beans with garlic, onion, and pork bits.",
+    "estimated": true,
+    "photo": "marb-marb-01.jpg"
+   },
+   {
+    "name": "Ginataang Kalabasa",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Squash simmered in coconut milk with green beans and chili.",
+    "estimated": true,
+    "photo": "marb-marb-02.jpg"
+   },
+   {
+    "name": "Monggo",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Savory mung bean soup topped with malunggay leaves .",
+    "estimated": true,
+    "photo": "marb-marb-03.jpg"
+   },
+   {
+    "name": "Pork Menudo",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Diced pork stewed with liver, potatoes, and raisins in rich tomato sauce.",
+    "estimated": true,
+    "photo": "marb-marb-04.jpg"
+   },
+   {
+    "name": "Pork Adobo",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Classic simmered pork in soy sauce, vinegar, garlic, and bay leaves.",
+    "estimated": true,
+    "photo": "marb-marb-05.jpg"
+   },
+   {
+    "name": "Dinuguan",
+    "category": "Main Course",
+    "price": 50,
+    "description": "Savory pork blood stew seasoned with vinegar, garlic, and green chilies.",
+    "estimated": true,
+    "photo": "marb-marb-06.jpg"
+   },
+   {
+    "name": "Chicken Curry",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Tender chicken pieces simmered in coconut curry sauce with potatoes and bell peppers.",
+    "estimated": true,
+    "photo": "marb-marb-07.jpg"
+   },
+   {
+    "name": "Fried Chicken",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Crispy golden fried chicken cutlet seasoned with local spices.",
+    "estimated": true,
+    "photo": "marb-marb-08.jpg"
+   },
+   {
+    "name": "Paksiw na Bangus",
+    "category": "Seafood",
+    "price": 55,
+    "description": "Milkfish simmered in vinegar, garlic, ginger, and eggplant.",
+    "estimated": true,
+    "photo": "marb-marb-09.jpg"
+   },
+   {
+    "name": "Fried Tulingan",
+    "category": "Seafood",
+    "price": 45,
+    "description": "Pan-fried mackerel tuna seasoned with sea salt and garlic.",
+    "estimated": true,
+    "photo": null
+   },
+   {
+    "name": "Fried Hotdog",
+    "category": "Breakfast / Short Orders",
+    "price": 20,
+    "description": "Classic pan-fried red hotdog.",
+    "estimated": true,
+    "photo": "marb-marb-11.jpg"
+   },
+   {
+    "name": "Fried Egg",
+    "category": "Breakfast / Short Orders",
+    "price": 20,
+    "description": "Fresh chicken egg cooked sunny-side up or scrambled.",
+    "estimated": true,
+    "photo": "marb-marb-12.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "kunis",
+  "email": "kunis@feasto.com",
+  "name": "Kunis Eatery",
+  "storeType": "CARINDERIA",
+  "description": "A friendly roadside eatery serving fresh home-style ulam, soup dishes and affordable vegetable options for student and worker budgets.",
+  "address": "P.I. Garcia St, Naval, Biliran",
+  "opensAt": "06:30",
+  "closesAt": "19:00",
+  "latitude": 11.559,
+  "longitude": 124.3944,
+  "cover": "kunis-cover.jpg",
+  "menu": [
+   {
+    "name": "Guisadong Ampalaya",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Sautéed bitter gourd cooked with scrambled egg and tomatoes.",
+    "estimated": true,
+    "photo": "kunis-01.jpg"
+   },
+   {
+    "name": "Guisadong Petchay",
+    "category": "Vegetables",
+    "price": 25,
+    "description": "Stir-fried bok choy with garlic, onions, and light soy sauce.",
+    "estimated": true,
+    "photo": "kunis-02.jpg"
+   },
+   {
+    "name": "Chopsuey",
+    "category": "Vegetables",
+    "price": 30,
+    "description": "Sautéed mixed garden vegetables in a thick garlic glaze.",
+    "estimated": true,
+    "photo": "kunis-03.jpg"
+   },
+   {
+    "name": "Tortang Talong",
+    "category": "Vegetables / Egg",
+    "price": 25,
+    "description": "Grilled eggplant dipped in beaten egg and pan-fried to perfection.",
+    "estimated": true,
+    "photo": "kunis-04.jpg"
+   },
+   {
+    "name": "Pork Adobo",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Rich soy-vinegar marinated pork simmered until tender.",
+    "estimated": true,
+    "photo": "kunis-05.jpg"
+   },
+   {
+    "name": "Pork Dinuguan",
+    "category": "Main Course",
+    "price": 50,
+    "description": "Traditional dark savory pork blood with chili peppers.",
+    "estimated": true,
+    "photo": "kunis-06.jpg"
+   },
+   {
+    "name": "Chicken Curry",
+    "category": "Main Course",
+    "price": 55,
+    "description": "Chicken stewed in coconut milk with yellow curry powder and carrots.",
+    "estimated": true,
+    "photo": "kunis-07.jpg"
+   },
+   {
+    "name": "Paksiw na Tulingan",
+    "category": "Seafood",
+    "price": 45,
+    "description": "Mackerel tuna braised in vinegar, kamias, ginger, and garlic.",
+    "estimated": true,
+    "photo": "kunis-08.jpg"
+   },
+   {
+    "name": "Boiled Egg",
+    "category": "Breakfast / Short Orders",
+    "price": 15,
+    "description": "Fresh chicken egg cooked to order.",
+    "estimated": true,
+    "photo": "kunis-09.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "big-bu",
+  "email": "big-bu@feasto.com",
+  "name": "Big Bu Meals And Snacks",
+  "storeType": "CARINDERIA",
+  "description": "A casual neighborhood carinderia along Caibiran Cross-Country Road offering affordable Filipino lutong-bahay viands, fresh vegetable dishes and budget meals.",
+  "address": "Caibiran Cross-Country Road, Naval, Biliran",
+  "opensAt": "06:30",
+  "closesAt": "19:30",
+  "latitude": 11.563987,
+  "longitude": 124.400609,
+  "cover": null,
+  "menu": [
+   {
+    "name": "Pinakbet",
+    "category": "Vegetables",
+    "price": 25.0,
+    "description": "Mixed local vegetables sautéed with shrimp paste and bits of pork.",
+    "photo": null
+   },
+   {
+    "name": "Ginisang Sayote",
+    "category": "Vegetables",
+    "price": 20.0,
+    "description": "Sautéed chayote strips cooked with garlic, onions, and ground pork.",
+    "photo": null
+   },
+   {
+    "name": "Tortang Talong",
+    "category": "Vegetables",
+    "price": 25.0,
+    "description": "Pan-fried eggplant omelet seasoned with salt and pepper.",
+    "photo": null
+   },
+   {
+    "name": "Pork Afritada",
+    "category": "Main Course",
+    "price": 50.0,
+    "description": "Tender pork chunks simmered in tomato sauce with potatoes, carrots, and bell peppers.",
+    "photo": null
+   },
+   {
+    "name": "Bicol Express",
+    "category": "Main Course",
+    "price": 50.0,
+    "description": "Spicy pork stew cooked in rich coconut milk with chili peppers and shrimp paste.",
+    "photo": null
+   },
+   {
+    "name": "Chicken Adobo",
+    "category": "Main Course",
+    "price": 45.0,
+    "description": "Classic chicken pieces braised in soy sauce, vinegar, garlic, and peppercorns.",
+    "photo": null
+   },
+   {
+    "name": "Ginataang Isda",
+    "category": "Seafood",
+    "price": 45.0,
+    "description": "Fresh local fish simmered in creamy coconut milk with ginger, garlic, and pechay.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "paul-beth",
+  "email": "paul-beth@feasto.com",
+  "name": "Paul & Beth Eatery",
+  "storeType": "HOME_KITCHEN",
+  "description": "A cozy family-operated eatery offering homemade Filipino dishes, fresh seafood, savory soups and affordable rice meals.",
+  "address": "Caneja St, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "17:00",
+  "latitude": 11.5617,
+  "longitude": 124.3947,
+  "cover": "paul-beth-cover.jpg",
+  "menu": [
+   {
+    "name": "Special Chopsuey",
+    "category": "Vegetables",
+    "price": 35.0,
+    "description": "Loaded stir-fried cabbage, carrots, bell peppers, and young corn.",
+    "photo": "paul-beth-01.jpg"
+   },
+   {
+    "name": "Guisadong Ampalaya",
+    "category": "Vegetables",
+    "price": 25.0,
+    "description": "Sautéed bitter gourd with eggs, onions, and tomatoes.",
+    "photo": "paul-beth-02.jpg"
+   },
+   {
+    "name": "Guisadong Sitaw at Kalabasa",
+    "category": "Vegetables",
+    "price": 25.0,
+    "description": "String beans and squash cooked with garlic, onions, and pork bits.",
+    "photo": "paul-beth-03.jpg"
+   },
+   {
+    "name": "Tortang Talong",
+    "category": "Vegetables / Egg",
+    "price": 30.0,
+    "description": "Char-broiled eggplant dipped in egg and pan-fried.",
+    "photo": "paul-beth-04.jpg"
+   },
+   {
+    "name": "Pork Adobo",
+    "category": "Main Course",
+    "price": 55.0,
+    "description": "Slow-cooked pork belly in garlic, bay leaf, vinegar, and soy sauce glaze.",
+    "photo": "paul-beth-05.jpg"
+   },
+   {
+    "name": "Pork Dinuguan",
+    "category": "Main Course",
+    "price": 50.0,
+    "description": "Rich, tangy pork blood stew with long green peppers.",
+    "photo": "paul-beth-06.jpg"
+   },
+   {
+    "name": "Crispy Fried Chicken",
+    "category": "Main Course",
+    "price": 55.0,
+    "description": "Deep-fried seasoned chicken piece.",
+    "photo": "paul-beth-07.jpg"
+   },
+   {
+    "name": "Fried Tulingan",
+    "category": "Seafood",
+    "price": 45.0,
+    "description": "Mackerel tuna simmered in spiced vinegar and ginger broth.",
+    "photo": "paul-beth-08.jpg"
+   },
+   {
+    "name": "Fried Bangus",
+    "category": "Seafood",
+    "price": 65.0,
+    "description": "Pan-fried marinated milkfish section.",
+    "photo": null
+   },
+   {
+    "name": "Omelet / Fried Egg",
+    "category": "Breakfast / Short Orders",
+    "price": 20.0,
+    "description": "Pan-fried chicken egg.",
+    "photo": "paul-beth-10.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "marelous",
+  "email": "marelous@feasto.com",
+  "name": "Marelous Eatery",
+  "storeType": "HOME_KITCHEN",
+  "description": "A popular eatery in Naval known for generous meal portions, flavorful meat stews, fried fish and tasty vegetable viands.",
+  "address": "Vicentillo St, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "19:00",
+  "latitude": 11.5636,
+  "longitude": 124.3972,
+  "cover": "marelous-cover.jpg",
+  "menu": [
+   {
+    "name": "Ginataang Kalabasa at Sitaw",
+    "category": "Vegetables",
+    "price": 25.0,
+    "description": "Squash and string beans cooked in creamy coconut milk with chili.",
+    "photo": "marelous-01.jpg"
+   },
+   {
+    "name": "Pork Menudo",
+    "category": "Main Course",
+    "price": 55.0,
+    "description": "Pork and liver stew with bell peppers, potatoes, and tomato gravy.",
+    "photo": "marelous-02.jpg"
+   },
+   {
+    "name": "Fried Chicken",
+    "category": "Main Course",
+    "price": 55.0,
+    "description": "Crispy fried chicken leg or thigh section.",
+    "photo": "marelous-03.jpg"
+   },
+   {
+    "name": "Chicken Adobo",
+    "category": "Main Course",
+    "price": 50.0,
+    "description": "Chicken simmered in vinegar, garlic, soy sauce, and peppercorns.",
+    "photo": "marelous-04.jpg"
+   },
+   {
+    "name": "Fried Tulingan",
+    "category": "Seafood",
+    "price": 45.0,
+    "description": "Crispy fried whole or sliced mackerel tuna fish.",
+    "photo": "marelous-05.jpg"
+   },
+   {
+    "name": "Paksiw na Bangus",
+    "category": "Seafood",
+    "price": 55.0,
+    "description": "Milkfish simmered in spiced vinegar sauce with eggplant.",
+    "photo": "marelous-06.jpg"
+   },
+   {
+    "name": "Jumbo Hotdog",
+    "category": "Breakfast / Short Orders",
+    "price": 20.0,
+    "description": "Pan-fried tender juicy red hotdog.",
+    "photo": "marelous-07.jpg"
+   },
+   {
+    "name": "Sunny-Side Up Egg",
+    "category": "Breakfast / Short Orders",
+    "price": 20.0,
+    "description": "Pan-fried chicken egg with soft yolk.",
+    "photo": "marelous-08.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "cusina-de-salas",
+  "email": "cusina-de-salas@feasto.com",
+  "name": "Cusina De Salas",
+  "storeType": "RESTAURANT",
+  "description": "A long-running casual restaurant centered on affordable, uncomplicated meals, for breakfast, lunch, takeout and delivery.",
+  "address": "Ballesteros St, corner Santissimo Rosario, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "22:00",
+  "latitude": 11.56112,
+  "longitude": 124.39252,
+  "cover": "cusina-de-salas-cover.jpg",
+  "menu": [
+   {
+    "name": "Lomi",
+    "category": "Noodles",
+    "price": 120.0,
+    "description": "Thick egg noodles with meat and vegetables",
+    "photo": null
+   },
+   {
+    "name": "Bulalo",
+    "category": "Soup",
+    "price": 280.0,
+    "description": "Beef shank soup with vegetables",
+    "photo": null
+   },
+   {
+    "name": "Chicken Inasal",
+    "category": "Main Course",
+    "price": 150.0,
+    "description": "Grilled marinated chicken with rice",
+    "photo": null
+   },
+   {
+    "name": "Pancit Canton",
+    "category": "Noodles",
+    "price": 130.0,
+    "description": "Stir-fried noodles with vegetables and meat",
+    "photo": null
+   },
+   {
+    "name": "Chicken Liver",
+    "category": "Main Course",
+    "price": 110.0,
+    "description": "Sautéed chicken liver with onions",
+    "photo": null
+   },
+   {
+    "name": "Pork Adobo",
+    "category": "Main Course",
+    "price": 130.0,
+    "description": "Pork simmered in soy sauce and vinegar",
+    "photo": null
+   },
+   {
+    "name": "Pork Sisig",
+    "category": "Main Course",
+    "price": 180.0,
+    "description": "Sizzling seasoned chopped pork",
+    "photo": null
+   },
+   {
+    "name": "Fried Chicken",
+    "category": "Main Course",
+    "price": 140.0,
+    "description": "Crispy fried chicken with rice",
+    "photo": null
+   },
+   {
+    "name": "Chopsuey",
+    "category": "Vegetables",
+    "price": 120.0,
+    "description": "Mixed vegetables in savory sauce",
+    "photo": null
+   },
+   {
+    "name": "Garlic Rice",
+    "category": "Rice",
+    "price": 35.0,
+    "description": "Fried rice with garlic",
+    "photo": null
+   },
+   {
+    "name": "Plain Rice",
+    "category": "Rice",
+    "price": 20.0,
+    "description": "Steamed white rice",
+    "photo": null
+   },
+   {
+    "name": "Iced Tea",
+    "category": "Beverages",
+    "price": 45.0,
+    "description": "Refreshing iced tea",
+    "photo": null
+   },
+   {
+    "name": "Mango Shake",
+    "category": "Beverages",
+    "price": 85.0,
+    "description": "Fresh mango blended with ice",
+    "photo": null
+   },
+   {
+    "name": "Soft Drinks",
+    "category": "Beverages",
+    "price": 35.0,
+    "description": "Bottled carbonated drinks",
+    "photo": null
+   },
+   {
+    "name": "Bottled Water",
+    "category": "Beverages",
+    "price": 20.0,
+    "description": "Purified drinking water",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "el-pomar",
+  "email": "el-pomar@feasto.com",
+  "name": "El Pomar Bistro Café",
+  "storeType": "RESTAURANT",
+  "description": "A casual restaurant in a converted house serving Filipino comfort food, café fare and drinks. Open until 9 PM on Fridays and Saturdays.",
+  "address": "Sabenorio Street, Brgy. Santissimo Rosario, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "19:30",
+  "latitude": 11.5622,
+  "longitude": 124.3929,
+  "cover": "el-pomar-cover.jpg",
+  "menu": [
+   {
+    "category": "Rice Meals",
+    "name": "Chicken Inasal Petcho with Unli Rice",
+    "price": 158.0,
+    "description": "Grilled chicken breast inasal with unlimited rice.",
+    "photo": "el-pomar-01.jpg"
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Honey Garlic Chicken",
+    "price": 213.0,
+    "description": "Crispy chicken glazed in honey garlic sauce.",
+    "photo": "el-pomar-02.jpg"
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Beef Steak Chinese Style",
+    "price": 238.0,
+    "description": "Tender beef slices in Chinese-style sauce.",
+    "photo": "el-pomar-03.jpg"
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Lomi",
+    "price": 218.0,
+    "description": "Thick noodle soup with meat and vegetables, good for sharing.",
+    "photo": "el-pomar-04.jpg"
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Carbonara Spaghetti Tray",
+    "price": 740.0,
+    "description": "A party tray of creamy carbonara with garlic toast.",
+    "photo": "el-pomar-05.jpg"
+   },
+   {
+    "category": "Snacks",
+    "name": "Cheeseburger",
+    "price": 90.0,
+    "description": "Beef burger with cheese.",
+    "photo": "el-pomar-06.jpg"
+   },
+   {
+    "category": "Desserts & Drinks",
+    "name": "Special Halo-Halo",
+    "price": 105.0,
+    "description": "Ube ice cream, corn flakes, corn, mango, red and green gulaman on creamy ice.",
+    "photo": "el-pomar-07.jpg"
+   },
+   {
+    "category": "Desserts & Drinks",
+    "name": "Mango Shake",
+    "price": 70.0,
+    "description": "Fresh mango blended with ice.",
+    "photo": "el-pomar-08.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "diovannis",
+  "email": "diovannis@feasto.com",
+  "name": "Diovanni's Pizza House",
+  "storeType": "RESTAURANT",
+  "description": "A homemade Italian-style pizzeria specializing in pizza with pasta, chicken, burgers and other comfort food. Call for delivery: 0945 876 7221.",
+  "address": "Caraycaray, Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "18:30",
+  "latitude": 11.5746,
+  "longitude": 124.3984,
+  "cover": "diovannis-cover.jpg",
+  "menu": [
+   {
+    "category": "Bundles",
+    "name": "Group Meal",
+    "price": 899.0,
+    "description": "1 large pizza (any flavor), 1 platter spaghetti, loaded fries and a pitcher of lemon iced tea.",
+    "photo": null
+   },
+   {
+    "category": "Bundles",
+    "name": "Family Meal",
+    "price": 999.0,
+    "description": "5 pcs chicken, 1 platter spaghetti, Classic Hawaiian and Ham & Cheese medium pizzas, and a pitcher of house-blend iced tea.",
+    "photo": null
+   },
+   {
+    "category": "Bundles",
+    "name": "Monster Meal",
+    "price": 1699.0,
+    "description": "Any party-size pizza, 1 platter spaghetti, garlic butter chicken, loaded fries and 2 pitchers of house-blend iced tea.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "mareola",
+  "email": "mareola@feasto.com",
+  "name": "MAREOLA Filipino Resto",
+  "storeType": "RESTAURANT",
+  "description": "A Taste of Home, Your Great Choice. Traditional, affordable Filipino food in front of the BiPSU first gate.",
+  "address": "Padre Inocentes Street, in front of BiPSU first gate, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "21:00",
+  "latitude": 11.5639,
+  "longitude": 124.4009,
+  "cover": "mareola-cover.jpg",
+  "menu": [
+   {
+    "category": "All-Day Breakfast",
+    "name": "Beef Tapa",
+    "price": 120.0,
+    "description": "Beef tapa with garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Danggit",
+    "price": 110.0,
+    "description": "Crispy dried danggit with garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Tocino",
+    "price": 110.0,
+    "description": "Sweet cured pork with garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Chorizo de Cebu",
+    "price": 110.0,
+    "description": "Cebu-style sweet sausage with garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Chicken ala King",
+    "price": 120.0,
+    "description": "Chicken in creamy sauce with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Combo & Sizzling",
+    "name": "Quarter Fried Chicken",
+    "price": 170.0,
+    "description": "Fried chicken quarter with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Combo & Sizzling",
+    "name": "Pork Liempo",
+    "price": 170.0,
+    "description": "Grilled pork belly with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Combo & Sizzling",
+    "name": "Boneless Bangus",
+    "price": 170.0,
+    "description": "Fried boneless milkfish with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Combo & Sizzling",
+    "name": "Sizzling Pork Sisig",
+    "price": 130.0,
+    "description": "Sizzling pork sisig with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Combo & Sizzling",
+    "name": "Butter Garlic Shrimp",
+    "price": 165.0,
+    "description": "Shrimp in butter and garlic with rice.",
+    "photo": null
+   },
+   {
+    "category": "BBQ & Inasal",
+    "name": "Chicken Inasal",
+    "price": 130.0,
+    "description": "Grilled chicken inasal with rice.",
+    "photo": null
+   },
+   {
+    "category": "BBQ & Inasal",
+    "name": "Pork Inasal",
+    "price": 140.0,
+    "description": "Grilled pork inasal with rice.",
+    "photo": null
+   },
+   {
+    "category": "Student Meals",
+    "name": "Chicken Katsu",
+    "price": 100.0,
+    "description": "Java rice bowl with chicken katsu.",
+    "photo": null
+   },
+   {
+    "category": "Student Meals",
+    "name": "Pork Katsu",
+    "price": 100.0,
+    "description": "Java rice bowl with pork katsu.",
+    "photo": null
+   },
+   {
+    "category": "Student Meals",
+    "name": "Fish Fillet",
+    "price": 100.0,
+    "description": "Java rice bowl with fish fillet.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Pasta",
+    "name": "Crispy Chicken Burger",
+    "price": 150.0,
+    "description": "Crispy chicken burger with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Pasta",
+    "name": "Double Patty Cheeseburger",
+    "price": 190.0,
+    "description": "Two patties with cheese, with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Pasta",
+    "name": "Creamy Carbonara",
+    "price": 180.0,
+    "description": "Creamy carbonara pasta.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Pasta",
+    "name": "Mareola House Asian Pasta",
+    "price": 180.0,
+    "description": "The house Asian-style pasta.",
+    "photo": null
+   },
+   {
+    "category": "Ulam for Sharing",
+    "name": "Lechon Kawali",
+    "price": 200.0,
+    "description": "Crispy pork belly. Medium, good for 2.",
+    "photo": null
+   },
+   {
+    "category": "Ulam for Sharing",
+    "name": "Crispy Kare-kare",
+    "price": 210.0,
+    "description": "Crispy pork in peanut sauce. Medium, good for 2.",
+    "photo": null
+   },
+   {
+    "category": "Ulam for Sharing",
+    "name": "Bicol Express",
+    "price": 210.0,
+    "description": "Pork in spicy coconut cream. Medium, good for 2.",
+    "photo": null
+   },
+   {
+    "category": "Ulam for Sharing",
+    "name": "Beef Caldereta",
+    "price": 250.0,
+    "description": "Beef stewed in tomato sauce. Medium, good for 2.",
+    "photo": null
+   },
+   {
+    "category": "Ulam for Sharing",
+    "name": "Beef Kare-kare",
+    "price": 250.0,
+    "description": "Beef and vegetables in peanut sauce. Medium, good for 2.",
+    "photo": null
+   },
+   {
+    "category": "Rice Platters",
+    "name": "Seafood Fried Rice",
+    "price": 200.0,
+    "description": "Fried rice with seafood, for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Rice Platters",
+    "name": "Plain Rice Platter",
+    "price": 150.0,
+    "description": "Steamed rice platter, for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Fresh Mango Shake",
+    "price": 100.0,
+    "description": "Blended ripe mango.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Halo-Halo",
+    "price": 130.0,
+    "description": "Shaved ice with sweet toppings.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Cucumber Lemonade",
+    "price": 70.0,
+    "description": "Fresh cucumber lemonade.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "dadaone",
+  "email": "dadaone@feasto.com",
+  "name": "D'Adaone Bar and Restaurant",
+  "storeType": "RESTAURANT",
+  "description": "A bar and restaurant serving Filipino, Asian, grilled and fusion food, for group dining and small occasions.",
+  "address": "2nd Floor, D'Mei Residence Inn, Caibiran Cross-Country Road, Naval, Biliran",
+  "opensAt": "11:00",
+  "closesAt": "23:00",
+  "latitude": 11.562963,
+  "longitude": 124.397766,
+  "cover": "dadaone-cover.jpg",
+  "menu": [
+   {
+    "category": "Appetizers",
+    "name": "Buffalo Wings",
+    "price": 150.0,
+    "description": "Chicken wings with D'Adaone's own buffalo sauce.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Gambas",
+    "price": 150.0,
+    "description": "Fresh shrimp sautéed in olive oil and garlic with a touch of Spanish paprika.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Crunchy Calamari",
+    "price": 200.0,
+    "description": "Fresh squid coated and deep-fried until crunchy.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Chicken Strips",
+    "price": 160.0,
+    "description": "Battered chicken strips, deep-fried until crunchy.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Pork Sisig",
+    "price": 160.0,
+    "description": "Pork face, liver and ears with pepper and onion on a hot plate, topped with egg.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Beef Nachos",
+    "price": 180.0,
+    "description": "Nachos with cheesy white sauce, beef bits and homemade salsa.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Cheezy Chips",
+    "price": 160.0,
+    "description": "Thin potato chips with creamy cheese dip.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Onion Rings",
+    "price": 120.0,
+    "description": "Deep-fried battered sweet white onion.",
+    "photo": null
+   },
+   {
+    "category": "Appetizers",
+    "name": "Chicken Platter",
+    "price": 420.0,
+    "description": "Thai wings, buffalo wings and chicken strips.",
+    "photo": null
+   },
+   {
+    "category": "Soups",
+    "name": "Vegetable Soup",
+    "price": 90.0,
+    "description": "Fresh vegetables in a tomato-based soup.",
+    "photo": null
+   },
+   {
+    "category": "Soups",
+    "name": "Creamy Mushroom Soup",
+    "price": 90.0,
+    "description": "Creamy mushroom soup served with garlic bread.",
+    "photo": null
+   },
+   {
+    "category": "Soups",
+    "name": "Lomi Soup",
+    "price": 180.0,
+    "description": "Thick noodles with liver, pork cuts, eggs and vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Spaghetti Carbonara",
+    "price": 190.0,
+    "description": "Bacon, garlic and cheese in the house carbonara sauce.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Pinoy-style Spaghetti",
+    "price": 170.0,
+    "description": "Sweet, meaty and cheesy Filipino spaghetti.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Spaghetti Bolognese",
+    "price": 190.0,
+    "description": "Beef and pork in a rich tomato sauce with red wine.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Prawn Alfredo",
+    "price": 190.0,
+    "description": "Prawn linguini in homemade alfredo sauce with parmesan.",
+    "photo": null
+   },
+   {
+    "category": "Short Orders",
+    "name": "Fish and Chips",
+    "price": 190.0,
+    "description": "Beer-battered fish with fries and homemade tartar sauce.",
+    "photo": null
+   },
+   {
+    "category": "Short Orders",
+    "name": "Lechon Kawali",
+    "price": 180.0,
+    "description": "Crispy outside, juicy inside.",
+    "photo": null
+   },
+   {
+    "category": "Short Orders",
+    "name": "Caesar Salad",
+    "price": 150.0,
+    "description": "Lettuce and croutons in the in-house dressing.",
+    "photo": null
+   },
+   {
+    "category": "Short Orders",
+    "name": "French Fries",
+    "price": 90.0,
+    "description": "Freshly sliced potato fries.",
+    "photo": null
+   },
+   {
+    "category": "Short Orders",
+    "name": "Extra Rice",
+    "price": 30.0,
+    "description": "One cup of steamed rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Grilled Tuna Panga",
+    "price": 250.0,
+    "description": "Grilled tuna jaw marinated with traditional spices, served with rice and atchara.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "D'Adaone Burger Steak",
+    "price": 195.0,
+    "description": "100% beef patty with homemade mushroom, pepper or gravy sauce and sautéed vegetables, with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Grilled Tuna with Mango Salsa",
+    "price": 250.0,
+    "description": "Grilled tuna with fresh mango salsa and lemon glaze.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "D'Adaone Special Pork Ribs",
+    "price": 240.0,
+    "description": "Sweet, tangy, slightly spicy pork ribs with rice and buttered vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Balsamic-Glazed Pork Belly",
+    "price": 240.0,
+    "description": "Grilled pork belly with balsamic glaze and caramelized apples and onions.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Tonkatsu",
+    "price": 195.0,
+    "description": "Breaded deep-fried pork cutlet with rice and shredded cabbage.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Lemon Garlic Fish",
+    "price": 190.0,
+    "description": "Fish in lemon garlic sauce with rice and string beans.",
+    "photo": null
+   },
+   {
+    "category": "Platters",
+    "name": "Special Pork Ribs Platter",
+    "price": 480.0,
+    "description": "The best-selling pork ribs, as a platter. Serves 3–4.",
+    "photo": null
+   },
+   {
+    "category": "Platters",
+    "name": "Chopsuey",
+    "price": 190.0,
+    "description": "Mixed vegetables with pork and shrimp in a special sauce.",
+    "photo": null
+   },
+   {
+    "category": "Platters",
+    "name": "Pinakbet",
+    "price": 190.0,
+    "description": "Squash, eggplant, okra, string beans and bitter melon.",
+    "photo": null
+   },
+   {
+    "category": "Platters",
+    "name": "Pansit Bisaya (Bam-i)",
+    "price": 190.0,
+    "description": "A popular Filipino noodle stir-fry.",
+    "photo": null
+   },
+   {
+    "category": "Platters",
+    "name": "Dimsum Sweet and Sour Fish",
+    "price": 190.0,
+    "description": "Fish in a sweet and sour dimsum-style sauce.",
+    "photo": null
+   },
+   {
+    "category": "Native Dishes",
+    "name": "Caldereta Kanding",
+    "price": 350.0,
+    "description": "Goat meat stewed in tomato sauce.",
+    "photo": null
+   },
+   {
+    "category": "Native Dishes",
+    "name": "Ginataan Bisaya Manok",
+    "price": 350.0,
+    "description": "Native chicken in coconut milk soup.",
+    "photo": null
+   },
+   {
+    "category": "Native Dishes",
+    "name": "Tinolang Bisaya Manok",
+    "price": 350.0,
+    "description": "Native chicken soup with vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Native Dishes",
+    "name": "Sinigang na Baboy",
+    "price": 200.0,
+    "description": "Sour pork broth with vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Native Dishes",
+    "name": "Crispy Pata Supreme",
+    "price": 495.0,
+    "description": "Deep-fried pig trotters with soy-vinegar dip.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "D'Adaone Hamburger Supreme",
+    "price": 180.0,
+    "description": "The house burger with homemade flavor, oozing goodness.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Clubhouse Sandwich",
+    "price": 170.0,
+    "description": "Cheese, bacon, ham, lettuce and Cajun mayo, with potato chips.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Chicken Salad Sandwich",
+    "price": 150.0,
+    "description": "A family recipe of chopped chicken breast.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Special Halo-halo",
+    "price": 90.0,
+    "description": "Shaved ice, evaporated milk, fruits, leche flan and beans.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Pure Fruit Shake",
+    "price": 80.0,
+    "description": "Mango, green mango, avocado, watermelon or buko.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Iced Tea Pitcher",
+    "price": 90.0,
+    "description": "A pitcher of house iced tea.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Canned Drinks",
+    "price": 60.0,
+    "description": "Coke, Sprite, Pineapple, Orange or Four Seasons.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "khloe",
+  "email": "khloe@feasto.com",
+  "name": "Khloe Cafeteria + Café",
+  "storeType": "RESTAURANT",
+  "description": "A small, affordable cafeteria and café serving Asian-style meals, snacks and drinks, convenient for locals and students. Closes 3 PM on Sundays.",
+  "address": "P. Inocentes Street, Naval, Biliran",
+  "opensAt": "07:00",
+  "closesAt": "20:00",
+  "latitude": 11.5615,
+  "longitude": 124.3963,
+  "cover": "khloe-cover.jpg",
+  "menu": [
+   {
+    "name": "Chicken Adobo",
+    "category": "Main Course",
+    "price": 95.0,
+    "description": "Chicken cooked in soy sauce and vinegar",
+    "photo": null
+   },
+   {
+    "name": "Pork Menudo",
+    "category": "Main Course",
+    "price": 100.0,
+    "description": "Pork stew with potatoes and carrots",
+    "photo": null
+   },
+   {
+    "name": "Beef Caldereta",
+    "category": "Main Course",
+    "price": 140.0,
+    "description": "Beef stew with tomato sauce",
+    "photo": null
+   },
+   {
+    "name": "Fried Chicken Meal",
+    "category": "Rice Meals",
+    "price": 120.0,
+    "description": "Fried chicken served with rice",
+    "photo": null
+   },
+   {
+    "name": "Pork Sisig Meal",
+    "category": "Rice Meals",
+    "price": 130.0,
+    "description": "Seasoned pork sisig with rice",
+    "photo": null
+   },
+   {
+    "name": "Pancit Canton",
+    "category": "Noodles",
+    "price": 95.0,
+    "description": "Stir-fried noodles with vegetables",
+    "photo": null
+   },
+   {
+    "name": "Spaghetti",
+    "category": "Pasta",
+    "price": 75.0,
+    "description": "Filipino-style sweet spaghetti",
+    "photo": null
+   },
+   {
+    "name": "Burger",
+    "category": "Snacks",
+    "price": 65.0,
+    "description": "Beef burger with vegetables and dressing",
+    "photo": null
+   },
+   {
+    "name": "French Fries",
+    "category": "Snacks",
+    "price": 60.0,
+    "description": "Crispy potato fries",
+    "photo": null
+   },
+   {
+    "name": "Halo-Halo",
+    "category": "Desserts",
+    "price": 85.0,
+    "description": "Shaved ice with sweet toppings",
+    "photo": null
+   },
+   {
+    "name": "Chocolate Cake",
+    "category": "Desserts",
+    "price": 90.0,
+    "description": "Slice of chocolate cake",
+    "photo": null
+   },
+   {
+    "name": "Hot Coffee",
+    "category": "Beverages",
+    "price": 50.0,
+    "description": "Freshly brewed coffee",
+    "photo": null
+   },
+   {
+    "name": "Iced Coffee",
+    "category": "Beverages",
+    "price": 75.0,
+    "description": "Chilled coffee with milk",
+    "photo": null
+   },
+   {
+    "name": "Milk Tea",
+    "category": "Beverages",
+    "price": 85.0,
+    "description": "Milk-based tea with pearls",
+    "photo": null
+   },
+   {
+    "name": "Fruit Shake",
+    "category": "Beverages",
+    "price": 80.0,
+    "description": "Blended seasonal fruits",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "talyer-belly",
+  "email": "talyer-belly@feasto.com",
+  "name": "Talyer Belly",
+  "storeType": "RESTAURANT",
+  "description": "Best known for lechon belly. Closes at noon on Sundays.",
+  "address": "Vicentillo Street, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "19:00",
+  "latitude": 11.562188,
+  "longitude": 124.394734,
+  "cover": "talyer-belly-cover.jpg",
+  "menu": [
+   {
+    "category": "Lechon",
+    "name": "Lechon Belly (1/4 kg)",
+    "price": 180.0,
+    "description": "Crispy roasted pork belly, the house specialty.",
+    "estimated": true,
+    "photo": "talyer-belly-01.jpg"
+   }
+  ]
+ },
+ {
+  "slug": "jelos-place",
+  "email": "jelos-place@feasto.com",
+  "name": "Jelo's Place",
+  "storeType": "RESTAURANT",
+  "description": "Hot meals since 2010: soups, pancit, pasta, sizzling plates and burgers. Shares its space with Lushan Tea.",
+  "address": "Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "21:00",
+  "latitude": 11.5627,
+  "longitude": 124.399,
+  "cover": "jelos-place-cover.jpg",
+  "menu": [
+   {
+    "category": "Hot Soup",
+    "name": "Special Lomi",
+    "price": 280.0,
+    "description": "Thick egg noodle soup, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Hot Soup",
+    "name": "Chicken Mami",
+    "price": 145.0,
+    "description": "Chicken noodle soup.",
+    "photo": null
+   },
+   {
+    "category": "Hot Soup",
+    "name": "Beef Mami",
+    "price": 180.0,
+    "description": "Beef noodle soup.",
+    "photo": null
+   },
+   {
+    "category": "Hot Soup",
+    "name": "Bulalo Hotpot",
+    "price": 355.0,
+    "description": "Beef shank and bone marrow soup.",
+    "photo": null
+   },
+   {
+    "category": "Hot Soup",
+    "name": "Sinigang na Baboy",
+    "price": 355.0,
+    "description": "Sour pork soup.",
+    "photo": null
+   },
+   {
+    "category": "Hot Soup",
+    "name": "Tinolang Isda",
+    "price": 340.0,
+    "description": "Fish soup with ginger and vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Bihon Guisado",
+    "price": 250.0,
+    "description": "Stir-fried rice noodles, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Canton Guisado",
+    "price": 250.0,
+    "description": "Stir-fried egg noodles, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Bam-i",
+    "price": 250.0,
+    "description": "Mixed bihon and canton noodles.",
+    "photo": null
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Gambas Pasta",
+    "price": 255.0,
+    "description": "Pasta with garlic shrimp.",
+    "photo": null
+   },
+   {
+    "category": "Noodles & Pasta",
+    "name": "Lasagna ala Carbonara",
+    "price": 280.0,
+    "description": "Creamy carbonara lasagna.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling Plates",
+    "name": "Sizzling Sisig",
+    "price": 205.0,
+    "description": "Sizzling pork sisig.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling Plates",
+    "name": "Sizzling Burger Steak",
+    "price": 205.0,
+    "description": "Burger steak on a sizzling plate.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling Plates",
+    "name": "Sizzling Hungarian Sausage",
+    "price": 265.0,
+    "description": "Hungarian sausage on a sizzling plate.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling Plates",
+    "name": "Bulalo Steak",
+    "price": 280.0,
+    "description": "Beef steak, bulalo-style.",
+    "photo": null
+   },
+   {
+    "category": "Burgers",
+    "name": "Jelo's Hamburger",
+    "price": 110.0,
+    "description": "The house hamburger.",
+    "photo": null
+   },
+   {
+    "category": "Burgers",
+    "name": "Cheeseburger",
+    "price": 145.0,
+    "description": "Burger with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Cheesy Hotdog Sandwich",
+    "price": 60.0,
+    "description": "Soft bun with juicy hotdog and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Belgian Waffle",
+    "price": 100.0,
+    "description": "Crisp waffle with ice cream and chocolate sauce.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Scoop & Sprinkles",
+    "price": 60.0,
+    "description": "Two scoops of ice cream with toppings.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true
+ },
+ {
+  "slug": "rabak",
+  "email": "rabak@feasto.com",
+  "name": "Rabak Food Station",
+  "storeType": "RESTAURANT",
+  "description": "Specialist of seafood: grilled, sinigang and tinola fish, pancit and Filipino favorites for sharing.",
+  "address": "Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "21:00",
+  "latitude": 11.5585,
+  "longitude": 124.3933,
+  "cover": "rabak-cover.jpg",
+  "menu": [
+   {
+    "category": "Seafood",
+    "name": "Bangus Sugba",
+    "price": 280.0,
+    "description": "Grilled milkfish.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Salmon Strips (400 g)",
+    "price": 250.0,
+    "description": "Sinigang, sugba or tinola.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Pompano",
+    "price": 418.0,
+    "description": "Steamed, sugba, tinola or sweet and sour.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Tuna Panga Paluto Sugba (300–400 g)",
+    "price": 248.0,
+    "description": "Grilled tuna jaw.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Tuna Belly (Small, 150–200 g)",
+    "price": 230.0,
+    "description": "Sugba, tinola or sinigang.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Shrimp Tempura",
+    "price": 188.0,
+    "description": "Battered fried shrimp.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Calamares",
+    "price": 198.0,
+    "description": "Fried battered squid rings.",
+    "photo": null
+   },
+   {
+    "category": "Seafood",
+    "name": "Sinuglaw",
+    "price": 248.0,
+    "description": "Grilled pork and fish ceviche.",
+    "photo": null
+   },
+   {
+    "category": "Ulam",
+    "name": "Sisig",
+    "price": 188.0,
+    "description": "Pork sisig.",
+    "photo": null
+   },
+   {
+    "category": "Ulam",
+    "name": "Chicharon Bulaklak",
+    "price": 168.0,
+    "description": "Crispy pork ruffle fat.",
+    "photo": null
+   },
+   {
+    "category": "Ulam",
+    "name": "Crispy Pata",
+    "price": 650.0,
+    "description": "Deep-fried pork knuckle, for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Pancit Bam-e",
+    "price": 198.0,
+    "description": "Mixed bihon and canton noodles.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Pancit Canton",
+    "price": 198.0,
+    "description": "Stir-fried egg noodles.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Chopsuey",
+    "price": 198.0,
+    "description": "Mixed vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Pinakbet",
+    "price": 188.0,
+    "description": "Mixed local vegetables with shrimp paste.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Relyenong Talong",
+    "price": 150.0,
+    "description": "Stuffed eggplant omelet.",
+    "photo": null
+   },
+   {
+    "category": "Pancit & Vegetables",
+    "name": "Adobong Kangkong",
+    "price": 120.0,
+    "description": "Water spinach cooked adobo-style.",
+    "photo": null
+   },
+   {
+    "category": "Rice",
+    "name": "Rice Platter",
+    "price": 150.0,
+    "description": "Steamed rice for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Rice",
+    "name": "Puso",
+    "price": 10.0,
+    "description": "Hanging rice in woven coconut leaves.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true
+ },
+ {
+  "slug": "rallions",
+  "email": "rallions@feasto.com",
+  "name": "Rallion's",
+  "storeType": "RESTAURANT",
+  "description": "Serving Naval since 2005: soups, pancit bilao, siopao, sandwiches and refreshing drinks.",
+  "address": "Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "20:00",
+  "latitude": 11.5603,
+  "longitude": 124.3978,
+  "cover": "rallions-cover.jpg",
+  "menu": [
+   {
+    "category": "Soup",
+    "name": "Lomi",
+    "price": 150.0,
+    "description": "Thick egg noodle soup.",
+    "photo": null
+   },
+   {
+    "category": "Soup",
+    "name": "Ma Ki Mi (Double)",
+    "price": 120.0,
+    "description": "Pork ma ki noodle soup, double. ₱100 single.",
+    "photo": null
+   },
+   {
+    "category": "Filipino Pancit",
+    "name": "Bilao Pancit Bam-i (Medium)",
+    "price": 300.0,
+    "description": "Party bilao of pancit bam-i. ₱550 large.",
+    "photo": null
+   },
+   {
+    "category": "Filipino Pancit",
+    "name": "Bilao Pancit Bihon (Medium)",
+    "price": 250.0,
+    "description": "Party bilao of pancit bihon. ₱450 large.",
+    "photo": null
+   },
+   {
+    "category": "Filipino Pancit",
+    "name": "Sotanghon Guisado",
+    "price": 250.0,
+    "description": "Stir-fried glass noodles.",
+    "photo": null
+   },
+   {
+    "category": "Filipino Pancit",
+    "name": "Pancit Canton",
+    "price": 200.0,
+    "description": "Stir-fried egg noodles.",
+    "photo": null
+   },
+   {
+    "category": "Filipino Pancit",
+    "name": "Pancit Bihon",
+    "price": 180.0,
+    "description": "Stir-fried rice noodles.",
+    "photo": null
+   },
+   {
+    "category": "Combo Snacks",
+    "name": "Clubhouse Sandwich with Fries",
+    "price": 170.0,
+    "description": "Clubhouse sandwich with fries.",
+    "photo": null
+   },
+   {
+    "category": "Combo Snacks",
+    "name": "Chicken Burger with Fries",
+    "price": 120.0,
+    "description": "Chicken burger with fries.",
+    "photo": null
+   },
+   {
+    "category": "Paos & More",
+    "name": "Ding Pao",
+    "price": 90.0,
+    "description": "Big steamed bun.",
+    "photo": null
+   },
+   {
+    "category": "Paos & More",
+    "name": "Pork Asado Siopao",
+    "price": 50.0,
+    "description": "Steamed bun with sweet pork asado.",
+    "photo": null
+   },
+   {
+    "category": "Paos & More",
+    "name": "Bola-Bola Siopao",
+    "price": 50.0,
+    "description": "Steamed bun with meatball filling.",
+    "photo": null
+   },
+   {
+    "category": "Paos & More",
+    "name": "Pork Siomai",
+    "price": 50.0,
+    "description": "Steamed pork siomai.",
+    "photo": null
+   },
+   {
+    "category": "Paos & More",
+    "name": "French Fries (Big)",
+    "price": 100.0,
+    "description": "Crispy fries.",
+    "photo": null
+   },
+   {
+    "category": "Sandwiches",
+    "name": "Bacon & Egg Sandwich",
+    "price": 85.0,
+    "description": "Bacon and egg in toasted bread.",
+    "photo": null
+   },
+   {
+    "category": "Sandwiches",
+    "name": "Ham & Cheese Sandwich",
+    "price": 70.0,
+    "description": "Ham and cheese in toasted bread.",
+    "photo": null
+   },
+   {
+    "category": "Thirst Quenchers",
+    "name": "Halo-Halo Special",
+    "price": 75.0,
+    "description": "Halo-halo with the works.",
+    "photo": null
+   },
+   {
+    "category": "Thirst Quenchers",
+    "name": "Fresh Buko Shake",
+    "price": 65.0,
+    "description": "Young coconut shake.",
+    "photo": null
+   },
+   {
+    "category": "Thirst Quenchers",
+    "name": "Fresh Mango Shake",
+    "price": 65.0,
+    "description": "Ripe mango shake.",
+    "photo": null
+   },
+   {
+    "category": "Thirst Quenchers",
+    "name": "Calamansi Juice",
+    "price": 50.0,
+    "description": "Fresh calamansi juice.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true
+ },
+ {
+  "slug": "jollibee",
+  "email": "jollibee@feasto.com",
+  "name": "Jollibee Naval",
+  "storeType": "FAST_FOOD",
+  "description": "Filipino fast food: Chickenjoy, burgers, Jolly Spaghetti and rice meals. A popular stop for families, students and travelers.",
+  "address": "P. Inocentes St, corner Magallanes Street, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "22:00",
+  "latitude": 11.5609,
+  "longitude": 124.3941,
+  "cover": "jollibee-cover.jpg",
+  "menu": [
+   {
+    "category": "Chickenjoy",
+    "name": "1-pc Chickenjoy with Rice",
+    "price": 104.0,
+    "description": "Crispy, juicy fried chicken with rice and gravy.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "2-pc Chickenjoy with Rice",
+    "price": 205.0,
+    "description": "Two pieces of Chickenjoy with rice and gravy.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "1-pc Chickenjoy with Jolly Spaghetti",
+    "price": 184.0,
+    "description": "Chickenjoy with Jolly Spaghetti.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "1-pc Chickenjoy with Fries",
+    "price": 178.0,
+    "description": "Chickenjoy with fries.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "1-pc Chickenjoy with Burger Steak",
+    "price": 184.0,
+    "description": "Chickenjoy with a burger steak and rice.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "Chickenjoy Bucket (6 pcs)",
+    "price": 536.0,
+    "description": "Six pieces of Chickenjoy for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Chickenjoy",
+    "name": "Chickenjoy Bucket (8 pcs)",
+    "price": 682.0,
+    "description": "Eight pieces of Chickenjoy for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Jolly Spaghetti",
+    "name": "Jolly Spaghetti",
+    "price": 146.0,
+    "description": "Sweet-style spaghetti with hotdog slices and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Jolly Spaghetti",
+    "name": "Jolly Spaghetti with Yumburger",
+    "price": 142.0,
+    "description": "Jolly Spaghetti with a Yumburger.",
+    "photo": null
+   },
+   {
+    "category": "Jolly Spaghetti",
+    "name": "Jolly Spaghetti Family Pan",
+    "price": 300.0,
+    "description": "Jolly Spaghetti good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Burger Steak",
+    "name": "1-pc Burger Steak",
+    "price": 90.0,
+    "description": "Burger steak with mushroom gravy and rice.",
+    "photo": null
+   },
+   {
+    "category": "Burger Steak",
+    "name": "2-pc Burger Steak",
+    "price": 157.0,
+    "description": "Two burger steaks with mushroom gravy and rice.",
+    "photo": null
+   },
+   {
+    "category": "Burger Steak",
+    "name": "Burger Steak Family Pan (6 pcs)",
+    "price": 420.0,
+    "description": "Six burger steaks for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Chicken & Sandwiches",
+    "name": "1-pc Chicken Fillet with Pepper Cream",
+    "price": 104.0,
+    "description": "Chicken fillet in pepper cream sauce with rice.",
+    "photo": null
+   },
+   {
+    "category": "Chicken & Sandwiches",
+    "name": "Crunchy Chicken Sandwich",
+    "price": 153.0,
+    "description": "Crunchy chicken fillet sandwich.",
+    "photo": null
+   },
+   {
+    "category": "Chicken & Sandwiches",
+    "name": "Jolly Hotdog",
+    "price": 163.0,
+    "description": "Classic Jolly hotdog with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Chicken & Sandwiches",
+    "name": "Chicken Nuggets (6 pcs)",
+    "price": 179.0,
+    "description": "Six chicken nuggets with dip.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Peach Mango Pie",
+    "price": 53.0,
+    "description": "Crispy pie with peach and mango filling.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Chocolate Sundae",
+    "price": 58.0,
+    "description": "Soft-serve with chocolate syrup.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Coke Float",
+    "price": 79.0,
+    "description": "Coke topped with soft-serve.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "mcdonalds",
+  "email": "mcdonalds@feasto.com",
+  "name": "McDonald's Naval",
+  "storeType": "FAST_FOOD",
+  "description": "Burgers, chicken, fries, rice meals, desserts and breakfast. Open until midnight (1 AM on Saturdays).",
+  "address": "Sagrada Familia, Naval, Biliran",
+  "opensAt": "07:00",
+  "closesAt": "23:59",
+  "latitude": 11.5566,
+  "longitude": 124.3992,
+  "cover": "mcdonalds-cover.jpg",
+  "menu": [
+   {
+    "category": "Chicken Value Meals",
+    "name": "1-pc Chicken McDo with Rice",
+    "price": 158.0,
+    "description": "Crispy chicken with rice and a drink. ₱196 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "2-pc Chicken McDo with Rice",
+    "price": 239.0,
+    "description": "Two pieces of chicken with rice and a drink. ₱277 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "1-pc Chicken McDo with McSpaghetti",
+    "price": 216.0,
+    "description": "Chicken McDo with McSpaghetti and a drink.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "McSpaghetti",
+    "price": 126.0,
+    "description": "Sweet-style spaghetti with a drink.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "Chicken McDo McShare Box (6 pcs)",
+    "price": 515.0,
+    "description": "Six pieces of Chicken McDo for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "Chicken McDo McShare Box (8 pcs)",
+    "price": 650.0,
+    "description": "Eight pieces of Chicken McDo for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Value Meals",
+    "name": "6-pc Chicken McNuggets Meal",
+    "price": 207.0,
+    "description": "Six nuggets with fries and a drink.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "Cheeseburger Meal",
+    "price": 121.0,
+    "description": "Cheeseburger with a drink. ₱159 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "Double Cheeseburger Meal",
+    "price": 207.0,
+    "description": "Double cheeseburger with a drink. ₱245 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "Big Mac Meal",
+    "price": 232.0,
+    "description": "Big Mac with a drink. ₱270 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "Quarter Pounder with Cheese Meal",
+    "price": 232.0,
+    "description": "Quarter Pounder with cheese and a drink.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "McChicken Meal",
+    "price": 185.0,
+    "description": "McChicken with a drink. ₱223 with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burger Value Meals",
+    "name": "Crispy Chicken Sandwich Meal",
+    "price": 124.0,
+    "description": "Crispy chicken sandwich with a drink.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "McFlurry with Oreo",
+    "price": 72.0,
+    "description": "Soft-serve with Oreo cookie bits.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Coke McFloat",
+    "price": 59.0,
+    "description": "Coke topped with soft-serve.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Sundae",
+    "price": 52.0,
+    "description": "Hot fudge or hot caramel sundae.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "mang-inasal",
+  "email": "mang-inasal@feasto.com",
+  "name": "Mang Inasal Naval",
+  "storeType": "FAST_FOOD",
+  "description": "Grilled chicken inasal, rice meals with unli-rice and Filipino desserts.",
+  "address": "P. Inocentes Street, corner Ballesteros Street, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "21:00",
+  "latitude": 11.560713,
+  "longitude": 124.392766,
+  "cover": "mang-inasal-cover.jpg",
+  "menu": [
+   {
+    "category": "Chicken Inasal",
+    "name": "Chicken Inasal Paa Large (PM1)",
+    "price": 139.0,
+    "description": "Grilled chicken leg quarter with rice. ₱174 with drink.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Inasal",
+    "name": "Chicken Inasal Pecho Large (PM2)",
+    "price": 169.0,
+    "description": "Grilled chicken breast quarter with rice. ₱204 with drink.",
+    "photo": null
+   },
+   {
+    "category": "Chicken Inasal",
+    "name": "Chicken Inasal Regular",
+    "price": 99.0,
+    "description": "Grilled chicken inasal with rice. ₱134 with drink.",
+    "photo": null
+   },
+   {
+    "category": "Ihaw-Sarap Favorites",
+    "name": "Bangus Sisig",
+    "price": 135.0,
+    "description": "Milkfish sisig with rice.",
+    "photo": null
+   },
+   {
+    "category": "Ihaw-Sarap Favorites",
+    "name": "Grilled Liempo",
+    "price": 135.0,
+    "description": "Grilled pork belly with rice.",
+    "photo": null
+   },
+   {
+    "category": "Ihaw-Sarap Favorites",
+    "name": "Sizzling Liempo",
+    "price": 146.0,
+    "description": "With mushroom gravy and java rice.",
+    "photo": null
+   },
+   {
+    "category": "Pork BBQ",
+    "name": "Pork BBQ",
+    "price": 99.0,
+    "description": "Pork barbecue with rice.",
+    "photo": null
+   },
+   {
+    "category": "Pork BBQ",
+    "name": "Spicy Pork BBQ",
+    "price": 109.0,
+    "description": "Spicy pork barbecue with rice.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Bowls",
+    "name": "Soy Garlic Chicken Sulit Bowl",
+    "price": 89.0,
+    "description": "Soy garlic chicken on rice.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Bowls",
+    "name": "Pork Sisig Sulit Bowl",
+    "price": 89.0,
+    "description": "Pork sisig on rice with egg.",
+    "photo": null
+   },
+   {
+    "category": "Combos",
+    "name": "Ihaw-Sarap Combo A",
+    "price": 273.0,
+    "description": "1 Pecho unli-rice, extra creamy halo-halo (8 oz) and a small drink.",
+    "photo": null
+   },
+   {
+    "category": "Combos",
+    "name": "Ihaw-Sarap Combo B",
+    "price": 203.0,
+    "description": "1 Pork BBQ unli-rice, extra creamy halo-halo (8 oz) and a small drink.",
+    "photo": null
+   },
+   {
+    "category": "Fiesta Bundles",
+    "name": "Buddy Fiesta Meal: Chicken Inasal & Pork BBQ",
+    "price": 470.0,
+    "description": "Good for 2–3, with drinks.",
+    "photo": null
+   },
+   {
+    "category": "Fiesta Bundles",
+    "name": "Family Fiesta Meal: Chicken Inasal & Pork BBQ",
+    "price": 865.0,
+    "description": "Good for 4–6, with drinks.",
+    "photo": null
+   },
+   {
+    "category": "For Sharing",
+    "name": "Paa (2 pcs)",
+    "price": 268.0,
+    "description": "Two grilled chicken legs.",
+    "photo": null
+   },
+   {
+    "category": "For Sharing",
+    "name": "Pork BBQ Buddy",
+    "price": 193.0,
+    "description": "Pork BBQ for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Halo-Halo",
+    "name": "Extra Creamy Halo-Halo (Regular)",
+    "price": 95.0,
+    "description": "Extra creamy halo-halo, regular size.",
+    "photo": null
+   },
+   {
+    "category": "Halo-Halo",
+    "name": "Crema de Leche Halo-Halo (Regular)",
+    "price": 95.0,
+    "description": "Halo-halo with crema de leche, regular size.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "weluisa",
+  "email": "weluisa@feasto.com",
+  "name": "Weluisa Food Court",
+  "storeType": "FAST_FOOD",
+  "description": "A well-known local dining hub since 1998 serving Filipino comfort food, cakes, snacks and affordable meals.",
+  "address": "P. Inocentes St, Naval, Biliran",
+  "opensAt": "06:00",
+  "closesAt": "20:00",
+  "latitude": 11.560987,
+  "longitude": 124.393484,
+  "cover": "weluisa-cover.jpg",
+  "menu": [
+   {
+    "name": "Lechon Manok",
+    "category": "Main Course",
+    "price": 280.0,
+    "description": "Whole roasted chicken",
+    "photo": null
+   },
+   {
+    "name": "Liempo",
+    "category": "Main Course",
+    "price": 180.0,
+    "description": "Grilled pork belly",
+    "photo": null
+   },
+   {
+    "name": "Pork Adobo",
+    "category": "Main Course",
+    "price": 95.0,
+    "description": "Pork cooked in soy sauce and vinegar",
+    "photo": null
+   },
+   {
+    "name": "Chicken Curry",
+    "category": "Main Course",
+    "price": 110.0,
+    "description": "Chicken in creamy curry sauce",
+    "photo": null
+   },
+   {
+    "name": "Pork Menudo",
+    "category": "Main Course",
+    "price": 100.0,
+    "description": "Pork stew with vegetables",
+    "photo": null
+   },
+   {
+    "name": "Pancit Bam-i",
+    "category": "Noodles",
+    "price": 130.0,
+    "description": "Mixed noodles with meat and vegetables",
+    "photo": null
+   },
+   {
+    "name": "Pancit Canton",
+    "category": "Noodles",
+    "price": 110.0,
+    "description": "Stir-fried egg noodles",
+    "photo": null
+   },
+   {
+    "name": "Suman Balintawak",
+    "category": "Native Delicacies",
+    "price": 35.0,
+    "description": "Traditional sticky rice delicacy",
+    "photo": null
+   },
+   {
+    "name": "Custard Cake",
+    "category": "Desserts",
+    "price": 25.0,
+    "description": "Soft cake with custard flavor",
+    "photo": null
+   },
+   {
+    "name": "Cupcakes",
+    "category": "Desserts",
+    "price": 15.0,
+    "description": "Small individually baked cakes",
+    "photo": null
+   },
+   {
+    "name": "Crema de Fruita",
+    "category": "Desserts",
+    "price": 95.0,
+    "description": "Layered cake with fruit and cream",
+    "photo": null
+   },
+   {
+    "name": "Yema Cake",
+    "category": "Desserts",
+    "price": 90.0,
+    "description": "Cake with sweet yema topping",
+    "photo": null
+   },
+   {
+    "name": "Deep Dark Chocolate Cake",
+    "category": "Desserts",
+    "price": 110.0,
+    "description": "Rich chocolate cake",
+    "photo": null
+   },
+   {
+    "name": "Black Forest Cake",
+    "category": "Desserts",
+    "price": 120.0,
+    "description": "Chocolate cake with cream and cherries",
+    "photo": null
+   },
+   {
+    "name": "Plain Rice",
+    "category": "Rice",
+    "price": 20.0,
+    "description": "Steamed white rice",
+    "photo": null
+   },
+   {
+    "name": "Iced Tea",
+    "category": "Beverages",
+    "price": 40.0,
+    "description": "Chilled sweetened tea",
+    "photo": null
+   },
+   {
+    "name": "Soft Drinks",
+    "category": "Beverages",
+    "price": 35.0,
+    "description": "Carbonated beverages",
+    "photo": null
+   },
+   {
+    "name": "Bottled Water",
+    "category": "Beverages",
+    "price": 20.0,
+    "description": "Purified drinking water",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "cloud-burger",
+  "email": "cloud-burger@feasto.com",
+  "name": "Cloud Burger Pitstop",
+  "storeType": "FAST_FOOD",
+  "description": "Freshly made burgers and sides, buy one get one. Open late; on Thursdays to Saturdays until 4 AM.",
+  "address": "P. Inocentes Street, Brgy. Padre Inocentes Garcia, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "23:59",
+  "latitude": 11.5619,
+  "longitude": 124.3971,
+  "cover": "cloud-burger-cover.jpg",
+  "menu": [
+   {
+    "category": "Fries",
+    "name": "Fries Regular",
+    "price": 35.0,
+    "description": "Cheese, sour cream, BBQ or chili BBQ flavor.",
+    "photo": null
+   },
+   {
+    "category": "Fries",
+    "name": "Fries Large",
+    "price": 50.0,
+    "description": "Cheese, sour cream, BBQ or chili BBQ flavor.",
+    "photo": null
+   },
+   {
+    "category": "Fries",
+    "name": "Fries Jumbo (2 flavors)",
+    "price": 70.0,
+    "description": "Two flavors of your choice.",
+    "photo": null
+   },
+   {
+    "category": "Fries",
+    "name": "Fries Mega (3 flavors)",
+    "price": 100.0,
+    "description": "Three flavors of your choice.",
+    "photo": null
+   },
+   {
+    "category": "Fries",
+    "name": "Fries Cheese Overload (Large)",
+    "price": 65.0,
+    "description": "Fries loaded with cheese sauce.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Pork Burger",
+    "price": 39.0,
+    "description": "Buy one, get one. ₱54 with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Pork Burger with Egg",
+    "price": 64.0,
+    "description": "Buy one, get one. ₱79 with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Crispy Chicken Burger",
+    "price": 79.0,
+    "description": "Buy one, get one. ₱94 with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Beef Burger",
+    "price": 44.0,
+    "description": "Buy one, get one. ₱59 with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Beef Burger with Egg",
+    "price": 69.0,
+    "description": "Buy one, get one. ₱89 with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Jumbo Cheesedog Sandwich",
+    "price": 69.0,
+    "description": "Buy one, get one.",
+    "photo": null
+   },
+   {
+    "category": "Buy One Get One",
+    "name": "Footlong",
+    "price": 89.0,
+    "description": "Buy one, get one.",
+    "photo": null
+   },
+   {
+    "category": "Solo Orders",
+    "name": "Hungarian Sandwich",
+    "price": 50.0,
+    "description": "Hungarian sausage sandwich.",
+    "photo": null
+   },
+   {
+    "category": "Solo Orders",
+    "name": "Ham and Cheese Sandwich",
+    "price": 30.0,
+    "description": "Ham and cheese in soft bread.",
+    "photo": null
+   },
+   {
+    "category": "Solo Orders",
+    "name": "Bacon and Cheese Sandwich",
+    "price": 40.0,
+    "description": "Bacon and cheese in soft bread.",
+    "photo": null
+   },
+   {
+    "category": "Solo Orders",
+    "name": "Egg Sandwich",
+    "price": 30.0,
+    "description": "Egg sandwich.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Softdrinks (300 ml)",
+    "price": 25.0,
+    "description": "Chilled softdrink.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Bottled Iced Tea",
+    "price": 20.0,
+    "description": "230 ml bottled iced tea.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Mineral Water (500 ml)",
+    "price": 15.0,
+    "description": "Bottled mineral water.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "lub-dub",
+  "email": "lub-dub@feasto.com",
+  "name": "Lub Dub Café",
+  "storeType": "CAFE",
+  "description": "A trendy café serving signature coffee, matcha, frappes, all-day meals, pasta and desserts. Popular with students and young professionals.",
+  "address": "Gov. Sabonsolin Road, Sitio Lupa, Brgy. Calumpang, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "20:00",
+  "latitude": 11.57064,
+  "longitude": 124.40171,
+  "cover": "lub-dub-cover.jpg",
+  "menu": [
+   {
+    "category": "Signature Coffee",
+    "name": "Bear Kori Kohi",
+    "price": 195.0,
+    "description": "Iced overload signature coffee.",
+    "photo": null
+   },
+   {
+    "category": "Signature Coffee",
+    "name": "Tiramisu Iced Latte",
+    "price": 185.0,
+    "description": "Iced latte with tiramisu flavor.",
+    "photo": null
+   },
+   {
+    "category": "Signature Coffee",
+    "name": "Lub Dub Signature",
+    "price": 180.0,
+    "description": "The house signature iced coffee.",
+    "photo": null
+   },
+   {
+    "category": "Hot Drinks",
+    "name": "Americano",
+    "price": 150.0,
+    "description": "100% Arabica beans.",
+    "photo": null
+   },
+   {
+    "category": "Hot Drinks",
+    "name": "Cafe Latte",
+    "price": 150.0,
+    "description": "100% Arabica beans with steamed milk.",
+    "photo": null
+   },
+   {
+    "category": "Hot Drinks",
+    "name": "Cappuccino",
+    "price": 150.0,
+    "description": "Espresso with milk foam.",
+    "photo": null
+   },
+   {
+    "category": "House Faves",
+    "name": "Sea Salt Latte (Iced)",
+    "price": 175.0,
+    "description": "Also mochaccino, caramel macchiato, French vanilla or Spanish latte. ₱160 hot.",
+    "photo": null
+   },
+   {
+    "category": "Matcha",
+    "name": "Dirty Matcha",
+    "price": 180.0,
+    "description": "Iced ceremonial-grade matcha with espresso.",
+    "photo": null
+   },
+   {
+    "category": "Matcha",
+    "name": "Matcha Frappe",
+    "price": 180.0,
+    "description": "Blended ceremonial-grade matcha.",
+    "photo": null
+   },
+   {
+    "category": "Frappes",
+    "name": "Salted Caramel Frappe",
+    "price": 185.0,
+    "description": "Espresso-based blended frappe.",
+    "photo": null
+   },
+   {
+    "category": "Frappes",
+    "name": "Cookies & Cream Frappe",
+    "price": 180.0,
+    "description": "Non-espresso blended frappe.",
+    "photo": null
+   },
+   {
+    "category": "Freshies & Slush",
+    "name": "Honey Citrus",
+    "price": 120.0,
+    "description": "Iced fruit refresher.",
+    "photo": null
+   },
+   {
+    "category": "Freshies & Slush",
+    "name": "Strawberry Lime",
+    "price": 120.0,
+    "description": "Iced fruit refresher.",
+    "photo": null
+   },
+   {
+    "category": "Starters",
+    "name": "Cheesy Fries",
+    "price": 165.0,
+    "description": "Fries with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Starters",
+    "name": "Chicken & Fries",
+    "price": 255.0,
+    "description": "Fried chicken with fries.",
+    "photo": null
+   },
+   {
+    "category": "Starters",
+    "name": "Cheesy Beef Nachos",
+    "price": 220.0,
+    "description": "Nachos with beef and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Breakfast",
+    "name": "Cheesy Spam",
+    "price": 220.0,
+    "description": "Served with garlic rice and scrambled egg.",
+    "photo": null
+   },
+   {
+    "category": "Breakfast",
+    "name": "Sweet-Style Chicken Tocino",
+    "price": 200.0,
+    "description": "Served with garlic rice and scrambled egg.",
+    "photo": null
+   },
+   {
+    "category": "Breakfast",
+    "name": "Corned Beef Hash",
+    "price": 200.0,
+    "description": "Served with garlic rice and scrambled egg.",
+    "photo": null
+   },
+   {
+    "category": "Mains",
+    "name": "Lub Dub Breakfast Platter",
+    "price": 250.0,
+    "description": "All-day platter, with rice or garlic bread.",
+    "photo": null
+   },
+   {
+    "category": "Mains",
+    "name": "House Baby Back Ribs",
+    "price": 355.0,
+    "description": "With rice or garlic bread.",
+    "photo": null
+   },
+   {
+    "category": "Mains",
+    "name": "Pork Belly Fried",
+    "price": 270.0,
+    "description": "With rice or garlic bread.",
+    "photo": null
+   },
+   {
+    "category": "Mains",
+    "name": "Chicken Wings Spicy",
+    "price": 265.0,
+    "description": "With rice or garlic bread.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Pesto Chicken",
+    "price": 235.0,
+    "description": "Pasta in pesto with chicken.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Creamy Truffle",
+    "price": 255.0,
+    "description": "Pasta in creamy truffle sauce.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Bolognese",
+    "price": 255.0,
+    "description": "Pasta in red meat sauce.",
+    "photo": null
+   },
+   {
+    "category": "Sandwiches",
+    "name": "Lub Duburger",
+    "price": 245.0,
+    "description": "The house burger.",
+    "photo": null
+   },
+   {
+    "category": "Sandwiches",
+    "name": "Monte Cristo",
+    "price": 240.0,
+    "description": "Ham and cheese French-toasted sandwich.",
+    "photo": null
+   },
+   {
+    "category": "Sandwiches",
+    "name": "Tuna Melt",
+    "price": 185.0,
+    "description": "Tuna and melted cheese.",
+    "photo": null
+   },
+   {
+    "category": "Pancakes & Pastries",
+    "name": "Original Pancakes",
+    "price": 160.0,
+    "description": "Fluffy pancakes.",
+    "photo": null
+   },
+   {
+    "category": "Pancakes & Pastries",
+    "name": "Butter Croissant",
+    "price": 165.0,
+    "description": "Flaky butter croissant.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "New York Cheesecake",
+    "price": 160.0,
+    "description": "Classic cheesecake slice.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Nutella Cheesecake",
+    "price": 185.0,
+    "description": "Cheesecake with Nutella.",
+    "photo": null
+   },
+   {
+    "category": "Desserts",
+    "name": "Churros",
+    "price": 150.0,
+    "description": "Churros with dip.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "forever",
+  "email": "forever@feasto.com",
+  "name": "Forever Café & Lounge",
+  "storeType": "CAFE",
+  "description": "Good food, good mood: coffee, milk tea, pizza, pasta, rice meals and comfort food in a cozy hangout.",
+  "address": "Forever Cafe Bldg, P. Inocentes St, Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "21:00",
+  "latitude": 11.561863,
+  "longitude": 124.395203,
+  "cover": "forever-cover.jpg",
+  "menu": [
+   {
+    "category": "Rice Meals",
+    "name": "Tocino and Egg",
+    "price": 165.0,
+    "description": "Sweet cured pork with rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Crispy Porkchop",
+    "price": 175.0,
+    "description": "Crispy porkchop with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Crispy Chicken",
+    "price": 175.0,
+    "description": "Crispy fried chicken with rice. ₱195 spicy.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Chicken Wings Rice Meal",
+    "price": 225.0,
+    "description": "Spicy buffalo, sweet BBQ or sweet chili.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "BBQ Ribs Rice Meal",
+    "price": 345.0,
+    "description": "Pork ribs in BBQ sauce with rice.",
+    "photo": null
+   },
+   {
+    "category": "For Sharing",
+    "name": "Cheesy Beef Rolls",
+    "price": 295.0,
+    "description": "For the family or barkada.",
+    "photo": null
+   },
+   {
+    "category": "For Sharing",
+    "name": "Chicken Wings Platter",
+    "price": 395.0,
+    "description": "Spicy buffalo, sweet BBQ or sweet chili.",
+    "photo": null
+   },
+   {
+    "category": "For Sharing",
+    "name": "Spicy Sisig",
+    "price": 225.0,
+    "description": "Spicy pork sisig.",
+    "photo": null
+   },
+   {
+    "category": "Nachos & Fries",
+    "name": "Beef Nachos",
+    "price": 245.0,
+    "description": "Nachos with beef and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Nachos & Fries",
+    "name": "Regular Fries",
+    "price": 175.0,
+    "description": "Cheese, sour cream, BBQ or salt.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Sandwiches",
+    "name": "Sunrise Burger",
+    "price": 225.0,
+    "description": "Burger with egg, served with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Sandwiches",
+    "name": "Spicy Chicken Burger",
+    "price": 225.0,
+    "description": "Served with fries.",
+    "photo": null
+   },
+   {
+    "category": "Burgers & Sandwiches",
+    "name": "Ham & Cheese Melt",
+    "price": 165.0,
+    "description": "Served with fries.",
+    "photo": null
+   },
+   {
+    "category": "Pasta & Pizza",
+    "name": "Lasagna",
+    "price": 195.0,
+    "description": "Baked meat lasagna.",
+    "photo": null
+   },
+   {
+    "category": "Pasta & Pizza",
+    "name": "Carbonara",
+    "price": 195.0,
+    "description": "Creamy carbonara.",
+    "photo": null
+   },
+   {
+    "category": "Pasta & Pizza",
+    "name": "Spaghetti Meatballs",
+    "price": 155.0,
+    "description": "Spaghetti with meatballs.",
+    "photo": null
+   },
+   {
+    "category": "Pasta & Pizza",
+    "name": "All Meat Pizza (12\")",
+    "price": 355.0,
+    "description": "12-inch thin crust pizza.",
+    "photo": null
+   },
+   {
+    "category": "Pasta & Pizza",
+    "name": "Hawaiian Pizza (12\")",
+    "price": 355.0,
+    "description": "12-inch thin crust pizza.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Spanish Latte (Iced)",
+    "price": 205.0,
+    "description": "Iced Spanish latte, XL.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Caramel Macchiato (Iced)",
+    "price": 205.0,
+    "description": "Iced caramel macchiato, XL.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Americano (Hot)",
+    "price": 115.0,
+    "description": "Small hot Americano.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Classic Pearl Milk Tea",
+    "price": 155.0,
+    "description": "Large. ₱175 XL.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Wintermelon Pearl Milk Tea",
+    "price": 155.0,
+    "description": "Large. ₱175 XL.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Okinawa Pearl Milk Tea",
+    "price": 155.0,
+    "description": "Large. ₱175 XL.",
+    "photo": null
+   },
+   {
+    "category": "Shakes",
+    "name": "Mango Shake",
+    "price": 185.0,
+    "description": "Large. ₱205 XL.",
+    "photo": null
+   },
+   {
+    "category": "Shakes",
+    "name": "Cookies & Cream Shake",
+    "price": 185.0,
+    "description": "Large. ₱205 XL.",
+    "photo": null
+   },
+   {
+    "category": "Cheesecake Drinks",
+    "name": "Red Velvet Cheesecake Drink",
+    "price": 175.0,
+    "description": "Large signature cheesecake drink.",
+    "photo": null
+   },
+   {
+    "category": "Fruit Tea",
+    "name": "Mango Lychee Fruit Tea",
+    "price": 155.0,
+    "description": "Large. ₱175 XL.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "backyard-brews",
+  "email": "backyard-brews@feasto.com",
+  "name": "Backyard Brews Café",
+  "storeType": "CAFE",
+  "description": "A cozy, affordable café and dining spot with coffee, ramen, dumplings, rice meals, silog and snacks. Also does catering.",
+  "address": "Caraycaray, Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "21:00",
+  "latitude": 11.5752,
+  "longitude": 124.3992,
+  "cover": "backyard-brews-cover.jpg",
+  "menu": [
+   {
+    "category": "Rice Meals",
+    "name": "Chicken Teriyaki",
+    "price": 250.0,
+    "description": "Chicken in teriyaki glaze with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Tonkatsu (Pork)",
+    "price": 250.0,
+    "description": "Breaded pork cutlet with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Creamy Chicken Breast",
+    "price": 280.0,
+    "description": "Chicken breast in cream sauce with rice.",
+    "photo": null
+   },
+   {
+    "category": "Japanese Curry",
+    "name": "Chicken Cutlet Curry",
+    "price": 350.0,
+    "description": "Japanese curry with chicken cutlet and rice.",
+    "photo": null
+   },
+   {
+    "category": "Japanese Curry",
+    "name": "Curry Rice",
+    "price": 250.0,
+    "description": "Japanese curry with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Katsu Don",
+    "price": 250.0,
+    "description": "Pork cutlet and egg on rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Yangchow with Tonkatsu",
+    "price": 250.0,
+    "description": "Yangchow rice with tonkatsu.",
+    "photo": null
+   },
+   {
+    "category": "Silog",
+    "name": "Tapsilog",
+    "price": 150.0,
+    "description": "Beef tapa, garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "Silog",
+    "name": "Longsilog",
+    "price": 145.0,
+    "description": "Longganisa, garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "Silog",
+    "name": "Liemposilog",
+    "price": 150.0,
+    "description": "Grilled liempo, garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "Silog",
+    "name": "Hotsilog",
+    "price": 100.0,
+    "description": "Hotdog, garlic rice and egg.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Pork Sinigang",
+    "price": 380.0,
+    "description": "Sour pork soup, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Lechon Kawali",
+    "price": 380.0,
+    "description": "Crispy pork belly, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Fish n Chips",
+    "price": 380.0,
+    "description": "Battered fish with chips, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Shrimp Halabos",
+    "price": 400.0,
+    "description": "Steamed shrimp, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Sisig",
+    "price": 290.0,
+    "description": "Pork sisig, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Meals for Sharing",
+    "name": "Canton Guisado",
+    "price": 300.0,
+    "description": "Stir-fried canton noodles, good for sharing.",
+    "photo": null
+   },
+   {
+    "category": "Ramen",
+    "name": "Tonkotsu Ramen",
+    "price": 300.0,
+    "description": "Rich pork bone broth ramen.",
+    "photo": null
+   },
+   {
+    "category": "Ramen",
+    "name": "Special Spicy Tonkotsu Ramen",
+    "price": 380.0,
+    "description": "Spicy pork bone broth ramen.",
+    "photo": null
+   },
+   {
+    "category": "Ramen",
+    "name": "Shoyu Ramen",
+    "price": 300.0,
+    "description": "Soy sauce broth ramen.",
+    "photo": null
+   },
+   {
+    "category": "Ramen",
+    "name": "Gyoza",
+    "price": 180.0,
+    "description": "Pan-fried dumplings.",
+    "photo": null
+   },
+   {
+    "category": "Dumplings",
+    "name": "Pork Siomai (6 pcs)",
+    "price": 220.0,
+    "description": "Steamed pork siomai.",
+    "photo": null
+   },
+   {
+    "category": "Dumplings",
+    "name": "Xiaolongbao Chocolate (4 pcs)",
+    "price": 155.0,
+    "description": "Steamed soup dumplings, chocolate.",
+    "photo": null
+   },
+   {
+    "category": "Dumplings",
+    "name": "Wonton Noodle Soup",
+    "price": 350.0,
+    "description": "Wonton dumplings in noodle soup.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Fries (Cheese or Salted)",
+    "price": 120.0,
+    "description": "Crispy fries.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Beef or Chicken Burger",
+    "price": 230.0,
+    "description": "Burger with fries.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Takoyaki",
+    "price": 150.0,
+    "description": "Ham, bacon or tuna.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Ten Yen Cheese Coin",
+    "price": 100.0,
+    "description": "Classic cheese coin snack.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Creamy Carbonara",
+    "price": 235.0,
+    "description": "Creamy carbonara pasta.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Shrimp Aglio Olio",
+    "price": 250.0,
+    "description": "Garlic and olive oil pasta with shrimp.",
+    "photo": null
+   },
+   {
+    "category": "Coffee & Frappe",
+    "name": "Cafe Latte",
+    "price": 150.0,
+    "description": "Hot or iced, tall.",
+    "photo": null
+   },
+   {
+    "category": "Coffee & Frappe",
+    "name": "Salted Caramel Macchiato",
+    "price": 150.0,
+    "description": "Hot or iced, tall.",
+    "photo": null
+   },
+   {
+    "category": "Coffee & Frappe",
+    "name": "Javachip Frappe",
+    "price": 165.0,
+    "description": "Tall. ₱185 grande.",
+    "photo": null
+   },
+   {
+    "category": "Coffee & Frappe",
+    "name": "Cookies & Cream Frappe",
+    "price": 165.0,
+    "description": "Tall. ₱185 grande.",
+    "photo": null
+   },
+   {
+    "category": "Fruit Soda & Desserts",
+    "name": "Ichigo (Strawberry) Soda",
+    "price": 130.0,
+    "description": "Fruit soda.",
+    "photo": null
+   },
+   {
+    "category": "Fruit Soda & Desserts",
+    "name": "Special Halo-Halo",
+    "price": 180.0,
+    "description": "Halo-halo with all the toppings.",
+    "photo": null
+   },
+   {
+    "category": "Fruit Soda & Desserts",
+    "name": "Mango Shake",
+    "price": 180.0,
+    "description": "Fresh mango shake.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "juanitas",
+  "email": "juanitas@feasto.com",
+  "name": "Juanita's Café",
+  "storeType": "CAFE",
+  "description": "A homey café for coffee, matcha, rice bowls, wings and pasta, frequented by students, families and travelers. Closed on Sundays.",
+  "address": "Padre Inocentes Garcia, Naval, Biliran",
+  "opensAt": "07:00",
+  "closesAt": "22:00",
+  "latitude": 11.5604,
+  "longitude": 124.3957,
+  "cover": "juanitas-cover.jpg",
+  "menu": [
+   {
+    "category": "Coffee",
+    "name": "Biscoff Latte",
+    "price": 180.0,
+    "description": "A best seller.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Spanish Latte",
+    "price": 155.0,
+    "description": "Espresso with sweetened milk.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Sea Salt Latte",
+    "price": 155.0,
+    "description": "A best seller.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Buttercream Latte",
+    "price": 180.0,
+    "description": "Latte with buttercream.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Americano",
+    "price": 110.0,
+    "description": "Classic black coffee.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Caramel Macchiato",
+    "price": 155.0,
+    "description": "Espresso, milk and caramel.",
+    "photo": null
+   },
+   {
+    "category": "Oat Series",
+    "name": "Sea Salt Oat Latte",
+    "price": 185.0,
+    "description": "A best seller, with oat milk.",
+    "photo": null
+   },
+   {
+    "category": "Oat Series",
+    "name": "Biscoff Oat Latte",
+    "price": 210.0,
+    "description": "A best seller, with oat milk.",
+    "photo": null
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Matcha Latte",
+    "price": 155.0,
+    "description": "A best seller.",
+    "photo": null
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Strawberry Matcha",
+    "price": 160.0,
+    "description": "A best seller.",
+    "photo": null
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Sea Salt Matcha",
+    "price": 160.0,
+    "description": "Matcha with sea salt cream.",
+    "photo": null
+   },
+   {
+    "category": "Milk Based",
+    "name": "Strawberry Latte",
+    "price": 150.0,
+    "description": "Strawberry milk.",
+    "photo": null
+   },
+   {
+    "category": "Milk Based",
+    "name": "Ice Chocolate",
+    "price": 150.0,
+    "description": "Iced chocolate milk.",
+    "photo": null
+   },
+   {
+    "category": "Special Drinks",
+    "name": "Pistachio Latte",
+    "price": 220.0,
+    "description": "Latte with pistachio.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Spam Musubi Rice",
+    "price": 180.0,
+    "description": "Spam and rice, musubi-style.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Karaage Don",
+    "price": 220.0,
+    "description": "Japanese fried chicken on rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Honey Garlic Chicken",
+    "price": 220.0,
+    "description": "Chicken in honey garlic glaze on rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Yangnyeom Chicken",
+    "price": 220.0,
+    "description": "Korean sweet-spicy chicken on rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Bowls",
+    "name": "Chicken ala King",
+    "price": 230.0,
+    "description": "Chicken in cream sauce on rice.",
+    "photo": null
+   },
+   {
+    "category": "Wings (6 pcs)",
+    "name": "Honey Garlic Wings",
+    "price": 260.0,
+    "description": "Six chicken wings.",
+    "photo": null
+   },
+   {
+    "category": "Wings (6 pcs)",
+    "name": "Salted Egg Wings",
+    "price": 300.0,
+    "description": "Six chicken wings in salted egg sauce.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Carbonara",
+    "price": 200.0,
+    "description": "Creamy carbonara.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Chicken Alfredo",
+    "price": 210.0,
+    "description": "Creamy alfredo with chicken.",
+    "photo": null
+   },
+   {
+    "category": "Pasta",
+    "name": "Truffle Pesto Carbonara",
+    "price": 250.0,
+    "description": "Carbonara with truffle and pesto.",
+    "photo": null
+   },
+   {
+    "category": "Others",
+    "name": "Korean Ramen",
+    "price": 150.0,
+    "description": "Spicy Korean ramen.",
+    "photo": null
+   },
+   {
+    "category": "Others",
+    "name": "Cheese Fries",
+    "price": 120.0,
+    "description": "Fries with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Others",
+    "name": "Garlic Bread",
+    "price": 30.0,
+    "description": "Toasted garlic bread.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "la-maison",
+  "email": "la-maison@feasto.com",
+  "name": "La Maison Café",
+  "storeType": "CAFE",
+  "description": "A French-inspired café serving coffee, pastries, pasta, sandwiches and light meals in a cozy, stylish space.",
+  "address": "Corner Vicentillo and Castin Streets, Brgy. P.I. Garcia, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "20:00",
+  "latitude": 11.5589,
+  "longitude": 124.3963,
+  "cover": "la-maison-cover.jpg",
+  "menu": [
+   {
+    "name": "Café Americano",
+    "category": "Hot Coffee",
+    "price": 90.0,
+    "description": "Espresso diluted with hot water",
+    "photo": null
+   },
+   {
+    "name": "Café Latte",
+    "category": "Hot Coffee",
+    "price": 110.0,
+    "description": "Espresso with steamed milk",
+    "photo": null
+   },
+   {
+    "name": "Cappuccino",
+    "category": "Hot Coffee",
+    "price": 110.0,
+    "description": "Espresso with steamed milk foam",
+    "photo": null
+   },
+   {
+    "name": "Caramel Macchiato",
+    "category": "Coffee",
+    "price": 135.0,
+    "description": "Espresso with milk and caramel",
+    "photo": null
+   },
+   {
+    "name": "Spanish Latte",
+    "category": "Coffee",
+    "price": 130.0,
+    "description": "Espresso with sweetened milk",
+    "photo": null
+   },
+   {
+    "name": "Iced Mocha",
+    "category": "Iced Coffee",
+    "price": 135.0,
+    "description": "Espresso with chocolate and milk",
+    "photo": null
+   },
+   {
+    "name": "Matcha Latte",
+    "category": "Non-Coffee",
+    "price": 140.0,
+    "description": "Matcha green tea with milk",
+    "photo": null
+   },
+   {
+    "name": "Hot Chocolate",
+    "category": "Non-Coffee",
+    "price": 100.0,
+    "description": "Rich hot chocolate beverage",
+    "photo": null
+   },
+   {
+    "name": "Chicken Alfredo Pasta",
+    "category": "Pasta",
+    "price": 180.0,
+    "description": "Pasta with creamy Alfredo sauce and chicken",
+    "photo": null
+   },
+   {
+    "name": "Carbonara",
+    "category": "Pasta",
+    "price": 170.0,
+    "description": "Creamy pasta with bacon",
+    "photo": null
+   },
+   {
+    "name": "Spaghetti Bolognese",
+    "category": "Pasta",
+    "price": 160.0,
+    "description": "Pasta with tomato and meat sauce",
+    "photo": null
+   },
+   {
+    "name": "Clubhouse Sandwich",
+    "category": "Sandwiches",
+    "price": 150.0,
+    "description": "Layered sandwich with chicken and vegetables",
+    "photo": null
+   },
+   {
+    "name": "Chicken Sandwich",
+    "category": "Sandwiches",
+    "price": 120.0,
+    "description": "Grilled chicken with lettuce and dressing",
+    "photo": null
+   },
+   {
+    "name": "Chicken Wings",
+    "category": "Appetizers",
+    "price": 190.0,
+    "description": "Seasoned chicken wings with dipping sauce",
+    "photo": null
+   },
+   {
+    "name": "French Fries",
+    "category": "Appetizers",
+    "price": 85.0,
+    "description": "Crispy golden potato fries",
+    "photo": null
+   },
+   {
+    "name": "Chocolate Cake",
+    "category": "Desserts",
+    "price": 120.0,
+    "description": "Rich chocolate cake slice",
+    "photo": null
+   },
+   {
+    "name": "Blueberry Cheesecake",
+    "category": "Desserts",
+    "price": 145.0,
+    "description": "Creamy cheesecake with blueberry topping",
+    "photo": null
+   },
+   {
+    "name": "Brownies",
+    "category": "Desserts",
+    "price": 75.0,
+    "description": "Chocolate brownies",
+    "photo": null
+   },
+   {
+    "name": "Mango Shake",
+    "category": "Beverages",
+    "price": 110.0,
+    "description": "Blended mango with milk and ice",
+    "photo": null
+   },
+   {
+    "name": "Strawberry Smoothie",
+    "category": "Beverages",
+    "price": 120.0,
+    "description": "Blended strawberry drink",
+    "photo": null
+   }
+  ],
+  "hoursGuessed": true
+ },
+ {
+  "slug": "jusas",
+  "email": "jusas@feasto.com",
+  "name": "JUSA's Tropical Smoothie Café",
+  "storeType": "CAFE",
+  "description": "Fresh fruit smoothies with combo meals, all-day breakfast, sizzling plates and snacks. A relaxed, affordable hangout.",
+  "address": "P. Inocentes St, Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "20:00",
+  "latitude": 11.563237,
+  "longitude": 124.398703,
+  "cover": "jusas-cover.jpg",
+  "menu": [
+   {
+    "category": "Sulit Combo Meals",
+    "name": "J-1 Burger, Fries and Smoothie",
+    "price": 245.0,
+    "description": "1 burger, 1 fries and 1 smoothie.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Combo Meals",
+    "name": "J-2 Carbonara, Toasted Bread and Smoothie",
+    "price": 195.0,
+    "description": "1 carbonara, 1 toasted bread and 1 smoothie.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Combo Meals",
+    "name": "J-3 Burger, Spaghetti and Smoothie",
+    "price": 255.0,
+    "description": "1 burger, 1 spaghetti and 1 smoothie.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Combo Meals",
+    "name": "J-4 Siopao, Siomai and Drink",
+    "price": 175.0,
+    "description": "1 siopao, 4 pcs siomai and 1 iced coffee or milk tea.",
+    "photo": null
+   },
+   {
+    "category": "Sulit Combo Meals",
+    "name": "J-5 Bangus Meal and Smoothie",
+    "price": 235.0,
+    "description": "1 bangus, 1 rice, 1 egg and 1 smoothie.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Longganisa, Egg and Rice",
+    "price": 95.0,
+    "description": "With free coffee.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Tocino, Egg and Rice",
+    "price": 95.0,
+    "description": "With free coffee.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Bangus, Egg and Rice",
+    "price": 95.0,
+    "description": "With free coffee.",
+    "photo": null
+   },
+   {
+    "category": "All-Day Breakfast",
+    "name": "Hotdog, Egg and Rice",
+    "price": 95.0,
+    "description": "With free coffee.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling",
+    "name": "Sizzling Pork Sisig",
+    "price": 135.0,
+    "description": "With rice.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling",
+    "name": "Sizzling Pork Chop",
+    "price": 145.0,
+    "description": "With rice.",
+    "photo": null
+   },
+   {
+    "category": "Sizzling",
+    "name": "Sizzling Garlic Pepper Beef",
+    "price": 155.0,
+    "description": "With rice.",
+    "photo": null
+   },
+   {
+    "category": "Salads",
+    "name": "Fresh Mixed Green Salad with Chicken",
+    "price": 155.0,
+    "description": "Fresh greens with chicken.",
+    "photo": null
+   },
+   {
+    "category": "Salads",
+    "name": "Fresh Fruit Salad",
+    "price": 145.0,
+    "description": "Fresh fruits with honey.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Burger",
+    "price": 135.0,
+    "description": "Classic burger.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Carbonara",
+    "price": 115.0,
+    "description": "Creamy carbonara.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Spaghetti",
+    "price": 105.0,
+    "description": "Filipino-style spaghetti.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Siomai (4 pcs)",
+    "price": 50.0,
+    "description": "Steamed siomai.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Siopao",
+    "price": 55.0,
+    "description": "Steamed bun.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Fries (Regular)",
+    "price": 85.0,
+    "description": "Cheese, BBQ or sour cream.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Empanada",
+    "price": 25.0,
+    "description": "Pork or chicken, each.",
+    "photo": null
+   },
+   {
+    "category": "Solo Snacks",
+    "name": "Shanghai Lumpia (3 pcs)",
+    "price": 50.0,
+    "description": "Crispy spring rolls.",
+    "photo": null
+   }
+  ],
+  "hoursGuessed": true
+ },
+ {
+  "slug": "max-cafe",
+  "email": "max-cafe@feasto.com",
+  "name": "Max Café",
+  "storeType": "CAFE",
+  "description": "Coffee, fruit milk and fruit soda at pocket-friendly prices.",
+  "address": "Naval, Biliran",
+  "opensAt": "08:00",
+  "closesAt": "20:00",
+  "latitude": 11.5596,
+  "longitude": 124.3986,
+  "cover": "max-cafe-cover.jpg",
+  "menu": [
+   {
+    "category": "Coffee",
+    "name": "Americano (16 oz)",
+    "price": 38.0,
+    "description": "₱48 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Cafe Latte (16 oz)",
+    "price": 48.0,
+    "description": "₱58 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Creme Brulee Latte (16 oz)",
+    "price": 68.0,
+    "description": "₱78 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Salted Caramel Latte (16 oz)",
+    "price": 58.0,
+    "description": "₱68 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Spanish Latte (16 oz)",
+    "price": 68.0,
+    "description": "₱78 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Biscoff Espresso (16 oz)",
+    "price": 68.0,
+    "description": "₱78 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Dirty Matcha (16 oz)",
+    "price": 68.0,
+    "description": "₱78 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Non-Coffee",
+    "name": "Matcha Latte (16 oz)",
+    "price": 68.0,
+    "description": "₱78 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Non-Coffee",
+    "name": "Strawberry Latte (16 oz)",
+    "price": 58.0,
+    "description": "₱68 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Non-Coffee",
+    "name": "Milo Dino (16 oz)",
+    "price": 58.0,
+    "description": "₱68 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Soda Fruit",
+    "name": "Mango Soda (16 oz)",
+    "price": 38.0,
+    "description": "Also lychee, strawberry, grapes, blueberry or green apple.",
+    "photo": null
+   },
+   {
+    "category": "Soda Fruit",
+    "name": "Strawberry Fruit Milk (16 oz)",
+    "price": 58.0,
+    "description": "₱68 for 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Soda Fruit",
+    "name": "Mango Fruit Milk (16 oz)",
+    "price": 58.0,
+    "description": "₱68 for 22 oz.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true,
+  "hoursGuessed": true
+ },
+ {
+  "slug": "cup-stop",
+  "email": "cup-stop@feasto.com",
+  "name": "Cup Stop",
+  "storeType": "MILK_TEA_DRINKS",
+  "description": "Milk tea and coffee with budget rice meals and snacks. Closed on Sundays.",
+  "address": "P. Inocentes St, Naval, Biliran",
+  "opensAt": "11:00",
+  "closesAt": "20:00",
+  "latitude": 11.563012,
+  "longitude": 124.398484,
+  "cover": "cup-stop-cover.jpg",
+  "menu": [
+   {
+    "category": "Foods",
+    "name": "Hungarian Rice Meal",
+    "price": 80.0,
+    "description": "Hungarian sausage with rice.",
+    "photo": null
+   },
+   {
+    "category": "Foods",
+    "name": "Fried Chicken Rice Meal",
+    "price": 80.0,
+    "description": "Fried chicken with rice.",
+    "photo": null
+   },
+   {
+    "category": "Foods",
+    "name": "Chicken Pastil",
+    "price": 55.0,
+    "description": "Shredded chicken on rice, Mindanao-style.",
+    "photo": null
+   },
+   {
+    "category": "Foods",
+    "name": "Lechon Kawali Rice Meal",
+    "price": 85.0,
+    "description": "Crispy pork belly with rice.",
+    "photo": null
+   },
+   {
+    "category": "Foods",
+    "name": "Burger Steak Rice Meal",
+    "price": 65.0,
+    "description": "Burger steak with gravy and rice.",
+    "photo": null
+   },
+   {
+    "category": "Foods",
+    "name": "Chaofan",
+    "price": 60.0,
+    "description": "Fried rice with toppings.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Waffle",
+    "price": 27.0,
+    "description": "Chocolate or other fillings.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Cheese Sticks",
+    "price": 60.0,
+    "description": "Crispy cheese sticks.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Pancake",
+    "price": 35.0,
+    "description": "Soft pancake with filling.",
+    "photo": null
+   }
+  ]
+ },
+ {
+  "slug": "sebu-cha",
+  "email": "sebu-cha@feasto.com",
+  "name": "Sebu Cha Milk Tea Station",
+  "storeType": "MILK_TEA_DRINKS",
+  "description": "Milk tea station with classic, premium, latte and frappe series, iced coffee and healthy fruit tea.",
+  "address": "P. Inocentes St, Brgy. P.I. Garcia, Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "21:00",
+  "latitude": 11.5613,
+  "longitude": 124.3952,
+  "cover": "sebu-cha-cover.jpg",
+  "menu": [
+   {
+    "category": "Classic Series",
+    "name": "Classic Milk Tea (Medium)",
+    "price": 79.0,
+    "description": "Classic milk tea with pearls. ₱89 large.",
+    "photo": null
+   },
+   {
+    "category": "Classic Series",
+    "name": "Okinawa Milk Tea (Medium)",
+    "price": 79.0,
+    "description": "Classic series. ₱89 large.",
+    "photo": null
+   },
+   {
+    "category": "Classic Series",
+    "name": "Wintermelon Milk Tea (Medium)",
+    "price": 79.0,
+    "description": "Classic series. ₱89 large.",
+    "photo": null
+   },
+   {
+    "category": "Premium Series",
+    "name": "Premium Cheesecake Milk Tea (Medium)",
+    "price": 89.0,
+    "description": "Premium series with cheesecake. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Premium Series",
+    "name": "Double Dutch Cheesecake (Medium)",
+    "price": 89.0,
+    "description": "Premium series. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Latte Series",
+    "name": "Matcha Latte (Medium)",
+    "price": 89.0,
+    "description": "Latte series. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Latte Series",
+    "name": "Strawberry Latte (Medium)",
+    "price": 89.0,
+    "description": "Latte series. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Frappe Series",
+    "name": "Mango Frappe",
+    "price": 99.0,
+    "description": "Frappe series. ₱110 large.",
+    "photo": null
+   },
+   {
+    "category": "Frappe Series",
+    "name": "Cookies & Cream Frappe",
+    "price": 99.0,
+    "description": "Frappe series. ₱110 large.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Iced Coffee",
+    "price": 89.0,
+    "description": "Ice coffee drinks. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Coffee",
+    "name": "Hot Coffee",
+    "price": 69.0,
+    "description": "Hot drinks.",
+    "photo": null
+   },
+   {
+    "category": "Fruit Tea",
+    "name": "Healthy Fruit Tea",
+    "price": 89.0,
+    "description": "Lychee, passion fruit or blue lemonade. ₱99 large.",
+    "photo": null
+   },
+   {
+    "category": "Snacks",
+    "name": "Pizza Slice",
+    "price": 59.0,
+    "description": "Snack to pair with your milk tea.",
+    "photo": null
+   }
+  ],
+  "hoursGuessed": true
+ },
+ {
+  "slug": "lushan",
+  "email": "lushan@feasto.com",
+  "name": "Lushan Tea",
+  "storeType": "MILK_TEA_DRINKS",
+  "description": "Milk tea made of real tea leaves, brewed fresh daily: red, green, assam and oolong teas, smoothies and fresh juice. At Jelo's Place.",
+  "address": "Naval, Biliran",
+  "opensAt": "09:00",
+  "closesAt": "21:00",
+  "latitude": 11.5628,
+  "longitude": 124.3992,
+  "cover": "lushan-cover.jpg",
+  "menu": [
+   {
+    "category": "Red Tea",
+    "name": "Taiwan Milktea (Medium)",
+    "price": 110.0,
+    "description": "Made of real tea leaves, brewed fresh daily. ₱120 large.",
+    "photo": null
+   },
+   {
+    "category": "Red Tea",
+    "name": "Golden Boba (Medium)",
+    "price": 110.0,
+    "description": "₱120 large.",
+    "photo": null
+   },
+   {
+    "category": "Red Tea",
+    "name": "Okinawa with Pearl (Medium)",
+    "price": 100.0,
+    "description": "₱110 large.",
+    "photo": null
+   },
+   {
+    "category": "Red Tea",
+    "name": "Wintermelon with Pearl (Medium)",
+    "price": 90.0,
+    "description": "₱100 large.",
+    "photo": null
+   },
+   {
+    "category": "Red Tea",
+    "name": "Plain Milktea with Pearl (Medium)",
+    "price": 75.0,
+    "description": "₱85 large.",
+    "photo": null
+   },
+   {
+    "category": "Red Tea",
+    "name": "Salted Cream Cheese (Medium)",
+    "price": 85.0,
+    "description": "₱95 large.",
+    "photo": null
+   },
+   {
+    "category": "Assam Tea",
+    "name": "Coffee with Coffee Jelly (Medium)",
+    "price": 90.0,
+    "description": "₱100 large.",
+    "photo": null
+   },
+   {
+    "category": "Assam Tea",
+    "name": "Taro with Pearl (Medium)",
+    "price": 85.0,
+    "description": "₱95 large.",
+    "photo": null
+   },
+   {
+    "category": "Green Tea",
+    "name": "Kiwi Yakult with Nata (Medium)",
+    "price": 95.0,
+    "description": "₱105 large.",
+    "photo": null
+   },
+   {
+    "category": "Green Tea",
+    "name": "Lychee with Popping Boba (Medium)",
+    "price": 85.0,
+    "description": "₱95 large.",
+    "photo": null
+   },
+   {
+    "category": "Smoothies",
+    "name": "Triple Strawberry Smoothie (Medium)",
+    "price": 120.0,
+    "description": "₱130 large.",
+    "photo": null
+   },
+   {
+    "category": "Smoothies",
+    "name": "Matcha Cream Puff with Pearl (Medium)",
+    "price": 120.0,
+    "description": "₱130 large.",
+    "photo": null
+   },
+   {
+    "category": "Smoothies",
+    "name": "Oreo Choco with Pearl (Medium)",
+    "price": 110.0,
+    "description": "₱120 large.",
+    "photo": null
+   },
+   {
+    "category": "House Specialties",
+    "name": "Dark Choco Matcha (Medium)",
+    "price": 120.0,
+    "description": "₱130 large.",
+    "photo": null
+   },
+   {
+    "category": "House Specialties",
+    "name": "Iced Matcha Green Tea Latte (Medium)",
+    "price": 120.0,
+    "description": "₱130 large.",
+    "photo": null
+   },
+   {
+    "category": "Fresh Fruit Juice",
+    "name": "Lemon Juice (Large)",
+    "price": 75.0,
+    "description": "Fresh lemon juice.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true,
+  "hoursGuessed": true
+ },
+ {
+  "slug": "street-bites",
+  "email": "street-bites@feasto.com",
+  "name": "Street Bites Snack Bar",
+  "storeType": "SNACKS_STREET_FOOD",
+  "description": "Budget rice meals, takoyaki and milk tea.",
+  "address": "Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "20:00",
+  "latitude": 11.5581,
+  "longitude": 124.3967,
+  "cover": "street-bites-cover.jpg",
+  "menu": [
+   {
+    "category": "Rice Meals",
+    "name": "Bacsilog",
+    "price": 55.0,
+    "description": "Crispy bacon, egg and rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Hungarian Sausage Rice Meal",
+    "price": 80.0,
+    "description": "Hungarian sausage with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Japanese Siomai Rice",
+    "price": 55.0,
+    "description": "Japanese siomai with rice.",
+    "photo": null
+   },
+   {
+    "category": "Rice Meals",
+    "name": "Burger Steak with Mushroom Gravy",
+    "price": 55.0,
+    "description": "Burger steak with mushroom gravy and rice.",
+    "photo": null
+   },
+   {
+    "category": "Takoyaki",
+    "name": "Vegetable Takoyaki",
+    "price": 90.0,
+    "description": "Octopus balls with vegetables.",
+    "photo": null
+   },
+   {
+    "category": "Takoyaki",
+    "name": "Ham Takoyaki",
+    "price": 95.0,
+    "description": "Takoyaki with ham.",
+    "photo": null
+   },
+   {
+    "category": "Takoyaki",
+    "name": "Bacon Takoyaki",
+    "price": 95.0,
+    "description": "Takoyaki with bacon.",
+    "photo": null
+   },
+   {
+    "category": "Takoyaki",
+    "name": "Cheesy Bacon Takoyaki",
+    "price": 100.0,
+    "description": "Takoyaki with bacon and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Takoyaki",
+    "name": "Takoyaki Platter (20 pcs, mixed)",
+    "price": 230.0,
+    "description": "Mixed takoyaki platter.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Classic Milk Tea (16 oz)",
+    "price": 70.0,
+    "description": "Classic milk tea.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true,
+  "hoursGuessed": true
+ },
+ {
+  "slug": "ja-snack",
+  "email": "ja-snack@feasto.com",
+  "name": "J&A Snack Corner",
+  "storeType": "SNACKS_STREET_FOOD",
+  "description": "Milk tea, waffles, sushi rolls and Korean favorites. Korean dishes are on Fridays.",
+  "address": "Naval, Biliran",
+  "opensAt": "10:00",
+  "closesAt": "20:00",
+  "latitude": 11.5577,
+  "longitude": 124.3951,
+  "cover": "ja-snack-cover.jpg",
+  "menu": [
+   {
+    "category": "Milk Tea",
+    "name": "Milk Tea Regular (16 oz)",
+    "price": 35.0,
+    "description": "Okinawa, wintermelon, taro, chocolate, vanilla, caramel, dalgona, cookies & cream or mango cheesecake.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Milk Tea Regular (22 oz)",
+    "price": 45.0,
+    "description": "Regular flavors, 22 oz.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Milk Tea Premium (16 oz)",
+    "price": 40.0,
+    "description": "Premium flavors, 16 oz.",
+    "photo": null
+   },
+   {
+    "category": "Milk Tea",
+    "name": "Milk Tea (1 Liter)",
+    "price": 75.0,
+    "description": "Regular flavors, 1 liter.",
+    "photo": null
+   },
+   {
+    "category": "Drinks",
+    "name": "Fruit Soda or Coke Float (16 oz)",
+    "price": 39.0,
+    "description": "Fruit soda or coke float.",
+    "photo": null
+   },
+   {
+    "category": "Waffles",
+    "name": "Cheese Waffle",
+    "price": 10.0,
+    "description": "Crispy waffle with cheese.",
+    "photo": null
+   },
+   {
+    "category": "Waffles",
+    "name": "Chocolate Waffle",
+    "price": 15.0,
+    "description": "Crispy waffle with chocolate.",
+    "photo": null
+   },
+   {
+    "category": "Sushi Rolls",
+    "name": "Maki Roll (8 pcs)",
+    "price": 120.0,
+    "description": "Solo sushi roll.",
+    "photo": null
+   },
+   {
+    "category": "Sushi Rolls",
+    "name": "Crazy Maki Roll (8 pcs)",
+    "price": 125.0,
+    "description": "Solo sushi roll.",
+    "photo": null
+   },
+   {
+    "category": "Sushi Rolls",
+    "name": "California Maki (8 pcs)",
+    "price": 130.0,
+    "description": "Solo sushi roll.",
+    "photo": null
+   },
+   {
+    "category": "Sushi Rolls",
+    "name": "Mixed Rolls Platter (21 pcs)",
+    "price": 280.0,
+    "description": "Regular mixed rolls platter.",
+    "photo": null
+   },
+   {
+    "category": "Korean (Fridays)",
+    "name": "Kimbap (Regular)",
+    "price": 120.0,
+    "description": "Korean rice rolls. ₱150 bulgogi kimbap.",
+    "photo": null
+   },
+   {
+    "category": "Korean (Fridays)",
+    "name": "Bibimbap",
+    "price": 125.0,
+    "description": "Korean mixed rice bowl.",
+    "photo": null
+   },
+   {
+    "category": "Korean (Fridays)",
+    "name": "Tteokbokki",
+    "price": 100.0,
+    "description": "Spicy rice cakes with egg and cheese.",
+    "photo": null
+   },
+   {
+    "category": "Korean (Fridays)",
+    "name": "Combo A: Tteokbokki + Regular Kimbap",
+    "price": 210.0,
+    "description": "Combo deal.",
+    "photo": null
+   }
+  ],
+  "unknownAddress": true,
+  "hoursGuessed": true
+ }
+]

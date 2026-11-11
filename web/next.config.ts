@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // The Docker image (web/Dockerfile) runs a self-contained server; local `next start` is unchanged
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   cacheComponents: true,
   // The floating "N" dev button covered the mobile tab bar. Errors still show without it.
   devIndicators: false,

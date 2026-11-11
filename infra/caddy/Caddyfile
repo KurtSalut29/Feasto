@@ -1,0 +1,29 @@
+# The public entry point on the server (see DEPLOY.md). Caddy gets and renews the HTTPS
+# certificate by itself for SITE_ADDRESS, e.g. 203.0.113.10.sslip.io or feasto.example.com.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Live updates: pass every event through at once
+	handle /api/me/events {
+		reverse_proxy nginx:80 {
+			flush_interval -1
+		}
+	}
+	# The API and photos go straight to Nginx (which spreads them over api-1, api-2, api-3)
+	handle /api/* {
+		reverse_proxy nginx:80
+	}
+	handle /uploads/* {
+		reverse_proxy nginx:80
+	}
+	# Everything else is the web app
+	handle {
+		reverse_proxy web:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

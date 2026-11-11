@@ -1,0 +1,463 @@
+## dadaone
+Appetizers|Buffalo Wings|150|Chicken wings with D'Adaone's own buffalo sauce.
+Appetizers|Gambas|150|Fresh shrimp sautéed in olive oil and garlic with a touch of Spanish paprika.
+Appetizers|Crunchy Calamari|200|Fresh squid coated and deep-fried until crunchy.
+Appetizers|Chicken Strips|160|Battered chicken strips, deep-fried until crunchy.
+Appetizers|Pork Sisig|160|Pork face, liver and ears with pepper and onion on a hot plate, topped with egg.
+Appetizers|Beef Nachos|180|Nachos with cheesy white sauce, beef bits and homemade salsa.
+Appetizers|Cheezy Chips|160|Thin potato chips with creamy cheese dip.
+Appetizers|Onion Rings|120|Deep-fried battered sweet white onion.
+Appetizers|Chicken Platter|420|Thai wings, buffalo wings and chicken strips.
+Soups|Vegetable Soup|90|Fresh vegetables in a tomato-based soup.
+Soups|Creamy Mushroom Soup|90|Creamy mushroom soup served with garlic bread.
+Soups|Lomi Soup|180|Thick noodles with liver, pork cuts, eggs and vegetables.
+Pasta|Spaghetti Carbonara|190|Bacon, garlic and cheese in the house carbonara sauce.
+Pasta|Pinoy-style Spaghetti|170|Sweet, meaty and cheesy Filipino spaghetti.
+Pasta|Spaghetti Bolognese|190|Beef and pork in a rich tomato sauce with red wine.
+Pasta|Prawn Alfredo|190|Prawn linguini in homemade alfredo sauce with parmesan.
+Short Orders|Fish and Chips|190|Beer-battered fish with fries and homemade tartar sauce.
+Short Orders|Lechon Kawali|180|Crispy outside, juicy inside.
+Short Orders|Caesar Salad|150|Lettuce and croutons in the in-house dressing.
+Short Orders|French Fries|90|Freshly sliced potato fries.
+Short Orders|Extra Rice|30|One cup of steamed rice.
+Rice Meals|Grilled Tuna Panga|250|Grilled tuna jaw marinated with traditional spices, served with rice and atchara.
+Rice Meals|D'Adaone Burger Steak|195|100% beef patty with homemade mushroom, pepper or gravy sauce and sautéed vegetables, with rice.
+Rice Meals|Grilled Tuna with Mango Salsa|250|Grilled tuna with fresh mango salsa and lemon glaze.
+Rice Meals|D'Adaone Special Pork Ribs|240|Sweet, tangy, slightly spicy pork ribs with rice and buttered vegetables.
+Rice Meals|Balsamic-Glazed Pork Belly|240|Grilled pork belly with balsamic glaze and caramelized apples and onions.
+Rice Meals|Tonkatsu|195|Breaded deep-fried pork cutlet with rice and shredded cabbage.
+Rice Meals|Lemon Garlic Fish|190|Fish in lemon garlic sauce with rice and string beans.
+Platters|Special Pork Ribs Platter|480|The best-selling pork ribs, as a platter. Serves 3–4.
+Platters|Chopsuey|190|Mixed vegetables with pork and shrimp in a special sauce.
+Platters|Pinakbet|190|Squash, eggplant, okra, string beans and bitter melon.
+Platters|Pansit Bisaya (Bam-i)|190|A popular Filipino noodle stir-fry.
+Platters|Dimsum Sweet and Sour Fish|190|Fish in a sweet and sour dimsum-style sauce.
+Native Dishes|Caldereta Kanding|350|Goat meat stewed in tomato sauce.
+Native Dishes|Ginataan Bisaya Manok|350|Native chicken in coconut milk soup.
+Native Dishes|Tinolang Bisaya Manok|350|Native chicken soup with vegetables.
+Native Dishes|Sinigang na Baboy|200|Sour pork broth with vegetables.
+Native Dishes|Crispy Pata Supreme|495|Deep-fried pig trotters with soy-vinegar dip.
+Snacks|D'Adaone Hamburger Supreme|180|The house burger with homemade flavor, oozing goodness.
+Snacks|Clubhouse Sandwich|170|Cheese, bacon, ham, lettuce and Cajun mayo, with potato chips.
+Snacks|Chicken Salad Sandwich|150|A family recipe of chopped chicken breast.
+Desserts|Special Halo-halo|90|Shaved ice, evaporated milk, fruits, leche flan and beans.
+Drinks|Pure Fruit Shake|80|Mango, green mango, avocado, watermelon or buko.
+Drinks|Iced Tea Pitcher|90|A pitcher of house iced tea.
+Drinks|Canned Drinks|60|Coke, Sprite, Pineapple, Orange or Four Seasons.
+## mareola
+All-Day Breakfast|Beef Tapa|120|Beef tapa with garlic rice and egg.
+All-Day Breakfast|Danggit|110|Crispy dried danggit with garlic rice and egg.
+All-Day Breakfast|Tocino|110|Sweet cured pork with garlic rice and egg.
+All-Day Breakfast|Chorizo de Cebu|110|Cebu-style sweet sausage with garlic rice and egg.
+All-Day Breakfast|Chicken ala King|120|Chicken in creamy sauce with rice.
+Rice Combo & Sizzling|Quarter Fried Chicken|170|Fried chicken quarter with rice.
+Rice Combo & Sizzling|Pork Liempo|170|Grilled pork belly with rice.
+Rice Combo & Sizzling|Boneless Bangus|170|Fried boneless milkfish with rice.
+Rice Combo & Sizzling|Sizzling Pork Sisig|130|Sizzling pork sisig with rice.
+Rice Combo & Sizzling|Butter Garlic Shrimp|165|Shrimp in butter and garlic with rice.
+BBQ & Inasal|Chicken Inasal|130|Grilled chicken inasal with rice.
+BBQ & Inasal|Pork Inasal|140|Grilled pork inasal with rice.
+Student Meals|Chicken Katsu|100|Java rice bowl with chicken katsu.
+Student Meals|Pork Katsu|100|Java rice bowl with pork katsu.
+Student Meals|Fish Fillet|100|Java rice bowl with fish fillet.
+Burgers & Pasta|Crispy Chicken Burger|150|Crispy chicken burger with fries.
+Burgers & Pasta|Double Patty Cheeseburger|190|Two patties with cheese, with fries.
+Burgers & Pasta|Creamy Carbonara|180|Creamy carbonara pasta.
+Burgers & Pasta|Mareola House Asian Pasta|180|The house Asian-style pasta.
+Ulam for Sharing|Lechon Kawali|200|Crispy pork belly. Medium, good for 2.
+Ulam for Sharing|Crispy Kare-kare|210|Crispy pork in peanut sauce. Medium, good for 2.
+Ulam for Sharing|Bicol Express|210|Pork in spicy coconut cream. Medium, good for 2.
+Ulam for Sharing|Beef Caldereta|250|Beef stewed in tomato sauce. Medium, good for 2.
+Ulam for Sharing|Beef Kare-kare|250|Beef and vegetables in peanut sauce. Medium, good for 2.
+Rice Platters|Seafood Fried Rice|200|Fried rice with seafood, for sharing.
+Rice Platters|Plain Rice Platter|150|Steamed rice platter, for sharing.
+Drinks|Fresh Mango Shake|100|Blended ripe mango.
+Drinks|Halo-Halo|130|Shaved ice with sweet toppings.
+Drinks|Cucumber Lemonade|70|Fresh cucumber lemonade.
+## diovanni
+Bundles|Group Meal|899|1 large pizza (any flavor), 1 platter spaghetti, loaded fries and a pitcher of lemon iced tea.
+Bundles|Family Meal|999|5 pcs chicken, 1 platter spaghetti, Classic Hawaiian and Ham & Cheese medium pizzas, and a pitcher of house-blend iced tea.
+Bundles|Monster Meal|1699|Any party-size pizza, 1 platter spaghetti, garlic butter chicken, loaded fries and 2 pitchers of house-blend iced tea.
+## elpomar
+Rice Meals|Chicken Inasal Petcho with Unli Rice|158|Grilled chicken breast inasal with unlimited rice.@RESTAURANTS/El Pomar/4.7.jpg
+Rice Meals|Honey Garlic Chicken|213|Crispy chicken glazed in honey garlic sauce.@RESTAURANTS/El Pomar/4.6.jpg
+Rice Meals|Beef Steak Chinese Style|238|Tender beef slices in Chinese-style sauce.@RESTAURANTS/El Pomar/4.3.jpg
+Noodles & Pasta|Lomi|218|Thick noodle soup with meat and vegetables, good for sharing.@RESTAURANTS/El Pomar/4.4.jpg
+Noodles & Pasta|Carbonara Spaghetti Tray|740|A party tray of creamy carbonara with garlic toast.@RESTAURANTS/El Pomar/4.1.jpg
+Snacks|Cheeseburger|90|Beef burger with cheese.@RESTAURANTS/El Pomar/4.2.jpg
+Desserts & Drinks|Special Halo-Halo|105|Ube ice cream, corn flakes, corn, mango, red and green gulaman on creamy ice.@RESTAURANTS/El Pomar/4.9.jpg
+Desserts & Drinks|Mango Shake|70|Fresh mango blended with ice.@RESTAURANTS/El Pomar/4.8.jpg
+## cloudburger
+Fries|Fries Regular|35|Cheese, sour cream, BBQ or chili BBQ flavor.
+Fries|Fries Large|50|Cheese, sour cream, BBQ or chili BBQ flavor.
+Fries|Fries Jumbo (2 flavors)|70|Two flavors of your choice.
+Fries|Fries Mega (3 flavors)|100|Three flavors of your choice.
+Fries|Fries Cheese Overload (Large)|65|Fries loaded with cheese sauce.
+Buy One Get One|Pork Burger|39|Buy one, get one. ₱54 with cheese.
+Buy One Get One|Pork Burger with Egg|64|Buy one, get one. ₱79 with cheese.
+Buy One Get One|Crispy Chicken Burger|79|Buy one, get one. ₱94 with cheese.
+Buy One Get One|Beef Burger|44|Buy one, get one. ₱59 with cheese.
+Buy One Get One|Beef Burger with Egg|69|Buy one, get one. ₱89 with cheese.
+Buy One Get One|Jumbo Cheesedog Sandwich|69|Buy one, get one.
+Buy One Get One|Footlong|89|Buy one, get one.
+Solo Orders|Hungarian Sandwich|50|Hungarian sausage sandwich.
+Solo Orders|Ham and Cheese Sandwich|30|Ham and cheese in soft bread.
+Solo Orders|Bacon and Cheese Sandwich|40|Bacon and cheese in soft bread.
+Solo Orders|Egg Sandwich|30|Egg sandwich.
+Drinks|Softdrinks (300 ml)|25|Chilled softdrink.
+Drinks|Bottled Iced Tea|20|230 ml bottled iced tea.
+Drinks|Mineral Water (500 ml)|15|Bottled mineral water.
+## jollibee
+Chickenjoy|1-pc Chickenjoy with Rice|104|Crispy, juicy fried chicken with rice and gravy.
+Chickenjoy|2-pc Chickenjoy with Rice|205|Two pieces of Chickenjoy with rice and gravy.
+Chickenjoy|1-pc Chickenjoy with Jolly Spaghetti|184|Chickenjoy with Jolly Spaghetti.
+Chickenjoy|1-pc Chickenjoy with Fries|178|Chickenjoy with fries.
+Chickenjoy|1-pc Chickenjoy with Burger Steak|184|Chickenjoy with a burger steak and rice.
+Chickenjoy|Chickenjoy Bucket (6 pcs)|536|Six pieces of Chickenjoy for sharing.
+Chickenjoy|Chickenjoy Bucket (8 pcs)|682|Eight pieces of Chickenjoy for sharing.
+Jolly Spaghetti|Jolly Spaghetti|146|Sweet-style spaghetti with hotdog slices and cheese.
+Jolly Spaghetti|Jolly Spaghetti with Yumburger|142|Jolly Spaghetti with a Yumburger.
+Jolly Spaghetti|Jolly Spaghetti Family Pan|300|Jolly Spaghetti good for sharing.
+Burger Steak|1-pc Burger Steak|90|Burger steak with mushroom gravy and rice.
+Burger Steak|2-pc Burger Steak|157|Two burger steaks with mushroom gravy and rice.
+Burger Steak|Burger Steak Family Pan (6 pcs)|420|Six burger steaks for sharing.
+Chicken & Sandwiches|1-pc Chicken Fillet with Pepper Cream|104|Chicken fillet in pepper cream sauce with rice.
+Chicken & Sandwiches|Crunchy Chicken Sandwich|153|Crunchy chicken fillet sandwich.
+Chicken & Sandwiches|Jolly Hotdog|163|Classic Jolly hotdog with cheese.
+Chicken & Sandwiches|Chicken Nuggets (6 pcs)|179|Six chicken nuggets with dip.
+Desserts|Peach Mango Pie|53|Crispy pie with peach and mango filling.
+Desserts|Chocolate Sundae|58|Soft-serve with chocolate syrup.
+Desserts|Coke Float|79|Coke topped with soft-serve.
+## inasal
+Chicken Inasal|Chicken Inasal Paa Large (PM1)|139|Grilled chicken leg quarter with rice. ₱174 with drink.
+Chicken Inasal|Chicken Inasal Pecho Large (PM2)|169|Grilled chicken breast quarter with rice. ₱204 with drink.
+Chicken Inasal|Chicken Inasal Regular|99|Grilled chicken inasal with rice. ₱134 with drink.
+Ihaw-Sarap Favorites|Bangus Sisig|135|Milkfish sisig with rice.
+Ihaw-Sarap Favorites|Grilled Liempo|135|Grilled pork belly with rice.
+Ihaw-Sarap Favorites|Sizzling Liempo|146|With mushroom gravy and java rice.
+Pork BBQ|Pork BBQ|99|Pork barbecue with rice.
+Pork BBQ|Spicy Pork BBQ|109|Spicy pork barbecue with rice.
+Sulit Bowls|Soy Garlic Chicken Sulit Bowl|89|Soy garlic chicken on rice.
+Sulit Bowls|Pork Sisig Sulit Bowl|89|Pork sisig on rice with egg.
+Combos|Ihaw-Sarap Combo A|273|1 Pecho unli-rice, extra creamy halo-halo (8 oz) and a small drink.
+Combos|Ihaw-Sarap Combo B|203|1 Pork BBQ unli-rice, extra creamy halo-halo (8 oz) and a small drink.
+Fiesta Bundles|Buddy Fiesta Meal: Chicken Inasal & Pork BBQ|470|Good for 2–3, with drinks.
+Fiesta Bundles|Family Fiesta Meal: Chicken Inasal & Pork BBQ|865|Good for 4–6, with drinks.
+For Sharing|Paa (2 pcs)|268|Two grilled chicken legs.
+For Sharing|Pork BBQ Buddy|193|Pork BBQ for sharing.
+Halo-Halo|Extra Creamy Halo-Halo (Regular)|95|Extra creamy halo-halo, regular size.
+Halo-Halo|Crema de Leche Halo-Halo (Regular)|95|Halo-halo with crema de leche, regular size.
+## mcdo
+Chicken Value Meals|1-pc Chicken McDo with Rice|158|Crispy chicken with rice and a drink. ₱196 with fries.
+Chicken Value Meals|2-pc Chicken McDo with Rice|239|Two pieces of chicken with rice and a drink. ₱277 with fries.
+Chicken Value Meals|1-pc Chicken McDo with McSpaghetti|216|Chicken McDo with McSpaghetti and a drink.
+Chicken Value Meals|McSpaghetti|126|Sweet-style spaghetti with a drink.
+Chicken Value Meals|Chicken McDo McShare Box (6 pcs)|515|Six pieces of Chicken McDo for sharing.
+Chicken Value Meals|Chicken McDo McShare Box (8 pcs)|650|Eight pieces of Chicken McDo for sharing.
+Chicken Value Meals|6-pc Chicken McNuggets Meal|207|Six nuggets with fries and a drink.
+Burger Value Meals|Cheeseburger Meal|121|Cheeseburger with a drink. ₱159 with fries.
+Burger Value Meals|Double Cheeseburger Meal|207|Double cheeseburger with a drink. ₱245 with fries.
+Burger Value Meals|Big Mac Meal|232|Big Mac with a drink. ₱270 with fries.
+Burger Value Meals|Quarter Pounder with Cheese Meal|232|Quarter Pounder with cheese and a drink.
+Burger Value Meals|McChicken Meal|185|McChicken with a drink. ₱223 with fries.
+Burger Value Meals|Crispy Chicken Sandwich Meal|124|Crispy chicken sandwich with a drink.
+Desserts|McFlurry with Oreo|72|Soft-serve with Oreo cookie bits.
+Desserts|Coke McFloat|59|Coke topped with soft-serve.
+Desserts|Sundae|52|Hot fudge or hot caramel sundae.
+## lubdub
+Signature Coffee|Bear Kori Kohi|195|Iced overload signature coffee.
+Signature Coffee|Tiramisu Iced Latte|185|Iced latte with tiramisu flavor.
+Signature Coffee|Lub Dub Signature|180|The house signature iced coffee.
+Hot Drinks|Americano|150|100% Arabica beans.
+Hot Drinks|Cafe Latte|150|100% Arabica beans with steamed milk.
+Hot Drinks|Cappuccino|150|Espresso with milk foam.
+House Faves|Sea Salt Latte (Iced)|175|Also mochaccino, caramel macchiato, French vanilla or Spanish latte. ₱160 hot.
+Matcha|Dirty Matcha|180|Iced ceremonial-grade matcha with espresso.
+Matcha|Matcha Frappe|180|Blended ceremonial-grade matcha.
+Frappes|Salted Caramel Frappe|185|Espresso-based blended frappe.
+Frappes|Cookies & Cream Frappe|180|Non-espresso blended frappe.
+Freshies & Slush|Honey Citrus|120|Iced fruit refresher.
+Freshies & Slush|Strawberry Lime|120|Iced fruit refresher.
+Starters|Cheesy Fries|165|Fries with cheese.
+Starters|Chicken & Fries|255|Fried chicken with fries.
+Starters|Cheesy Beef Nachos|220|Nachos with beef and cheese.
+Breakfast|Cheesy Spam|220|Served with garlic rice and scrambled egg.
+Breakfast|Sweet-Style Chicken Tocino|200|Served with garlic rice and scrambled egg.
+Breakfast|Corned Beef Hash|200|Served with garlic rice and scrambled egg.
+Mains|Lub Dub Breakfast Platter|250|All-day platter, with rice or garlic bread.
+Mains|House Baby Back Ribs|355|With rice or garlic bread.
+Mains|Pork Belly Fried|270|With rice or garlic bread.
+Mains|Chicken Wings Spicy|265|With rice or garlic bread.
+Pasta|Pesto Chicken|235|Pasta in pesto with chicken.
+Pasta|Creamy Truffle|255|Pasta in creamy truffle sauce.
+Pasta|Bolognese|255|Pasta in red meat sauce.
+Sandwiches|Lub Duburger|245|The house burger.
+Sandwiches|Monte Cristo|240|Ham and cheese French-toasted sandwich.
+Sandwiches|Tuna Melt|185|Tuna and melted cheese.
+Pancakes & Pastries|Original Pancakes|160|Fluffy pancakes.
+Pancakes & Pastries|Butter Croissant|165|Flaky butter croissant.
+Desserts|New York Cheesecake|160|Classic cheesecake slice.
+Desserts|Nutella Cheesecake|185|Cheesecake with Nutella.
+Desserts|Churros|150|Churros with dip.
+## forever
+Rice Meals|Tocino and Egg|165|Sweet cured pork with rice and egg.
+Rice Meals|Crispy Porkchop|175|Crispy porkchop with rice.
+Rice Meals|Crispy Chicken|175|Crispy fried chicken with rice. ₱195 spicy.
+Rice Meals|Chicken Wings Rice Meal|225|Spicy buffalo, sweet BBQ or sweet chili.
+Rice Meals|BBQ Ribs Rice Meal|345|Pork ribs in BBQ sauce with rice.
+For Sharing|Cheesy Beef Rolls|295|For the family or barkada.
+For Sharing|Chicken Wings Platter|395|Spicy buffalo, sweet BBQ or sweet chili.
+For Sharing|Spicy Sisig|225|Spicy pork sisig.
+Nachos & Fries|Beef Nachos|245|Nachos with beef and cheese.
+Nachos & Fries|Regular Fries|175|Cheese, sour cream, BBQ or salt.
+Burgers & Sandwiches|Sunrise Burger|225|Burger with egg, served with fries.
+Burgers & Sandwiches|Spicy Chicken Burger|225|Served with fries.
+Burgers & Sandwiches|Ham & Cheese Melt|165|Served with fries.
+Pasta & Pizza|Lasagna|195|Baked meat lasagna.
+Pasta & Pizza|Carbonara|195|Creamy carbonara.
+Pasta & Pizza|Spaghetti Meatballs|155|Spaghetti with meatballs.
+Pasta & Pizza|All Meat Pizza (12")|355|12-inch thin crust pizza.
+Pasta & Pizza|Hawaiian Pizza (12")|355|12-inch thin crust pizza.
+Coffee|Spanish Latte (Iced)|205|Iced Spanish latte, XL.
+Coffee|Caramel Macchiato (Iced)|205|Iced caramel macchiato, XL.
+Coffee|Americano (Hot)|115|Small hot Americano.
+Milk Tea|Classic Pearl Milk Tea|155|Large. ₱175 XL.
+Milk Tea|Wintermelon Pearl Milk Tea|155|Large. ₱175 XL.
+Milk Tea|Okinawa Pearl Milk Tea|155|Large. ₱175 XL.
+Shakes|Mango Shake|185|Large. ₱205 XL.
+Shakes|Cookies & Cream Shake|185|Large. ₱205 XL.
+Cheesecake Drinks|Red Velvet Cheesecake Drink|175|Large signature cheesecake drink.
+Fruit Tea|Mango Lychee Fruit Tea|155|Large. ₱175 XL.
+## backyard
+Rice Meals|Chicken Teriyaki|250|Chicken in teriyaki glaze with rice.
+Rice Meals|Tonkatsu (Pork)|250|Breaded pork cutlet with rice.
+Rice Meals|Creamy Chicken Breast|280|Chicken breast in cream sauce with rice.
+Japanese Curry|Chicken Cutlet Curry|350|Japanese curry with chicken cutlet and rice.
+Japanese Curry|Curry Rice|250|Japanese curry with rice.
+Rice Bowls|Katsu Don|250|Pork cutlet and egg on rice.
+Rice Bowls|Yangchow with Tonkatsu|250|Yangchow rice with tonkatsu.
+Silog|Tapsilog|150|Beef tapa, garlic rice and egg.
+Silog|Longsilog|145|Longganisa, garlic rice and egg.
+Silog|Liemposilog|150|Grilled liempo, garlic rice and egg.
+Silog|Hotsilog|100|Hotdog, garlic rice and egg.
+Meals for Sharing|Pork Sinigang|380|Sour pork soup, good for sharing.
+Meals for Sharing|Lechon Kawali|380|Crispy pork belly, good for sharing.
+Meals for Sharing|Fish n Chips|380|Battered fish with chips, good for sharing.
+Meals for Sharing|Shrimp Halabos|400|Steamed shrimp, good for sharing.
+Meals for Sharing|Sisig|290|Pork sisig, good for sharing.
+Meals for Sharing|Canton Guisado|300|Stir-fried canton noodles, good for sharing.
+Ramen|Tonkotsu Ramen|300|Rich pork bone broth ramen.
+Ramen|Special Spicy Tonkotsu Ramen|380|Spicy pork bone broth ramen.
+Ramen|Shoyu Ramen|300|Soy sauce broth ramen.
+Ramen|Gyoza|180|Pan-fried dumplings.
+Dumplings|Pork Siomai (6 pcs)|220|Steamed pork siomai.
+Dumplings|Xiaolongbao Chocolate (4 pcs)|155|Steamed soup dumplings, chocolate.
+Dumplings|Wonton Noodle Soup|350|Wonton dumplings in noodle soup.
+Snacks|Fries (Cheese or Salted)|120|Crispy fries.
+Snacks|Beef or Chicken Burger|230|Burger with fries.
+Snacks|Takoyaki|150|Ham, bacon or tuna.
+Snacks|Ten Yen Cheese Coin|100|Classic cheese coin snack.
+Pasta|Creamy Carbonara|235|Creamy carbonara pasta.
+Pasta|Shrimp Aglio Olio|250|Garlic and olive oil pasta with shrimp.
+Coffee & Frappe|Cafe Latte|150|Hot or iced, tall.
+Coffee & Frappe|Salted Caramel Macchiato|150|Hot or iced, tall.
+Coffee & Frappe|Javachip Frappe|165|Tall. ₱185 grande.
+Coffee & Frappe|Cookies & Cream Frappe|165|Tall. ₱185 grande.
+Fruit Soda & Desserts|Ichigo (Strawberry) Soda|130|Fruit soda.
+Fruit Soda & Desserts|Special Halo-Halo|180|Halo-halo with all the toppings.
+Fruit Soda & Desserts|Mango Shake|180|Fresh mango shake.
+## juanita
+Coffee|Biscoff Latte|180|A best seller.
+Coffee|Spanish Latte|155|Espresso with sweetened milk.
+Coffee|Sea Salt Latte|155|A best seller.
+Coffee|Buttercream Latte|180|Latte with buttercream.
+Coffee|Americano|110|Classic black coffee.
+Coffee|Caramel Macchiato|155|Espresso, milk and caramel.
+Oat Series|Sea Salt Oat Latte|185|A best seller, with oat milk.
+Oat Series|Biscoff Oat Latte|210|A best seller, with oat milk.
+Matcha Bar|Matcha Latte|155|A best seller.
+Matcha Bar|Strawberry Matcha|160|A best seller.
+Matcha Bar|Sea Salt Matcha|160|Matcha with sea salt cream.
+Milk Based|Strawberry Latte|150|Strawberry milk.
+Milk Based|Ice Chocolate|150|Iced chocolate milk.
+Special Drinks|Pistachio Latte|220|Latte with pistachio.
+Rice Bowls|Spam Musubi Rice|180|Spam and rice, musubi-style.
+Rice Bowls|Karaage Don|220|Japanese fried chicken on rice.
+Rice Bowls|Honey Garlic Chicken|220|Chicken in honey garlic glaze on rice.
+Rice Bowls|Yangnyeom Chicken|220|Korean sweet-spicy chicken on rice.
+Rice Bowls|Chicken ala King|230|Chicken in cream sauce on rice.
+Wings (6 pcs)|Honey Garlic Wings|260|Six chicken wings.
+Wings (6 pcs)|Salted Egg Wings|300|Six chicken wings in salted egg sauce.
+Pasta|Carbonara|200|Creamy carbonara.
+Pasta|Chicken Alfredo|210|Creamy alfredo with chicken.
+Pasta|Truffle Pesto Carbonara|250|Carbonara with truffle and pesto.
+Others|Korean Ramen|150|Spicy Korean ramen.
+Others|Cheese Fries|120|Fries with cheese.
+Others|Garlic Bread|30|Toasted garlic bread.
+## jusa
+Sulit Combo Meals|J-1 Burger, Fries and Smoothie|245|1 burger, 1 fries and 1 smoothie.
+Sulit Combo Meals|J-2 Carbonara, Toasted Bread and Smoothie|195|1 carbonara, 1 toasted bread and 1 smoothie.
+Sulit Combo Meals|J-3 Burger, Spaghetti and Smoothie|255|1 burger, 1 spaghetti and 1 smoothie.
+Sulit Combo Meals|J-4 Siopao, Siomai and Drink|175|1 siopao, 4 pcs siomai and 1 iced coffee or milk tea.
+Sulit Combo Meals|J-5 Bangus Meal and Smoothie|235|1 bangus, 1 rice, 1 egg and 1 smoothie.
+All-Day Breakfast|Longganisa, Egg and Rice|95|With free coffee.
+All-Day Breakfast|Tocino, Egg and Rice|95|With free coffee.
+All-Day Breakfast|Bangus, Egg and Rice|95|With free coffee.
+All-Day Breakfast|Hotdog, Egg and Rice|95|With free coffee.
+Sizzling|Sizzling Pork Sisig|135|With rice.
+Sizzling|Sizzling Pork Chop|145|With rice.
+Sizzling|Sizzling Garlic Pepper Beef|155|With rice.
+Salads|Fresh Mixed Green Salad with Chicken|155|Fresh greens with chicken.
+Salads|Fresh Fruit Salad|145|Fresh fruits with honey.
+Solo Snacks|Burger|135|Classic burger.
+Solo Snacks|Carbonara|115|Creamy carbonara.
+Solo Snacks|Spaghetti|105|Filipino-style spaghetti.
+Solo Snacks|Siomai (4 pcs)|50|Steamed siomai.
+Solo Snacks|Siopao|55|Steamed bun.
+Solo Snacks|Fries (Regular)|85|Cheese, BBQ or sour cream.
+Solo Snacks|Empanada|25|Pork or chicken, each.
+Solo Snacks|Shanghai Lumpia (3 pcs)|50|Crispy spring rolls.
+## cupstop
+Foods|Hungarian Rice Meal|80|Hungarian sausage with rice.
+Foods|Fried Chicken Rice Meal|80|Fried chicken with rice.
+Foods|Chicken Pastil|55|Shredded chicken on rice, Mindanao-style.
+Foods|Lechon Kawali Rice Meal|85|Crispy pork belly with rice.
+Foods|Burger Steak Rice Meal|65|Burger steak with gravy and rice.
+Foods|Chaofan|60|Fried rice with toppings.
+Snacks|Waffle|27|Chocolate or other fillings.
+Snacks|Cheese Sticks|60|Crispy cheese sticks.
+Snacks|Pancake|35|Soft pancake with filling.
+## sebucha
+Classic Series|Classic Milk Tea (Medium)|79|Classic milk tea with pearls. ₱89 large.
+Classic Series|Okinawa Milk Tea (Medium)|79|Classic series. ₱89 large.
+Classic Series|Wintermelon Milk Tea (Medium)|79|Classic series. ₱89 large.
+Premium Series|Premium Cheesecake Milk Tea (Medium)|89|Premium series with cheesecake. ₱99 large.
+Premium Series|Double Dutch Cheesecake (Medium)|89|Premium series. ₱99 large.
+Latte Series|Matcha Latte (Medium)|89|Latte series. ₱99 large.
+Latte Series|Strawberry Latte (Medium)|89|Latte series. ₱99 large.
+Frappe Series|Mango Frappe|99|Frappe series. ₱110 large.
+Frappe Series|Cookies & Cream Frappe|99|Frappe series. ₱110 large.
+Coffee|Iced Coffee|89|Ice coffee drinks. ₱99 large.
+Coffee|Hot Coffee|69|Hot drinks.
+Fruit Tea|Healthy Fruit Tea|89|Lychee, passion fruit or blue lemonade. ₱99 large.
+Snacks|Pizza Slice|59|Snack to pair with your milk tea.
+## lushan
+Red Tea|Taiwan Milktea (Medium)|110|Made of real tea leaves, brewed fresh daily. ₱120 large.
+Red Tea|Golden Boba (Medium)|110|₱120 large.
+Red Tea|Okinawa with Pearl (Medium)|100|₱110 large.
+Red Tea|Wintermelon with Pearl (Medium)|90|₱100 large.
+Red Tea|Plain Milktea with Pearl (Medium)|75|₱85 large.
+Red Tea|Salted Cream Cheese (Medium)|85|₱95 large.
+Assam Tea|Coffee with Coffee Jelly (Medium)|90|₱100 large.
+Assam Tea|Taro with Pearl (Medium)|85|₱95 large.
+Green Tea|Kiwi Yakult with Nata (Medium)|95|₱105 large.
+Green Tea|Lychee with Popping Boba (Medium)|85|₱95 large.
+Smoothies|Triple Strawberry Smoothie (Medium)|120|₱130 large.
+Smoothies|Matcha Cream Puff with Pearl (Medium)|120|₱130 large.
+Smoothies|Oreo Choco with Pearl (Medium)|110|₱120 large.
+House Specialties|Dark Choco Matcha (Medium)|120|₱130 large.
+House Specialties|Iced Matcha Green Tea Latte (Medium)|120|₱130 large.
+Fresh Fruit Juice|Lemon Juice (Large)|75|Fresh lemon juice.
+## jelos
+Hot Soup|Special Lomi|280|Thick egg noodle soup, good for sharing.
+Hot Soup|Chicken Mami|145|Chicken noodle soup.
+Hot Soup|Beef Mami|180|Beef noodle soup.
+Hot Soup|Bulalo Hotpot|355|Beef shank and bone marrow soup.
+Hot Soup|Sinigang na Baboy|355|Sour pork soup.
+Hot Soup|Tinolang Isda|340|Fish soup with ginger and vegetables.
+Noodles & Pasta|Bihon Guisado|250|Stir-fried rice noodles, good for sharing.
+Noodles & Pasta|Canton Guisado|250|Stir-fried egg noodles, good for sharing.
+Noodles & Pasta|Bam-i|250|Mixed bihon and canton noodles.
+Noodles & Pasta|Gambas Pasta|255|Pasta with garlic shrimp.
+Noodles & Pasta|Lasagna ala Carbonara|280|Creamy carbonara lasagna.
+Sizzling Plates|Sizzling Sisig|205|Sizzling pork sisig.
+Sizzling Plates|Sizzling Burger Steak|205|Burger steak on a sizzling plate.
+Sizzling Plates|Sizzling Hungarian Sausage|265|Hungarian sausage on a sizzling plate.
+Sizzling Plates|Bulalo Steak|280|Beef steak, bulalo-style.
+Burgers|Jelo's Hamburger|110|The house hamburger.
+Burgers|Cheeseburger|145|Burger with cheese.
+Snacks|Cheesy Hotdog Sandwich|60|Soft bun with juicy hotdog and cheese.
+Snacks|Belgian Waffle|100|Crisp waffle with ice cream and chocolate sauce.
+Snacks|Scoop & Sprinkles|60|Two scoops of ice cream with toppings.
+## maxcafe
+Coffee|Americano (16 oz)|38|₱48 for 22 oz.
+Coffee|Cafe Latte (16 oz)|48|₱58 for 22 oz.
+Coffee|Creme Brulee Latte (16 oz)|68|₱78 for 22 oz.
+Coffee|Salted Caramel Latte (16 oz)|58|₱68 for 22 oz.
+Coffee|Spanish Latte (16 oz)|68|₱78 for 22 oz.
+Coffee|Biscoff Espresso (16 oz)|68|₱78 for 22 oz.
+Coffee|Dirty Matcha (16 oz)|68|₱78 for 22 oz.
+Non-Coffee|Matcha Latte (16 oz)|68|₱78 for 22 oz.
+Non-Coffee|Strawberry Latte (16 oz)|58|₱68 for 22 oz.
+Non-Coffee|Milo Dino (16 oz)|58|₱68 for 22 oz.
+Soda Fruit|Mango Soda (16 oz)|38|Also lychee, strawberry, grapes, blueberry or green apple.
+Soda Fruit|Strawberry Fruit Milk (16 oz)|58|₱68 for 22 oz.
+Soda Fruit|Mango Fruit Milk (16 oz)|58|₱68 for 22 oz.
+## streetbites
+Rice Meals|Bacsilog|55|Crispy bacon, egg and rice.
+Rice Meals|Hungarian Sausage Rice Meal|80|Hungarian sausage with rice.
+Rice Meals|Japanese Siomai Rice|55|Japanese siomai with rice.
+Rice Meals|Burger Steak with Mushroom Gravy|55|Burger steak with mushroom gravy and rice.
+Takoyaki|Vegetable Takoyaki|90|Octopus balls with vegetables.
+Takoyaki|Ham Takoyaki|95|Takoyaki with ham.
+Takoyaki|Bacon Takoyaki|95|Takoyaki with bacon.
+Takoyaki|Cheesy Bacon Takoyaki|100|Takoyaki with bacon and cheese.
+Takoyaki|Takoyaki Platter (20 pcs, mixed)|230|Mixed takoyaki platter.
+Drinks|Classic Milk Tea (16 oz)|70|Classic milk tea.
+## rallions
+Soup|Lomi|150|Thick egg noodle soup.
+Soup|Ma Ki Mi (Double)|120|Pork ma ki noodle soup, double. ₱100 single.
+Filipino Pancit|Bilao Pancit Bam-i (Medium)|300|Party bilao of pancit bam-i. ₱550 large.
+Filipino Pancit|Bilao Pancit Bihon (Medium)|250|Party bilao of pancit bihon. ₱450 large.
+Filipino Pancit|Sotanghon Guisado|250|Stir-fried glass noodles.
+Filipino Pancit|Pancit Canton|200|Stir-fried egg noodles.
+Filipino Pancit|Pancit Bihon|180|Stir-fried rice noodles.
+Combo Snacks|Clubhouse Sandwich with Fries|170|Clubhouse sandwich with fries.
+Combo Snacks|Chicken Burger with Fries|120|Chicken burger with fries.
+Paos & More|Ding Pao|90|Big steamed bun.
+Paos & More|Pork Asado Siopao|50|Steamed bun with sweet pork asado.
+Paos & More|Bola-Bola Siopao|50|Steamed bun with meatball filling.
+Paos & More|Pork Siomai|50|Steamed pork siomai.
+Paos & More|French Fries (Big)|100|Crispy fries.
+Sandwiches|Bacon & Egg Sandwich|85|Bacon and egg in toasted bread.
+Sandwiches|Ham & Cheese Sandwich|70|Ham and cheese in toasted bread.
+Thirst Quenchers|Halo-Halo Special|75|Halo-halo with the works.
+Thirst Quenchers|Fresh Buko Shake|65|Young coconut shake.
+Thirst Quenchers|Fresh Mango Shake|65|Ripe mango shake.
+Thirst Quenchers|Calamansi Juice|50|Fresh calamansi juice.
+## rabak
+Seafood|Bangus Sugba|280|Grilled milkfish.
+Seafood|Salmon Strips (400 g)|250|Sinigang, sugba or tinola.
+Seafood|Pompano|418|Steamed, sugba, tinola or sweet and sour.
+Seafood|Tuna Panga Paluto Sugba (300–400 g)|248|Grilled tuna jaw.
+Seafood|Tuna Belly (Small, 150–200 g)|230|Sugba, tinola or sinigang.
+Seafood|Shrimp Tempura|188|Battered fried shrimp.
+Seafood|Calamares|198|Fried battered squid rings.
+Seafood|Sinuglaw|248|Grilled pork and fish ceviche.
+Ulam|Sisig|188|Pork sisig.
+Ulam|Chicharon Bulaklak|168|Crispy pork ruffle fat.
+Ulam|Crispy Pata|650|Deep-fried pork knuckle, for sharing.
+Pancit & Vegetables|Pancit Bam-e|198|Mixed bihon and canton noodles.
+Pancit & Vegetables|Pancit Canton|198|Stir-fried egg noodles.
+Pancit & Vegetables|Chopsuey|198|Mixed vegetables.
+Pancit & Vegetables|Pinakbet|188|Mixed local vegetables with shrimp paste.
+Pancit & Vegetables|Relyenong Talong|150|Stuffed eggplant omelet.
+Pancit & Vegetables|Adobong Kangkong|120|Water spinach cooked adobo-style.
+Rice|Rice Platter|150|Steamed rice for sharing.
+Rice|Puso|10|Hanging rice in woven coconut leaves.
+## jasnack
+Milk Tea|Milk Tea Regular (16 oz)|35|Okinawa, wintermelon, taro, chocolate, vanilla, caramel, dalgona, cookies & cream or mango cheesecake.
+Milk Tea|Milk Tea Regular (22 oz)|45|Regular flavors, 22 oz.
+Milk Tea|Milk Tea Premium (16 oz)|40|Premium flavors, 16 oz.
+Milk Tea|Milk Tea (1 Liter)|75|Regular flavors, 1 liter.
+Drinks|Fruit Soda or Coke Float (16 oz)|39|Fruit soda or coke float.
+Waffles|Cheese Waffle|10|Crispy waffle with cheese.
+Waffles|Chocolate Waffle|15|Crispy waffle with chocolate.
+Sushi Rolls|Maki Roll (8 pcs)|120|Solo sushi roll.
+Sushi Rolls|Crazy Maki Roll (8 pcs)|125|Solo sushi roll.
+Sushi Rolls|California Maki (8 pcs)|130|Solo sushi roll.
+Sushi Rolls|Mixed Rolls Platter (21 pcs)|280|Regular mixed rolls platter.
+Korean (Fridays)|Kimbap (Regular)|120|Korean rice rolls. ₱150 bulgogi kimbap.
+Korean (Fridays)|Bibimbap|125|Korean mixed rice bowl.
+Korean (Fridays)|Tteokbokki|100|Spicy rice cakes with egg and cheese.
+Korean (Fridays)|Combo A: Tteokbokki + Regular Kimbap|210|Combo deal.

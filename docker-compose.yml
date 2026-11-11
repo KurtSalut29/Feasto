@@ -115,6 +115,27 @@ services:
       redis:
         condition: service_healthy
 
+  # Real Naval stores instead of the demo (wipes everything first). See server/naval/README.md.
+  naval:
+    profiles: ["tools"]
+    build:
+      context: ./server
+      target: build
+    command: ["node", "dist/naval.js"]
+    environment:
+      <<: *server-env
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@feasto.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      STORE_PASSWORD: ${STORE_PASSWORD:-demo1234}
+    volumes:
+      - uploads:/app/uploads
+      - documents:/app/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   api-1:
     <<: *api
     environment:
