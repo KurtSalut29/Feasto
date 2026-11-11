@@ -17,6 +17,18 @@ if (!cloudflared) {
   process.exit(1);
 }
 
+// With the classroom setup running (infra/lan/start.ps1), share that instead of `npm run dev`:
+// it is the fast production build, and both addresses then show the same data.
+const classroom = await fetch("http://localhost:8081/api/health", { signal: AbortSignal.timeout(2000) })
+  .then((response) => response.ok)
+  .catch(() => false);
+const target = classroom ? "http://localhost:8081" : "http://localhost:3000";
+console.log(
+  classroom
+    ? "The classroom setup is running: the tunnel opens it for people on other networks."
+    : "Sharing npm run dev (port 3000). Start the classroom setup first to share that instead.",
+);
+
 console.log("Starting the tunnel. Open the https://...trycloudflare.com address below on your phone. Ctrl+C stops it.\n");
-const tunnel = spawn(cloudflared, ["tunnel", "--url", "http://localhost:3000"], { stdio: "inherit" });
+const tunnel = spawn(cloudflared, ["tunnel", "--url", target], { stdio: "inherit" });
 tunnel.on("exit", (code) => process.exit(code ?? 0));

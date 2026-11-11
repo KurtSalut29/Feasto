@@ -1,8 +1,18 @@
-# The laptop as the server on the classroom WiFi (see DEPLOY.md, "Laptop as the server").
-# SITE_ADDRESS is the laptop's WiFi address written like 192-168-1-10.local-ip.sh: that name points
-# back to the laptop, and local-ip.sh publishes a real certificate for it, so phones get HTTPS
-# (needed for GPS) without installing anything.
+{
+	servers {
+		# cloudflared (npm run tunnel) connects from the laptop and says the visitor used https
+		trusted_proxies static private_ranges
+	}
+}
+
+# Phones on the classroom WiFi
 {$SITE_ADDRESS} {
 	tls /certs/server.pem /certs/server.key
+	import routes.caddy
+}
+
+# The same site for the Cloudflare tunnel (npm run tunnel), for people on other networks.
+# Only the laptop itself can reach this port.
+http://:8081 {
 	import routes.caddy
 }

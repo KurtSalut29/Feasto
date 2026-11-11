@@ -35,7 +35,7 @@ function toneOf(title: string): ToastTone {
 }
 
 /**
- * Keeps one live connection (Server-Sent Events) open for the signed-in user.
+ * Keeps one live connection (Server-Sent Events, or long polling where streams can't pass) open for the signed-in user.
  * Whenever something changes on the server, the visible page re-fetches its data,
  * and new notifications pop up as Feasto toast messages.
  */
@@ -57,14 +57,20 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
       refreshTimer = setTimeout(() => router.refresh(), 250);
     };
 
-    // EventSource reconnects by itself if the connection drops (e.g. an API copy restarts)
-    const source = new EventSource("/api/me/events");
-    source.onmessage = (message) => {
-      const event = JSON.parse(message.data) as LiveEvent;
+    let stopped = false;
+    let source: EventSource | undefined;
+    let poll: AbortController | undefined;
+    const stop = () => {
+      stopped = true;
+      source?.close();
+      poll?.abort();
+    };
+
+    const handle = (event: LiveEvent) => {
       listeners.current.forEach((listener) => listener(event));
       if (event.type === "session.ended") {
         // An admin disabled this account: leave right away
-        source.close();
+        stop();
         window.location.replace("/logout?reason=disabled");
         return;
       }
@@ -75,9 +81,52 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
       }
       refreshSoon();
     };
+
+    // Asks the server again and again; each answer waits until something happens (or 20 s pass)
+    const startPolling = async () => {
+      source?.close();
+      source = undefined;
+      while (!stopped) {
+        poll = new AbortController();
+        try {
+          const response = await fetch("/api/me/events/poll", { signal: poll.signal, cache: "no-store" });
+          if (response.status === 401) return; // signed out
+          if (!response.ok) throw new Error(String(response.status));
+          const { events } = (await response.json()) as { events: LiveEvent[] };
+          events.forEach(handle);
+        } catch {
+          if (stopped) return;
+          await new Promise((resolve) => setTimeout(resolve, 3000)); // the server is restarting
+        }
+      }
+    };
+
+    // A Cloudflare quick tunnel holds streamed answers back, so live updates there use polling
+    let streamCheck: ReturnType<typeof setTimeout> | undefined;
+    if (window.location.hostname.endsWith(".trycloudflare.com")) {
+      void startPolling();
+    } else {
+      // EventSource reconnects by itself if the connection drops (e.g. an API copy restarts)
+      source = new EventSource("/api/me/events");
+      let connected = false;
+      source.onmessage = (message) => {
+        const event = JSON.parse(message.data) as LiveEvent | { type: "connected" };
+        if (event.type === "connected") {
+          connected = true;
+          return;
+        }
+        handle(event);
+      };
+      // Something between here and the server never lets the stream through: poll instead
+      streamCheck = setTimeout(() => {
+        if (!connected && !stopped) void startPolling();
+      }, 10_000);
+    }
+
     return () => {
       clearTimeout(refreshTimer);
-      source.close();
+      clearTimeout(streamCheck);
+      stop();
     };
   }, [router]);
 

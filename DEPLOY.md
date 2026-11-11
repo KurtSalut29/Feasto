@@ -49,6 +49,21 @@ router restart), run it again and share the new address.
 | "Server not found" | Some routers block names that point to local addresses. On the phone set Private DNS to `dns.google` (Android: Settings → Network → Private DNS), or change the router's DNS to 8.8.8.8. |
 | Maps blank | The Mapbox token's URL restrictions: add `https://*.local-ip.sh`. |
 
+**People on another network (hybrid)**: while the classroom setup runs, open a second
+PowerShell and start a tunnel. It finds the classroom setup by itself and shares it:
+
+```powershell
+cd web
+npm run tunnel        # prints https://<random-words>.trycloudflare.com
+```
+
+Share both addresses: the WiFi one for the room, the tunnel one for everyone else (any WiFi or
+mobile data). Both show the same stores, accounts and orders, and the laptop does the work for
+both. Live updates through the tunnel come by polling, a second or two later than on the WiFi.
+The tunnel address changes every time it starts, and a quick tunnel holds about 200 requests at
+once, so keep the room on the WiFi address. If the Mapbox token has URL restrictions, add
+`https://*.trycloudflare.com` too.
+
 **Show the performance**: Admin → System lists this laptop's API copies and its workers (one per
 CPU) with what each is doing; run the load test (`loadtest/README.md`) while everyone is ordering.
 

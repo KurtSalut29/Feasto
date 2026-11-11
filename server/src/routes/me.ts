@@ -7,7 +7,7 @@ import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
 import { CHANNELS } from "../lib/liveUpdates.js";
-import { openStream } from "../lib/liveUpdateStreams.js";
+import { openStream, pollOnce } from "../lib/liveUpdateStreams.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { newPassword } from "./auth.js";
 
@@ -17,12 +17,20 @@ meRouter.use(requireAuth);
 
 // ---------- Live updates ----------
 
+function liveChannels(session: NonNullable<Express.Request["session"]>) {
+  const channels = [CHANNELS.user(session.userId)];
+  if (session.role === "RIDER") channels.push(CHANNELS.riders);
+  if (session.role === "ADMIN") channels.push(CHANNELS.admin);
+  return channels;
+}
+
 meRouter.get("/events", async (req, res) => {
-  const { userId, role } = req.session!;
-  const channels = [CHANNELS.user(userId)];
-  if (role === "RIDER") channels.push(CHANNELS.riders);
-  if (role === "ADMIN") channels.push(CHANNELS.admin);
-  await openStream(res, channels);
+  await openStream(res, liveChannels(req.session!));
+});
+
+// The same updates for browsers whose connection can't stream (e.g. through a quick tunnel)
+meRouter.get("/events/poll", (req, res) => {
+  pollOnce(res, liveChannels(req.session!));
 });
 
 // ---------- Profile ----------

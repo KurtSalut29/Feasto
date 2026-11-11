@@ -47,6 +47,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # For `npm run tunnel` (people on other networks); not reachable from the WiFi
+      - "127.0.0.1:8081:8081"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Run infra/lan/start.ps1, which sets SITE_ADDRESS}
     volumes:

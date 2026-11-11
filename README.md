@@ -100,7 +100,7 @@ winget install Cloudflare.cloudflared   # once
 cd web && npm run tunnel                # prints https://<random-words>.trycloudflare.com
 ```
 
-Keep the web app (`npm run dev`) and Docker running. On the phone, open the printed address and log in:
+Keep the web app (`npm run dev`) and Docker running (or the classroom setup, which the tunnel then shares instead; see [DEPLOY.md](DEPLOY.md)). On the phone, open the printed address and log in:
 
 - **Android (Chrome):** tap **Install** on the "Get the Feasto app" card, or Account → Install the Feasto app.
 - **iPhone (Safari):** Share → **Add to Home Screen** (Account → Install the Feasto app shows the steps).

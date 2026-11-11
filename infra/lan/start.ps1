@@ -22,9 +22,13 @@ $site = ($Ip -replace "\.", "-") + ".local-ip.sh"
 # 2. The certificate for *.local-ip.sh (public, refreshed by local-ip.sh), so phones trust the HTTPS
 $certs = Join-Path $PSScriptRoot "certs"
 New-Item -ItemType Directory -Force $certs | Out-Null
-Invoke-WebRequest "https://local-ip.sh/server.pem" -OutFile (Join-Path $certs "server.pem")
-Invoke-WebRequest "https://local-ip.sh/server.key" -OutFile (Join-Path $certs "server.key")
-$cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem((Get-Content (Join-Path $certs "server.pem") -Raw))
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest "https://local-ip.sh/server.pem" -OutFile (Join-Path $certs "server.pem") -UseBasicParsing
+Invoke-WebRequest "https://local-ip.sh/server.key" -OutFile (Join-Path $certs "server.key") -UseBasicParsing
+# Read the first certificate in the file (works in Windows PowerShell 5.1 and PowerShell 7)
+$pem = Get-Content (Join-Path $certs "server.pem") -Raw
+$b64 = [regex]::Match($pem, "-----BEGIN CERTIFICATE-----(.+?)-----END CERTIFICATE-----", "Singleline").Groups[1].Value -replace "\s", ""
+$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 (, [Convert]::FromBase64String($b64))
 if ($cert.NotAfter -lt (Get-Date)) { throw "The local-ip.sh certificate has expired ($($cert.NotAfter)). Use the cloud setup in DEPLOY.md instead." }
 Write-Host "Certificate for $($cert.Subject), valid until $($cert.NotAfter.ToString('MMM d, yyyy'))."
 
@@ -45,6 +49,7 @@ if ($net -and $net.NetworkCategory -eq "Public") {
 
 # 4. Start everything: the backend, the web app and Caddy (HTTPS)
 $env:SITE_ADDRESS = $site
+$ErrorActionPreference = "Continue"  # docker prints its progress on stderr
 docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
 if ($LASTEXITCODE -ne 0) { throw "docker compose failed." }
 
