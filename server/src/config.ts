@@ -40,6 +40,9 @@ export const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY ?? "",
     subject: process.env.VAPID_SUBJECT || "mailto:admin@feasto.com",
   },
+  // Requests one signed-in account may make per minute (0 = no limit, for the raw stress test in
+  // loadtest/browse.js). A person tapping around never comes close; it stops a script flooding the API.
+  apiRequestsPerMinute: Number(process.env.API_REQUESTS_PER_MINUTE ?? 1200),
   // Name shown in responses and logs so you can see which copy handled the work.
   instanceId: process.env.INSTANCE_ID ?? os.hostname(),
 };

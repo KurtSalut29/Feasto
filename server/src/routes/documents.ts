@@ -12,6 +12,7 @@ import { notify } from "../lib/liveUpdates.js";
 import { hasExpired, removeDocument } from "../lib/renewals.js";
 import { documentKind, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { perAccount } from "../lib/rateLimit.js";
 import { detectImageType } from "./uploads.js";
 
 /**
@@ -42,6 +43,8 @@ const EDITABLE = ["PENDING", "REJECTED"] as const;
 documentsRouter.put(
   "/mine",
   requireRole("VENDOR", "RIDER"),
+  // Counted before the file is read, so a flood of uploads costs nothing
+  perAccount("upload", 30, 600, "You've uploaded a lot of files just now."),
   express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES }),
   async (req, res) => {
     const data = req.body;
@@ -158,6 +161,8 @@ documentsRouter.get("/renewal", requireRole("VENDOR", "RIDER"), async (req, res)
 documentsRouter.put(
   "/renewal/file",
   requireRole("VENDOR", "RIDER"),
+  // Counted before the file is read, so a flood of uploads costs nothing
+  perAccount("upload", 30, 600, "You've uploaded a lot of files just now."),
   express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES }),
   async (req, res) => {
     const data = req.body;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Clock, Hourglass, Route, Sun, TimerOff, Wallet } from "lucide-react";
+import { Bike, Clock, Hourglass, Route, ShieldCheck, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -25,6 +25,8 @@ export type PlatformSettings = {
   stuckMinutes: number;
   /** Orders no store accepted, or no rider took, are cancelled by themselves after this (0 = off) */
   autoCancelMinutes: number;
+  /** Accounts one network may create in 10 minutes (where Feasto can tell networks apart) */
+  signupsPerNetwork: number;
 };
 type Key = Exclude<keyof PlatformSettings, "peakHours">;
 
@@ -88,6 +90,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     riderWaveSeconds: String(initial.riderWaveSeconds),
     stuckMinutes: String(initial.stuckMinutes),
     autoCancelMinutes: String(initial.autoCancelMinutes),
+    signupsPerNetwork: String(initial.signupsPerNetwork),
   });
   const [peakHours, setPeakHours] = useState<PeakWindow[]>(initial.peakHours);
   const [saving, setSaving] = useState(false);
@@ -127,6 +130,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         riderWaveSeconds: number("riderWaveSeconds"),
         stuckMinutes: number("stuckMinutes"),
         autoCancelMinutes: number("autoCancelMinutes"),
+        signupsPerNetwork: number("signupsPerNetwork"),
       },
     });
     setSaving(false);
@@ -232,6 +236,28 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
             ))}
           </ol>
           <p className="text-sm text-muted">The stock goes back and online payments are refunded. Every automatic cancel is in the activity log as &quot;Feasto (automatic)&quot;.</p>
+        </div>
+      </Card>
+
+      <Card
+        title="Sign-up limit"
+        Icon={ShieldCheck}
+        description="Stops a script from making hundreds of fake accounts, without stopping a class that signs up together."
+      >
+        <div className="space-y-4 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="New accounts per network, every 10 minutes"
+              min="5"
+              icon={UserPlus}
+              hint="5 to 1000. Everyone on the same WiFi or pocket WiFi shares one network, so leave room for a whole class."
+              {...field("signupsPerNetwork")}
+            />
+          </div>
+          <p className="text-sm text-muted">
+            Feasto can only tell networks apart through the tunnel and on a cloud server. On the classroom laptop every phone looks the same to it, so
+            there only the overall cap applies: 300 new accounts in 10 minutes across all of Feasto. Only accounts actually made are counted.
+          </p>
         </div>
       </Card>
       </div>

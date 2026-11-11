@@ -1,15 +1,22 @@
 # Shared by Caddyfile (cloud) and Caddyfile.lan (laptop on the classroom WiFi)
 encode zstd gzip
 
+# The API learns who's asking from X-Client-IP: the visitor's address as Caddy knows it (through
+# the tunnel, the one Cloudflare reports). It replaces any X-Client-IP the visitor sent, so it can't
+# be faked. Used for rate limits (server/src/lib/rateLimit.ts).
+
 # Live updates: pass every event through at once
 handle /api/me/events {
 	reverse_proxy nginx:80 {
 		flush_interval -1
+		header_up X-Client-IP {client_ip}
 	}
 }
 # The API and photos go straight to Nginx (which spreads them over api-1, api-2, api-3)
 handle /api/* {
-	reverse_proxy nginx:80
+	reverse_proxy nginx:80 {
+		header_up X-Client-IP {client_ip}
+	}
 }
 handle /uploads/* {
 	reverse_proxy nginx:80

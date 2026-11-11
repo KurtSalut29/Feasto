@@ -2,6 +2,8 @@
 	servers {
 		# cloudflared (npm run tunnel) connects from the laptop and says the visitor used https
 		trusted_proxies static private_ranges
+		# ...and passes each visitor's real address in this header (used for rate limits)
+		client_ip_headers CF-Connecting-IP
 	}
 }
 

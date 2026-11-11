@@ -358,6 +358,7 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   riderWaveSeconds: { label: "Time between waves", show: (value) => `${value} s` },
   stuckMinutes: { label: "Stuck after", show: (value) => `${value} min` },
   autoCancelMinutes: { label: "Cancel automatically after", show: (value) => (value ? `${value} min` : "off") },
+  signupsPerNetwork: { label: "Sign-ups per network", show: (value) => `${value} per 10 min` },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);

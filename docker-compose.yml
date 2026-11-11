@@ -20,6 +20,8 @@ x-server-env: &server-env
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@feasto.com}
+  # Requests one signed-in account may make per minute (0 = off, for the stress test in loadtest/)
+  API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-1200}
 
 # Settings shared by the three API copies.
 x-api: &api

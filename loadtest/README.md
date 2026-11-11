@@ -3,6 +3,26 @@
 These use [k6](https://k6.io). Nothing to install: k6 runs in Docker and talks to Nginx inside
 Feasto's Docker network. Start the backend first (`docker compose up -d`).
 
+## Rate limits and these tests
+
+Feasto limits how fast one account and one network can go (`server/src/lib/rateLimit.ts`):
+
+| What | Limit |
+|---|---|
+| Any request of one signed-in account | 1200 a minute (`API_REQUESTS_PER_MINUTE` in `.env`, 0 = off) |
+| Orders (checkout) | 10 per account in 5 minutes |
+| Photo and document uploads | 30 per account in 10 minutes |
+| New accounts | 300 in 10 minutes across Feasto, and the admin's "sign-ups per network" (20 by default) where Feasto can see networks |
+| Wrong passwords | 5 per e-mail in 15 minutes |
+
+- **Part 3 (classroom)** spreads its virtual classmates over the 24 sample residents, so it runs with
+  every limit on, like a real class.
+- **`browse.js` and part 1** hammer the API from one account without pauses to find the most it can
+  take, so the account limit would stop them. Turn it off for the test: add `API_REQUESTS_PER_MINUTE=0`
+  to `.env`, run `docker compose up -d api-1 api-2 api-3`, test, then remove the line and run it again.
+- **Part 2 (booking race)** signs up 101 accounts, so it can run twice in 10 minutes before the
+  overall sign-up cap stops it.
+
 ## 1. One API copy vs three (scalability)
 
 From the `Feasto` folder, in PowerShell:
@@ -47,22 +67,27 @@ three API copies each request lands on.
 ## 3. A class using the app at once (the classroom setup)
 
 With the classroom setup running (`.\infra\lan\start.ps1`), this opens full pages the way phones
-do (Home, a store, My orders) with a 2–5 second pause between taps. It only reads: it logs in as
-`resident@feasto.com` and orders nothing.
+do (Home, a store, My orders) with a 2–5 second pause between taps. It only reads and orders
+nothing. It logs in as the 24 sample residents (each with about 55 past orders, so My orders is
+big); `-e ACCOUNTS=resident@feasto.com` uses one new account instead, like a classmate on day one
+(then turn the account limit off as described above, since all users share that one account).
 
 ```powershell
 docker run --rm --network feasto_default -v "${PWD}\loadtest:/scripts" -e VUS=50 -e DURATION=60s `
   grafana/k6:1.3.0 run /scripts/classroom.js
 ```
 
-Measured on the same laptop (Docker: 4 CPUs / 3 GB, and k6 itself runs inside that too, so phones
-would see better), 2 copies of the web app, 60 seconds each:
+Measured with one new account (`resident@feasto.com`) on the same laptop (Docker: 4 CPUs / 3 GB,
+and k6 itself runs inside that too, so phones would see better), 2 copies of the web app, 60 seconds each:
 
 | Users at once | Typical page | Home page, slowest 5% | Requests per second | Errors |
 |---|---|---|---|---|
 | 50 | 34 ms | 3.1 s | 23 | 0% |
 | 100 | 41 ms | 5.7 s | 42 | 0% |
 | 200 | 79 ms | 8.8 s | 61 | 0% |
+
+With the 24 sample residents and their long order histories, 100 users is past what 2 web copies
+can render (Home took 26 s typical on 2026-11-12, 0 errors): their pages are about twice as big.
 
 The slowest pages are the first Home page loads when everyone opens the app in the same second.
 The web app renders pages and is the busiest part (Admin → System shows the API side); with one

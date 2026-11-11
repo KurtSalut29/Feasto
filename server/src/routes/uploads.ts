@@ -4,6 +4,7 @@ import path from "node:path";
 import express, { Router } from "express";
 import { config } from "../config.js";
 import { HttpError } from "../lib/http.js";
+import { perAccount } from "../lib/rateLimit.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 /**
@@ -30,6 +31,7 @@ uploadsRouter.post(
   "/",
   requireAuth,
   requireRole("VENDOR", "RIDER"),
+  perAccount("upload", 30, 600, "You've uploaded a lot of photos just now."),
   express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_BYTES }),
   async (req, res) => {
     const data = req.body;

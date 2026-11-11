@@ -27,6 +27,8 @@ export const DEFAULT_SETTINGS = {
   stuckMinutes: 15,
   /** Orders no store accepted, or no rider took, are cancelled by themselves after this (0 = off) */
   autoCancelMinutes: 10,
+  /** Accounts one network may create in 10 minutes (where Feasto can tell networks apart) */
+  signupsPerNetwork: 20,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -95,6 +97,7 @@ export const settingsSchema = z.object({
     .number("Enter 0 to turn it off, or 3 to 120 minutes.")
     .int("Enter 0 to turn it off, or 3 to 120 minutes.")
     .refine((v) => v === 0 || (v >= 3 && v <= 120), "Enter 0 to turn it off, or 3 to 120 minutes."),
+  signupsPerNetwork: whole(5, 1000, "sign-ups"),
 });
 
 /**
@@ -105,7 +108,7 @@ export function getSettings(): Promise<Settings> {
   return cached(CACHE_KEYS.settings, 60, async () => {
     const row = await prisma.platformSettings.findUnique({ where: { id: 1 } });
     if (!row) return DEFAULT_SETTINGS;
-    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes } = row;
+    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork } = row;
     const saved = peakHours.safeParse(row.peakHours);
     return {
       deliveryFee: Number(deliveryFee),
@@ -117,6 +120,7 @@ export function getSettings(): Promise<Settings> {
       riderWaveSeconds,
       stuckMinutes,
       autoCancelMinutes,
+      signupsPerNetwork,
     };
   });
 }

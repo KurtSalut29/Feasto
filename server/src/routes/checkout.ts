@@ -8,6 +8,7 @@ import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
 import { QUEUES } from "../lib/rabbitmq.js";
+import { perAccount } from "../lib/rateLimit.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const checkoutRouter = Router();
@@ -38,7 +39,7 @@ const checkoutSchema = z
 
 const checkoutSummary = { id: true, orders: { select: { id: true } } } as const;
 
-checkoutRouter.post("/", async (req, res) => {
+checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of orders just now."), async (req, res) => {
   const input = parseBody(checkoutSchema, req.body);
   const userId = req.session!.userId;
 

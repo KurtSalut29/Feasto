@@ -304,6 +304,9 @@ model PlatformSettings {
   stuckMinutes      Int      @default(15)
   /// An order the store didn't accept, or no rider took, in this many minutes is cancelled by itself (0 = never)
   autoCancelMinutes Int      @default(10)
+  /// Accounts one network (one internet address) may create in 10 minutes. Only applies where
+  /// Feasto can see addresses: through the tunnel and on a cloud server, not on the classroom laptop
+  signupsPerNetwork Int      @default(20)
   updatedAt         DateTime @updatedAt
 }
 

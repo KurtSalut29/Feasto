@@ -10,7 +10,8 @@ import {
   verifyPassword,
 } from "../lib/auth.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
-import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
+import { atLimit, clearFailedLogins, clientIp, hit, loginLockSeconds, recordFailedLogin, tooMany } from "../lib/rateLimit.js";
+import { getSettings } from "../lib/settings.js";
 import { acceptsReservationsByDefault, STORE_TYPES } from "../lib/storeTypes.js";
 import { mobileNumber, newRiderCode, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -106,8 +107,19 @@ function uniqueViolationField(error: Prisma.PrismaClientKnownRequestError): stri
   return Array.isArray(found) ? found.join(",") : found;
 }
 
+/** Accounts all of Feasto takes in 10 minutes: far above a whole class signing up at once, and the
+ * only cap on the classroom laptop, where every phone arrives from the same address. */
+const SIGNUPS_OVERALL = 300;
+const SIGNUP_WINDOW = 10 * 60;
+
 authRouter.post("/register", async (req, res) => {
   const input = parseBody(registerSchema, req.body);
+  // Only accounts actually made are counted (a typo in the form costs nothing), so check first
+  const ip = clientIp(req);
+  const networkKey = ip ? `rate:signup:ip:${ip}` : null;
+  const { signupsPerNetwork } = await getSettings();
+  const wait = Math.max(networkKey ? await atLimit(networkKey, signupsPerNetwork) : 0, await atLimit("rate:signup:all", SIGNUPS_OVERALL));
+  if (wait) tooMany(res, wait, "A lot of accounts were just made from this network.");
   // A rider joining a store needs its code to be right before anything is saved
   const riderStore = input.role === "RIDER" && input.storeCode ? await storeForCode(input.storeCode) : null;
 
@@ -162,6 +174,7 @@ authRouter.post("/register", async (req, res) => {
     });
 
     if (riderStore) await notifyStoreOfRider(riderStore.ownerId, user.name);
+    await Promise.all([hit("rate:signup:all", SIGNUPS_OVERALL, SIGNUP_WINDOW), networkKey && hit(networkKey, signupsPerNetwork, SIGNUP_WINDOW)]);
 
     res.cookie(SESSION_COOKIE, await signSession({ userId: user.id, role: user.role, name: user.name }), sessionCookieOptions);
     res.status(201).json({ user });
