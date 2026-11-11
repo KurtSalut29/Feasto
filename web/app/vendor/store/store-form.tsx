@@ -171,7 +171,7 @@ function GroupHeading({ title, Icon, taken, options, onAll }: { title: string; I
   );
 }
 
-export function StoreForm({ initial, permit }: { initial: StoreSettings; permit?: ReactNode }) {
+export function StoreForm({ initial, permit, account }: { initial: StoreSettings; permit?: ReactNode; account?: ReactNode }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [savedValues, setSavedValues] = useState(initial);
@@ -511,6 +511,7 @@ export function StoreForm({ initial, permit }: { initial: StoreSettings; permit?
             <Preview values={values} />
           </div>
         </Card>
+        {account}
         {/* Room so the floating Save bar never covers the preview */}
         {dirty && <div aria-hidden className="h-32 xl:hidden" />}
       </aside>

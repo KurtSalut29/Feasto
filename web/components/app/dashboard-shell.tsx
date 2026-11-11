@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { initials, mealTime, todayLabel, type MealTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { User } from "@/lib/types";
+import { ChangePasswordButton } from "./change-password-dialog";
 import { LiveUpdates } from "./live-updates";
 import { LogoutButton } from "./logout-button";
 import { NotificationBell } from "./notification-bell";
@@ -140,8 +141,7 @@ async function SidebarContext() {
   );
 }
 
-/** The signed-in person, with buttons to change the password and log out. */
-/** The signed-in person at the bottom of the sidebar, with password and log out (vendor, admin and rider) */
+/** The signed-in person at the bottom of the sidebar, with password and log out (vendor, admin and rider). Vendor and admin change the password in a pop-up. */
 export async function SidebarUser() {
   const user = await getCurrentUser();
 
@@ -158,14 +158,18 @@ export async function SidebarUser() {
         <p className="truncate text-xs text-muted">{user.email}</p>
       </div>
       <div className="flex shrink-0 items-center lg:collapsed:flex-col lg:collapsed:gap-1.5">
-        <Link
-          href={`/${user.role.toLowerCase()}/password`}
-          aria-label="Change password"
-          title="Change password"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
-        >
-          <KeyRound className="size-[18px]" aria-hidden />
-        </Link>
+        {user.role === "RIDER" ? (
+          <Link
+            href="/rider/password"
+            aria-label="Change password"
+            title="Change password"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+          >
+            <KeyRound className="size-[18px]" aria-hidden />
+          </Link>
+        ) : (
+          <ChangePasswordButton email={user.email} variant="icon" />
+        )}
         <LogoutButton />
       </div>
     </div>

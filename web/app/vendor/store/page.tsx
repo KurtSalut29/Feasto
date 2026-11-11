@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { AccountSecurityCard } from "@/components/app/change-password-dialog";
 import { RenewalPanel } from "@/components/app/renewal-panel";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { StoreStatusPill } from "@/components/app/store-status";
@@ -21,7 +22,7 @@ export default function VendorStorePage() {
 }
 
 async function VendorStore() {
-  await requireRole("VENDOR");
+  const user = await requireRole("VENDOR");
   const { store } = await serverApi<{ store: StoreSettings & { status: ApprovalStatus } }>("/vendor/store");
   const { status, ...settings } = store;
   const permit = status === "APPROVED" || status === "SUSPENDED" ? await serverApi<RenewalInfo>("/documents/renewal") : null;
@@ -51,6 +52,7 @@ async function VendorStore() {
           onlinePayments: settings.onlinePayments,
         }}
         permit={permit ? <RenewalPanel data={permit} /> : undefined}
+        account={<AccountSecurityCard name={user.name} email={user.email} roleLabel="store" />}
       />
     </>
   );

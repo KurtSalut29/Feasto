@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AccountSecurityCard } from "@/components/app/change-password-dialog";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
@@ -16,12 +17,15 @@ export default function AdminSettingsPage() {
 }
 
 async function Settings() {
-  await requireRole("ADMIN");
+  const user = await requireRole("ADMIN");
   const { settings } = await serverApi<{ settings: PlatformSettings }>("/admin/settings");
   return (
     <>
       <PageHeader eyebrow="Insights" title="Settings" description="Applied right away across every server. Each change is written in the activity log." />
-      <SettingsForm initial={settings} />
+      <div className="space-y-5">
+        <AccountSecurityCard name={user.name} email={user.email} roleLabel="admin" />
+        <SettingsForm initial={settings} />
+      </div>
     </>
   );
 }

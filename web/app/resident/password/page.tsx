@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
-import { PasswordForm } from "@/components/app/password-form";
+import { MobileSkeleton } from "@/components/app/mobile-shell";
+import { PasswordPage } from "@/components/app/password-page";
 import { requireRole } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Change password" };
@@ -15,11 +15,6 @@ export default function ChangePasswordPage() {
 }
 
 async function ChangePassword() {
-  await requireRole("RESIDENT");
-  return (
-    <div className="md:max-w-2xl">
-      <MobileHeading title="Change password" />
-      <PasswordForm />
-    </div>
-  );
+  const user = await requireRole("RESIDENT");
+  return <PasswordPage email={user.email} backHref="/resident/account" />;
 }

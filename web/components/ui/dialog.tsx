@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 /** A centered pop-up built on the browser's <dialog>, which handles focus and the Esc key. */
 export function Dialog({
@@ -20,6 +20,7 @@ export function Dialog({
   wide?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const id = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -31,6 +32,8 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      aria-labelledby={`${id}-title`}
+      aria-describedby={description ? `${id}-description` : undefined}
       onClose={onClose}
       onClick={(e) => {
         // Clicking the dimmed backdrop closes it
@@ -44,8 +47,14 @@ export function Dialog({
         <div className="max-h-[85dvh] overflow-y-auto p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-lg font-semibold text-ink">{title}</h2>
-              {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+              <h2 id={`${id}-title`} className="text-lg font-semibold text-ink">
+                {title}
+              </h2>
+              {description && (
+                <p id={`${id}-description`} className="mt-1 text-sm [overflow-wrap:anywhere] text-muted">
+                  {description}
+                </p>
+              )}
             </div>
             <button
               type="button"
