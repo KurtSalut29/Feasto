@@ -1,0 +1,8 @@
+# The laptop as the server on the classroom WiFi (see DEPLOY.md, "Laptop as the server").
+# SITE_ADDRESS is the laptop's WiFi address written like 192-168-1-10.local-ip.sh: that name points
+# back to the laptop, and local-ip.sh publishes a real certificate for it, so phones get HTTPS
+# (needed for GPS) without installing anything.
+{$SITE_ADDRESS} {
+	tls /certs/server.pem /certs/server.key
+	import routes.caddy
+}

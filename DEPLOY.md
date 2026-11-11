@@ -1,4 +1,58 @@
-# Deploying Feasto to a cloud server
+# Deploying Feasto
+
+Two ways for a class to use Feasto at the same time:
+
+- **[Laptop as the server](#laptop-as-the-server-classroom-wifi)**: everyone in the room uses the
+  laptop over one WiFi. The laptop's own CPUs do the work (Admin → System shows them).
+- **[Cloud server](#cloud-server)**: one Linux server on the internet; the laptop can be off.
+
+## Laptop as the server (classroom WiFi)
+
+```
+Phones on the same WiFi ──HTTPS──► this laptop: Caddy ──► web + Nginx ──► api-1..3, workers (1 per CPU)
+     https://192-168-1-10.local-ip.sh
+```
+
+`192-168-1-10.local-ip.sh` is a public name that points back to the laptop's WiFi address, and
+[local-ip.sh](https://local-ip.sh) publishes a real certificate for it. Phones get proper HTTPS
+(needed for GPS and live tracking) without installing anything.
+
+**What you need**
+
+- A WiFi router or pocket WiFi that everyone joins, **with internet** (maps and the address lookup
+  use it). School WiFi often blocks devices from reaching each other; a phone hotspot or Windows'
+  Mobile hotspot only allows about 8–10 devices.
+- The laptop plugged in, with sleep turned off (Settings → System → Power → Screen and sleep: Never).
+
+**Start** (PowerShell in the `Feasto` folder; the first time as **administrator**, so it can open
+ports 80 and 443 in Windows Firewall):
+
+```powershell
+.\infra\lan\start.ps1
+```
+
+It finds the WiFi address, downloads the certificate, starts everything and prints the address
+to share, e.g. `https://192-168-1-10.local-ip.sh`. If the laptop gets a new address (new WiFi or
+router restart), run it again and share the new address.
+
+**Stop** (data is kept; `npm run dev` works the whole time either way):
+
+```powershell
+.\infra\lan\stop.ps1
+```
+
+**If a phone can't open it**
+
+| Problem | Fix |
+|---|---|
+| Times out | Windows Firewall: run `start.ps1` once as administrator. Set this WiFi to **Private** (Settings → Network & internet → Wi-Fi → the network). The router may isolate devices: use another router. |
+| "Server not found" | Some routers block names that point to local addresses. On the phone set Private DNS to `dns.google` (Android: Settings → Network → Private DNS), or change the router's DNS to 8.8.8.8. |
+| Maps blank | The Mapbox token's URL restrictions: add `https://*.local-ip.sh`. |
+
+**Show the performance**: Admin → System lists this laptop's API copies and its workers (one per
+CPU) with what each is doing; run the load test (`loadtest/README.md`) while everyone is ordering.
+
+# Cloud server
 
 This puts the whole system on one Linux server with HTTPS, so everyone opens the same address on
 their phone or laptop. The laptop doesn't have to stay on.

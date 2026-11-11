@@ -143,7 +143,7 @@ used for this school project (`server/demo/photos`).
 
 - `docker compose --profile tools run --rm --build naval` replaces everything with the 39 real food
   stores of Naval (menus, photos, hours, map pins). Details and store log-ins: [server/naval/README.md](server/naval/README.md).
-- To put Feasto on a cloud server with HTTPS for everyone to use: [DEPLOY.md](DEPLOY.md).
+- For a class to use it at once, either the laptop as the server on one WiFi (`.\infra\lan\start.ps1`) or a cloud server with HTTPS: [DEPLOY.md](DEPLOY.md).
 
 ## Working on the backend without Docker rebuilds
 

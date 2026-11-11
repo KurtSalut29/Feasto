@@ -52,6 +52,7 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env, e.g. 203.0.113.10.sslip.io}
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infra/caddy/routes.caddy:/etc/caddy/routes.caddy:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
