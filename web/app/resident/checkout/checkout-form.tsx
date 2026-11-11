@@ -16,7 +16,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
-import { toast } from "@/components/ui/toast";
+import { celebrate } from "@/components/app/celebrate";
 import { formatPeso } from "@/lib/format";
 import type { Address, Cart, Fulfillment, PaymentMethod } from "@/lib/types";
 
@@ -121,13 +121,15 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
     const { orderIds } = result.data;
     const names = cart.groups.map((g) => g.store.name);
     const storesText = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-    toast.success(
-      orderIds.length === 1 ? "Order placed!" : `${orderIds.length} orders placed!`,
-      paymentMethod === "ONLINE"
-        ? `We're confirming your ${PAYMENT_OPTIONS.find((o) => o.value === pay)?.name ?? "online"} payment. ${storesText} will get the order once it's through.`
-        : `${storesText} got your order. We'll tell you as soon as it's accepted.`,
-      { duration: 6500 },
-    );
+    // Chef Feasto pops up and stays while the app moves on to the order
+    celebrate({
+      title: orderIds.length === 1 ? "Order placed!" : `${orderIds.length} orders placed!`,
+      message:
+        paymentMethod === "ONLINE"
+          ? `We're confirming your ${PAYMENT_OPTIONS.find((o) => o.value === pay)?.name ?? "online"} payment. ${storesText} will get the order once it's through.`
+          : `${storesText} got your order. We'll tell you as soon as it's accepted.`,
+      duration: 3800,
+    });
     router.replace(orderIds.length === 1 ? `/resident/orders/${orderIds[0]}` : "/resident/orders");
   }
 

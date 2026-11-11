@@ -32,12 +32,12 @@ export function timeAgo(iso: string) {
 
 /** "Oct 19, 2026" */
 export function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric" });
 }
 
 /** "Oct 19, 2026, 3:05 PM" */
 export function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleString("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 /** Time of day in Manila, e.g. "7:00 PM" */

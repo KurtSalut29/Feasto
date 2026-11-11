@@ -41,17 +41,27 @@ export function OrderProgress({
         const done = ORDER.indexOf(step.key) <= reached && status !== "AWAITING_PAYMENT";
         const current = ORDER.indexOf(step.key) === reached;
         const last = index === steps.length - 1;
+        // The step the order is on now, while it's still waiting for the next one
+        const live = current && !last && status !== "AWAITING_PAYMENT";
         return (
           <li key={step.key} className="flex gap-3">
-            <div className="flex flex-col items-center">
+            <div className="relative flex flex-col items-center">
+              {live && <span aria-hidden className="absolute top-0 size-6 rounded-full bg-brand-500/40 motion-safe:animate-ping" />}
               <span
-                className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                className={`relative flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
                   done ? "border-brand-600 bg-brand-600 text-white" : "border-gray-300 bg-white"
                 } ${current && !last ? "ring-4 ring-brand-100" : ""}`}
               >
                 {done && <Check className="size-3.5" strokeWidth={3} aria-hidden />}
               </span>
-              {!last && <span className={`w-0.5 flex-1 ${done && !current ? "bg-brand-600" : "bg-gray-200"}`} />}
+              {/* The line fills down to the next step once it's reached */}
+              {!last && (
+                <span className="relative w-0.5 flex-1 overflow-hidden bg-gray-200">
+                  <span
+                    className={`absolute inset-0 origin-top bg-brand-600 transition-transform duration-700 ease-out ${done && !current ? "scale-y-100" : "scale-y-0"}`}
+                  />
+                </span>
+              )}
             </div>
             <div className={`pb-5 ${last ? "pb-0" : ""}`}>
               <p className={`text-[15px] ${done ? "font-semibold text-ink" : "text-muted"}`}>{step.label}</p>

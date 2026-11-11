@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { OrderProgress } from "@/components/app/order-progress";
+import { OrderMoments } from "@/components/app/receipt-moment";
 import { RiderTracking } from "@/components/app/rider-tracking";
 import { StoreCover } from "@/components/app/store-card";
 import { Alert } from "@/components/ui/alert";
@@ -61,8 +62,29 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             Order {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
           </p>
         </div>
-        <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
+        {/* Keyed by the status, so it pops each time the order moves on */}
+        <span key={order.status} className="shrink-0 motion-safe:animate-pop">
+          <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
+        </span>
       </div>
+
+      <OrderMoments
+        order={{
+          id: order.id,
+          code: orderCode(order.id),
+          storeName: order.vendor.name,
+          fulfillment: order.fulfillment,
+          status: order.status,
+          paymentMethod: order.checkout.paymentMethod,
+          paymentStatus: order.checkout.paymentStatus,
+          paymentLabel: paymentName(order.checkout),
+          createdAt: order.createdAt,
+          finishedAt: order.finishedAt,
+          items: order.items,
+          deliveryFee: Number(order.deliveryFee),
+          total,
+        }}
+      />
 
       {/* Big screens: two columns, read top to bottom (the live map first) */}
       <div className="space-y-4 lg:block lg:columns-2 lg:gap-6 lg:space-y-0 lg:[&>*]:mb-4 lg:[&>*]:break-inside-avoid">

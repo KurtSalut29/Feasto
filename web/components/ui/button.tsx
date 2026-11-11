@@ -13,6 +13,7 @@ const variants = {
 };
 
 const base = `inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition
+  motion-safe:active:scale-[0.97] motion-safe:disabled:active:scale-100
   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500`;
 
 /** The classes of a Button, for elements that only need to look like one. */

@@ -125,13 +125,208 @@ body {
   color: var(--color-ink);
 }
 
-/* Printing a receipt prints only the paper slip, not the app around it */
+/* ---- Motion: page changes, chef Feasto's pop-up, the printed receipt -------------------------
+   Everything here only moves for people who haven't asked their phone to reduce motion;
+   otherwise the same things simply appear. */
+
+/* A new page fades in (app/<role>/template.tsx). Only opacity: a transform here would pin the
+   page's fixed bars to the page for a moment. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* components/app/celebrate.tsx */
+@keyframes fx-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fx-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes mascot-in {
+  0% {
+    opacity: 0;
+    transform: translateY(80px) scale(0.5) rotate(-12deg);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-12px) scale(1.06) rotate(4deg);
+  }
+  80% {
+    transform: translateY(3px) scale(0.98) rotate(-2deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes mascot-bob {
+  50% {
+    transform: translateY(-7px) rotate(-3deg);
+  }
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.4);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes halo {
+  from {
+    opacity: 0.6;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.3);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)) scale(1);
+  }
+}
+@keyframes celebrate-out {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.92);
+  }
+}
+
+/* components/app/receipt-moment.tsx: the slip comes out of the printer in short pushes,
+   like a thermal printer, then the PAID stamp lands on it */
+@keyframes receipt-print {
+  0% {
+    transform: translateY(-100%);
+  }
+  20% {
+    transform: translateY(-76%);
+  }
+  28% {
+    transform: translateY(-74%);
+  }
+  50% {
+    transform: translateY(-42%);
+  }
+  58% {
+    transform: translateY(-40%);
+  }
+  84% {
+    transform: translateY(-5%);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-26deg) scale(2.6);
+  }
+  65% {
+    opacity: 1;
+    transform: rotate(-11deg) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-12deg) scale(1);
+  }
+}
+@keyframes paper-thud {
+  45% {
+    transform: translateY(4px) scale(0.995);
+  }
+}
+@keyframes printer-led {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.fx-stamp {
+  transform: rotate(-12deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fx-page {
+    animation: page-in 0.28s ease-out;
+  }
+  .fx-backdrop {
+    animation: fx-fade-in 0.25s ease-out both;
+  }
+  .fx-leaving .fx-backdrop {
+    animation: fx-fade-out 0.3s ease-in both;
+  }
+  .fx-mascot {
+    animation:
+      mascot-in 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      mascot-bob 2.6s ease-in-out 0.9s infinite;
+  }
+  .fx-bubble {
+    animation: bubble-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both;
+  }
+  .fx-halo {
+    animation: halo 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  }
+  .fx-halo-late {
+    animation-delay: 0.45s;
+  }
+  .fx-confetti {
+    animation: confetti-burst 1.15s cubic-bezier(0.2, 0.7, 0.4, 1) 0.2s both;
+  }
+  /* Waits --fx-delay before rising in (set with a class like [--fx-delay:0.5s]) */
+  .fx-rise {
+    animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) var(--fx-delay, 0s) both;
+  }
+  .fx-leaving .fx-stage {
+    animation: celebrate-out 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+  }
+  .fx-print {
+    animation: receipt-print 1.6s cubic-bezier(0.3, 0.6, 0.4, 1) 0.35s both;
+  }
+  .fx-thud {
+    animation: paper-thud 0.25s ease-out 2.25s;
+  }
+  .fx-stamp {
+    animation: stamp-in 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) 2.05s both;
+  }
+  .fx-led {
+    animation: printer-led 0.5s steps(1) 0.35s 4;
+  }
+}
+
+/* Printing a receipt prints only the paper slip, not the app around it. The slip's own
+   header (logo, store name, address) is a <header> too, so it's left out of the hiding. */
 @media print {
-  body:has([data-receipt]) header,
-  body:has([data-receipt]) aside,
+  body:has([data-receipt]) header:not([data-receipt] *),
+  body:has([data-receipt]) aside:not([data-receipt] *),
   body:has([data-receipt]) [data-print-hide],
   body:has([data-receipt]) [data-tabbar] {
     display: none !important;
+  }
+  /* Keep the torn zigzag edges: browsers skip background images when printing unless asked */
+  [data-receipt] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
   body:has([data-receipt]) main {
     padding: 0 !important;
