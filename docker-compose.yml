@@ -16,6 +16,10 @@ x-server-env: &server-env
   DOCUMENT_DIR: /app/documents
   # Road distances for the delivery fee (optional: without it, distances are estimated)
   MAPBOX_TOKEN: ${MAPBOX_TOKEN:-}
+  # Push notifications to phones while Feasto is closed (optional: without them, only in the app)
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@feasto.com}
 
 # Settings shared by the three API copies.
 x-api: &api

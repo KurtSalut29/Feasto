@@ -143,6 +143,12 @@ STORE_PASSWORD=choose-another-password
 
 # Same token as on the laptop (road distances and the maps)
 MAPBOX_TOKEN=pk.…
+
+# Notifications on phones while Feasto is closed. Make new ones for the server:
+#   docker run --rm node:24-alpine npx -y web-push@3.6.7 generate-vapid-keys
+VAPID_PUBLIC_KEY=…
+VAPID_PRIVATE_KEY=…
+VAPID_SUBJECT=mailto:admin@feasto.com
 ```
 
 If the Mapbox token has **URL restrictions**, add `https://203.0.113.10.sslip.io` to it in the

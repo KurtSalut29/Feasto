@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { PushCard } from "@/components/app/push-card";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkTabs } from "@/components/ui/link-tabs";
@@ -90,6 +91,7 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
         description="First come, first served: the oldest order is always at the top of the queue."
         actions={views(counts)}
       />
+      <PushCard place="orders" className="mb-4 max-w-2xl" />
 
       {/* Which stage to show, with how many orders are in each */}
       <nav aria-label="Stage" className="-mx-4 mb-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">

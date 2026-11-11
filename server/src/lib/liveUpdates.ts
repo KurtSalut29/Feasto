@@ -1,5 +1,6 @@
 import { prisma } from "./db.js";
 import { marshal } from "./marshalling.js";
+import { pushTo } from "./push.js";
 import { redis } from "./redis.js";
 
 /**
@@ -38,7 +39,11 @@ export function publish(channel: string, event: RealtimeEvent) {
   return redis.publish(channel, marshal(event, { transport: "pubsub", channel }));
 }
 
-/** Saves an in-app notification and pushes it live to the user's open pages. */
+/**
+ * Saves an in-app notification, pushes it live to the user's open pages, and sends it to the
+ * phones and computers where they turned on notifications (shown there only while Feasto isn't
+ * on screen).
+ */
 export async function notify(userId: string, message: { title: string; body: string; link?: string }) {
   const notification = await prisma.notification.create({
     data: { userId, title: message.title, body: message.body, link: message.link ?? null },
@@ -53,4 +58,6 @@ export async function notify(userId: string, message: { title: string; body: str
       createdAt: notification.createdAt.toISOString(),
     },
   });
+  // Not awaited: the push services can take a moment, and nothing waits for them
+  void pushTo(userId, { title: notification.title, body: notification.body, link: notification.link, tag: `n-${notification.id}` });
 }

@@ -33,6 +33,13 @@ export const config = {
   reportPartDelayMs: Number(process.env.REPORT_PART_DELAY_MS ?? 300),
   // Mapbox, for road distances that set the delivery fee. Without it, distances are estimated.
   mapboxToken: process.env.MAPBOX_TOKEN ?? "",
+  // Push notifications that reach phones while Feasto is closed. Without the keys, Feasto only
+  // shows notifications in the open app. Make them with: npx web-push generate-vapid-keys
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY ?? "",
+    privateKey: process.env.VAPID_PRIVATE_KEY ?? "",
+    subject: process.env.VAPID_SUBJECT || "mailto:admin@feasto.com",
+  },
   // Name shown in responses and logs so you can see which copy handled the work.
   instanceId: process.env.INSTANCE_ID ?? os.hostname(),
 };

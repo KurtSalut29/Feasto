@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast, type ToastTone } from "@/components/ui/toast";
 import { isChatOpen } from "@/lib/chat-open";
+import { resyncPush } from "@/lib/push";
 
 export type LiveEvent =
   | { type: "notification"; notification: { id: string; title: string; body: string; link: string | null; createdAt: string } }
@@ -61,6 +62,11 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
       listeners.current.delete(listener);
     };
   });
+
+  // Notifications on this phone follow whoever is signed in now
+  useEffect(() => {
+    void resyncPush().catch(() => {});
+  }, []);
 
   useEffect(() => {
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;

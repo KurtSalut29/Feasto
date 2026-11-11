@@ -16,6 +16,7 @@ import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
 import { JobsPreview } from "./jobs-preview";
 import { RiderHero, type Totals } from "./rider-hero";
+import { PushCard } from "@/components/app/push-card";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -66,6 +67,7 @@ async function RiderHome() {
   return (
     <>
       <RiderHero firstName={firstName} online={jobs.online} totals={totals} />
+      <PushCard place="jobs" className="mb-4" />
 
       <ExpiryNotice date={profile?.licenseExpiresAt} documentName="driver's license" href="/rider/license" blocked="You can't go online until your renewed license is approved. Tap to send it." />
 

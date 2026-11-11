@@ -8,6 +8,8 @@ import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
 import { CHANNELS } from "../lib/liveUpdates.js";
 import { openStream, pollOnce } from "../lib/liveUpdateStreams.js";
+import { pushEnabled } from "../lib/push.js";
+import { config } from "../config.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { newPassword } from "./auth.js";
 
@@ -31,6 +33,38 @@ meRouter.get("/events", async (req, res) => {
 // The same updates for browsers whose connection can't stream (e.g. through a quick tunnel)
 meRouter.get("/events/poll", (req, res) => {
   pollOnce(res, liveChannels(req.session!));
+});
+
+// ---------- Push notifications (while Feasto is closed) ----------
+
+// The key a browser needs to sign up, and whether this server sends pushes at all
+meRouter.get("/push", (_req, res) => {
+  res.json({ enabled: pushEnabled, publicKey: pushEnabled ? config.vapid.publicKey : null });
+});
+
+const pushDevice = z.object({
+  endpoint: z.url().max(1000),
+  keys: z.object({ p256dh: z.string().min(1).max(200), auth: z.string().min(1).max(100) }),
+});
+
+// Turns them on for this browser. A browser shared by two accounts gets the one signed in now.
+meRouter.post("/push", async (req, res) => {
+  if (!pushEnabled) throw new HttpError(503, "Notifications on your phone aren't set up on this server.");
+  const { endpoint, keys } = parseBody(pushDevice, req.body);
+  const userId = req.session!.userId;
+  await prisma.pushSubscription.upsert({
+    where: { endpoint },
+    create: { userId, endpoint, p256dh: keys.p256dh, auth: keys.auth },
+    update: { userId, p256dh: keys.p256dh, auth: keys.auth },
+  });
+  res.status(204).end();
+});
+
+// Turns them off for this browser (also when logging out, so the next person doesn't get them)
+meRouter.delete("/push", async (req, res) => {
+  const { endpoint } = parseBody(z.object({ endpoint: z.string().max(1000) }), req.body);
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: req.session!.userId } });
+  res.status(204).end();
 });
 
 // ---------- Profile ----------

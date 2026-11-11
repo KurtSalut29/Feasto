@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/browser-api";
+import { forgetPushForLogout } from "@/lib/push";
 import { toast } from "@/components/ui/toast";
 
 /**
@@ -57,6 +58,8 @@ function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }
 
   async function logOut() {
     setPending(true);
+    // This browser stops getting this account's notifications (it gets them again after the next log-in)
+    await forgetPushForLogout();
     await apiRequest("/auth/logout", { method: "POST" });
     toast.later({ tone: "success", title: "You're logged out", description: "See you again soon!" });
     // Full page load so no signed-in pages stay alive in the background after logout

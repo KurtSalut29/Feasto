@@ -141,6 +141,7 @@ model User {
   favorites     Favorite[]
   orderMessages OrderMessage[]  @relation("OrderMessages")
   chatReads     OrderChatRead[]
+  pushDevices   PushSubscription[]
 }
 
 /// A resident's saved delivery address.
@@ -401,6 +402,21 @@ model JobOffer {
 
   @@unique([orderId, riderId])
   @@index([riderId])
+}
+
+/// A browser or phone that gets this person's notifications while Feasto is closed (Web Push).
+/// The push service gives each browser its own endpoint; a dead one is deleted the first time a
+/// push to it fails.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 /// The order's chat: the resident, the store and (once there is one) the rider, in one thread.

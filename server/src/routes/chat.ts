@@ -5,6 +5,7 @@ import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { CHANNELS, publish } from "../lib/liveUpdates.js";
 import { orderCode } from "../lib/orders.js";
+import { pushTo } from "../lib/push.js";
 import { redis } from "../lib/redis.js";
 import { requireAuth } from "../middleware/auth.js";
 
@@ -24,6 +25,7 @@ const MAX_LENGTH = 500;
 const PER_MINUTE = 20;
 
 type Part = Extract<Role, "RESIDENT" | "VENDOR" | "RIDER">;
+const PART_NAME: Record<Part, string> = { RESIDENT: "Customer", VENDOR: "Store", RIDER: "Rider" };
 
 const FINISHED = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"];
 
@@ -125,19 +127,18 @@ chatRouter.post("/:orderId", async (req, res) => {
   });
 
   const code = orderCode(order.id);
+  const others = members.filter((m) => m.userId !== userId);
   await Promise.all(
-    members
-      .filter((m) => m.userId !== userId)
-      .map((m) =>
-        publish(CHANNELS.user(m.userId), {
-          type: "chat.message",
-          orderId: order.id,
-          code,
-          link: m.link,
-          message: shown(message, m.userId, order.vendor.name),
-        }),
-      ),
+    others.map((m) =>
+      publish(CHANNELS.user(m.userId), { type: "chat.message", orderId: order.id, code, link: m.link, message: shown(message, m.userId, order.vendor.name) }),
+    ),
   );
+  // On their phones too, while Feasto is closed: one per order's chat, the newest on top.
+  // Not awaited, so the sender doesn't wait for the push services.
+  const from = `${part === "VENDOR" ? order.vendor.name : message.sender.name} · ${PART_NAME[part]}`;
+  for (const m of others) {
+    void pushTo(m.userId, { title: from, body: body.length > 140 ? `${body.slice(0, 137)}…` : body, link: `${m.link}?chat=${order.id}`, tag: `chat-${order.id}` });
+  }
   res.status(201).json({ message: shown(message, userId, order.vendor.name) });
 });
 
