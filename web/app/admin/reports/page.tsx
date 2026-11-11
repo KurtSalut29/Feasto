@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AutoRefresh } from "@/components/app/auto-refresh";
+import { ReportDownload } from "@/components/app/report-download";
+import { ReportPaper, reportNumber } from "@/components/app/report-paper";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth";
-import { formatDate, formatPeso, timeAgo } from "@/lib/format";
+import { dayCount, formatPeso, formatRange, timeAgo } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { GenerateReport } from "./generate-report";
 import { StoreSales, WorkerChip } from "./store-sales";
@@ -39,8 +41,8 @@ export default function AdminReportsPage({ searchParams }: PageProps<"/admin/rep
   );
 }
 
-const day = (date: string) => formatDate(`${date}T12:00:00+08:00`);
-const range = (r: { from: string; to: string }) => (r.from === r.to ? day(r.from) : `${day(r.from)} – ${day(r.to)}`);
+/** Feasto's way of writing a period: "Oct 1 – 11, 2026" */
+const range = (r: { from: string; to: string }) => formatRange(r.from, r.to);
 
 async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "searchParams">) {
   await requireRole("ADMIN");
@@ -61,7 +63,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
             </span>
             <div>
               <p className="font-semibold text-ink">New sales report</p>
-              <p className="text-sm text-muted">Pick a period. The page fills in as the workers finish.</p>
+              <p className="text-sm text-muted">Pick any period, up to a year. The page fills in as the workers finish.</p>
             </div>
           </div>
           <GenerateReport />
@@ -95,7 +97,9 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-ink">{range(report)}</h2>
-                  <p className="text-sm text-muted">Requested {timeAgo(report.requestedAt)}</p>
+                  <p className="text-sm text-muted">
+                    {dayCount(report.from, report.to)} {dayCount(report.from, report.to) === 1 ? "day" : "days"} · requested {timeAgo(report.requestedAt).toLowerCase()}
+                  </p>
                 </div>
                 <p className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm text-muted">
                   <Cpu className="size-4 text-brand-600" aria-hidden />
@@ -133,6 +137,25 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
           )}
         </div>
 
+        <div className="space-y-6">
+        {report?.status === "done" && (
+          <Card title="Feasto report" description="Download it as PDF, Word or Excel">
+            <div className="bg-canvas/60 px-8 pt-6 pb-5">
+              <ReportPaper
+                number={reportNumber("P", report.from, report.to, report.id.replaceAll("-", ""))}
+                title="All Feasto stores"
+                from={report.from}
+                to={report.to}
+                days={dayCount(report.from, report.to)}
+                sales={report.totals.sales}
+                orders={report.totals.orders}
+              />
+            </div>
+            <div className="border-t border-line px-5 py-4">
+              <ReportDownload path={`/admin/reports/${report.id}/export`} wide />
+            </div>
+          </Card>
+        )}
         <Card title="Report history" Icon={History}>
           {reports.length === 0 ? (
             <p className="px-5 py-6 text-sm text-muted">Reports you generate are kept here.</p>
@@ -161,6 +184,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
             </ul>
           )}
         </Card>
+        </div>
       </div>
     </>
   );

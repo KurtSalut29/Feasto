@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatPeso } from "@/lib/format";
+import { formatPeso, manilaDate } from "@/lib/format";
 import type { SalesDay } from "@/lib/types";
 
 /** 1,250 -> "1.3K" for the axis. */
@@ -19,11 +19,14 @@ function niceScale(max: number) {
   return { top: step * 4, ticks: [0, 1, 2, 3, 4].map((i) => i * step) };
 }
 
+/** A bar's label: a day ("2026-10-01") or, for long periods, a month ("2026-10") */
 const dayLabel = (date: string, style: "short" | "long") =>
-  new Date(`${date}T12:00:00+08:00`).toLocaleDateString("en-PH", {
-    timeZone: "Asia/Manila",
-    ...(style === "short" ? { month: "short", day: "numeric" } : { weekday: "short", month: "short", day: "numeric" }),
-  });
+  date.length === 7
+    ? new Date(`${date}-15T12:00:00+08:00`).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", month: style === "short" ? "short" : "long", year: "numeric" })
+    : new Date(`${date}T12:00:00+08:00`).toLocaleDateString("en-PH", {
+        timeZone: "Asia/Manila",
+        ...(style === "short" ? { month: "short", day: "numeric" } : { weekday: "short", month: "short", day: "numeric", year: "numeric" }),
+      });
 
 /**
  * Column chart of money per day (sales, or a rider's earnings), one bar per day.
@@ -45,6 +48,8 @@ export function SalesChart({
   const labelEvery = days.length > 10 ? Math.ceil(days.length / 7) : 1;
   const count = (n: number) => `${n} ${n === 1 ? countLabel[0] : countLabel[1]}`;
   const hovered = active === null ? null : days[active];
+  const unit = days[0]?.date.length === 7 ? "month" : "day";
+  const today = manilaDate();
 
   return (
     <figure className="m-0 pt-2">
@@ -65,7 +70,7 @@ export function SalesChart({
           ))}
 
           {/* Columns: each day is a full-height hit area with a thin bar inside */}
-          <div className="absolute inset-0 flex items-end" role="list" aria-label={`${valueLabel} per day`}>
+          <div className="absolute inset-0 flex items-end" role="list" aria-label={`${valueLabel} per ${unit}`}>
             {days.map((day, i) => (
               <div
                 key={day.date}
@@ -114,17 +119,19 @@ export function SalesChart({
         <div className="flex flex-1">
           {days.map((day, i) => (
             <span key={day.date} className="flex-1 text-center whitespace-nowrap">
-              {i === days.length - 1 ? "Today" : (days.length - 1 - i) % labelEvery === 0 ? dayLabel(day.date, "short") : ""}
+              {day.date === today ? "Today" : (days.length - 1 - i) % labelEvery === 0 ? dayLabel(day.date, "short") : ""}
             </span>
           ))}
         </div>
       </div>
 
       <table className="sr-only">
-        <caption>{valueLabel} per day</caption>
+        <caption>
+          {valueLabel} per {unit}
+        </caption>
         <thead>
           <tr>
-            <th>Day</th>
+            <th>{unit === "month" ? "Month" : "Day"}</th>
             <th>{valueLabel}</th>
             <th>{countLabel[1]}</th>
           </tr>

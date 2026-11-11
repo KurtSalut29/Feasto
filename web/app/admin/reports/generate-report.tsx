@@ -3,54 +3,44 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import { apiRequest } from "@/lib/browser-api";
+import { DateRangeButton, type Period } from "@/components/ui/date-range-picker";
 import { toast } from "@/components/ui/toast";
-import { manilaDate } from "@/lib/format";
+import { apiRequest } from "@/lib/browser-api";
+import { addDays, formatRange, manilaDate } from "@/lib/format";
 
-const PRESETS = { today: 0, week: 6, month: 29 } as const;
-type Preset = keyof typeof PRESETS;
-
-/** Starts a sales report; the workers compute it and the page shows it when ready. */
+/** Starts a sales report for any period; the workers compute it and the page shows it when ready. */
 export function GenerateReport() {
   const router = useRouter();
-  const [preset, setPreset] = useState<Preset>("week");
+  const [period, setPeriod] = useState<Period>(() => ({ from: addDays(manilaDate(), -6), to: manilaDate() }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="w-80 max-w-full">
-        <SegmentedControl
-          name="range"
-          legend="Report period"
-          value={preset}
-          onChange={setPreset}
-          options={[
-            { value: "today", label: "Today" },
-            { value: "week", label: "Last 7 days" },
-            { value: "month", label: "Last 30 days" },
-          ]}
-        />
-      </div>
+      <DateRangeButton value={period} onChange={setPeriod} disabled={busy} />
       <Button
         loading={busy}
         onClick={async () => {
           setBusy(true);
           setError(undefined);
-          const result = await apiRequest<{ id: string }>("/admin/reports", {
-            method: "POST",
-            body: { from: manilaDate(-PRESETS[preset]), to: manilaDate() },
-          });
+          const result = await apiRequest<{ id: string }>("/admin/reports", { method: "POST", body: period });
           setBusy(false);
-          if (!result.ok) return setError(result.error);
-          toast.info("Making your report", "The workers are adding up each store's sales. It shows here in a few seconds.");
+          if (!result.ok) {
+            const message = result.fieldErrors?.to?.[0] ?? result.fieldErrors?.from?.[0] ?? result.error;
+            toast.error("Couldn't start the report", message);
+            return setError(message);
+          }
+          toast.info("Making your report", `The workers are adding up each store's sales for ${formatRange(period.from, period.to)}. It shows here in a few seconds.`);
           router.push(`/admin/reports?id=${result.data.id}`);
         }}
       >
         Generate report
       </Button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="w-full text-sm text-red-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

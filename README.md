@@ -36,10 +36,12 @@ Browser ─► Next.js ─► Nginx ──► api-2 ├────────�
 | Browse, search, filter by store type | Jobs reach the store's riders first, then the nearest free riders in waves; sign-up with license photo; a free rider is approved by the admin, a store's rider by the store (using its code) | Sign-up with business permit and map pin; store details, cover photo, hours, "temporarily closed" | Approve / reject / suspend stores and riders, with their documents side by side. Check renewed permits and licenses, watch what's expired or expiring, step in on stuck orders, read the activity log, and set the delivery fee and rider wave timings |
 | One cart across several stores | Online/offline switch | Menu with photos, sections, stock, availability; own riders: code, approve, suspend, remove | Users list with search |
 | Delivery or pickup, cash or online (simulated) | Live job list, race-safe accept | Live order board with sound, accept/decline, preparing, ready | All orders across stores |
-| Live order tracking with rider map | Pickup → delivered, live GPS sharing | Table setup and daily bookings | Sales reports computed in parallel |
+| Live order tracking with rider map | Pickup → delivered, live GPS sharing | Table setup and daily bookings | Sales reports computed in parallel, for any period |
 | Table booking by date, time and party size | Earnings history | Today's orders and sales | System monitor (API copies, workers, queues) |
 | Saved addresses, profile, notifications | Profile, notifications | Notifications | Notifications |
 | Ratings & reviews, saved stores, order again | 7-day earnings chart | 14-day sales chart, ratings & reviews | 14-day sales chart, top-rated stores |
+| | | Reports for any period (date-range picker), best sellers, payments, delivery vs pickup | |
+| | | **Feasto report** download: PDF, Word or Excel | **Feasto report** download: PDF, Word or Excel |
 | | | | Disable / enable accounts (logged out everywhere instantly) |
 
 ## Requirements

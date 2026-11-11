@@ -13,6 +13,10 @@ import { ONLINE_PAYMENTS } from "../lib/payments.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
 import { dailySales } from "../lib/sales.js";
+import { periodSchema } from "../lib/reportDates.js";
+import { storeDocument } from "../lib/reportExport/document.js";
+import { exportFormat, sendReport } from "../lib/reportExport/index.js";
+import { storeReport } from "../lib/storeReport.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -290,6 +294,24 @@ const daysQuery = z.object({ days: z.coerce.number().int().min(7).max(90).defaul
 vendorRouter.get("/sales", async (req, res) => {
   const { days } = daysQuery.parse(req.query);
   res.json({ days: await dailySales(days, await myVendorId(req.session!.userId)) });
+});
+
+// ---------- Reports: any period the vendor picks, and downloads in the Feasto format ----------
+
+vendorRouter.get("/reports", async (req, res) => {
+  const { from, to } = parseBody(periodSchema, req.query);
+  const { orders: _orders, ...report } = await storeReport(await myVendorId(req.session!.userId), from, to);
+  res.json({ report });
+});
+
+vendorRouter.get("/reports/export", async (req, res) => {
+  const { from, to } = parseBody(periodSchema, req.query);
+  const format = parseBody(z.object({ format: exportFormat }), req.query).format;
+  const [report, me] = await Promise.all([
+    storeReport(await myVendorId(req.session!.userId), from, to),
+    prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, email: true } }),
+  ]);
+  await sendReport(res, storeDocument(report, `${me.name} (${me.email})`), format);
 });
 
 /** The latest ratings, with the store's average. */

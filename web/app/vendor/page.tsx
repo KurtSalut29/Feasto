@@ -324,6 +324,12 @@ async function VendorOverview() {
           title="Sales, last 14 days"
           description={<Trend change={percentChange(thisWeek, lastWeek)} label="this week vs last week" />}
           className="xl:col-span-2"
+          footer={
+            <Link href="/vendor/reports" className={CARD_LINK}>
+              Reports for any period, with downloads
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          }
           actions={
             <div className="text-right">
               <p className="text-xl font-semibold text-ink tabular-nums">{formatPeso(sum(days))}</p>

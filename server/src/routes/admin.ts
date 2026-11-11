@@ -16,6 +16,9 @@ import { QUEUES } from "../lib/rabbitmq.js";
 import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { redis } from "../lib/redis.js";
 import { readReport, REPORT_LIST, reportKey } from "../lib/reports.js";
+import { periodSchema } from "../lib/reportDates.js";
+import { platformDocument } from "../lib/reportExport/document.js";
+import { exportFormat, sendReport } from "../lib/reportExport/index.js";
 import { manilaToday } from "../lib/renewals.js";
 import { dailySales } from "../lib/sales.js";
 import { getSettings } from "../lib/settings.js";
@@ -306,12 +309,8 @@ adminRouter.get("/orders", async (req, res) => {
 
 // ---------- Sales reports (computed in parallel by the workers) ----------
 
-const reportSchema = z
-  .object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })
-  .refine((v) => v.from <= v.to, { path: ["to"], message: "The end date must be after the start date." });
-
 adminRouter.post("/reports", async (req, res) => {
-  const { from, to } = parseBody(reportSchema, req.body);
+  const { from, to } = parseBody(periodSchema, req.body);
   const id = randomUUID();
   await redis.hset(reportKey(id), {
     status: "running",
@@ -340,6 +339,16 @@ adminRouter.get("/reports/:id", async (req, res) => {
   const report = await readReport(String(req.params.id));
   if (!report) throw new HttpError(404, "We couldn't find this report. It may have expired; generate a new one.");
   res.json({ report });
+});
+
+/** The finished report as a PDF, Word or Excel file in the Feasto format */
+adminRouter.get("/reports/:id/export", async (req, res) => {
+  const { format } = parseBody(z.object({ format: exportFormat }), req.query);
+  const report = await readReport(String(req.params.id));
+  if (!report) throw new HttpError(404, "We couldn't find this report. It may have expired; generate a new one.");
+  if (report.status !== "done") throw new HttpError(409, "This report is still being computed. Download it once it's ready.");
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, email: true } });
+  await sendReport(res, platformDocument(report, `${me.name} (${me.email})`), format);
 });
 
 // ---------- System monitor ----------

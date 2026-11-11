@@ -115,3 +115,31 @@ export function compactPeso(value: number) {
   if (value >= 1000) return `₱${(value / 1000).toFixed(value >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;
   return `₱${Math.round(value)}`;
 }
+
+// ---------- Report periods ("YYYY-MM-DD" dates in Manila) ----------
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const dateParts = (d: string) => ({ y: Number(d.slice(0, 4)), m: SHORT_MONTHS[Number(d.slice(5, 7)) - 1], d: Number(d.slice(8, 10)) });
+
+/**
+ * Feasto's way of writing a period, the same on every page and in every report file
+ * (kept in step with formatRange in server/src/lib/reportDates.ts):
+ * "Oct 11, 2026" · "Oct 1 – 11, 2026" · "Sep 28 – Oct 11, 2026" · "Dec 28, 2025 – Jan 3, 2026".
+ */
+export function formatRange(from: string, to: string) {
+  const a = dateParts(from);
+  const b = dateParts(to);
+  if (from === to) return `${a.m} ${a.d}, ${a.y}`;
+  if (a.y !== b.y) return `${a.m} ${a.d}, ${a.y} – ${b.m} ${b.d}, ${b.y}`;
+  if (a.m !== b.m) return `${a.m} ${a.d} – ${b.m} ${b.d}, ${b.y}`;
+  return `${a.m} ${a.d} – ${b.d}, ${b.y}`;
+}
+
+const dayNo = (d: string) => Date.parse(`${d}T00:00:00Z`) / 86400_000;
+/** Both ends counted: Oct 1 – 11 is 11 days */
+export const dayCount = (from: string, to: string) => dayNo(to) - dayNo(from) + 1;
+/** "2026-10-01" plus n days */
+export const addDays = (d: string, n: number) => new Date((dayNo(d) + n) * 86400_000).toISOString().slice(0, 10);
+/** "Thu, Oct 1, 2026" */
+export const formatLongDay = (d: string) =>
+  new Date(`${d}T12:00:00Z`).toLocaleDateString("en-PH", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric", year: "numeric" });
