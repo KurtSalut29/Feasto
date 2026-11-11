@@ -115,7 +115,15 @@ async function advance(tx: Tx, id: string, settings: Settings): Promise<Advance 
     const riders = await offerToNearest(tx, order, SECOND_WAVE);
     if (riders.length) return moveTo("WIDER", settings.riderWaveSeconds * 1000, riders);
   }
-  return moveTo("EVERYONE", null, []);
+  // The last stage: the job is in every free rider's list. Tell the ones it hasn't reached yet, so
+  // a rider with Feasto closed hears about it too (once: this is the final step).
+  const rest = await tx.riderProfile.findMany({
+    // Freelance riders only: a store's own riders only ever see that store's jobs
+    where: availableRider({ vendorId: null }, { jobOffers: { none: { orderId: id } } }),
+    select: { userId: true },
+    take: 100,
+  });
+  return moveTo("EVERYONE", null, rest.map((r) => r.userId));
 }
 
 /**

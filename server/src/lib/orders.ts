@@ -78,7 +78,7 @@ export async function broadcastOrder(orderId: string) {
   if (order.fulfillment === "DELIVERY") await publish(CHANNELS.riders, { type: "jobs.changed" });
 }
 
-/** Notification text for the resident when their order moves. */
+/** Notification text for the resident (and the rider, when it's theirs to collect) when an order moves. */
 export async function notifyResident(orderId: string) {
   const order = await prisma.order.findUniqueOrThrow({
     where: { id: orderId },
@@ -86,10 +86,15 @@ export async function notifyResident(orderId: string) {
       status: true,
       fulfillment: true,
       rejectReason: true,
+      riderId: true,
       vendor: { select: { name: true, address: true } },
       checkout: { select: { residentId: true } },
     },
   });
+  // The rider already on the way to the store learns it's ready without watching the app
+  if (order.status === "READY" && order.riderId) {
+    await notify(order.riderId, { title: `${orderCode(orderId)} is ready for pickup`, body: `Collect it at ${order.vendor.name}.`, link: "/rider/active" });
+  }
   const store = order.vendor.name;
   const messages: Partial<Record<OrderStatus, { title: string; body: string }>> = {
     ACCEPTED: { title: `${store} accepted your order`, body: "They'll start preparing it soon." },

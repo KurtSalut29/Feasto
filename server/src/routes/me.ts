@@ -8,7 +8,7 @@ import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { clearFailedLogins, loginLockSeconds, recordFailedLogin } from "../lib/rateLimit.js";
 import { CHANNELS } from "../lib/liveUpdates.js";
 import { openStream, pollOnce } from "../lib/liveUpdateStreams.js";
-import { pushEnabled } from "../lib/push.js";
+import { pushEnabled, pushTo } from "../lib/push.js";
 import { config } from "../config.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { newPassword } from "./auth.js";
@@ -58,6 +58,19 @@ meRouter.post("/push", async (req, res) => {
     update: { userId, p256dh: keys.p256dh, auth: keys.auth },
   });
   res.status(204).end();
+});
+
+// A test message to every device this person turned them on in, shown even with Feasto open
+meRouter.post("/push/test", async (req, res) => {
+  const sent = await pushTo(req.session!.userId, {
+    title: "Notifications are working",
+    body: "This is how Feasto will tell you about orders, jobs and messages.",
+    link: "/",
+    tag: "test",
+    always: true,
+  });
+  if (!sent) throw new HttpError(409, "No device got it. Turn notifications on again on this device.");
+  res.json({ sent });
 });
 
 // Turns them off for this browser (also when logging out, so the next person doesn't get them)

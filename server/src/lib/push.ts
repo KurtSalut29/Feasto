@@ -20,11 +20,14 @@ export type PushMessage = {
   link?: string | null;
   /** Messages with the same tag replace each other (e.g. one per order's chat) */
   tag?: string;
+  /** Show it even while Feasto is open on screen (the test from the Notifications page) */
+  always?: boolean;
 };
 
-/** Sends to every browser this person turned notifications on in. Never throws. */
+/** Sends to every browser this person turned notifications on in. Never throws; returns how many took it. */
 export async function pushTo(userId: string, message: PushMessage) {
-  if (!pushEnabled) return;
+  let sent = 0;
+  if (!pushEnabled) return sent;
   try {
     const devices = await prisma.pushSubscription.findMany({ where: { userId, user: { disabledAt: null } } });
     await Promise.all(
@@ -32,10 +35,11 @@ export async function pushTo(userId: string, message: PushMessage) {
         try {
           await webpush.sendNotification(
             { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } },
-            JSON.stringify({ title: message.title, body: message.body, link: message.link ?? null, tag: message.tag }),
+            JSON.stringify({ title: message.title, body: message.body, link: message.link ?? null, tag: message.tag, always: message.always ?? false }),
             // Kept an hour if the phone is off; "high" wakes a sleeping phone for it
             { TTL: 3600, urgency: "high", timeout: 5000 },
           );
+          sent++;
         } catch (error) {
           const status = (error as { statusCode?: number }).statusCode;
           // Gone: the person turned them off, cleared the browser or uninstalled the app
@@ -47,4 +51,5 @@ export async function pushTo(userId: string, message: PushMessage) {
   } catch (error) {
     console.warn("[push] failed:", (error as Error).message);
   }
+  return sent;
 }

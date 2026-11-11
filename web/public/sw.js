@@ -40,9 +40,9 @@ self.addEventListener("push", (event) => {
   }
   event.waitUntil(
     (async () => {
-      // Feasto is open on screen: the page already shows it as a toast
+      // Feasto is open on screen: the page already shows it as a toast (except the test message)
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      if (windows.some((w) => w.visibilityState === "visible")) return;
+      if (!message.always && windows.some((w) => w.visibilityState === "visible")) return;
       await self.registration.showNotification(message.title || "Feasto", {
         body: message.body || "",
         icon: "/icons/icon-192.png",

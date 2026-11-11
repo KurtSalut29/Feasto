@@ -56,6 +56,14 @@ export function PushCard({ place, className = "" }: { place: Place; className?: 
     }
   }
 
+  async function sendTest() {
+    setBusy(true);
+    const response = await fetch("/api/me/push/test", { method: "POST" }).catch(() => null);
+    setBusy(false);
+    if (response?.ok) toast.success("Test sent", "It should pop up on this device in a few seconds.");
+    else toast.error("The test didn't go out", (await response?.json().catch(() => null))?.error ?? "Check your connection and try again.");
+  }
+
   async function turnOff() {
     setBusy(true);
     await turnOffPush().catch(() => {});
@@ -114,6 +122,16 @@ export function PushCard({ place, className = "" }: { place: Place; className?: 
                 {busy ? "Turning on…" : "Turn on notifications"}
               </button>
             ) : (
+              <>
+              <button
+                type="button"
+                onClick={sendTest}
+                disabled={busy}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 motion-safe:active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+              >
+                <BellRing className="size-4" aria-hidden />
+                Send a test notification
+              </button>
               <button
                 type="button"
                 onClick={turnOff}
@@ -122,6 +140,7 @@ export function PushCard({ place, className = "" }: { place: Place; className?: 
               >
                 Turn off on this device
               </button>
+              </>
             )}
           </div>
         )}
