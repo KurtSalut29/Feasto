@@ -18,7 +18,7 @@ const FORMATS: { format: Format; label: string; note: string; Icon: LucideIcon; 
  * `path` is the API path of the export (without the format), e.g. "/vendor/reports/export?from=…&to=…".
  */
 /** `wide` fills its box (under the report preview), with the menu opening below it */
-export function ReportDownload({ path, disabled, wide }: { path: string; disabled?: boolean; wide?: boolean }) {
+export function ReportDownload({ path, disabled, wide, secondary }: { path: string; disabled?: boolean; wide?: boolean; secondary?: boolean }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -72,7 +72,7 @@ export function ReportDownload({ path, disabled, wide }: { path: string; disable
         disabled={disabled || busy !== null}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 ${wide ? "w-full justify-center" : ""} px-4 text-[15px] font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-70`}
+        className={`inline-flex h-11 items-center gap-2 rounded-xl ${wide ? "w-full justify-center" : ""} px-4 text-[15px] font-semibold transition ${secondary ? "border border-line bg-white text-ink hover:bg-canvas" : "bg-brand-600 text-white hover:bg-brand-700"} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-70`}
       >
         {busy ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Download className="size-5" aria-hidden />}
         {busy ? `Making ${FORMATS.find((f) => f.format === busy)!.label}…` : "Download"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarRange, ChevronDown, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -45,7 +45,23 @@ export function presetName(period: Period) {
  * The Feasto period picker: a button showing the period ("Oct 1 – 11, 2026 · 11 days") that opens
  * a pop-up with quick picks and a calendar. Tap a start date, then an end date, then Apply.
  */
-export function DateRangeButton({ value, onChange, maxDays = 366, disabled }: { value: Period; onChange: (p: Period) => void; maxDays?: number; disabled?: boolean }) {
+export function DateRangeButton({
+  value,
+  onChange,
+  maxDays = 366,
+  disabled,
+  busy,
+  applyLabel = (p) => `Show ${formatRange(p.from, p.to)}`,
+}: {
+  value: Period;
+  onChange: (p: Period) => void;
+  maxDays?: number;
+  disabled?: boolean;
+  /** Shows a spinner while the picked period loads */
+  busy?: boolean;
+  /** What the pop-up's main button says, e.g. "Make report for Oct 1 – 11, 2026" */
+  applyLabel?: (p: Period) => string;
+}) {
   const [open, setOpen] = useState(false);
   const days = dayCount(value.from, value.to);
   const preset = presetName(value);
@@ -55,13 +71,14 @@ export function DateRangeButton({ value, onChange, maxDays = 366, disabled }: { 
       <button
         type="button"
         onClick={() => setOpen(true)}
-        disabled={disabled}
+        disabled={disabled || busy}
+        aria-busy={busy || undefined}
         aria-haspopup="dialog"
         aria-label={`Report period: ${formatRange(value.from, value.to)}, ${days} ${days === 1 ? "day" : "days"}. Change`}
         className="group inline-flex h-11 max-w-full items-center gap-2.5 rounded-xl border border-line bg-white pr-3 pl-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
-          <CalendarRange className="size-[18px]" aria-hidden />
+          {busy ? <LoaderCircle className="size-[18px] animate-spin" aria-hidden /> : <CalendarRange className="size-[18px]" aria-hidden />}
         </span>
         <span className="min-w-0 leading-tight">
           <span className="block truncate text-sm font-semibold text-ink">{formatRange(value.from, value.to)}</span>
@@ -76,6 +93,7 @@ export function DateRangeButton({ value, onChange, maxDays = 366, disabled }: { 
         <RangeCalendar
           initial={value}
           maxDays={maxDays}
+          applyLabel={applyLabel}
           onCancel={() => setOpen(false)}
           onApply={(p) => {
             setOpen(false);
@@ -87,7 +105,19 @@ export function DateRangeButton({ value, onChange, maxDays = 366, disabled }: { 
   );
 }
 
-function RangeCalendar({ initial, maxDays, onCancel, onApply }: { initial: Period; maxDays: number; onCancel: () => void; onApply: (p: Period) => void }) {
+function RangeCalendar({
+  initial,
+  maxDays,
+  applyLabel,
+  onCancel,
+  onApply,
+}: {
+  initial: Period;
+  maxDays: number;
+  applyLabel: (p: Period) => string;
+  onCancel: () => void;
+  onApply: (p: Period) => void;
+}) {
   const [today] = useState(() => manilaDate());
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState<string | null>(initial.to);
@@ -214,7 +244,7 @@ function RangeCalendar({ initial, maxDays, onCancel, onApply }: { initial: Perio
           Cancel
         </Button>
         <Button type="button" disabled={!to} onClick={() => to && onApply({ from, to })}>
-          {to ? `Show ${formatRange(from, to)}` : "Pick the last day"}
+          {to ? applyLabel({ from, to }) : "Pick the last day"}
         </Button>
       </div>
     </div>

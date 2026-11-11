@@ -28,7 +28,7 @@ export function ReportPaper({
   orders: number;
 }) {
   return (
-    <figure aria-label={`Preview of report ${number}`} className="m-0 mx-auto max-w-[290px] rotate-[-1.2deg] transition-transform duration-300 hover:rotate-0 motion-reduce:rotate-0">
+    <figure aria-label={`Preview of report ${number}`} className="m-0 mx-auto max-w-[290px] transition-transform duration-200 group-hover/paper:-translate-y-1 motion-reduce:transform-none">
       <div className="overflow-hidden rounded-md bg-white shadow-[0_1px_0_rgba(31,45,61,0.04),0_14px_30px_-14px_rgba(31,45,61,0.45)] ring-1 ring-line">
         <div aria-hidden className="h-1.5 bg-brand-500 shadow-[inset_0_-1px_0_#b23a00]" />
         <div className="px-4 pt-3 pb-4">

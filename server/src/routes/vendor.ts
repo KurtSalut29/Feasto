@@ -15,7 +15,7 @@ import { redis } from "../lib/redis.js";
 import { dailySales } from "../lib/sales.js";
 import { periodSchema } from "../lib/reportDates.js";
 import { storeDocument } from "../lib/reportExport/document.js";
-import { exportFormat, sendReport } from "../lib/reportExport/index.js";
+import { exportFormat, onScreen, sendReport } from "../lib/reportExport/index.js";
 import { storeReport } from "../lib/storeReport.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
@@ -302,6 +302,16 @@ vendorRouter.get("/reports", async (req, res) => {
   const { from, to } = parseBody(periodSchema, req.query);
   const { orders: _orders, ...report } = await storeReport(await myVendorId(req.session!.userId), from, to);
   res.json({ report });
+});
+
+/** The Feasto report itself, to view in the browser before downloading */
+vendorRouter.get("/reports/document", async (req, res) => {
+  const { from, to } = parseBody(periodSchema, req.query);
+  const [report, me] = await Promise.all([
+    storeReport(await myVendorId(req.session!.userId), from, to),
+    prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, email: true } }),
+  ]);
+  res.json({ document: onScreen(storeDocument(report, `${me.name} (${me.email})`)) });
 });
 
 vendorRouter.get("/reports/export", async (req, res) => {

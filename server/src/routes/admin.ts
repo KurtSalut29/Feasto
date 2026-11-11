@@ -18,7 +18,7 @@ import { redis } from "../lib/redis.js";
 import { readReport, REPORT_LIST, reportKey } from "../lib/reports.js";
 import { periodSchema } from "../lib/reportDates.js";
 import { platformDocument } from "../lib/reportExport/document.js";
-import { exportFormat, sendReport } from "../lib/reportExport/index.js";
+import { exportFormat, onScreen, sendReport } from "../lib/reportExport/index.js";
 import { manilaToday } from "../lib/renewals.js";
 import { dailySales } from "../lib/sales.js";
 import { getSettings } from "../lib/settings.js";
@@ -339,6 +339,15 @@ adminRouter.get("/reports/:id", async (req, res) => {
   const report = await readReport(String(req.params.id));
   if (!report) throw new HttpError(404, "We couldn't find this report. It may have expired; generate a new one.");
   res.json({ report });
+});
+
+/** The finished report in the Feasto format, to view in the browser */
+adminRouter.get("/reports/:id/document", async (req, res) => {
+  const report = await readReport(String(req.params.id));
+  if (!report) throw new HttpError(404, "We couldn't find this report. It may have expired; generate a new one.");
+  if (report.status !== "done") throw new HttpError(409, "This report is still being computed. View it once it's ready.");
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, email: true } });
+  res.json({ document: onScreen(platformDocument(report, `${me.name} (${me.email})`)) });
 });
 
 /** The finished report as a PDF, Word or Excel file in the Feasto format */

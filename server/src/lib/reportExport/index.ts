@@ -14,6 +14,11 @@ const TYPES: Record<ExportFormat, string> = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 };
 
+/** The report for showing on screen: the same parts as the PDF (the Excel-only lists are left out) */
+export function onScreen(report: ReportDocument) {
+  return { ...report, tables: report.tables.filter((t) => !t.excelOnly) };
+}
+
 /** Builds the report in the Feasto format as a PDF, Word or Excel file and sends it as a download. */
 export async function sendReport(res: Response, report: ReportDocument, format: ExportFormat) {
   const file = format === "pdf" ? await renderPdf(report) : format === "docx" ? await renderDocx(report) : await renderXlsx(report);

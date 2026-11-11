@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { ReportDownload } from "@/components/app/report-download";
 import { ReportPaper, reportNumber } from "@/components/app/report-paper";
+import { ViewReportButton } from "@/components/app/report-viewer";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -63,7 +64,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
             </span>
             <div>
               <p className="font-semibold text-ink">New sales report</p>
-              <p className="text-sm text-muted">Pick any period, up to a year. The page fills in as the workers finish.</p>
+              <p className="text-sm text-muted">Pick the dates and the report starts right away. It fills in as the workers finish.</p>
             </div>
           </div>
           <GenerateReport />
@@ -101,6 +102,12 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
                     {dayCount(report.from, report.to)} {dayCount(report.from, report.to) === 1 ? "day" : "days"} · requested {timeAgo(report.requestedAt).toLowerCase()}
                   </p>
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ViewReportButton documentPath={`/admin/reports/${report.id}/document`} exportPath={`/admin/reports/${report.id}/export`} />
+                  <ReportDownload path={`/admin/reports/${report.id}/export`} secondary />
+                </div>
+              </div>
+              <div className="mb-4">
                 <p className="inline-flex flex-wrap items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm text-muted">
                   <Cpu className="size-4 text-brand-600" aria-hidden />
                   <span>
@@ -139,8 +146,9 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
 
         <div className="space-y-6">
         {report?.status === "done" && (
-          <Card title="Feasto report" description="Download it as PDF, Word or Excel">
+          <Card title="Feasto report" description="Tap the page to view it full size">
             <div className="bg-canvas/60 px-8 pt-6 pb-5">
+              <ViewReportButton documentPath={`/admin/reports/${report.id}/document`} exportPath={`/admin/reports/${report.id}/export`} label="View the Feasto report full size">
               <ReportPaper
                 number={reportNumber("P", report.from, report.to, report.id.replaceAll("-", ""))}
                 title="All Feasto stores"
@@ -150,9 +158,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/admin/reports">, "sear
                 sales={report.totals.sales}
                 orders={report.totals.orders}
               />
-            </div>
-            <div className="border-t border-line px-5 py-4">
-              <ReportDownload path={`/admin/reports/${report.id}/export`} wide />
+              </ViewReportButton>
             </div>
           </Card>
         )}

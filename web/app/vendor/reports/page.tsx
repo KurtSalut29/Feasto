@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { ReportDownload } from "@/components/app/report-download";
 import { ReportPaper, reportNumber } from "@/components/app/report-paper";
+import { ViewReportButton } from "@/components/app/report-viewer";
 import { SalesChart } from "@/components/app/sales-chart";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -70,6 +71,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
   const vs = `vs ${formatRange(before.from, before.to)}`;
   const series = chartDays(report.daily);
   const exportPath = `/vendor/reports/export?${query(period)}`;
+  const documentPath = `/vendor/reports/document?${query(period)}`;
   const topDish = report.dishes[0]?.quantity ?? 0;
 
   return (
@@ -77,11 +79,12 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
       <PageHeader
         eyebrow="Your store"
         title="Reports"
-        description="Sales for any period you pick, ready to download as a Feasto report."
+        description="1. Pick the dates  ·  2. View the Feasto report  ·  3. Download it as PDF, Word or Excel."
         actions={
           <>
             <PeriodPicker value={period} />
-            <ReportDownload path={exportPath} />
+            <ViewReportButton documentPath={documentPath} exportPath={exportPath} />
+            <ReportDownload path={exportPath} secondary />
           </>
         }
       />
@@ -161,8 +164,9 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
         </div>
 
         <aside className="space-y-6">
-          <Card title="Your Feasto report" description="What you download, as PDF, Word or Excel">
+          <Card title="Your Feasto report" description="Tap the page to view it full size">
             <div className="bg-canvas/60 px-8 pt-6 pb-5">
+              <ViewReportButton documentPath={documentPath} exportPath={exportPath} label="View the Feasto report full size">
               <ReportPaper
                 number={reportNumber("S", report.from, report.to, report.store.id)}
                 title={report.store.name}
@@ -172,9 +176,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
                 sales={totals.sales}
                 orders={totals.orders}
               />
-            </div>
-            <div className="border-t border-line px-5 py-4">
-              <ReportDownload path={exportPath} wide />
+              </ViewReportButton>
             </div>
           </Card>
 
