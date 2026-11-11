@@ -11,7 +11,7 @@ import { getSettings } from "./settings.js";
  * Orders nobody took are cancelled by themselves, so they don't sit stuck and the admin doesn't
  * have to step in:
  *
- *  - the store didn't accept the order within `autoCancelMinutes` of it being placed, or
+ *  - the store didn't accept the order within `autoCancelMinutes` of getting it (`placedAt`), or
  *  - no rider took a delivery within `autoCancelMinutes` of the store accepting it.
  *
  * The stock goes back, an online payment is refunded, and both the resident and the store are told
@@ -24,11 +24,11 @@ type Why = "NO_STORE_REPLY" | "NO_RIDER";
 
 /** When an order that's still waiting will be cancelled, or null if it won't be */
 export function autoCancelAt(
-  order: { status: string; fulfillment: string; riderId: string | null; createdAt: Date; acceptedAt: Date | null },
+  order: { status: string; fulfillment: string; riderId: string | null; placedAt: Date; acceptedAt: Date | null },
   minutes: number,
 ): { at: Date; why: Why } | null {
   if (!minutes) return null;
-  if (order.status === "PLACED") return { at: new Date(order.createdAt.getTime() + minutes * 60_000), why: "NO_STORE_REPLY" };
+  if (order.status === "PLACED") return { at: new Date(order.placedAt.getTime() + minutes * 60_000), why: "NO_STORE_REPLY" };
   if (order.fulfillment === "DELIVERY" && !order.riderId && OPEN_JOB.includes(order.status as never) && order.acceptedAt) {
     return { at: new Date(order.acceptedAt.getTime() + minutes * 60_000), why: "NO_RIDER" };
   }
@@ -39,7 +39,8 @@ function staleWhere(minutes: number, now: number): Prisma.OrderWhereInput {
   const since = new Date(now - minutes * 60_000);
   return {
     OR: [
-      { status: "PLACED", createdAt: { lt: since } },
+      // From when it reached the store: a scheduled order is ordered long before that
+      { status: "PLACED", placedAt: { lt: since } },
       { fulfillment: "DELIVERY", riderId: null, status: { in: OPEN_JOB }, acceptedAt: { lt: since } },
     ],
   };

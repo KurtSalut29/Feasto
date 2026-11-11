@@ -49,6 +49,7 @@ enum PaymentStatus {
 
 enum OrderStatus {
   AWAITING_PAYMENT // online payment not confirmed yet; vendors don't see it
+  SCHEDULED // ordered for later: the store sees it coming, and gets it to accept a while before the time
   PLACED
   ACCEPTED
   PREPARING
@@ -381,6 +382,11 @@ model Order {
   tip              Decimal     @default(0) @db.Decimal(10, 2)
   /// The e-wallet or card the tip was paid with
   tipMethod        OnlinePayment?
+  /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
+  scheduledFor     DateTime?
+  /// When it reached the store to accept: at checkout, after the online payment, or when a scheduled order was sent.
+  /// The store's time to accept (and the auto-cancel) counts from here, not from when it was ordered.
+  placedAt         DateTime    @default(now())
   dispatch         JobDispatch @default(NEW)
   /// When the job should reach more riders; null when there's nothing left to do
   nextDispatchAt   DateTime?
@@ -402,6 +408,7 @@ model Order {
   @@index([riderId])
   @@index([checkoutId])
   @@index([nextDispatchAt])
+  @@index([status, scheduledFor])
 }
 
 /// A free rider this job has reached so far. Only they can see and accept it until it opens to everyone.
@@ -468,6 +475,8 @@ model OrderItem {
   name       String // copied at order time so later menu edits don't change past orders
   unitPrice  Decimal  @db.Decimal(10, 2)
   quantity   Int
+  /// The resident's note for this dish only, e.g. "No onions"
+  note       String?
 }
 
 model DiningTable {

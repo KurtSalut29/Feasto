@@ -249,7 +249,7 @@ adminRouter.get("/users", async (req, res) => {
 // ---------- All orders ----------
 
 const ORDER_GROUPS = {
-  active: ["AWAITING_PAYMENT", "PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"],
+  active: ["AWAITING_PAYMENT", "SCHEDULED", "PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"],
   completed: ["DELIVERED", "COMPLETED"],
   cancelled: ["REJECTED", "CANCELLED"],
 } as const satisfies Record<string, OrderStatus[]>;

@@ -10,7 +10,7 @@ type Tx = Prisma.TransactionClient;
 export const orderCode = (id: string) => `#${id.slice(-6).toUpperCase()}`;
 
 /** Orders still in progress (not finished one way or another). */
-export const ACTIVE_STATUSES: OrderStatus[] = ["AWAITING_PAYMENT", "PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
+export const ACTIVE_STATUSES: OrderStatus[] = ["AWAITING_PAYMENT", "SCHEDULED", "PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
 export const FINISHED_STATUSES: OrderStatus[] = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"];
 
 /**

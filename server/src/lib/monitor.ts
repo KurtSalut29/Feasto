@@ -22,7 +22,7 @@ export function stuckOrdersWhere(stuckMinutes: number, now = Date.now()): Prisma
   const since = new Date(now - stuckMinutes * 60_000);
   return {
     OR: [
-      { status: "PLACED", createdAt: { lt: since } },
+      { status: "PLACED", placedAt: { lt: since } },
       { fulfillment: "DELIVERY", riderId: null, status: { in: OPEN_JOB }, acceptedAt: { lt: since } },
       { fulfillment: "DELIVERY", riderId: { not: null }, status: "READY", readyAt: { lt: since } },
       { status: "PICKED_UP", pickedUpAt: { lt: new Date(now - ON_THE_ROAD_MINUTES * 60_000) } },
@@ -30,10 +30,10 @@ export function stuckOrdersWhere(stuckMinutes: number, now = Date.now()): Prisma
   };
 }
 
-type StuckFields = { status: string; riderId: string | null; createdAt: Date; acceptedAt: Date | null; readyAt: Date | null; pickedUpAt: Date | null };
+type StuckFields = { status: string; riderId: string | null; createdAt: Date; placedAt: Date; acceptedAt: Date | null; readyAt: Date | null; pickedUpAt: Date | null };
 
 export function whyStuck(order: StuckFields) {
-  if (order.status === "PLACED") return { reason: "NO_STORE_REPLY", since: order.createdAt };
+  if (order.status === "PLACED") return { reason: "NO_STORE_REPLY", since: order.placedAt };
   if (order.status === "PICKED_UP") return { reason: "ON_THE_ROAD", since: order.pickedUpAt ?? order.createdAt };
   if (order.riderId) return { reason: "RIDER_NOT_COLLECTING", since: order.readyAt ?? order.createdAt };
   return { reason: "NO_RIDER", since: order.acceptedAt ?? order.createdAt };

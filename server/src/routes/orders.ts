@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
 import { invalidateStore } from "../lib/redisCache.js";
-import { readCartQuantities, setCartQuantity } from "../lib/cart.js";
+import { readCartNotes, readCartQuantities, setCartNote, setCartQuantity } from "../lib/cart.js";
 import { autoCancelAt } from "../lib/autoCancel.js";
 import { prisma } from "../lib/db.js";
 import { getSettings } from "../lib/settings.js";
@@ -12,6 +12,7 @@ import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayme
 import { notify } from "../lib/liveUpdates.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
+import { whenWords } from "../lib/schedule.js";
 import { RATE_RIDER_DAYS, riderRatingSchema, shortName } from "../lib/riderRatings.js";
 import { ONLINE_LABEL } from "../lib/payments.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -22,7 +23,7 @@ ordersRouter.use(requireAuth, requireRole("RESIDENT"));
 
 const orderInclude = {
   vendor: { select: { id: true, name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
-  items: { select: { id: true, name: true, unitPrice: true, quantity: true } },
+  items: { select: { id: true, name: true, unitPrice: true, quantity: true, note: true } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true, ratingSum: true, ratingCount: true } } } },
   checkout: {
     select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
@@ -54,17 +55,17 @@ ordersRouter.get("/:id", async (req, res) => {
   res.json({ order, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
 });
 
-/** Residents can cancel until the store accepts. If both happen at once, only one wins. */
+/** Residents can cancel until the store accepts (a scheduled order, any time before then). If both happen at once, only one wins. */
 ordersRouter.post("/:id/cancel", async (req, res) => {
   const id = String(req.params.id);
   const order = await prisma.order.findFirst({
     where: { id, checkout: { residentId: req.session!.userId } },
-    select: { checkoutId: true, vendor: { select: { ownerId: true, name: true } } },
+    select: { checkoutId: true, status: true, scheduledFor: true, vendor: { select: { ownerId: true, name: true } } },
   });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const vendorId = await prisma.$transaction(async (tx) => {
-    await transition(tx, id, ["PLACED", "AWAITING_PAYMENT"], "CANCELLED", { finishedAt: new Date(), rejectReason: "Cancelled by the resident" });
+    await transition(tx, id, ["PLACED", "AWAITING_PAYMENT", "SCHEDULED"], "CANCELLED", { finishedAt: new Date(), rejectReason: "Cancelled by the resident" });
     const restored = await restoreStock(tx, id);
     await settlePayment(tx, order.checkoutId);
     return restored;
@@ -76,7 +77,14 @@ ordersRouter.post("/:id/cancel", async (req, res) => {
   });
 
   await refreshStoreCache(vendorId);
-  await notify(order.vendor.ownerId, { title: "An order was cancelled", body: "The resident cancelled before you accepted it.", link: "/vendor/orders" });
+  await notify(order.vendor.ownerId, {
+    title: order.status === "SCHEDULED" ? `A scheduled order was cancelled` : "An order was cancelled",
+    body:
+      order.status === "SCHEDULED" && order.scheduledFor
+        ? `The resident cancelled ${orderCode(id)} for ${whenWords(order.scheduledFor)}. You don't need to prepare it.`
+        : "The resident cancelled before you accepted it.",
+    link: "/vendor/orders",
+  });
   await broadcastOrder(id);
   res.json({ ok: true });
 });
@@ -186,6 +194,7 @@ ordersRouter.post("/:id/reorder", async (req, res) => {
         select: {
           name: true,
           quantity: true,
+          note: true,
           menuItem: { select: { id: true, deletedAt: true, isAvailable: true, stock: true, vendor: { select: ACTIVE_STORE_FIELDS } } },
         },
       },
@@ -194,9 +203,10 @@ ordersRouter.post("/:id/reorder", async (req, res) => {
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const inCart = new Map((await readCartQuantities(userId)).map((l) => [l.menuItemId, l.quantity]));
+  const notes = await readCartNotes(userId);
   const added: string[] = [];
   const skipped: string[] = [];
-  for (const { name, quantity, menuItem } of order.items) {
+  for (const { name, quantity, note, menuItem } of order.items) {
     const storeActive = menuItem.vendor.status === ACTIVE_STORE.status && !menuItem.vendor.owner.disabledAt;
     if (!storeActive || menuItem.deletedAt || !menuItem.isAvailable || menuItem.stock === 0) {
       skipped.push(name);
@@ -205,6 +215,8 @@ ordersRouter.post("/:id/reorder", async (req, res) => {
     let total = (inCart.get(menuItem.id) ?? 0) + quantity;
     if (menuItem.stock !== null) total = Math.min(total, menuItem.stock);
     await setCartQuantity(userId, menuItem.id, Math.min(total, 50));
+    // The same "No onions" as last time, unless the cart already has a note for it
+    if (note && !notes.has(menuItem.id)) await setCartNote(userId, menuItem.id, note);
     added.push(name);
   }
   if (added.length === 0) throw new HttpError(400, "None of these dishes can be ordered right now.");

@@ -9,7 +9,7 @@ import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
 import { useApiData } from "@/components/app/use-api-data";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -18,7 +18,9 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
 import { celebrate } from "@/components/app/celebrate";
 import { formatPeso } from "@/lib/format";
+import { clockOf, scheduleDays, sendAtOf, whenInSentence, whenOf } from "@/lib/schedule";
 import type { Address, Cart, Fulfillment, PaymentMethod } from "@/lib/types";
+import { WhenPicker } from "./when-picker";
 
 function Choice({
   name,
@@ -86,11 +88,30 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
   const [error, setError] = useState<string>();
 
   const stores = cart.groups.length;
-  // Each store's fee follows its distance to the chosen address: price it again when the address changes
+
+  // Now or later. A store that's closed right now can only take an order for later.
+  const closedNow = cart.groups.filter((g) => !g.store.isOpen).map((g) => g.store.name);
+  const [now] = useState(() => new Date());
+  const days = useMemo(() => scheduleDays(cart.groups.map((g) => g.store), fulfillment, now), [cart.groups, fulfillment, now]);
+  const [laterChosen, setLater] = useState(closedNow.length > 0);
+  const later = laterChosen || closedNow.length > 0;
+  const [picked, setPicked] = useState<string | null>(null);
+  const times = days.flatMap((d) => d.times);
+  // The picked time while it still fits (Delivery and Pickup allow different times), else the first one
+  const scheduledFor = later ? (times.find((t) => t.iso === picked)?.iso ?? times[0]?.iso ?? null) : null;
+
+  // Each store's fee follows its distance to the chosen address, and the rush hour at the time it's
+  // delivered: price it again when either changes
   const [quoteKey, setQuoteKey] = useState(0);
-  const otherAddress = fulfillment === "DELIVERY" && addressId && addressId !== cart.delivery.addressId;
-  const { data: quoted } = useApiData<{ cart: Cart }>(otherAddress ? `/cart?addressId=${addressId}` : null, quoteKey);
-  const priced = !otherAddress ? cart : quoted?.cart.delivery.addressId === addressId ? quoted.cart : null;
+  const delivery = fulfillment === "DELIVERY" && Boolean(addressId);
+  const requote = delivery && (addressId !== cart.delivery.addressId || scheduledFor !== null);
+  const quoteUrl = requote ? `/cart?addressId=${addressId}${scheduledFor ? `&at=${encodeURIComponent(scheduledFor)}` : ""}` : null;
+  const { data: quoted } = useApiData<{ cart: Cart }>(quoteUrl, quoteKey);
+  const priced = !requote
+    ? cart
+    : quoted?.cart.delivery.addressId === addressId && (quoted.cart.delivery.pricedFor ?? null) === scheduledFor
+      ? quoted.cart
+      : null;
   const quoteOf = (storeId: string) => priced?.groups.find((g) => g.store.id === storeId)?.delivery ?? null;
   const deliveryTotal = fulfillment === "DELIVERY" ? (priced?.delivery.total ?? 0) : 0;
   const total = cart.itemsTotal + deliveryTotal;
@@ -107,6 +128,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         paymentMethod,
         onlineMethod: pay === "COD" ? undefined : pay,
         notes,
+        scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
         simulatePaymentFailure: paymentMethod === "ONLINE" && simulateFailure,
       },
@@ -122,14 +144,25 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
     const names = cart.groups.map((g) => g.store.name);
     const storesText = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
     // Chef Feasto pops up and stays while the app moves on to the order
-    celebrate({
-      title: orderIds.length === 1 ? "Order placed!" : `${orderIds.length} orders placed!`,
-      message:
-        paymentMethod === "ONLINE"
-          ? `We're confirming your ${PAYMENT_OPTIONS.find((o) => o.value === pay)?.name ?? "online"} payment. ${storesText} will get the order once it's through.`
-          : `${storesText} got your order. We'll tell you as soon as it's accepted.`,
-      duration: 3800,
-    });
+    const wallet = PAYMENT_OPTIONS.find((o) => o.value === pay)?.name ?? "online";
+    celebrate(
+      scheduledFor
+        ? {
+            title: orderIds.length === 1 ? "Order scheduled!" : `${orderIds.length} orders scheduled!`,
+            message: `${fulfillment === "DELIVERY" ? "Arriving" : "Ready for pickup"} ${whenInSentence(scheduledFor)}. ${storesText} ${
+              stores > 1 ? "get" : "gets"
+            } it at ${clockOf(sendAtOf(scheduledFor, fulfillment))}.${paymentMethod === "ONLINE" ? ` We're confirming your ${wallet} payment now.` : ""}`,
+            duration: 4200,
+          }
+        : {
+            title: orderIds.length === 1 ? "Order placed!" : `${orderIds.length} orders placed!`,
+            message:
+              paymentMethod === "ONLINE"
+                ? `We're confirming your ${wallet} payment. ${storesText} will get the order once it's through.`
+                : `${storesText} got your order. We'll tell you as soon as it's accepted.`,
+            duration: 3800,
+          },
+    );
     router.replace(orderIds.length === 1 ? `/resident/orders/${orderIds[0]}` : "/resident/orders");
   }
 
@@ -206,7 +239,20 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         </Step>
       )}
 
-      <Step n={3} title="Payment">
+      <Step n={3} title="When do you want it?">
+        <WhenPicker
+          days={days}
+          later={later}
+          onLater={setLater}
+          value={scheduledFor}
+          onChange={setPicked}
+          fulfillment={fulfillment}
+          storeNames={cart.groups.map((g) => g.store.name)}
+          closedNow={closedNow}
+        />
+      </Step>
+
+      <Step n={4} title="Payment">
         <PaymentPicker
           value={pay}
           onChange={setPay}
@@ -230,7 +276,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
       </Step>
 
       <Step
-        n={4}
+        n={5}
         title="Your order"
         action={
           <Link href="/resident/cart" className="text-sm font-semibold text-brand-700 hover:underline">
@@ -248,6 +294,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
                     <DishPhoto src={item.imageUrl} sizes="40px" className="size-10 shrink-0 rounded-lg" />
                     <span className="min-w-0 flex-1 text-ink">
                       <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.name}
+                      {item.note && <span className="mt-0.5 block text-[13px] text-amber-800">“{item.note}”</span>}
                     </span>
                     <span className="shrink-0 text-ink tabular-nums">{formatPeso(item.lineTotal)}</span>
                   </li>
@@ -274,6 +321,10 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
     <div className="mt-7 space-y-4 lg:sticky lg:top-24 lg:mt-0">
       <section aria-label="Summary" className="rounded-2xl border border-line bg-white p-4">
         <ul className="space-y-1.5 text-[15px]">
+          <li className="flex justify-between gap-3">
+            <span className="text-muted">{fulfillment === "DELIVERY" ? "Arrives" : "Ready"}</span>
+            <span className="text-right font-medium text-ink">{scheduledFor ? whenOf(scheduledFor) : later ? "Choose a time" : "As soon as possible"}</span>
+          </li>
           <li className="flex justify-between gap-3">
             <span className="text-muted">Items ({cart.itemCount})</span>
             <span className="text-ink tabular-nums">{formatPeso(cart.itemsTotal)}</span>
@@ -305,10 +356,10 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         <Button
           className="w-full shadow-lg"
           loading={placing}
-          disabled={fulfillment === "DELIVERY" && (!addressId || !priced)}
+          disabled={(fulfillment === "DELIVERY" && (!addressId || !priced)) || (later && !scheduledFor)}
           onClick={placeOrder}
         >
-          {placing ? "Placing order…" : `Place order · ${formatPeso(total)}`}
+          {placing ? (later ? "Scheduling…" : "Placing order…") : `${later ? "Schedule order" : "Place order"} · ${formatPeso(total)}`}
         </Button>
       </div>
     </div>

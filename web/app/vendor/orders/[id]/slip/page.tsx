@@ -103,6 +103,8 @@ async function OrderSlip({ params }: Pick<PageProps<"/vendor/orders/[id]/slip">,
                   <span className="shrink-0 tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
                 </div>
                 {item.quantity > 1 && <p className="pl-8 text-[12px] text-[#555]">@ {formatPeso(Number(item.unitPrice))} each</p>}
+                {/* The kitchen reads this before cooking, so it's loud on paper too */}
+                {item.note && <p className="pl-8 text-[13px] font-bold uppercase">** {item.note} **</p>}
               </li>
             ))}
           </ul>

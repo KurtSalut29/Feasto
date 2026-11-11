@@ -7,9 +7,12 @@ import { isStoreOpen } from "./storeHours.js";
 
 /**
  * The cart lives in Redis as a hash: menu item id -> quantity. Any API copy can read
- * or change it, so it doesn't matter which copy Nginx sends each click to.
+ * or change it, so it doesn't matter which copy Nginx sends each click to. A note for one
+ * dish ("No onions") sits in a second hash beside it: menu item id -> note.
  */
 const key = (userId: string) => `cart:${userId}`;
+const notesKey = (userId: string) => `cart-notes:${userId}`;
+export const ITEM_NOTE_MAX = 120;
 const CART_DAYS = 7;
 
 export async function readCartQuantities(userId: string) {
@@ -17,8 +20,22 @@ export async function readCartQuantities(userId: string) {
   return Object.entries(raw).map(([menuItemId, qty]) => ({ menuItemId, quantity: Number(qty) }));
 }
 
+export async function readCartNotes(userId: string) {
+  return new Map(Object.entries(await redis.hgetall(notesKey(userId))));
+}
+
+/** An empty note removes it */
+export async function setCartNote(userId: string, menuItemId: string, note: string) {
+  if (!note) await redis.hdel(notesKey(userId), menuItemId);
+  else {
+    await redis.hset(notesKey(userId), menuItemId, note);
+    await redis.expire(notesKey(userId), CART_DAYS * 86400);
+  }
+}
+
 export async function setCartQuantity(userId: string, menuItemId: string, quantity: number) {
-  if (quantity <= 0) await redis.hdel(key(userId), menuItemId);
+  // A dish taken out of the cart takes its note with it
+  if (quantity <= 0) await Promise.all([redis.hdel(key(userId), menuItemId), redis.hdel(notesKey(userId), menuItemId)]);
   else {
     await redis.hset(key(userId), menuItemId, quantity);
     await redis.expire(key(userId), CART_DAYS * 86400);
@@ -26,7 +43,7 @@ export async function setCartQuantity(userId: string, menuItemId: string, quanti
 }
 
 export function clearCart(userId: string) {
-  return redis.del(key(userId));
+  return redis.del(key(userId), notesKey(userId));
 }
 
 export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STORE_CLOSED" | "STORE_UNAVAILABLE";
@@ -43,11 +60,11 @@ async function deliveryAddress(userId: string, addressId?: string) {
  * Each store's delivery fee is priced for the distance from it to `addressId` (or the
  * resident's default address).
  */
-export async function buildCart(userId: string, addressId?: string) {
-  const lines = await readCartQuantities(userId);
+export async function buildCart(userId: string, addressId?: string, /** A scheduled time: the rush-hour add-on is judged then */ at?: Date) {
+  const [lines, notes] = await Promise.all([readCartQuantities(userId), readCartNotes(userId)]);
   const settings = await getSettings();
-  const empty = { addressId: null, addressLabel: null, total: 0, baseFee: settings.deliveryFee };
-  if (lines.length === 0) return { groups: [], itemCount: 0, itemsTotal: 0, delivery: empty, hasProblems: false };
+  const empty = { addressId: null, addressLabel: null, total: 0, baseFee: settings.deliveryFee, pricedFor: null };
+  if (lines.length === 0) return { groups: [], itemCount: 0, itemsTotal: 0, delivery: empty, hasProblems: false, canSchedule: false };
 
   const items = await prisma.menuItem.findMany({
     where: { id: { in: lines.map((l) => l.menuItemId) } },
@@ -77,8 +94,8 @@ export async function buildCart(userId: string, addressId?: string) {
   if (gone.length) await redis.hdel(key(userId), ...gone.map((g) => g.menuItemId));
 
   const groups = new Map<string, {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
-    items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
+    items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null; note: string | null }[];
     subtotal: number;
     problem: CartProblem | null;
     /** This store's delivery fee to the address, with how it was worked out; null without an address */
@@ -93,7 +110,7 @@ export async function buildCart(userId: string, addressId?: string) {
     let group = groups.get(item.vendorId);
     if (!group) {
       group = {
-        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
+        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, closesAt: item.vendor.closesAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
         items: [],
         subtotal: 0,
         problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
@@ -110,7 +127,7 @@ export async function buildCart(userId: string, addressId?: string) {
         : item.stock !== null && quantity > item.stock
           ? "NOT_ENOUGH_STOCK"
           : null;
-    group.items.push({ menuItemId: item.id, name: item.name, imageUrl: item.imageUrl, price, quantity, lineTotal: price * quantity, problem, stock: item.stock });
+    group.items.push({ menuItemId: item.id, name: item.name, imageUrl: item.imageUrl, price, quantity, lineTotal: price * quantity, problem, stock: item.stock, note: notes.get(item.id) ?? null });
     group.subtotal += price * quantity;
   }
 
@@ -120,7 +137,7 @@ export async function buildCart(userId: string, addressId?: string) {
   // Price each store's delivery for the distance to the address (looked up in parallel)
   const address = await deliveryAddress(userId, addressId);
   if (address) {
-    const now = new Date();
+    const now = at ?? new Date();
     const quotes = await Promise.all(list.map((g) => quoteDelivery(g.pin, address, settings, now)));
     list.forEach((g, i) => (g.delivery = quotes[i]!));
   }
@@ -134,7 +151,11 @@ export async function buildCart(userId: string, addressId?: string) {
       addressLabel: address?.label ?? null,
       total: Math.round(list.reduce((n, g) => n + (g.delivery?.fee ?? 0), 0) * 100) / 100,
       baseFee: settings.deliveryFee,
+      /** The scheduled time the fees were priced for; null for now */
+      pricedFor: at?.toISOString() ?? null,
     },
     hasProblems: list.some((g) => g.problem || g.items.some((i) => i.problem)),
+    /** Nothing's wrong except that a store is closed right now, so it can still be ordered for later */
+    canSchedule: list.length > 0 && !list.some((g) => (g.problem && g.problem !== "STORE_CLOSED") || g.items.some((i) => i.problem)),
   };
 }

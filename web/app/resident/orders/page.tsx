@@ -1,4 +1,4 @@
-import { ChevronRight, ReceiptText, Star } from "lucide-react";
+import { CalendarClock, ChevronRight, ReceiptText, Star } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatClock, formatPeso, manilaDate, timeAgo } from "@/lib/format";
 import { hasReceipt, isFinished, itemsSummary, orderCode, paymentName, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { clockOf, sendAtOf, whenInSentence } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { OrderStatus, ResidentOrder } from "@/lib/types";
 import { ReorderButton } from "./[id]/order-feedback";
@@ -49,7 +50,8 @@ function LiveOrder({ order }: { order: ResidentOrder }) {
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-ink">{order.vendor.name}</p>
             <p className="text-[13px] text-muted">
-              {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"} · placed {timeAgo(order.createdAt).toLowerCase()}
+              {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"} ·{" "}
+              {order.scheduledFor ? `for ${clockOf(order.scheduledFor)}` : `placed ${timeAgo(order.createdAt).toLowerCase()}`}
             </p>
           </div>
           <span className="text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
@@ -81,6 +83,44 @@ function LiveOrder({ order }: { order: ResidentOrder }) {
           <p className="min-w-0 truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
           <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700">
             Track
+            <ChevronRight className="size-4" aria-hidden />
+          </span>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+/** An order for later: when it's coming, and when the store gets it. */
+function ScheduledOrder({ order }: { order: ResidentOrder }) {
+  const at = order.scheduledFor!;
+  return (
+    <li>
+      <Link
+        href={`/resident/orders/${order.id}`}
+        className="block rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50 to-white p-4 transition hover:border-sky-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+      >
+        <div className="flex items-start gap-3">
+          <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-ink">{order.vendor.name}</p>
+            <p className="text-[13px] text-muted">
+              {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
+            </p>
+          </div>
+          <span className="text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-sky-800">
+          <CalendarClock className="size-[18px] shrink-0 text-sky-600" aria-hidden />
+          {order.fulfillment === "DELIVERY" ? "Arrives" : "Ready"} {whenInSentence(at)}
+        </p>
+        <p className="mt-0.5 text-[13px] text-muted">
+          {order.vendor.name} gets it at {clockOf(sendAtOf(at, order.fulfillment))}. You can cancel until then.
+        </p>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-sky-100 pt-3">
+          <p className="min-w-0 truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-sky-800">
+            Details
             <ChevronRight className="size-4" aria-hidden />
           </span>
         </div>
@@ -158,7 +198,11 @@ function dayLabel(iso: string) {
 async function ResidentOrders() {
   await requireRole("RESIDENT");
   const { orders } = await serverApi<{ orders: ResidentOrder[] }>("/orders");
-  const active = orders.filter((o) => !isFinished(o.status));
+  const active = orders.filter((o) => !isFinished(o.status) && o.status !== "SCHEDULED");
+  // Orders for later, soonest first
+  const scheduled = orders
+    .filter((o) => o.status === "SCHEDULED" && o.scheduledFor)
+    .sort((a, b) => new Date(a.scheduledFor!).getTime() - new Date(b.scheduledFor!).getTime());
   const past = orders.filter((o) => isFinished(o.status));
 
   if (orders.length === 0) {
@@ -186,7 +230,13 @@ async function ResidentOrders() {
     <>
       <MobileHeading
         title="Orders"
-        subtitle={active.length ? `${active.length} on the way. Updates arrive live, no need to refresh.` : "Your past orders, receipts and ratings."}
+        subtitle={
+          active.length
+            ? `${active.length} on the way. Updates arrive live, no need to refresh.`
+            : scheduled.length
+              ? `${scheduled.length} scheduled for later.`
+              : "Your past orders, receipts and ratings."
+        }
       />
       {active.length > 0 && (
         <section className="mb-7" aria-labelledby="orders-active">
@@ -196,6 +246,18 @@ async function ResidentOrders() {
           <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {active.map((o) => (
               <LiveOrder key={o.id} order={o} />
+            ))}
+          </ul>
+        </section>
+      )}
+      {scheduled.length > 0 && (
+        <section className="mb-7" aria-labelledby="orders-scheduled">
+          <h2 id="orders-scheduled" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            Scheduled
+          </h2>
+          <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+            {scheduled.map((o) => (
+              <ScheduledOrder key={o.id} order={o} />
             ))}
           </ul>
         </section>

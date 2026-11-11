@@ -181,6 +181,8 @@ adminToolsRouter.get("/stuck", async (req, res) => {
         subtotal: true,
         deliveryFee: true,
         createdAt: true,
+        placedAt: true,
+        scheduledFor: true,
         acceptedAt: true,
         readyAt: true,
         pickedUpAt: true,

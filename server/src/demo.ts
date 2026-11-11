@@ -610,6 +610,7 @@ async function main() {
         pickedUpAt: reached(["PICKED_UP", "DELIVERED"]) ? at(between(27, 32)) : null,
         finishedAt: finished ? at(failed ? between(2, 6) : between(38, 55)) : null,
         createdAt,
+        placedAt: createdAt,
         items: { create: lines.map((l) => ({ menuItemId: l.item.id, name: l.item.name, unitPrice: l.item.price, quantity: l.quantity })) },
       },
     });

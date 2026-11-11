@@ -143,6 +143,7 @@ async function Receipt({
                   <span className="min-w-0">
                     <span className="inline-block w-7">{item.quantity}</span>
                     {item.name}
+                    {item.note && <span className="block pl-7 text-[12px] text-muted">Note: {item.note}</span>}
                   </span>
                   <span className="shrink-0 tabular-nums">
                     {formatPeso(Number(item.unitPrice) * item.quantity)}

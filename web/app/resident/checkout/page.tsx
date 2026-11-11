@@ -23,8 +23,9 @@ async function Checkout() {
     serverApi<{ cart: Cart }>("/cart"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
-  // Nothing to pay for, or something changed: back to the cart to fix it
-  if (cart.groups.length === 0 || cart.hasProblems) redirect("/resident/cart");
+  // Nothing to pay for, or something changed: back to the cart to fix it. A store that's only
+  // closed right now is fine: the order can be scheduled for when it's open.
+  if (cart.groups.length === 0 || (cart.hasProblems && !cart.canSchedule)) redirect("/resident/cart");
 
   return (
     <>

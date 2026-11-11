@@ -1,4 +1,4 @@
-import { ArrowLeft, Banknote, Bike, Camera, ClipboardList, CreditCard, MapPin, MessageSquareText, Phone, Printer, User, UtensilsCrossed } from "lucide-react";
+import { ArrowLeft, Banknote, Bike, CalendarClock, Camera, ClipboardList, CreditCard, MapPin, MessageSquareText, Phone, Printer, User, UtensilsCrossed } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth";
+import { clockOf, sendAtOf, whenOf } from "@/lib/schedule";
 import { formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { isFinished, orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
@@ -55,6 +56,12 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
         description={
           <span className="flex flex-wrap items-center gap-2">
             Placed {formatDateTime(order.createdAt)}
+            {order.scheduledFor && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-xs font-semibold text-sky-800 ring-1 ring-sky-100">
+                <CalendarClock className="size-3.5" aria-hidden />
+                For {whenOf(order.scheduledFor)}
+              </span>
+            )}
             <Badge tone={STATUS_TONE[order.status]} dot>
               {statusLabel(order.status, order.fulfillment)}
             </Badge>
@@ -80,6 +87,11 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
             <Alert tone="error" title={order.status === "REJECTED" ? "You declined this order" : "The resident cancelled this order"}>
               {order.rejectReason ?? "No reason given."}
             </Alert>
+          ) : order.status === "SCHEDULED" && order.scheduledFor ? (
+            <Alert tone="info" title={`Scheduled for ${whenOf(order.scheduledFor)}`}>
+              It joins your queue to accept at {clockOf(sendAtOf(order.scheduledFor, order.fulfillment))}, so it&apos;s {delivery ? "delivered" : "ready"} by{" "}
+              {clockOf(order.scheduledFor)}. The stock is already set aside for it.
+            </Alert>
           ) : (
             <Card title="Progress" Icon={ClipboardList}>
               <div className="px-5 py-4">
@@ -102,6 +114,12 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                       <span className="font-bold text-brand-700">{item.quantity}×</span> {item.name}
                     </p>
                     <p className="text-xs text-muted">{formatPeso(item.unitPrice)} each</p>
+                    {item.note && (
+                      <p className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[13px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                        <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        <span className="min-w-0 break-words">{item.note}</span>
+                      </p>
+                    )}
                   </div>
                   <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</p>
                 </li>
@@ -140,6 +158,9 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
           {!isFinished(order.status) && (
             <Card title="Next step">
               <div className="px-5 py-4">
+                {order.status === "SCHEDULED" && order.scheduledFor ? (
+                  <p className="text-sm text-muted">Nothing to do yet. You&apos;ll get it to accept at {clockOf(sendAtOf(order.scheduledFor, order.fulfillment))}.</p>
+                ) : (
                 <OrderActions
                   orderId={order.id}
                   status={order.status}
@@ -148,6 +169,7 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                   dispatch={order.dispatch}
                   riderShown={Boolean(delivery && order.rider)}
                 />
+                )}
               </div>
             </Card>
           )}

@@ -126,6 +126,7 @@ riderRouter.get("/jobs", async (req, res) => {
       status: true,
       deliveryFee: true,
       createdAt: true,
+      scheduledFor: true,
       subtotal: true,
       vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true } },
       items: { select: { name: true, quantity: true, unitPrice: true } },

@@ -9,6 +9,7 @@ import { enqueue, relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
 import { autoCancelStaleOrders } from "./lib/autoCancel.js";
+import { announceScheduled, clockWords, sendDueScheduledOrders } from "./lib/schedule.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/rabbitmq.js";
 import { CHANNELS, notify, publish as publishRealtime } from "./lib/liveUpdates.js";
 import { marshal, unmarshal } from "./lib/marshalling.js";
@@ -74,14 +75,17 @@ await consume<{ orderId: string }>(QUEUES.ordersPlaced, async ({ orderId }) => {
   await sleep(config.orderProcessingDelayMs);
 
   const items = order.items.reduce((n, i) => n + i.quantity, 0);
+  const summary = `${items} ${items === 1 ? "item" : "items"} · ₱${Number(order.subtotal).toFixed(2)} · ${order.fulfillment === "PICKUP" ? "Pickup" : "Delivery"}`;
+  // A scheduled order arrives now because its time is near
+  const by = order.scheduledFor ? clockWords(order.scheduledFor) : null;
   await notify(order.vendor.ownerId, {
-    title: `New order ${orderCode(order.id)}`,
-    body: `${items} ${items === 1 ? "item" : "items"} · ₱${Number(order.subtotal).toFixed(2)} · ${order.fulfillment === "PICKUP" ? "Pickup" : "Delivery"}`,
+    title: by ? `Scheduled order ${orderCode(order.id)} for ${by}` : `New order ${orderCode(order.id)}`,
+    body: by ? `${summary}. Accept it now so it's ${order.fulfillment === "PICKUP" ? "ready" : "delivered"} by ${by}.` : summary,
     link: "/vendor/orders",
   });
   await notify(order.checkout.residentId, {
-    title: `Order sent to ${order.vendor.name}`,
-    body: "Waiting for the store to accept it.",
+    title: by ? `Your order for ${by} went to ${order.vendor.name}` : `Order sent to ${order.vendor.name}`,
+    body: by ? `They're getting it ready for ${by}. We'll tell you once they accept it.` : "Waiting for the store to accept it.",
     link: `/resident/orders/${order.id}`,
   });
   await broadcastOrder(order.id);
@@ -91,7 +95,7 @@ await consume<{ orderId: string }>(QUEUES.ordersPlaced, async ({ orderId }) => {
 // ---------- Online payment (simulated) and its saga ----------
 
 await consume<{ checkoutId: string; simulateFailure: boolean }>(QUEUES.paymentRequested, async ({ checkoutId, simulateFailure }) => {
-  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, include: { orders: { select: { id: true, vendorId: true } } } });
+  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, include: { orders: { select: { id: true, vendorId: true, scheduledFor: true } } } });
   if (!checkout || checkout.paymentStatus !== "PENDING") return;
 
   await sleep(config.paymentDelayMs); // talking to the payment provider (simulated)
@@ -101,14 +105,19 @@ await consume<{ checkoutId: string; simulateFailure: boolean }>(QUEUES.paymentRe
       const { count } = await tx.checkout.updateMany({ where: { id: checkoutId, paymentStatus: "PENDING" }, data: { paymentStatus: "PAID" } });
       if (count === 0) return;
       for (const order of checkout.orders) {
-        const moved = await tx.order.updateMany({ where: { id: order.id, status: "AWAITING_PAYMENT" }, data: { status: "PLACED" } });
+        // An order for later waits for its time; the others go to their stores now
+        const moved = await tx.order.updateMany({
+          where: { id: order.id, status: "AWAITING_PAYMENT" },
+          data: order.scheduledFor ? { status: "SCHEDULED" } : { status: "PLACED", placedAt: new Date() },
+        });
         // Next step of the saga: the paid orders now go to their stores
-        if (moved.count) await enqueue(tx, QUEUES.ordersPlaced, { orderId: order.id });
+        if (moved.count && !order.scheduledFor) await enqueue(tx, QUEUES.ordersPlaced, { orderId: order.id });
       }
       // If the resident cancelled while paying, the money goes straight back
       await settlePayment(tx, checkoutId);
     });
     await notify(checkout.residentId, { title: "Payment received", body: `₱${Number(checkout.total).toFixed(2)} paid online.`, link: "/resident/orders" });
+    for (const order of checkout.orders) if (order.scheduledFor) await announceScheduled(order.id);
     log(`payment for checkout ${checkoutId} succeeded`);
     return;
   }
@@ -227,13 +236,14 @@ const dispatchTimer = setInterval(async () => {
   }
 }, 1000);
 
-// ---------- Orders nobody took: cancelled by themselves ----------
+// ---------- Scheduled orders sent to their stores when the time is near, and orders nobody took cancelled ----------
 
 let cancelling = false;
 const autoCancelTimer = setInterval(async () => {
   if (cancelling) return;
   cancelling = true;
   try {
+    await sendDueScheduledOrders(log);
     await autoCancelStaleOrders(log);
   } catch (error) {
     console.error(`[${config.instanceId}] auto-cancel failed`, error);

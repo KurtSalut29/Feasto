@@ -1,11 +1,12 @@
 "use client";
 
-import { Banknote, CreditCard, MapPin } from "lucide-react";
+import { Banknote, CalendarClock, CreditCard, MapPin } from "lucide-react";
 import { StoreCover } from "@/components/app/store-card";
 import { Badge } from "@/components/ui/badge";
 import { formatPeso, timeAgo } from "@/lib/format";
 import { distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
 import { itemsSummary, riderPayment } from "@/lib/order-status";
+import { clockOf } from "@/lib/schedule";
 import type { RiderJob } from "@/lib/types";
 import { AcceptJobButton } from "./accept-job-button";
 
@@ -69,6 +70,12 @@ export function JobCard({ job, me, busy }: { job: RiderJob; me: LatLng | null; b
           </p>
         </div>
 
+        {job.scheduledFor && (
+          <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-800">
+            <CalendarClock className="size-3.5" aria-hidden />
+            Scheduled: deliver by {clockOf(job.scheduledFor)}
+          </p>
+        )}
         <p className="mt-2 text-xs text-gray-500">
           {trip !== null && `${formatDistance(trip)} trip · `}ordered{" "}
           {/* The minute can tick over between the server's render and the browser's */}

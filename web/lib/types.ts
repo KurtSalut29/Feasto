@@ -155,8 +155,8 @@ export type DeliveryQuote = {
 
 export type Cart = {
   groups: {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
-    items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null }[];
+    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
+    items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null; /** For the store, this dish only */ note?: string | null }[];
     subtotal: number;
     problem: CartProblem | null;
     /** This store's delivery to the address below; null when the resident has no address yet */
@@ -165,14 +165,17 @@ export type Cart = {
   itemCount: number;
   itemsTotal: number;
   /** The address the fees were priced for, and all stores' fees together */
-  delivery: { addressId: string | null; addressLabel: string | null; total: number; baseFee: number };
+  delivery: { addressId: string | null; addressLabel: string | null; total: number; baseFee: number; pricedFor?: string | null };
   hasProblems: boolean;
+  /** Nothing's wrong except that a store is closed right now, so it can still be ordered for later */
+  canSchedule: boolean;
 };
 
 export type Address = Pin & { id: string; label: string; details: string; landmark: string | null; isDefault: boolean };
 
 export type OrderStatus =
   | "AWAITING_PAYMENT"
+  | "SCHEDULED"
   | "PLACED"
   | "ACCEPTED"
   | "PREPARING"
@@ -190,6 +193,10 @@ export type PaymentMethod = "COD" | "ONLINE";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 type OrderBase = {
+  /** Ordered for later: when it's to be delivered (or ready for pickup). Null for as soon as possible. */
+  scheduledFor?: string | null;
+  /** When it reached the store to accept */
+  placedAt?: string;
   /** Road distance that set the delivery fee, when ordered */
   deliveryKm?: string | null;
   id: string;
@@ -205,7 +212,8 @@ type OrderBase = {
   pickedUpAt: string | null;
   finishedAt: string | null;
   createdAt: string;
-  items: { id: string; name: string; unitPrice: string; quantity: number }[];
+  /** `note` is the resident's note for that one dish */
+  items: { id: string; name: string; unitPrice: string; quantity: number; note?: string | null }[];
 };
 
 /** An order as the resident sees it. */
@@ -305,6 +313,8 @@ export type RiderJob = {
   subtotal: string;
   deliveryFee: string;
   createdAt: string;
+  /** Ordered for later: when the resident wants it at their door */
+  scheduledFor?: string | null;
   vendor: Pin & { name: string; address: string; imageUrl: string | null };
   items: { name: string; quantity: number; unitPrice: string }[];
   checkout: {
@@ -323,6 +333,8 @@ export type JobsPage = { online: boolean; approved: boolean; licenseExpired?: bo
 export type RiderDelivery = {
   id: string;
   status: OrderStatus;
+  /** Ordered for later: when the resident wants it at their door */
+  scheduledFor?: string | null;
   subtotal: string;
   deliveryFee: string;
   readyAt: string | null;

@@ -343,6 +343,7 @@ async function main() {
         pickedUpAt: rider ? at(ready + between(3, 8)) : null,
         finishedAt: at(failed ? between(2, 6) : ready + between(15, 30)),
         createdAt,
+        placedAt: createdAt,
         items: { create: lines.map((l) => ({ menuItemId: l.item.id, name: l.item.name, unitPrice: l.item.price, quantity: l.quantity })) },
       },
     });

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { ACTIVE_STORE } from "../lib/accounts.js";
-import { buildCart, clearCart, readCartQuantities, setCartQuantity } from "../lib/cart.js";
+import { buildCart, clearCart, ITEM_NOTE_MAX, readCartQuantities, setCartNote, setCartQuantity } from "../lib/cart.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -9,10 +9,14 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 export const cartRouter = Router();
 cartRouter.use(requireAuth, requireRole("RESIDENT"));
 
-/** `?addressId=` prices each store's delivery to that address (checkout, when the resident picks one) */
+/**
+ * `?addressId=` prices each store's delivery to that address (checkout, when the resident picks one).
+ * `?at=` prices it for a scheduled time, when the rush-hour add-on may or may not apply.
+ */
 cartRouter.get("/", async (req, res) => {
   const addressId = typeof req.query.addressId === "string" && req.query.addressId ? req.query.addressId : undefined;
-  res.json({ cart: await buildCart(req.session!.userId, addressId) });
+  const at = typeof req.query.at === "string" && !Number.isNaN(Date.parse(req.query.at)) ? new Date(req.query.at) : undefined;
+  res.json({ cart: await buildCart(req.session!.userId, addressId, at) });
 });
 
 /** A lighter call for the cart badge: just the number of items. */
@@ -42,6 +46,19 @@ cartRouter.put("/items", async (req, res) => {
 
   await setCartQuantity(userId, menuItemId, quantity);
   res.json({ cart: await buildCart(userId) });
+});
+
+const noteSchema = z.object({ note: z.string().trim().max(ITEM_NOTE_MAX, `Keep it under ${ITEM_NOTE_MAX} characters.`) });
+
+/** A note for one dish in the cart, for the store ("No onions", "Extra spicy"). An empty note removes it. */
+cartRouter.put("/items/:menuItemId/note", async (req, res) => {
+  const { note } = parseBody(noteSchema, req.body);
+  const userId = req.session!.userId;
+  const menuItemId = String(req.params.menuItemId);
+  const inCart = (await readCartQuantities(userId)).some((l) => l.menuItemId === menuItemId);
+  if (!inCart) throw new HttpError(404, "This dish isn't in your cart anymore.");
+  await setCartNote(userId, menuItemId, note);
+  res.json({ note: note || null });
 });
 
 cartRouter.delete("/", async (req, res) => {

@@ -7,6 +7,7 @@ export const orderCode = (id: string) => `#${id.slice(-6).toUpperCase()}`;
 export function statusLabel(status: OrderStatus, fulfillment: Fulfillment) {
   const labels: Record<OrderStatus, string> = {
     AWAITING_PAYMENT: "Confirming payment",
+    SCHEDULED: "Scheduled",
     PLACED: "Waiting for the store",
     ACCEPTED: "Accepted",
     PREPARING: "Preparing",
@@ -22,6 +23,7 @@ export function statusLabel(status: OrderStatus, fulfillment: Fulfillment) {
 
 export const STATUS_TONE: Record<OrderStatus, BadgeTone> = {
   AWAITING_PAYMENT: "warning",
+  SCHEDULED: "info",
   PLACED: "warning",
   ACCEPTED: "brand",
   PREPARING: "brand",

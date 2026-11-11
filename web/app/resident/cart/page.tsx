@@ -15,6 +15,7 @@ import { formatPeso, formatTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { Cart, CartProblem } from "@/lib/types";
 import { ClearCartButton } from "./clear-cart-button";
+import { ItemNote } from "./item-note";
 
 export const metadata: Metadata = { title: "Cart" };
 
@@ -58,6 +59,9 @@ async function ResidentCart() {
 
   const stores = cart.groups.length;
   const delivery = cart.delivery.addressId ? cart.delivery.total : cart.delivery.baseFee * stores;
+  // Only a closed store is in the way: it can still be ordered for later
+  const blocked = cart.hasProblems && !cart.canSchedule;
+  const laterOnly = cart.hasProblems && cart.canSchedule;
 
   return (
     <>
@@ -119,7 +123,12 @@ async function ResidentCart() {
             </Link>
             {group.problem && (
               <div className="px-4 pt-3">
-                <Alert tone="error">{PROBLEM_TEXT[group.problem]}</Alert>
+                {/* Closed now isn't a dead end: the order can be scheduled for when it's open */}
+                {group.problem === "STORE_CLOSED" && cart.canSchedule ? (
+                  <Alert tone="pending">Closed right now. You can still order for later: choose a time at checkout.</Alert>
+                ) : (
+                  <Alert tone="error">{PROBLEM_TEXT[group.problem]}</Alert>
+                )}
               </div>
             )}
             <ul className="divide-y divide-line px-4">
@@ -130,6 +139,7 @@ async function ResidentCart() {
                     <p className="line-clamp-2 leading-snug font-medium text-ink">{item.name}</p>
                     <p className="mt-0.5 text-sm text-muted">{formatPeso(item.price)} each</p>
                     {item.problem && <p className="mt-0.5 text-xs font-semibold text-red-600">{PROBLEM_TEXT[item.problem]}</p>}
+                    <ItemNote key={item.note ?? ""} menuItemId={item.menuItemId} name={item.name} note={item.note ?? null} />
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5">
                     <QuantityControl key={item.quantity} menuItemId={item.menuItemId} name={item.name} quantity={item.quantity} compact />
@@ -178,11 +188,11 @@ async function ResidentCart() {
       </section>
       {/* Big screens: checkout right under the total */}
       <div className="mt-3 hidden md:block">
-        {cart.hasProblems ? (
+        {blocked ? (
           <p className="rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 ring-1 ring-red-100">Fix the items marked in red to check out.</p>
         ) : (
           <Link href="/resident/checkout" className={`${buttonClass()} h-12 w-full`}>
-            Go to checkout · {formatPeso(cart.itemsTotal + delivery)}
+            {laterOnly ? "Order for later" : "Go to checkout"} · {formatPeso(cart.itemsTotal + delivery)}
             <ChevronRight className="size-5" aria-hidden />
           </Link>
         )}
@@ -193,7 +203,7 @@ async function ResidentCart() {
       {/* Room so the bar below never covers the total */}
       <div className="h-20 md:hidden" aria-hidden />
       <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] px-4 md:hidden">
-        {cart.hasProblems ? (
+        {blocked ? (
           <p className="rounded-2xl bg-red-50 px-4 py-4 text-center text-sm font-medium text-red-700 shadow-lg ring-1 ring-red-100">
             Fix the items marked in red to check out.
           </p>
@@ -207,7 +217,7 @@ async function ResidentCart() {
               <span className="block text-lg leading-tight font-bold tabular-nums">{formatPeso(cart.itemsTotal + delivery)}</span>
             </span>
             <span className="flex items-center gap-1 font-semibold">
-              Go to checkout
+              {laterOnly ? "Order for later" : "Go to checkout"}
               <ChevronRight className="size-5" aria-hidden />
             </span>
           </Link>

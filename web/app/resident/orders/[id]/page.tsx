@@ -1,4 +1,4 @@
-import { Bike, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
+import { Bike, CalendarClock, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -17,6 +17,7 @@ import { formatClock, formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { hasReceipt, ONLINE_LABEL, orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { canRateRider, riderAverage } from "@/lib/rider-ratings";
+import { clockOf, sendAtOf, whenOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
@@ -60,6 +61,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
     ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
     : null;
   const tip = Number(order.tip ?? 0);
+  const scheduled = order.status === "SCHEDULED" && order.scheduledFor;
 
   return (
     <>
@@ -70,6 +72,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           <p className="text-sm text-muted">
             Order {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
           </p>
+          {order.scheduledFor && !scheduled && !dropped && !received && (
+            <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
+              <CalendarClock className="size-3.5" aria-hidden />
+              Scheduled for {clockOf(order.scheduledFor)}
+            </p>
+          )}
         </div>
         {/* Keyed by the status, so it pops each time the order moves on */}
         <span key={order.status} className="shrink-0 motion-safe:animate-pop">
@@ -140,12 +148,40 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             <p className="text-sm font-medium">Confirming your online payment…</p>
           </div>
         )}
+        {/* Ordered for later: when it comes and when the store starts on it, in place of the steps */}
+        {scheduled && (
+          <section className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50 to-white p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-sky-800">
+              <CalendarClock className="size-5 text-sky-600" aria-hidden />
+              Scheduled {order.fulfillment === "DELIVERY" ? "delivery" : "pickup"}
+            </p>
+            <p className="mt-1 text-[22px] leading-tight font-bold tracking-tight text-ink">{whenOf(order.scheduledFor!)}</p>
+            <ol className="mt-3 space-y-2 text-sm">
+              <li className="flex gap-2.5">
+                <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-500" />
+                <span className="text-ink">
+                  <strong className="tabular-nums">{clockOf(sendAtOf(order.scheduledFor!, order.fulfillment))}</strong> · {order.vendor.name} gets your order and starts on it
+                </span>
+              </li>
+              <li className="flex gap-2.5">
+                <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-300" />
+                <span className="text-ink">
+                  <strong className="tabular-nums">{clockOf(order.scheduledFor!)}</strong> · {order.fulfillment === "DELIVERY" ? "It arrives at your door" : "It's ready for you to pick up"}
+                </span>
+              </li>
+            </ol>
+            <p className="mt-3 text-[13px] text-muted">
+              You can cancel any time before the store gets it.{" "}
+              {order.checkout.paymentMethod === "COD" ? "You pay when you receive it." : "Your online payment is refunded if you cancel."}
+            </p>
+          </section>
+        )}
         {dropped ? (
           <Alert tone="error" title={order.status === "REJECTED" ? "The store couldn't take this order" : "This order was cancelled"}>
             {order.rejectReason ?? "No reason given."}
             {order.checkout.paymentStatus === "REFUNDED" && " Your online payment was refunded."}
           </Alert>
-        ) : (
+        ) : scheduled ? null : (
           <Section title="Progress">
             <OrderProgress
               status={order.status}
@@ -225,8 +261,9 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           <ul className="space-y-2 text-[15px]">
             {order.items.map((item) => (
               <li key={item.id} className="flex justify-between gap-3">
-                <span className="text-ink">
+                <span className="min-w-0 text-ink">
                   {item.quantity}× {item.name}
+                  {item.note && <span className="block text-[13px] text-amber-800">“{item.note}”</span>}
                 </span>
                 <span className="text-muted">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
               </li>
@@ -287,7 +324,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             View receipt
           </ButtonLink>
         )}
-        {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT") && <CancelOrderButton orderId={order.id} />}
+        {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT" || order.status === "SCHEDULED") && <CancelOrderButton orderId={order.id} />}
         {(received || dropped) && <ReorderButton orderId={order.id} />}
       </div>
     </>

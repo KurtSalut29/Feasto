@@ -161,6 +161,8 @@ const ORDER_TABS = {
   /** Everything the store is still handling, as one queue: first come, first served */
   active: ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"],
   new: ["PLACED"],
+  /** Ordered for later: shown so the store can plan, sent to accept a while before the time */
+  scheduled: ["SCHEDULED"],
   preparing: ["ACCEPTED", "PREPARING"],
   ready: ["READY", "PICKED_UP"],
   done: ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"],
@@ -168,7 +170,7 @@ const ORDER_TABS = {
 
 /** What the store sees of an order: the dishes (with photos), the rider and the customer */
 const vendorOrderInclude = {
-  items: { select: { id: true, name: true, quantity: true, unitPrice: true, menuItem: { select: { imageUrl: true } } } },
+  items: { select: { id: true, name: true, quantity: true, unitPrice: true, note: true, menuItem: { select: { imageUrl: true } } } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true } } } },
   checkout: {
     select: {
@@ -210,13 +212,14 @@ vendorRouter.get("/orders/:id", async (req, res) => {
 });
 
 vendorRouter.get("/orders", async (req, res) => {
-  const tab = z.enum(["active", "new", "preparing", "ready", "done"]).catch("new").parse(req.query.tab);
+  const tab = z.enum(["active", "new", "scheduled", "preparing", "ready", "done"]).catch("new").parse(req.query.tab);
   const vendorId = await myVendorId(req.session!.userId);
 
   const [orders, counts] = await Promise.all([
     prisma.order.findMany({
       where: { vendorId, status: { in: [...ORDER_TABS[tab]] } },
-      orderBy: { createdAt: tab === "done" ? "desc" : "asc" },
+      // Waiting orders in the order they reached the store; scheduled ones by their time
+      orderBy: tab === "done" ? { createdAt: "desc" } : tab === "scheduled" ? { scheduledFor: "asc" } : { placedAt: "asc" },
       take: 100,
       include: vendorOrderInclude,
     }),
@@ -230,7 +233,7 @@ vendorRouter.get("/orders", async (req, res) => {
   res.json({
     tab,
     orders: (await withRiderLocations(orders)).map((o) => ({ ...o, autoCancel: autoCancelAt(o, autoCancelMinutes) })),
-    counts: { new: count(ORDER_TABS.new), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
+    counts: { new: count(ORDER_TABS.new), scheduled: count(ORDER_TABS.scheduled), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
   });
 });
 
@@ -354,7 +357,7 @@ vendorRouter.get("/overview", async (req, res) => {
   const since = new Date(startOfDay.getTime() - 13 * 86400_000);
   const [today, pending, inKitchen, dishes, tables, upcomingBookings, ratings, best] = await Promise.all([
     prisma.order.findMany({
-      where: { vendorId, createdAt: { gte: startOfDay }, status: { notIn: ["AWAITING_PAYMENT", "REJECTED", "CANCELLED"] } },
+      where: { vendorId, createdAt: { gte: startOfDay }, status: { notIn: ["AWAITING_PAYMENT", "SCHEDULED", "REJECTED", "CANCELLED"] } },
       select: { subtotal: true },
     }),
     prisma.order.count({ where: { vendorId, status: "PLACED" } }),

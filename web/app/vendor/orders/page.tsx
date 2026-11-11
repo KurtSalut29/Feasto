@@ -1,4 +1,4 @@
-import { ArrowDownWideNarrow, Bike, ClipboardList, History, ListOrdered, MessageSquareText, Store } from "lucide-react";
+import { ArrowDownWideNarrow, Bike, CalendarClock, ClipboardList, History, ListOrdered, MessageSquareText, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/auth";
 import { formatPeso, renderTime } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { itemsSummary, orderCode, statusLabel } from "@/lib/order-status";
+import { clockOf, dayOf, sendAtOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrder } from "@/lib/types";
 import { HistoryTable } from "./history-table";
@@ -21,7 +22,7 @@ import { WaitClock } from "./wait-clock";
 
 export const metadata: Metadata = { title: "Orders" };
 
-type Tab = "new" | "preparing" | "ready" | "done";
+type Tab = "new" | "scheduled" | "preparing" | "ready" | "done";
 type OrdersResponse = { orders: VendorOrder[]; counts: Record<Tab, number> };
 
 export default function VendorOrdersPage({ searchParams }: PageProps<"/vendor/orders">) {
@@ -58,8 +59,9 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
     );
   }
 
-  const [{ orders: queue, counts }, { store }] = await Promise.all([
+  const [{ orders: queue, counts }, { orders: later }, { store }] = await Promise.all([
     serverApi<OrdersResponse>("/vendor/orders?tab=active"),
+    serverApi<OrdersResponse>("/vendor/orders?tab=scheduled"),
     serverApi<{ store: { latitude: number | null; longitude: number | null } }>("/vendor/store"),
   ]);
   const storePin = pinOf(store.latitude, store.longitude);
@@ -173,7 +175,59 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
           </div>
         </div>
       )}
+
+      {later.length > 0 && <ScheduledList orders={later} />}
     </>
+  );
+}
+
+/**
+ * Orders for later, soonest first. Nothing to do yet: each one joins the queue by itself, to accept,
+ * a while before its time. Listed so the store can plan (and stock up) ahead.
+ */
+function ScheduledList({ orders }: { orders: VendorOrder[] }) {
+  return (
+    <section aria-labelledby="later-title" className="mt-6 overflow-hidden rounded-2xl border border-sky-100 bg-white">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-sky-100 bg-sky-50/60 px-4 py-3">
+        <h2 id="later-title" className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <CalendarClock className="size-4 text-sky-600" aria-hidden />
+          Scheduled for later · {orders.length}
+        </h2>
+        <p className="text-xs text-muted">Each one joins the queue by itself, to accept, before its time.</p>
+      </header>
+      <ul className="divide-y divide-line">
+        {orders.map((order) => {
+          const count = order.items.reduce((n, item) => n + item.quantity, 0);
+          const delivery = order.fulfillment === "DELIVERY";
+          const at = order.scheduledFor!;
+          return (
+            <li key={order.id}>
+              <Link
+                href={`/vendor/orders/${order.id}`}
+                className="flex items-center gap-3 px-4 py-3 transition hover:bg-canvas/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500"
+              >
+                <span className="w-20 shrink-0">
+                  <span className="block text-xs font-semibold text-sky-700">{dayOf(at)}</span>
+                  <span className="block font-bold text-ink tabular-nums">{clockOf(at)}</span>
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-ink">
+                    {orderCode(order.id)} <span className="font-medium text-muted">· {order.checkout.resident.name.split(" ")[0]}</span>
+                  </span>
+                  <span className="block truncate text-sm text-muted">
+                    {count} {count === 1 ? "item" : "items"} · {itemsSummary(order.items)}
+                  </span>
+                </span>
+                <span className="hidden shrink-0 text-right text-xs text-muted sm:block">
+                  <span className="block font-semibold text-ink">{delivery ? "Delivery" : "Pickup"}</span>
+                  Joins the queue {clockOf(sendAtOf(at, order.fulfillment))}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -207,7 +261,7 @@ function QueueRow({ order, position, on, href, renderedAt }: { order: VendorOrde
           <span className="truncate font-bold text-ink">
             {orderCode(order.id)} <span className="font-medium text-muted">· {order.checkout.resident.name.split(" ")[0]}</span>
           </span>
-          <WaitClock since={order.createdAt} status={order.status} renderedAt={renderedAt} />
+          <WaitClock since={order.placedAt ?? order.createdAt} status={order.status} renderedAt={renderedAt} />
         </span>
         <span className="mt-0.5 block truncate text-sm text-muted">
           {count} {count === 1 ? "item" : "items"} · {itemsSummary(order.items)}
@@ -226,10 +280,20 @@ function QueueRow({ order, position, on, href, renderedAt }: { order: VendorOrde
           <span className={`rounded-md px-1.5 py-0.5 tabular-nums ${payment.tone === "paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
             {formatPeso(payment.total)} · {payment.tone === "paid" ? "Paid" : order.checkout.paymentMethod === "COD" ? "Cash" : "Unpaid"}
           </span>
-          {order.checkout.notes && (
+          {order.scheduledFor && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-sky-800 ring-1 ring-sky-100">
+              <CalendarClock className="size-3.5" aria-hidden />
+              For {clockOf(order.scheduledFor)}
+            </span>
+          )}
+          {/* A note for the whole order or for a dish: either way the kitchen should read it first */}
+          {(order.checkout.notes || order.items.some((i) => i.note)) && (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-amber-800">
               <MessageSquareText className="size-3.5" aria-hidden />
-              Note
+              {(() => {
+                const dishNotes = order.items.filter((i) => i.note).length + (order.checkout.notes ? 1 : 0);
+                return dishNotes > 1 ? `${dishNotes} notes` : "Note";
+              })()}
             </span>
           )}
         </span>

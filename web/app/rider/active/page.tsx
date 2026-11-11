@@ -1,4 +1,4 @@
-import { Banknote, Check, CreditCard, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, type LucideIcon } from "lucide-react";
+import { Banknote, CalendarClock, Check, CreditCard, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense, type ReactNode } from "react";
@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
 import { pinOf, type LatLng } from "@/lib/geo";
 import { deliverySteps, orderCode, paymentName, riderPayment, statusLabel } from "@/lib/order-status";
+import { clockOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
 import { OrderChat } from "@/components/app/order-chat";
@@ -163,6 +164,12 @@ async function RiderActive() {
             <p className="mt-0.5 truncate text-sm text-muted">
               {order.vendor.name} to {order.checkout.resident.name}
             </p>
+            {order.scheduledFor && (
+              <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800">
+                <CalendarClock className="size-3.5" aria-hidden />
+                Deliver by {clockOf(order.scheduledFor)}
+              </p>
+            )}
           </div>
           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 tabular-nums">
             <span className="sr-only">You earn </span>+{formatPeso(order.deliveryFee)}

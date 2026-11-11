@@ -2,6 +2,7 @@ import { serverApi } from "@/lib/server-api";
 import type { OrderStatus, ResidentOrder } from "@/lib/types";
 import { LiveOrderBarView, type LiveOrder } from "./live-order-bar-view";
 
+/** A scheduled order isn't followed here until its store gets it (then it's PLACED) */
 const IN_PROGRESS: OrderStatus[] = ["AWAITING_PAYMENT", "PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
 /** The order the resident most wants to follow: one on the road first, then the newest */
 const URGENCY: OrderStatus[] = ["PICKED_UP", "READY", "PREPARING", "ACCEPTED", "PLACED", "AWAITING_PAYMENT"];

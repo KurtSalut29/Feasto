@@ -1,8 +1,9 @@
-import { Banknote, Bike, ChevronRight, CreditCard, MapPin, MessageSquareText, Phone, Printer, Store, TimerReset } from "lucide-react";
+import { Banknote, Bike, CalendarClock, ChevronRight, CreditCard, MapPin, MessageSquareText, Phone, Printer, Store, TimerReset } from "lucide-react";
 import Link from "next/link";
 import { OrderChat } from "@/components/app/order-chat";
 import { Badge } from "@/components/ui/badge";
 import { formatClock, formatPeso } from "@/lib/format";
+import { clockOf } from "@/lib/schedule";
 import { pinOf, type LatLng } from "@/lib/geo";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import type { VendorOrder } from "@/lib/types";
@@ -48,10 +49,17 @@ export function OrderPanel({
           </p>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <span>
-              No. {position} in line · placed {formatClock(order.createdAt)}
+              No. {position} in line · {order.scheduledFor ? `came in ${formatClock(order.placedAt ?? order.createdAt)}` : `placed ${formatClock(order.createdAt)}`}
             </span>
-            <WaitClock since={order.createdAt} status={order.status} renderedAt={renderedAt} />
+            <WaitClock since={order.placedAt ?? order.createdAt} status={order.status} renderedAt={renderedAt} />
           </p>
+          {/* Ordered for later: the time the resident wants it, so the kitchen works to it */}
+          {order.scheduledFor && (
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-sky-50 px-2.5 py-1 text-sm font-semibold text-sky-800 ring-1 ring-sky-100">
+              <CalendarClock className="size-4" aria-hidden />
+              Scheduled: {delivery ? "deliver by" : "ready by"} {clockOf(order.scheduledFor)}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <Link
@@ -127,7 +135,15 @@ export function OrderPanel({
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink text-xs font-bold text-white tabular-nums">
                 {item.quantity}×
               </span>
-              <span className="min-w-0 flex-1 font-medium text-ink">{item.name}</span>
+              <span className="min-w-0 flex-1 font-medium text-ink">
+                {item.name}
+                {item.note && (
+                  <span className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[13px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                    <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                    <span className="min-w-0 break-words">{item.note}</span>
+                  </span>
+                )}
+              </span>
               <span className="shrink-0 text-muted tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
             </li>
           ))}
