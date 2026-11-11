@@ -93,6 +93,68 @@ The slowest pages are the first Home page loads when everyone opens the app in t
 The web app renders pages and is the busiest part (Admin → System shows the API side); with one
 copy instead of two, 200 users were twice as slow.
 
+## 4. More and more people at once (how Feasto behaves under load)
+
+```powershell
+docker run --rm --network feasto_default -v "${PWD}\loadtest:/scripts" grafana/k6:1.3.0 run /scripts/ramp.js
+```
+
+The classroom visitors of part 3 in steps of 10, 25, 50 and 100 people (40 seconds each, `STEP=60s`
+for longer), then back down to 10. Each step is measured on its own, so you see how response times
+grow with the number of users, whether anything fails, and whether Feasto recovers.
+
+Measured on 2026-11-12 (the 24 sample residents; Docker: 6 CPUs / 3.8 GB, k6 on the same laptop):
+
+| People at once | Typical request | Slowest 5% | Home page, typical | Failed |
+|---|---|---|---|---|
+| 10 | 39 ms | 294 ms | 151 ms | 0% |
+| 25 | 54 ms | 561 ms | 152 ms | 0% |
+| 50 | 66 ms | 1.31 s | 195 ms | 0% |
+| 100 | 87 ms | 2.95 s | 1.33 s | 0% |
+| back to 10 | 35 ms | 175 ms | 103 ms | 0% |
+
+Nothing fails at any step; pages get slower past about 50 people because building pages (the web
+app) uses all the CPU there is, and speed comes straight back once the crowd leaves. What changed
+on the way to these numbers (before: Home 2.14 s typical at 100 people, 293 ms at 50):
+
+- The bar at the bottom of every resident page loaded the resident's whole order history to find the
+  orders in progress; it asks `/orders/summary` for just those now.
+- The Orders page shows the latest 15 past orders first (it was 50: about 500 KB per visit).
+- RabbitMQ's health check started an Erlang VM every 10 seconds, taking a whole CPU core; it's a
+  plain port check now.
+- The classroom setup runs 3 copies of the web app instead of 2 (`WEB_COPIES` in `.env`).
+
+## 5. Race conditions: many people doing the same thing at the same instant
+
+```powershell
+python loadtestaces.py
+```
+
+Twelve tests, each releasing all of its requests in the same instant (a thread barrier) and then
+checking the database. It makes its own store, 30 residents and 8 riders (`@race.test`) and deletes
+them at the end. Results go to `loadtest/results/races.json`.
+
+| Test | What happens at once | Correct result |
+|---|---|---|
+| The last plate | 30 residents order a dish with 1 left | 1 order, stock 0 |
+| Ten plates | 30 residents order from a stock of 10 | exactly 10 sold, stock never below 0 |
+| Double tap | the same checkout sent 8 times (same key) | 1 checkout |
+| Accept vs cancel | on 15 orders, the store accepts while the resident cancels | one of them wins on each; stock back only for the cancelled |
+| Eight riders, one job | 8 riders accept the same delivery | 1 rider gets it |
+| One rider, five jobs | a rider accepts 5 jobs at once | 1 job taken |
+| Rate the store twice | one order rated from 10 tabs | 1 review, stars counted once |
+| Tip twice | the rider rated and tipped from 10 tabs | 1 rating, tip paid once |
+| One table | 30 residents book the only table at the same time | 1 booking |
+| Scheduled orders | 10 come due while 6 worker processes look for them | each sent to the store once |
+| Pay vs cancel | 10 residents cancel while GCash is still confirming | nobody charged for a cancelled order |
+| Chat burst | 20 messages sent at once | all 20 saved |
+
+12 of 12 passed on 2026-11-12, and again while part 3 ran 100 people at the same time (0% failed
+requests out of 4,825). What makes them safe: conditional updates that only succeed while the row is
+still in the expected state (stock, order status, job not taken), unique indexes (one checkout per
+key, one review and one rider rating per order, one booking per table and time), and short Redis
+locks (a rider's accept).
+
 ## Running browse.js on its own
 
 ```powershell

@@ -245,6 +245,13 @@ export type ResidentOrder = OrderBase & {
   review: { rating: number; comment: string | null; createdAt: string } | null;
 };
 
+/** The light version of a resident's orders that every page can afford (GET /orders/summary) */
+export type OrdersSummary = {
+  active: { id: string; status: OrderStatus; fulfillment: Fulfillment; scheduledFor: string | null; vendor: { name: string }; rider: { name: string } | null }[];
+  count: number;
+  toRate: number;
+};
+
 /** A resident's rating of their rider */
 export type RiderRatingGiven = { rating: number; tags: string[]; comment: string | null; createdAt: string };
 

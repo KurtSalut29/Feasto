@@ -8,9 +8,8 @@ import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { ProfileCard, Row, RowGroup } from "@/components/app/profile-parts";
 import { requireRole } from "@/lib/auth";
 import { formatClock, formatDay } from "@/lib/format";
-import { isFinished } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { Address, ResidentBooking, ResidentOrder } from "@/lib/types";
+import type { Address, OrdersSummary, ResidentBooking } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -28,16 +27,14 @@ export default function ResidentAccountPage() {
  */
 async function ResidentAccount() {
   const user = await requireRole("RESIDENT");
-  const [{ orders }, { bookings }, { total: savedCount }, { addresses }, { unread }] = await Promise.all([
-    serverApi<{ orders: ResidentOrder[] }>("/orders"),
+  const [{ active: live, count: orderCount, toRate }, { bookings }, { total: savedCount }, { addresses }, { unread }] = await Promise.all([
+    serverApi<OrdersSummary>("/orders/summary"),
     serverApi<{ bookings: ResidentBooking[] }>("/bookings"),
     serverApi<{ total: number }>("/stores?favorites=1&limit=1"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
     serverApi<{ unread: number }>("/me/notifications?limit=1"),
   ]);
-  const live = orders.filter((o) => !isFinished(o.status));
   const upcoming = bookings.filter((b) => b.upcoming).reverse();
-  const toRate = orders.filter((o) => (o.status === "DELIVERED" || o.status === "COMPLETED") && !o.review).length;
   const home = addresses.find((a) => a.isDefault);
 
   return (
@@ -47,7 +44,7 @@ async function ResidentAccount() {
         <ProfileCard
           user={user}
           stats={[
-            { label: "Orders", value: orders.length, href: "/resident/orders" },
+            { label: "Orders", value: orderCount, href: "/resident/orders" },
             { label: "Bookings", value: bookings.length, href: "/resident/bookings" },
             { label: "Saved", value: savedCount, href: "/resident/saved" },
           ]}

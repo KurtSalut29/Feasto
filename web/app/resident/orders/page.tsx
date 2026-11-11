@@ -13,18 +13,21 @@ import { formatClock, formatPeso, manilaDate, timeAgo } from "@/lib/format";
 import { hasReceipt, isFinished, itemsSummary, orderCode, paymentName, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { clockOf, sendAtOf, whenInSentence } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
-import type { OrderStatus, ResidentOrder } from "@/lib/types";
+import type { OrderStatus, OrdersSummary, ResidentOrder } from "@/lib/types";
 import { ReorderButton } from "./[id]/order-feedback";
 
 export const metadata: Metadata = { title: "Orders" };
 
-export default function ResidentOrdersPage() {
+export default function ResidentOrdersPage({ searchParams }: PageProps<"/resident/orders">) {
   return (
     <Suspense fallback={<MobileSkeleton />}>
-      <ResidentOrders />
+      <ResidentOrders searchParams={searchParams} />
     </Suspense>
   );
 }
+
+/** Past orders shown at first; "Show older orders" loads up to 50 */
+const FIRST_PAST = 15;
 
 const totalOf = (order: ResidentOrder) => Number(order.subtotal) + Number(order.deliveryFee);
 const isReceived = (status: OrderStatus) => status === "DELIVERED" || status === "COMPLETED";
@@ -195,9 +198,13 @@ function dayLabel(iso: string) {
   return new Date(iso).toLocaleDateString("en-PH", { timeZone: "Asia/Manila", weekday: "short", month: "short", day: "numeric", year: "numeric" });
 }
 
-async function ResidentOrders() {
+async function ResidentOrders({ searchParams }: Pick<PageProps<"/resident/orders">, "searchParams">) {
   await requireRole("RESIDENT");
-  const { orders } = await serverApi<{ orders: ResidentOrder[] }>("/orders");
+  const all = (await searchParams).all === "1";
+  const [{ orders, more }, { toRate }] = await Promise.all([
+    serverApi<{ orders: ResidentOrder[]; more: boolean }>(`/orders?limit=${all ? 50 : FIRST_PAST}`),
+    serverApi<OrdersSummary>("/orders/summary"),
+  ]);
   const active = orders.filter((o) => !isFinished(o.status) && o.status !== "SCHEDULED");
   // Orders for later, soonest first
   const scheduled = orders
@@ -224,7 +231,6 @@ async function ResidentOrders() {
     const label = dayLabel(order.createdAt);
     days.set(label, [...(days.get(label) ?? []), order]);
   }
-  const toRate = past.filter((o) => isReceived(o.status) && !o.review).length;
 
   return (
     <>
@@ -286,6 +292,17 @@ async function ResidentOrders() {
               </div>
             ))}
           </div>
+          {more && !all && (
+            <Link
+              href="/resident/orders?all=1"
+              scroll={false}
+              className="mt-4 flex h-11 items-center justify-center gap-1 rounded-xl border border-line text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              Show older orders
+              <ChevronRight className="size-4 rotate-90" aria-hidden />
+            </Link>
+          )}
+          {more && all && <p className="mt-4 text-center text-xs text-muted">Showing your latest 50 past orders.</p>}
         </section>
       )}
     </>

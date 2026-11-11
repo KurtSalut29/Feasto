@@ -80,11 +80,13 @@ services:
     ports:
       - "5672:5672"   # used by the API and worker
       - "15672:15672" # web dashboard: http://localhost:15672 (feasto / feasto)
+    # A plain port check. `rabbitmq-diagnostics ping` starts a whole Erlang VM each time, which took a
+    # full CPU core every 10 seconds and slowed the web app down when many people were using it.
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD", "nc", "-z", "localhost", "5672"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 15
 
   # Runs once: applies database migrations, creates the admin account, then exits.
   migrate:

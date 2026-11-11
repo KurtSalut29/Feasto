@@ -8,7 +8,7 @@ import { autoCancelAt } from "../lib/autoCancel.js";
 import { prisma } from "../lib/db.js";
 import { getSettings } from "../lib/settings.js";
 import { HttpError, parseBody } from "../lib/http.js";
-import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayment, transition } from "../lib/orders.js";
+import { ACTIVE_STATUSES, broadcastOrder, FINISHED_STATUSES, orderCode, refreshStoreCache, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { notify } from "../lib/liveUpdates.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
@@ -32,14 +32,38 @@ const orderInclude = {
   riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },
 } as const;
 
+/**
+ * Every order still in progress, then the latest `limit` finished ones (50 at most) and whether
+ * there are older ones. The Orders page asks for 15 first: a long history made the page heavy to
+ * build, which slowed everyone down when many residents opened it at once.
+ */
 ordersRouter.get("/", async (req, res) => {
-  const orders = await prisma.order.findMany({
-    where: { checkout: { residentId: req.session!.userId } },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: orderInclude,
-  });
-  res.json({ orders });
+  const limit = z.coerce.number().int().min(1).max(50).catch(50).parse(req.query.limit);
+  const mine = { checkout: { residentId: req.session!.userId } };
+  const [active, finished] = await Promise.all([
+    prisma.order.findMany({ where: { ...mine, status: { in: ACTIVE_STATUSES } }, orderBy: { createdAt: "desc" }, include: orderInclude }),
+    prisma.order.findMany({ where: { ...mine, status: { in: FINISHED_STATUSES } }, orderBy: { createdAt: "desc" }, take: limit + 1, include: orderInclude }),
+  ]);
+  res.json({ orders: [...active, ...finished.slice(0, limit)], more: finished.length > limit });
+});
+
+/**
+ * What every resident page needs and nothing more: the orders still in progress (for the bar at the
+ * bottom), how many orders there are and how many wait for a rating. The full list is heavy (each
+ * order with its dishes, store, rider and ratings), so it's only loaded on the Orders page.
+ */
+ordersRouter.get("/summary", async (req, res) => {
+  const mine = { checkout: { residentId: req.session!.userId } };
+  const [active, count, toRate] = await Promise.all([
+    prisma.order.findMany({
+      where: { ...mine, status: { in: ACTIVE_STATUSES } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, status: true, fulfillment: true, scheduledFor: true, vendor: { select: { name: true } }, rider: { select: { name: true } } },
+    }),
+    prisma.order.count({ where: mine }),
+    prisma.order.count({ where: { ...mine, status: { in: ["DELIVERED", "COMPLETED"] }, review: null } }),
+  ]);
+  res.json({ active, count, toRate });
 });
 
 ordersRouter.get("/:id", async (req, res) => {

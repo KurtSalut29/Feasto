@@ -1,5 +1,5 @@
 import { serverApi } from "@/lib/server-api";
-import type { OrderStatus, ResidentOrder } from "@/lib/types";
+import type { OrderStatus, OrdersSummary } from "@/lib/types";
 import { LiveOrderBarView, type LiveOrder } from "./live-order-bar-view";
 
 /** A scheduled order isn't followed here until its store gets it (then it's PLACED) */
@@ -13,8 +13,9 @@ const URGENCY: OrderStatus[] = ["PICKED_UP", "READY", "PREPARING", "ACCEPTED", "
  * order changes (the live connection refreshes the page on every order update).
  */
 export async function LiveOrderBar() {
-  const { orders } = await serverApi<{ orders: ResidentOrder[] }>("/orders");
-  const live = orders.filter((o) => IN_PROGRESS.includes(o.status));
+  // Only the orders in progress: this runs on every resident page, so it mustn't load the whole history
+  const { active } = await serverApi<OrdersSummary>("/orders/summary");
+  const live = active.filter((o) => IN_PROGRESS.includes(o.status));
   if (live.length === 0) return null;
   const order = [...live].sort((a, b) => URGENCY.indexOf(a.status) - URGENCY.indexOf(b.status))[0]!;
 
