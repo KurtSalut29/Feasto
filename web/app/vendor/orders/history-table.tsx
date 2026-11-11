@@ -16,7 +16,32 @@ export function HistoryTable({ orders }: { orders: VendorOrder[] }) {
       {orders.length === 0 ? (
         <EmptyState Icon={ClipboardList} title="No finished orders yet" text="Orders move here once they're delivered, collected, declined or cancelled." />
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        {/* Phones: one card per order */}
+        <ul className="divide-y divide-line md:hidden">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link href={`/vendor/orders/${order.id}`} className="block px-4 py-3.5 transition hover:bg-canvas/60">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 font-semibold text-ink">
+                    {orderCode(order.id)} <span className="font-normal text-muted">· {order.checkout.resident.name}</span>
+                  </p>
+                  <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(order.subtotal)}</p>
+                </div>
+                <p className="mt-0.5 truncate text-sm text-muted">{order.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  <Badge tone={STATUS_TONE[order.status]} dot>
+                    {statusLabel(order.status, order.fulfillment)}
+                  </Badge>
+                  <span className="text-muted">{paymentName(order.checkout)}</span>
+                  <span className="text-gray-500">{formatDateTime(order.createdAt)}</span>
+                </div>
+                {order.rejectReason && <p className="mt-1 truncate text-xs text-muted">“{order.rejectReason}”</p>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
           <table className={`${TABLE} min-w-[820px]`}>
             <thead className={THEAD}>
               <tr>
@@ -82,6 +107,7 @@ export function HistoryTable({ orders }: { orders: VendorOrder[] }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </Card>
   );

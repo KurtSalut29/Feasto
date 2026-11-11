@@ -73,7 +73,7 @@ async function RiderAccount() {
           />
         )}
 
-        <nav aria-label="Your Feasto" className="grid grid-cols-2 gap-3">
+        <nav aria-label="Your Feasto" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           <Tile href="/rider/history" Icon={History} label="History" note={totals.today.count ? `${peso(totals.today.earnings)} today` : "Deliveries and pay"} />
           <Tile
             href={approved ? "/rider/jobs" : "/rider"}

@@ -146,7 +146,7 @@ export function StoreMenu({
               <p className="text-sm text-muted" aria-live="polite">
                 {dishes(found.length)} for “{query.trim()}”
               </p>
-              <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5">
+              <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-3 md:gap-x-4 xl:grid-cols-4">
                 {found.map((item) => (
                   <DishCard key={item.id} item={item} showSection {...add} />
                 ))}
@@ -180,7 +180,7 @@ export function StoreMenu({
                 </h3>
                 <span className="text-sm text-muted">{current.id === "menu-popular" ? "Most ordered here" : dishes(shownItems.length)}</span>
               </div>
-              <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5">
+              <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-5 md:grid-cols-3 md:gap-x-4 xl:grid-cols-4">
                 {shownItems.map((item) => (
                   <DishCard key={item.id} item={item} {...add} />
                 ))}
@@ -206,7 +206,7 @@ export function StoreMenu({
         />
       )}
 
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] space-y-2 px-4">
+      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] space-y-2 px-4 md:right-6 md:left-auto md:w-[400px] md:px-0">
         {message && (
           <p role="status" className="rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white shadow-lg">
             {message}
@@ -445,9 +445,9 @@ function DishSheet({
       onClick={(e) => {
         if (e.target === ref.current) ref.current?.close();
       }}
-      className="mx-auto mt-auto mb-0 max-h-dvh w-full max-w-[440px] bg-transparent p-0 backdrop:bg-ink/50"
+      className="mx-auto mt-auto mb-0 max-h-dvh w-full max-w-[440px] bg-transparent p-0 md:my-auto md:max-w-lg md:px-4 backdrop:bg-ink/50"
     >
-      <div className="flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl bg-white transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none">
+      <div className="flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl md:rounded-3xl md:starting:translate-y-6 md:starting:opacity-0 bg-white transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none">
         <div className="overflow-y-auto">
           <div className="relative">
             <DishPhoto src={item.imageUrl} dim={soldOut} eager sizes="440px" className="aspect-[4/3]" />

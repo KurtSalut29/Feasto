@@ -112,7 +112,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
         ) : (
           <>
           {/* Phones: one card per person, so the role, status and button are all in view */}
-          <ul className="divide-y divide-line md:hidden">
+          <ul className="divide-y divide-line lg:hidden">
             {data.users.map((user) => {
               const disabled = Boolean(user.disabledAt);
               const review = user.vendor ?? user.riderProfile;
@@ -151,7 +151,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
               );
             })}
           </ul>
-          <div className="hidden overflow-x-auto md:block">
+          <div className="hidden overflow-x-auto lg:block">
             <table className={`${TABLE} min-w-[760px]`}>
               <thead className={THEAD}>
                 <tr>

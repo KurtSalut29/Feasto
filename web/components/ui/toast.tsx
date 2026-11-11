@@ -6,8 +6,8 @@ import { useEffect, useRef, useState, useSyncExternalStore, type PointerEvent } 
 
 /**
  * Feasto's toast messages: short notes that say what just happened ("Order placed", "Couldn't
- * save your store") without covering the page. On phones they drop in at the top, on bigger
- * screens they rise in at the bottom right. Each one leaves by itself after a few seconds
+ * save your store") without covering the page. They drop in at the top centre on every screen,
+ * as a dark pill that stands out on Feasto's white pages. Each one leaves by itself after a few seconds
  * (the thin bar shows the time left, and stops while the pointer is on it), can be closed with
  * the ×, or swiped sideways.
  *
@@ -91,11 +91,12 @@ export const toast = {
   },
 };
 
+/** A bright icon on the dark pill says the kind at a glance; the bar below counts down in the same colour */
 const TONES: Record<ToastTone, { Icon: LucideIcon; icon: string; bar: string }> = {
-  success: { Icon: CircleCheck, icon: "bg-emerald-50 text-emerald-600 ring-emerald-100", bar: "bg-emerald-500" },
-  error: { Icon: CircleAlert, icon: "bg-red-50 text-red-600 ring-red-100", bar: "bg-red-500" },
-  warning: { Icon: TriangleAlert, icon: "bg-amber-50 text-amber-600 ring-amber-100", bar: "bg-amber-500" },
-  info: { Icon: Info, icon: "bg-brand-50 text-brand-600 ring-brand-100", bar: "bg-brand-500" },
+  success: { Icon: CircleCheck, icon: "bg-emerald-500 text-white", bar: "bg-emerald-400" },
+  error: { Icon: CircleAlert, icon: "bg-red-500 text-white", bar: "bg-red-400" },
+  warning: { Icon: TriangleAlert, icon: "bg-amber-400 text-ink", bar: "bg-amber-300" },
+  info: { Icon: Info, icon: "bg-brand-500 text-white", bar: "bg-brand-500" },
 };
 
 /** Put once in the root layout. */
@@ -124,7 +125,8 @@ export function Toaster() {
     <section
       aria-label="Notifications"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-3 [--toast-from:-14px] sm:[--toast-from:14px] top-[calc(env(safe-area-inset-top)+4.125rem)] z-[100] flex flex-col gap-2 sm:inset-x-auto sm:top-auto sm:right-5 sm:bottom-5 sm:w-[380px] sm:flex-col-reverse print:hidden"
+      // Top centre on every screen, just under the top bar, where the eye already is
+      className="pointer-events-none fixed inset-x-3 top-[calc(env(safe-area-inset-top)+4.25rem)] z-[100] mx-auto flex max-w-[440px] flex-col items-stretch gap-2 [--toast-from:-16px] print:hidden"
     >
       {list.map((t) => (
         <ToastCard key={`${t.id}-${t.key}`} toast={t} />
@@ -167,21 +169,21 @@ function ToastCard({ toast: t }: { toast: ToastItem }) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           style={dragX ? { transform: `translateX(${dragX}px)`, opacity: Math.max(0.2, 1 - Math.abs(dragX) / 220) } : undefined}
-          className={`group pointer-events-auto relative flex touch-pan-y items-start gap-3 overflow-hidden rounded-2xl border border-line/80 bg-white/95 py-3 pr-2.5 pl-3 shadow-[0_18px_40px_-18px_rgba(31,45,61,0.45),0_2px_6px_rgba(31,45,61,0.06)] backdrop-blur-md select-none ${
+          className={`group pointer-events-auto relative flex touch-pan-y items-start gap-3 overflow-hidden rounded-[22px] bg-ink py-3 pr-2.5 pl-3 text-white shadow-[0_22px_44px_-14px_rgba(31,45,61,0.6),0_4px_10px_rgba(31,45,61,0.18)] ring-1 ring-white/10 select-none ${
             dragging ? "" : "transition-[transform,opacity] duration-200"
           } ${t.leaving ? "animate-toast-out" : "animate-toast-in"} motion-reduce:animate-none`}
         >
-          <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ring-1 ${icon}`} aria-hidden>
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-full shadow-[0_0_0_4px_rgba(255,255,255,0.06)] ${icon}`} aria-hidden>
             <Icon className="size-[18px]" strokeWidth={2.25} />
           </span>
           <div className="min-w-0 flex-1 pt-0.5">
-            <p className="text-sm leading-snug font-semibold text-ink">{t.title}</p>
-            {t.description && <p className="mt-0.5 text-[13px] leading-snug text-muted">{t.description}</p>}
+            <p className="text-sm leading-snug font-semibold text-white">{t.title}</p>
+            {t.description && <p className="mt-0.5 text-[13px] leading-snug text-white/70">{t.description}</p>}
             {t.action && (
               <Link
                 href={t.action.href}
                 onClick={() => dismiss(t.id)}
-                className="mt-1.5 inline-block rounded text-[13px] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
+                className="mt-2 inline-flex h-7 items-center rounded-full bg-white/10 px-3 text-[13px] font-semibold text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-brand-500"
               >
                 {t.action.label}
               </Link>
@@ -191,7 +193,7 @@ function ToastCard({ toast: t }: { toast: ToastItem }) {
             type="button"
             onClick={() => dismiss(t.id)}
             aria-label="Close message"
-            className="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-brand-500"
           >
             <X className="size-4" aria-hidden />
           </button>
@@ -200,7 +202,7 @@ function ToastCard({ toast: t }: { toast: ToastItem }) {
             aria-hidden
             onAnimationEnd={() => dismiss(t.id)}
             style={{ animationDuration: `${t.duration}ms` }}
-            className={`absolute bottom-0 left-0 h-[3px] w-full origin-left animate-toast-timer opacity-70 group-focus-within:[animation-play-state:paused] group-hover:[animation-play-state:paused] ${bar}`}
+            className={`absolute bottom-0 left-0 h-[3px] w-full origin-left animate-toast-timer opacity-90 group-focus-within:[animation-play-state:paused] group-hover:[animation-play-state:paused] ${bar}`}
           />
         </div>
       </div>

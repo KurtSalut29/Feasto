@@ -175,7 +175,8 @@ async function RiderActive() {
         </div>
       </section>
 
-      <div className="space-y-3">
+      {/* Laptops up: the map stays on the left while the steps, payment and route sit beside it */}
+      <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={store} home={home} homeAddress={order.checkout.deliveryAddress} status={order.status} />
         <DeliveryActions orderId={order.id} status={order.status} />
         <LocationSharer orderId={order.id} heading={pickedUp ? "home" : "store"} store={store} home={home} />

@@ -10,6 +10,36 @@
 :root:has([data-tabbar]) {
   --tabbar-h: 4rem;
 }
+/* No tabs where the big-screen navigation takes over */
+@media (width >= 48rem) {
+  :root:has([data-tabbar="md"]) {
+    --tabbar-h: 0px;
+  }
+}
+@media (width >= 64rem) {
+  :root:has([data-tabbar="lg"]) {
+    --tabbar-h: 0px;
+  }
+}
+/* The vendor's and admin's bottom tabs show on phones and tablets only */
+@media (width < 64rem) {
+  :root:has([data-dash-tabbar]) {
+    --tabbar-h: 4rem;
+  }
+}
+
+/* The "More" sheet on phones */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
 
 @theme inline {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;

@@ -53,7 +53,7 @@ async function SavedStores() {
   return (
     <>
       <MobileHeading title="Saved stores" subtitle={`${total} saved · ${open} open now. Tap the heart to remove one.`} />
-      <ul className="grid grid-cols-2 gap-3">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
         {sorted.map((store) => (
           <SavedTile key={store.id} store={store} />
         ))}

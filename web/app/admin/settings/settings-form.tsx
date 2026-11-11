@@ -66,7 +66,7 @@ function WaveTimeline({ storeSeconds, waveSeconds }: { storeSeconds: number; wav
     { at: storeSeconds + waveSeconds * 2, who: "Every free rider" },
   ];
   return (
-    <ol className="grid gap-2 sm:grid-cols-4">
+    <ol className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
       {steps.map((step) => (
         <li key={step.who} className="rounded-xl bg-canvas px-3 py-2.5">
           <p className="text-sm font-semibold text-ink tabular-nums">{step.at === 0 ? "Right away" : `After ${whenInWords(step.at)}`}</p>
@@ -144,7 +144,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
   const waveSeconds = Number(values.riderWaveSeconds) || 0;
 
   return (
-    <form onSubmit={submit} noValidate className="max-w-3xl space-y-5">
+    <form onSubmit={submit} noValidate className="space-y-5">
       {error && <Alert tone="error">{error}</Alert>}
       {saved && !error && <Alert tone="success">Settings saved.</Alert>}
 
@@ -153,22 +153,15 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         Icon={Wallet}
         description="Follows the distance by road from the store to the resident, like other food apps. Charged per store; pickup stays free. The rider earns the whole fee."
       >
-        <div className="space-y-4 p-5">
+        {/* Big screens: the prices and what they cost on the left, the rush hours on the right */}
+        <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <div className="min-w-0 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Base fee (₱)" step="0.01" min="0" icon={Wallet} hint="₱0 to ₱500. Covers the first kilometres." {...field("deliveryFee")} />
             <TextField label="Kilometres the base fee covers" step="0.5" min="0" icon={Route} hint="0 to 20 km, e.g. 2." {...field("deliveryBaseKm")} />
             <TextField label="Each extra km (₱)" step="0.01" min="0" icon={Route} hint="₱0 to ₱100. A started kilometre counts as one." {...field("deliveryPerKm")} />
             <TextField label="Rush-hour add-on (₱)" step="0.01" min="0" icon={Sun} hint="₱0 to ₱200. Added in the rush hours below, when riders are busiest. 0 turns it off." {...field("deliveryPeakFee")} />
           </div>
-          <RushHoursEditor
-            value={peakHours}
-            onChange={(next) => {
-              setSaved(false);
-              setPeakHours(next);
-            }}
-            peakFee={Number(values.deliveryPeakFee) || 0}
-            errors={fieldErrors.peakHours}
-          />
           <FeeExamples
             base={Number(values.deliveryFee) || 0}
             baseKm={Number(values.deliveryBaseKm) || 0}
@@ -176,8 +169,22 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
             peak={Number(values.deliveryPeakFee) || 0}
           />
           <p className="text-sm text-muted">New checkouts use these prices. Orders already placed keep the fee they were placed with.</p>
+          </div>
+          <div className="min-w-0 xl:border-l xl:border-line xl:pl-6">
+            <RushHoursEditor
+              value={peakHours}
+              onChange={(next) => {
+                setSaved(false);
+                setPeakHours(next);
+              }}
+              peakFee={Number(values.deliveryPeakFee) || 0}
+              errors={fieldErrors.peakHours}
+            />
+          </div>
         </div>
       </Card>
+
+      <div className="grid items-start gap-5 xl:grid-cols-2">
 
       <Card title="Finding a rider" Icon={Bike} description="How long a job waits before it reaches more riders.">
         <div className="space-y-4 p-5">
@@ -227,10 +234,14 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
           <p className="text-sm text-muted">The stock goes back and online payments are refunded. Every automatic cancel is in the activity log as &quot;Feasto (automatic)&quot;.</p>
         </div>
       </Card>
+      </div>
 
-      <Button type="submit" loading={saving}>
-        Save settings
-      </Button>
+      {/* Always in reach, above the bottom tabs on phones */}
+      <div className="sticky bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-10 flex justify-end">
+        <Button type="submit" loading={saving} className="shadow-[0_12px_28px_-10px_rgba(210,70,0,0.6)]">
+          Save settings
+        </Button>
+      </div>
     </form>
   );
 }

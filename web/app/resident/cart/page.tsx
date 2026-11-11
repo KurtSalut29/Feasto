@@ -8,7 +8,7 @@ import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { QuantityControl } from "@/components/app/quantity-control";
 import { StoreCover } from "@/components/app/store-card";
 import { Alert } from "@/components/ui/alert";
-import { ButtonLink } from "@/components/ui/button";
+import { ButtonLink, buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, formatTime } from "@/lib/format";
@@ -96,6 +96,8 @@ async function ResidentCart() {
         </section>
       )}
 
+      {/* Big screens: the dishes on the left, the total and checkout on the right */}
+      <div className="md:grid md:grid-cols-[minmax(0,1fr)_340px] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
         {cart.groups.map((group) => (
           <section key={group.store.id} aria-label={group.store.name} className="overflow-hidden rounded-2xl border border-line">
@@ -149,7 +151,8 @@ async function ResidentCart() {
         ))}
       </div>
 
-      <section aria-label="Total" className="mt-5 rounded-2xl border border-line p-4">
+      <div className="md:sticky md:top-24">
+      <section aria-label="Total" className="mt-5 rounded-2xl border border-line bg-white p-4 md:mt-0">
         <dl className="space-y-1.5 text-[15px]">
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Items ({cart.itemCount})</dt>
@@ -173,10 +176,23 @@ async function ResidentCart() {
           {formatPeso(cart.itemsTotal)} only.
         </p>
       </section>
+      {/* Big screens: checkout right under the total */}
+      <div className="mt-3 hidden md:block">
+        {cart.hasProblems ? (
+          <p className="rounded-xl bg-red-50 px-4 py-3 text-center text-sm font-medium text-red-700 ring-1 ring-red-100">Fix the items marked in red to check out.</p>
+        ) : (
+          <Link href="/resident/checkout" className={`${buttonClass()} h-12 w-full`}>
+            Go to checkout · {formatPeso(cart.itemsTotal + delivery)}
+            <ChevronRight className="size-5" aria-hidden />
+          </Link>
+        )}
+      </div>
+      </div>
+      </div>
 
       {/* Room so the bar below never covers the total */}
-      <div className="h-20" aria-hidden />
-      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] px-4">
+      <div className="h-20 md:hidden" aria-hidden />
+      <div className="fixed inset-x-0 bottom-[calc(var(--tabbar-h)+1rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] px-4 md:hidden">
         {cart.hasProblems ? (
           <p className="rounded-2xl bg-red-50 px-4 py-4 text-center text-sm font-medium text-red-700 shadow-lg ring-1 ring-red-100">
             Fix the items marked in red to check out.

@@ -17,9 +17,9 @@ export default function ChangePasswordPage() {
 async function ChangePassword() {
   await requireRole("RESIDENT");
   return (
-    <>
+    <div className="md:max-w-2xl">
       <MobileHeading title="Change password" />
       <PasswordForm />
-    </>
+    </div>
   );
 }

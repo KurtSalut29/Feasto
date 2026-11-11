@@ -51,7 +51,8 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
             ]),
           )}
         />
-        <main className="min-w-0 px-4 py-6 sm:px-8 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
+        {/* Phones: room at the bottom for the tabs. Big screens: room on the left for the sidebar. */}
+        <main className="min-w-0 px-4 pt-5 pb-[calc(var(--tabbar-h)+2rem+env(safe-area-inset-bottom))] sm:px-6 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
           <div className="mx-auto max-w-6xl">
             {/* Big screens: today's date on the left, the bell on the right, above every page.
                 On small screens the bell sits in the sidebar's top bar instead. */}
@@ -140,7 +141,8 @@ async function SidebarContext() {
 }
 
 /** The signed-in person, with buttons to change the password and log out. */
-async function SidebarUser() {
+/** The signed-in person at the bottom of the sidebar, with password and log out (vendor, admin and rider) */
+export async function SidebarUser() {
   const user = await getCurrentUser();
 
   return (
@@ -157,7 +159,7 @@ async function SidebarUser() {
       </div>
       <div className="flex shrink-0 items-center lg:collapsed:flex-col lg:collapsed:gap-1.5">
         <Link
-          href={user.role === "VENDOR" ? "/vendor/password" : "/admin/password"}
+          href={`/${user.role.toLowerCase()}/password`}
           aria-label="Change password"
           title="Change password"
           className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"

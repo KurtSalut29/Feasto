@@ -26,7 +26,7 @@ import type { Role } from "./types";
  * `also` lists other pages that belong to this tab (e.g. Addresses is part of Account).
  * `group` is the sidebar heading the link sits under (dashboard roles only).
  */
-export type NavItem = { href: string; label: string; Icon: LucideIcon; also?: string[]; group?: string };
+export type NavItem = { href: string; label: string; Icon: LucideIcon; also?: string[]; group?: string; /** Shorter name for a bottom tab */ short?: string };
 
 /** Bottom tabs for the mobile roles and sidebar links for the dashboard roles. */
 export const NAVIGATION: Record<Role, NavItem[]> = {
@@ -45,18 +45,18 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password", "/rider/notifications"] },
   ],
   VENDOR: [
-    { href: "/vendor", label: "Overview", Icon: LayoutDashboard, group: "Today" },
+    { href: "/vendor", label: "Overview", short: "Home", Icon: LayoutDashboard, group: "Today" },
     { href: "/vendor/orders", label: "Orders", Icon: ClipboardList, group: "Today" },
     { href: "/vendor/reservations", label: "Reservations", Icon: CalendarDays, group: "Today" },
     { href: "/vendor/menu", label: "Menu", Icon: UtensilsCrossed, group: "Your store" },
     { href: "/vendor/riders", label: "Riders", Icon: Bike, group: "Your store" },
-    { href: "/vendor/store", label: "Store settings", Icon: Store, group: "Your store" },
+    { href: "/vendor/store", label: "Store settings", short: "Store", Icon: Store, group: "Your store" },
   ],
   ADMIN: [
-    { href: "/admin", label: "Overview", Icon: LayoutDashboard, group: "Manage" },
+    { href: "/admin", label: "Overview", short: "Home", Icon: LayoutDashboard, group: "Manage" },
     { href: "/admin/approvals", label: "Approvals", Icon: ShieldCheck, group: "Manage" },
     { href: "/admin/documents", label: "Documents", Icon: FileClock, group: "Manage" },
-    { href: "/admin/stuck", label: "Stuck orders", Icon: Hourglass, group: "Manage" },
+    { href: "/admin/stuck", label: "Stuck orders", short: "Stuck", Icon: Hourglass, group: "Manage" },
     { href: "/admin/orders", label: "Orders", Icon: ClipboardList, group: "Manage" },
     { href: "/admin/users", label: "Users", Icon: Users, group: "Manage" },
     { href: "/admin/reports", label: "Reports", Icon: BarChart3, group: "Insights" },
@@ -64,6 +64,12 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/admin/system", label: "System", Icon: Server, group: "Insights" },
     { href: "/admin/settings", label: "Settings", Icon: Settings, group: "Insights" },
   ],
+};
+
+/** The vendor's and admin's bottom tabs on phones; everything else is under "More" */
+export const DASHBOARD_TABS: Partial<Record<Role, string[]>> = {
+  VENDOR: ["/vendor", "/vendor/orders", "/vendor/menu", "/vendor/riders"],
+  ADMIN: ["/admin", "/admin/approvals", "/admin/stuck", "/admin/orders"],
 };
 
 const matches = (item: NavItem, pathname: string) =>

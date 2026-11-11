@@ -132,7 +132,9 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
   }
 
   return (
-    <div className="space-y-7">
+    // Big screens: the steps on the left, the summary and "Place order" beside them
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8">
+    <div className="min-w-0 space-y-7">
       <Step n={1} title="How do you want it?">
         <SegmentedControl
           name="fulfillment"
@@ -265,7 +267,10 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         </div>
       </Step>
 
-      <section aria-label="Summary" className="rounded-2xl border border-line p-4">
+    </div>
+
+    <div className="mt-7 space-y-4 lg:sticky lg:top-24 lg:mt-0">
+      <section aria-label="Summary" className="rounded-2xl border border-line bg-white p-4">
         <ul className="space-y-1.5 text-[15px]">
           <li className="flex justify-between gap-3">
             <span className="text-muted">Items ({cart.itemCount})</span>
@@ -304,6 +309,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
           {placing ? "Placing order…" : `Place order · ${formatPeso(total)}`}
         </Button>
       </div>
+    </div>
     </div>
   );
 }

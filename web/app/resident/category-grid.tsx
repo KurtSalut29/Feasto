@@ -14,7 +14,7 @@ const badge = (type: StoreType) => `/category-badges/${type.toLowerCase().replac
 export function CategoryGrid({ categories }: { categories: StoreCategory[] }) {
   const byType = new Map(categories.map((c) => [c.type, c]));
   return (
-    <ul className="grid grid-cols-3 gap-x-2 gap-y-3">
+    <ul className="grid grid-cols-3 gap-x-2 gap-y-3 md:grid-cols-5 lg:grid-cols-9 lg:gap-x-3">
       {STORE_TYPE_OPTIONS.flatMap(({ value, label }) => {
         const category = byType.get(value);
         if (!category) return [];
@@ -33,7 +33,7 @@ export function CategoryGrid({ categories }: { categories: StoreCategory[] }) {
                   fill
                   // Every badge is on the first screen, so none should wait for scrolling
                   loading="eager"
-                  sizes="(max-width: 440px) 30vw, 140px"
+                  sizes="(max-width: 440px) 30vw, (max-width: 1024px) 18vw, 130px"
                   className="object-contain transition duration-300 group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none"
                 />
               </span>

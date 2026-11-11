@@ -31,10 +31,14 @@ function Tabs({ role, pathname }: { role: MobileRole; pathname: string }) {
   const current = activeHref(items, pathname);
 
   return (
+    // Hidden where the big-screen navigation takes over: the resident's top bar from tablets up,
+    // the rider's sidebar from laptops up. data-tabbar says when, for the page's bottom spacing.
     <nav
       aria-label="Main"
-      data-tabbar
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      data-tabbar={role === "RESIDENT" ? "md" : "lg"}
+      className={`fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur ${
+        role === "RESIDENT" ? "md:hidden" : "md:max-w-2xl lg:hidden"
+      }`}
     >
       <ul className={`grid h-16 ${items.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
         {items.map((item) => {

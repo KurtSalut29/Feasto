@@ -1,18 +1,19 @@
 "use client";
 
-import { ChevronLeft, Menu, X } from "lucide-react";
+import { ChevronLeft, Ellipsis, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import { activeHref, NAVIGATION, type NavItem } from "@/lib/navigation";
+import { activeHref, DASHBOARD_TABS, NAVIGATION, type NavItem } from "@/lib/navigation";
 import { ROLE_HOME } from "@/lib/roles";
 import { SIDEBAR_STORAGE_KEY } from "@/lib/sidebar";
 import type { Role } from "@/lib/types";
 import { NotificationBell } from "./notification-bell";
 import { RailTooltip } from "./rail-tooltip";
 
-type DashboardRole = Extract<Role, "VENDOR" | "ADMIN">;
+/** The roles with a sidebar on big screens (the rider gets one too, from laptops up) */
+type DashboardRole = Extract<Role, "VENDOR" | "ADMIN" | "RIDER">;
 
 /** Extra content for a link, keyed by its href (e.g. a count of new orders). */
 export type NavBadges = Partial<Record<string, ReactNode>>;
@@ -73,7 +74,7 @@ function Brand({ role }: { role: DashboardRole }) {
 }
 
 /** Reads the URL inside <Suspense> so pages with an id in the URL can still prerender. */
-function NavLinks(props: { role: DashboardRole; badges: NavBadges; onNavigate?: () => void }) {
+function NavLinks(props: { role: DashboardRole; badges: NavBadges; onNavigate?: () => void; only?: (item: NavItem) => boolean }) {
   return (
     <Suspense fallback={<Links {...props} pathname={null} />}>
       <ActiveLinks {...props} />
@@ -81,7 +82,7 @@ function NavLinks(props: { role: DashboardRole; badges: NavBadges; onNavigate?: 
   );
 }
 
-function ActiveLinks(props: { role: DashboardRole; badges: NavBadges; onNavigate?: () => void }) {
+function ActiveLinks(props: { role: DashboardRole; badges: NavBadges; onNavigate?: () => void; only?: (item: NavItem) => boolean }) {
   return <Links {...props} pathname={usePathname()} />;
 }
 
@@ -102,16 +103,18 @@ function Links({
   badges,
   onNavigate,
   pathname,
+  only,
 }: {
   role: DashboardRole;
   badges: NavBadges;
   onNavigate?: () => void;
   pathname: string | null;
+  only?: (item: NavItem) => boolean;
 }) {
   const current = pathname === null ? null : activeHref(NAVIGATION[role], pathname);
   return (
     <div className="space-y-5">
-      {groupItems(NAVIGATION[role]).map((group, index) => (
+      {groupItems(NAVIGATION[role].filter((item) => !only || only(item))).map((group, index) => (
         <div key={group.label}>
           {group.label && (
             <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-[0.12em] whitespace-nowrap text-gray-400 uppercase lg:collapsed:sr-only">
@@ -152,21 +155,25 @@ function Links({
 // ---------- Sidebar ----------
 
 /**
- * Floating sidebar for the vendor and admin dashboards. On big screens it hovers beside the page
- * and can fold into an icon rail; on small screens it becomes a top bar with a slide-out menu.
+ * Floating sidebar for the vendor and admin dashboards (and the rider, from laptops up). On big
+ * screens it hovers beside the page and can fold into an icon rail. On phones the vendor and admin
+ * get a top bar and bottom tabs like the resident and rider apps, with the other pages under "More".
  *
  * `context` (the store or admin card) and `footer` (the signed-in user) come from the server.
+ * `phone={false}` leaves the phone layout to the page's own shell (the rider's).
  */
 export function SidebarNav({
   role,
   context,
   footer,
   badges,
+  phone = true,
 }: {
   role: DashboardRole;
   context: ReactNode;
   footer: ReactNode;
   badges: NavBadges;
+  phone?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -193,52 +200,101 @@ export function SidebarNav({
         <div className="shrink-0 border-t border-line p-3">{footer}</div>
       </aside>
 
-      {/* Small screens */}
-      <header className="sticky top-0 z-30 px-3 pt-3 lg:hidden">
-        <div className="flex h-14 items-center justify-between rounded-2xl border border-line/80 bg-white/90 pr-1.5 pl-4 shadow-[0_8px_24px_-16px_rgba(31,45,61,0.35)] backdrop-blur">
-          <Brand role={role} />
-          <div className="flex items-center gap-1">
-            <NotificationBell allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              aria-label="Open menu"
-              aria-expanded={open}
-              className="flex size-10 items-center justify-center rounded-xl text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-            >
-              <Menu className="size-5" aria-hidden />
-            </button>
-          </div>
-        </div>
-      </header>
-      {open && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button
-            type="button"
-            aria-label="Close menu"
-            className="absolute inset-0 bg-ink/30 backdrop-blur-[2px]"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute inset-y-3 left-3 flex w-72 max-w-[calc(100vw-1.5rem)] flex-col rounded-3xl bg-white shadow-2xl">
-            <div className="flex h-[72px] shrink-0 items-center justify-between pr-3 pl-6">
+      {phone && (
+        <>
+          {/* Phones and tablets: a top bar like the resident and rider apps */}
+          <header className="sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+            <div className="flex h-14 items-center justify-between gap-3 pr-2 pl-4">
               <Brand role={role} />
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close menu"
-                className="flex size-10 items-center justify-center rounded-xl hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
-              >
-                <X className="size-5" aria-hidden />
-              </button>
+              <NotificationBell allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             </div>
-            <div className="shrink-0 px-3 pb-2">{context}</div>
-            <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-              <NavLinks role={role} badges={badges} onNavigate={() => setOpen(false)} />
-            </nav>
-            <div className="shrink-0 border-t border-line p-3">{footer}</div>
-          </div>
-        </div>
+          </header>
+
+          <BottomTabs role={role} badges={badges} onMore={() => setOpen(true)} moreOpen={open} />
+
+          {open && (
+            <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="More pages">
+              <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/35 backdrop-blur-[2px] motion-safe:animate-[fade-in_0.2s_ease-out]" onClick={() => setOpen(false)} />
+              {/* A sheet that slides up from the bottom tabs */}
+              <div className="absolute inset-x-2 bottom-2 flex max-h-[85dvh] flex-col overflow-hidden rounded-3xl bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl motion-safe:animate-[sheet-up_0.28s_cubic-bezier(0.22,1,0.36,1)]">
+                <div className="flex shrink-0 items-center justify-between py-3 pr-3 pl-5">
+                  <p className="text-base font-semibold text-ink">More</p>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close"
+                    className="flex size-10 items-center justify-center rounded-xl hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+                  >
+                    <X className="size-5" aria-hidden />
+                  </button>
+                </div>
+                <div className="shrink-0 px-3 pb-2">{context}</div>
+                <nav aria-label="More pages" className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+                  <NavLinks role={role} badges={badges} onNavigate={() => setOpen(false)} only={(item) => !(DASHBOARD_TABS[role] ?? []).includes(item.href)} />
+                </nav>
+                <div className="shrink-0 border-t border-line p-3">{footer}</div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </>
+  );
+}
+
+// ---------- Phone bottom tabs (vendor and admin) ----------
+
+function BottomTabs(props: { role: DashboardRole; badges: NavBadges; onMore: () => void; moreOpen: boolean }) {
+  return (
+    <Suspense fallback={null}>
+      <ActiveTabs {...props} />
+    </Suspense>
+  );
+}
+
+function ActiveTabs({ role, badges, onMore, moreOpen }: { role: DashboardRole; badges: NavBadges; onMore: () => void; moreOpen: boolean }) {
+  const pathname = usePathname();
+  const items = NAVIGATION[role];
+  const tabs = (DASHBOARD_TABS[role] ?? []).map((href) => items.find((i) => i.href === href)!).filter(Boolean);
+  const current = activeHref(items, pathname);
+  const onTab = tabs.some((t) => t.href === current);
+  const tab = (active: boolean) =>
+    `flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
+      active ? "text-brand-700" : "text-muted hover:text-ink"
+    }`;
+  const pill = (active: boolean) => `relative flex h-7 w-12 items-center justify-center rounded-full transition ${active ? "bg-brand-50" : ""}`;
+
+  return (
+    <nav aria-label="Main" data-dash-tabbar className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <ul className="mx-auto grid h-16 max-w-xl grid-cols-5">
+        {tabs.map((item) => {
+          const active = item.href === current && !moreOpen;
+          return (
+            <li key={item.href}>
+              <Link href={item.href} aria-current={active ? "page" : undefined} className={`group ${tab(active)}`}>
+                <span className={pill(active)}>
+                  <item.Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} aria-hidden />
+                  {/* The live count (new orders, applications…), as a small badge on the icon */}
+                  {badges[item.href] && (
+                    <span className="absolute -top-1.5 left-[30px] [&>span]:ml-0 [&>span]:h-[18px] [&>span]:min-w-[18px] [&>span]:px-1 [&>span]:text-[10px] [&>span]:ring-2 [&>span]:ring-white">
+                      {badges[item.href]}
+                    </span>
+                  )}
+                </span>
+                {item.short ?? item.label}
+              </Link>
+            </li>
+          );
+        })}
+        <li>
+          <button type="button" onClick={onMore} aria-expanded={moreOpen} aria-haspopup="dialog" className={tab(moreOpen || !onTab)}>
+            <span className={pill(moreOpen || !onTab)}>
+              <Ellipsis className="size-5" strokeWidth={moreOpen || !onTab ? 2.25 : 1.75} aria-hidden />
+            </span>
+            More
+          </button>
+        </li>
+      </ul>
+    </nav>
   );
 }

@@ -116,7 +116,35 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
         {data.orders.length === 0 ? (
           <EmptyState Icon={ClipboardList} title="No orders found" text={q ? `Nothing matches “${q}”.` : "Orders will appear here as residents check out."} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per order, everything readable without scrolling sideways */}
+          <ul className="divide-y divide-line md:hidden">
+            {data.orders.map((o) => (
+              <li key={o.id} className="px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-ink">
+                      {orderCode(o.id)} <span className="font-normal text-muted">· {recent(o.createdAt)}</span>
+                    </p>
+                    <p className="truncate text-sm font-medium text-ink">{o.vendor.name}</p>
+                    <p className="truncate text-sm text-muted">for {o.checkout.resident.name}</p>
+                  </div>
+                  <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(Number(o.subtotal) + Number(o.deliveryFee))}</p>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+                  <Badge tone={STATUS_TONE[o.status]} dot>
+                    {statusLabel(o.status, o.fulfillment)}
+                  </Badge>
+                  <span className="inline-flex items-center gap-1 text-muted">
+                    {o.fulfillment === "PICKUP" ? <Store className="size-3.5" aria-hidden /> : <Bike className="size-3.5" aria-hidden />}
+                    {o.fulfillment === "PICKUP" ? "Pickup" : (o.rider?.name ?? "No rider yet")}
+                  </span>
+                  <span className="text-muted">{paymentName(o.checkout)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className={`${TABLE} min-w-[960px]`}>
               <thead className={THEAD}>
                 <tr>
@@ -171,6 +199,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
               </tbody>
             </table>
           </div>
+          </>
         )}
         <Pagination page={page} pageSize={data.pageSize} total={data.total} noun="orders" href={(n) => href({ page: n > 1 ? String(n) : undefined })} />
       </section>

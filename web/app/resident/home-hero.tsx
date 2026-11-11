@@ -22,9 +22,9 @@ export function HomeHero({ firstName, addresses }: { firstName: string; addresse
   return (
     <section
       aria-label="Welcome"
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_14px_30px_-16px_rgba(178,58,0,0.8)]"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_14px_30px_-16px_rgba(178,58,0,0.8)] md:p-8"
     >
-      <span aria-hidden className="absolute -top-14 -right-12 size-48 rounded-full bg-brand-500/70" />
+      <span aria-hidden className="absolute -top-14 -right-12 size-48 rounded-full bg-brand-500/70 md:-top-24 md:-right-10 md:size-80" />
       <span aria-hidden className="absolute top-20 -right-4 size-16 rounded-full bg-white/10" />
       <Image
         src="/Logo/feasto-mascot.png"
@@ -32,19 +32,21 @@ export function HomeHero({ firstName, addresses }: { firstName: string; addresse
         width={96}
         height={96}
         preload
-        className="absolute top-2 -right-2 size-24 rotate-[-8deg] object-contain drop-shadow-[0_6px_8px_rgba(80,25,0,0.35)]"
+        className="absolute top-2 -right-2 size-24 rotate-[-8deg] object-contain drop-shadow-[0_6px_8px_rgba(80,25,0,0.35)] md:top-1/2 md:right-10 md:size-40 md:-translate-y-1/2"
       />
 
-      <div className="relative pr-24">
+      <div className="relative pr-24 md:pr-56">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-100 uppercase">
           <meal.Icon className="size-3.5" aria-hidden />
           {weekdayLabel()} · {meal.label}
         </p>
-        <h1 className="mt-1.5 text-[26px] leading-tight font-bold tracking-tight">Hi, {firstName}!</h1>
-        <p className="mt-1 text-sm text-white/90">{meal.line}</p>
+        <h1 className="mt-1.5 text-[26px] leading-tight font-bold tracking-tight md:text-4xl">Hi, {firstName}!</h1>
+        <p className="mt-1 text-sm text-white/90 md:text-base">{meal.line}</p>
       </div>
 
-      <AddressSwitcher addresses={addresses} />
+      <div className="relative md:max-w-lg">
+        <AddressSwitcher addresses={addresses} />
+      </div>
     </section>
   );
 }

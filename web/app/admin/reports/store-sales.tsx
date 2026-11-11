@@ -63,7 +63,35 @@ export function StoreSales({ rows, totalSales, workers }: { rows: StoreSalesRow[
           </button>
         )}
       </div>
-      <div className="overflow-x-auto">
+      {/* Phones: one card per store */}
+      <ul className="divide-y divide-line md:hidden">
+        {shown.map((row) => {
+          const n = rank.get(row.vendorId)!;
+          const share = totalSales ? (row.sales / totalSales) * 100 : 0;
+          return (
+            <li key={row.vendorId} className="flex gap-3 px-4 py-3.5">
+              <span className={`w-6 shrink-0 pt-0.5 text-sm font-bold tabular-nums ${n <= 3 ? "text-brand-600" : "text-gray-400"}`}>{n}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate font-medium text-ink">{row.name}</p>
+                  <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(row.sales)}</p>
+                </div>
+                <p className="text-xs text-muted">
+                  {row.orders} {row.orders === 1 ? "order" : "orders"} · {row.topDish ? `Best seller: ${row.topDish}` : "No orders in this period"}
+                </p>
+                <div className="mt-2 flex items-center gap-2.5">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas">
+                    <div className="h-full rounded-full bg-brand-500" style={{ width: `${top ? (row.sales / top) * 100 : 0}%` }} />
+                  </div>
+                  <span className="w-10 text-right text-xs text-muted tabular-nums">{share.toFixed(0)}%</span>
+                  <WorkerChip name={row.computedBy} workers={workers} />
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden overflow-x-auto md:block">
         <table className={`${TABLE} min-w-[680px]`}>
           <thead className={THEAD}>
             <tr>

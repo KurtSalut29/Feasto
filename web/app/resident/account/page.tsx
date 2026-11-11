@@ -74,7 +74,7 @@ async function ResidentAccount() {
           </div>
         )}
 
-        <nav aria-label="Your Feasto" className="grid grid-cols-2 gap-3">
+        <nav aria-label="Your Feasto" className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           <Tile href="/resident/orders" Icon={ReceiptText} label="Orders" note={toRate ? `${toRate} to rate` : "History and receipts"} />
           <Tile href="/resident/bookings" Icon={CalendarDays} label="Bookings" note={upcoming.length ? `${upcoming.length} coming up` : "Reserve a table"} />
           <Tile href="/resident/saved" Icon={Heart} label="Saved stores" note={savedCount ? `${savedCount} saved` : "Tap a heart to save"} />

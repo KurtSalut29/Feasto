@@ -132,7 +132,7 @@ export function AddressManager({ addresses, startAdding = false }: { addresses: 
         />
       ) : (
         <>
-          <ul className="space-y-3">
+          <ul className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
             {addresses.map((address) => (
               <li key={address.id} className="rounded-2xl border border-line p-4">
                 <div className="flex items-start justify-between gap-3">

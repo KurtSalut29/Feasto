@@ -6,11 +6,17 @@ import type { LatLng } from "@/lib/geo";
 
 /**
  * The full map pages: the map fills the space between the top bar and the bottom tabs, with
- * its own controls floating on top. The phone column is at most 440px wide, like the rest of the app.
+ * its own controls floating on top. On phones it's the 440px app column. From tablets up the
+ * resident's map fills the screen under the top navigation; from laptops up the rider's fills
+ * the space beside the sidebar, as a rounded panel.
  */
-export function FullMapFrame({ children }: { children: ReactNode }) {
+export function FullMapFrame({ children, role = "RESIDENT" }: { children: ReactNode; role?: "RESIDENT" | "RIDER" }) {
+  const big =
+    role === "RESIDENT"
+      ? "md:top-[calc(4rem+1px)] md:bottom-0 md:max-w-none"
+      : "md:max-w-2xl lg:inset-x-auto lg:top-[5.25rem] lg:right-10 lg:bottom-6 lg:left-[312px] lg:mx-0 lg:max-w-none lg:rounded-3xl lg:ring-1 lg:ring-line lg:collapsed:left-[132px]";
   return (
-    <div className="fixed inset-x-0 top-[calc(3.5rem+1px+env(safe-area-inset-top))] bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-[440px] overflow-hidden">
+    <div className={`fixed inset-x-0 top-[calc(3.5rem+1px+env(safe-area-inset-top))] bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-[440px] overflow-hidden ${big}`}>
       {children}
     </div>
   );

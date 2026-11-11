@@ -17,9 +17,9 @@ export default function EditProfilePage() {
 async function EditProfile() {
   const user = await requireRole("RIDER");
   return (
-    <>
+    <div className="md:max-w-2xl">
       <MobileHeading title="Edit profile" />
       <ProfileForm name={user.name} phone={user.phone} email={user.email} />
-    </>
+    </div>
   );
 }

@@ -442,7 +442,7 @@ export function StoreForm({ initial, permit }: { initial: StoreSettings; permit?
         <div
           className={`rounded-2xl border border-line bg-white p-4 ${
             dirty
-              ? "max-xl:fixed max-xl:inset-x-3 max-xl:bottom-3 max-xl:z-30 max-xl:mx-auto max-xl:max-w-xl max-xl:shadow-[0_18px_40px_-12px_rgba(31,45,61,0.45)] xl:shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
+              ? "max-xl:fixed max-xl:inset-x-3 max-xl:bottom-[calc(var(--tabbar-h)+0.75rem+env(safe-area-inset-bottom))] max-xl:z-30 max-xl:mx-auto max-xl:max-w-xl max-xl:shadow-[0_18px_40px_-12px_rgba(31,45,61,0.45)] xl:shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
               : justSaved
                 ? "shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
                 : "shadow-[0_1px_2px_rgba(16,24,40,0.04)] max-xl:hidden"

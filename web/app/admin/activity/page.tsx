@@ -73,7 +73,24 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
         {data.entries.length === 0 ? (
           <EmptyState Icon={History} title="Nothing found" text={q ? `Nothing matches “${q}”.` : "Reviews, suspensions, cancellations and setting changes will appear here."} />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Phones: one card per line of the log */}
+          <ul className="divide-y divide-line md:hidden">
+            {data.entries.map((entry) => (
+              <li key={entry.id} className="px-4 py-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 font-medium text-ink">{entry.action}</p>
+                  <Badge tone={CATEGORIES[entry.category].tone}>{CATEGORIES[entry.category].label}</Badge>
+                </div>
+                <p className="mt-0.5 text-sm text-ink">{entry.target}</p>
+                {entry.detail && <p className="mt-0.5 text-sm text-muted">{entry.detail}</p>}
+                <p className="mt-1 text-xs text-gray-500">
+                  {entry.actorName} · {formatDateTime(entry.createdAt)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className={`${TABLE} min-w-[820px]`}>
               <thead className={THEAD}>
                 <tr>
@@ -100,6 +117,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
               </tbody>
             </table>
           </div>
+          </>
         )}
         <Pagination page={page} pageSize={data.pageSize} total={data.total} noun="lines" href={(n) => href({ page: n })} />
       </section>

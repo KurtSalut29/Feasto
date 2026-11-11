@@ -278,7 +278,7 @@ async function ResidentBookings({ searchParams }: Pick<PageProps<"/resident/book
               <h2 id="bookings-later" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
                 Later
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                 {later.map((b) => (
                   <BookingCard key={b.id} booking={b} upcoming />
                 ))}
@@ -290,7 +290,7 @@ async function ResidentBookings({ searchParams }: Pick<PageProps<"/resident/book
               <h2 id="bookings-past" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
                 Past and cancelled
               </h2>
-              <ul className="space-y-2">
+              <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                 {past.map((b) => (
                   <BookingCard key={b.id} booking={b} upcoming={false} />
                 ))}

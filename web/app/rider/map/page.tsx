@@ -13,7 +13,7 @@ export default function RiderMapPage() {
   return (
     <Suspense
       fallback={
-        <FullMapFrame>
+        <FullMapFrame role="RIDER">
           <div aria-busy="true" className="h-full animate-pulse bg-gray-200/70" />
         </FullMapFrame>
       }

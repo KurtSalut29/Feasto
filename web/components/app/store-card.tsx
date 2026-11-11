@@ -39,7 +39,7 @@ export function OpenBadge({ isOpen, opensAt }: { isOpen: boolean; opensAt?: stri
 /** A small store card for the home screen's sideways rows. */
 export function StoreTile({ store, href }: { store: StoreSummary; href: string }) {
   return (
-    <article className="group relative w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-line bg-white transition hover:shadow-[0_12px_28px_-16px_rgba(31,45,61,0.35)] has-focus-visible:outline-2 has-focus-visible:outline-brand-500">
+    <article className="group relative w-44 shrink-0 snap-start md:w-auto overflow-hidden rounded-2xl border border-line bg-white transition hover:shadow-[0_12px_28px_-16px_rgba(31,45,61,0.35)] has-focus-visible:outline-2 has-focus-visible:outline-brand-500">
       <div className="relative">
         <StoreCover imageUrl={store.imageUrl} Icon={STORE_TYPE_ICON[store.storeType]} className={`aspect-[4/3] ${store.isOpen ? "" : "opacity-60 grayscale"}`} />
         {!store.isOpen && (
@@ -63,7 +63,8 @@ export function StoreTile({ store, href }: { store: StoreSummary; href: string }
 }
 
 /**
- * A store in the browse list: one row, so several fit on a phone and are easy to compare. It leads
+ * A store in the browse list: one row on a phone, so several fit and are easy to compare; a card
+ * with the photo on top from tablets up, in a grid. It leads
  * with what decides an order: rating and distance, whether it's open, then what it serves.
  * The whole row opens the store; the heart is its own button (a button can't go inside a link,
  * so the link is stretched).
@@ -81,13 +82,13 @@ export function StoreCard({
   const { open, label } = storeState(store);
   const serves = [showType && STORE_TYPE_LABEL[store.storeType], ...store.categories].filter(Boolean).join(" · ");
   return (
-    <article className="group relative flex gap-3 py-3 has-focus-visible:rounded-xl has-focus-visible:outline-2 has-focus-visible:outline-brand-500">
+    <article className="group relative flex gap-3 py-3 has-focus-visible:rounded-xl has-focus-visible:outline-2 has-focus-visible:outline-brand-500 md:flex-col md:gap-0 md:overflow-hidden md:rounded-2xl md:border md:border-line md:bg-white md:py-0 md:transition md:hover:shadow-[0_14px_30px_-18px_rgba(31,45,61,0.4)]">
       <StoreCover
         imageUrl={store.imageUrl}
         Icon={STORE_TYPE_ICON[store.storeType]}
-        className={`size-24 shrink-0 rounded-xl ${open ? "" : "opacity-60 grayscale"}`}
+        className={`size-24 shrink-0 rounded-xl md:aspect-[4/3] md:size-auto md:w-full md:rounded-none ${open ? "" : "opacity-60 grayscale"}`}
       />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 md:p-3">
         <h3 className="truncate pr-8 font-semibold leading-snug text-ink group-hover:text-brand-700">
           <Link href={href} className="outline-none after:absolute after:inset-0 after:content-['']">
             {store.name}
@@ -121,7 +122,7 @@ export function StoreCard({
         )}
       </div>
       {/* Above the stretched link so tapping the heart doesn't open the store */}
-      <div className="absolute top-1 -right-2.5 z-10">
+      <div className="absolute top-1 -right-2.5 z-10 md:top-2 md:right-2 md:rounded-full md:bg-white/90 md:shadow-sm">
         <FavoriteButton key={String(store.isFavorite)} storeId={store.id} storeName={store.name} isFavorite={store.isFavorite} plain />
       </div>
     </article>

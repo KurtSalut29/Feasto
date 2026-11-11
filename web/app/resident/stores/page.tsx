@@ -99,7 +99,7 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
         <NoStores filters={filters} totalAnyType={totalAnyType} />
       ) : (
         <>
-          <div className="mt-1 divide-y divide-line">
+          <div className="mt-1 divide-y divide-line md:mt-3 md:grid md:grid-cols-3 md:gap-4 md:divide-y-0 lg:grid-cols-4">
             {stores.map((store) => (
               <StoreCard key={store.id} store={store} href={`/resident/stores/${store.id}`} showType={!filters.type} />
             ))}

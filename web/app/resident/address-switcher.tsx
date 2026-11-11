@@ -82,9 +82,9 @@ export function AddressSwitcher({ addresses }: { addresses: Address[] }) {
         onClick={(e) => {
           if (e.target === ref.current) close();
         }}
-        className="mx-auto mt-auto mb-0 max-h-dvh w-full max-w-[440px] bg-transparent p-0 text-ink backdrop:bg-ink/50"
+        className="mx-auto mt-auto mb-0 max-h-dvh w-full max-w-[440px] bg-transparent p-0 md:my-auto md:max-w-lg md:px-4 text-ink backdrop:bg-ink/50"
       >
-        <div className="flex max-h-[85dvh] flex-col rounded-t-3xl bg-white pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none">
+        <div className="flex max-h-[85dvh] flex-col rounded-t-3xl md:rounded-3xl md:starting:translate-y-6 md:starting:opacity-0 bg-white pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none">
           <div aria-hidden className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-line" />
           <div className="flex items-start justify-between gap-3 px-5 pt-3">
             <div>

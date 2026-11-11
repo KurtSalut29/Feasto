@@ -52,7 +52,7 @@ export function LiveOrderBarView({ order }: { order: LiveOrder }) {
     <>
       {/* Room at the end of the page, so the bar never covers the last thing on it */}
       <div aria-hidden className="h-20" />
-      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+0.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] px-3">
+      <div className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--tabbar-h)+0.75rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[440px] px-3 md:right-6 md:left-auto md:w-[400px] md:px-0">
         <Link
           href={`/resident/orders/${order.id}`}
           aria-label={`${line}. ${trackable ? "Track your rider live" : "See your order"}`}

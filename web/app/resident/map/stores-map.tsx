@@ -94,10 +94,10 @@ export function StoresMap({ home, homeLabel }: { home: LatLng | null; homeLabel:
           {home && <MapButton label={`Show ${homeLabel ?? "my address"}`} Icon={House} onClick={() => setFocus({ ...home })} />}
         </div>
       </div>
-      {error && <p className="absolute inset-x-3 top-16 rounded-xl bg-white px-3 py-2 text-sm text-red-600 shadow-md">{error}</p>}
+      {error && <p className="absolute inset-x-3 top-16 rounded-xl md:right-auto md:max-w-sm bg-white px-3 py-2 text-sm text-red-600 shadow-md">{error}</p>}
 
       {selected && (
-        <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5">
+        <div className="absolute inset-x-3 bottom-3 md:left-auto md:w-[400px] rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5">
           <div className="flex gap-3">
             <StoreCover imageUrl={selected.store.imageUrl} className="size-16 shrink-0 rounded-xl" />
             <div className="min-w-0 flex-1">
@@ -129,7 +129,7 @@ export function StoresMap({ home, homeLabel }: { home: LatLng | null; homeLabel:
         </div>
       )}
       {!selected && data && (openOnly ? data.openCount : data.total) === 0 && (
-        <p className="absolute inset-x-3 bottom-3 rounded-2xl bg-white p-4 text-center text-sm text-muted shadow-xl">
+        <p className="absolute inset-x-3 bottom-3 md:left-auto md:w-[400px] rounded-2xl bg-white p-4 text-center text-sm text-muted shadow-xl">
           No {openOnly ? "open " : ""}stores in this part of the map. Zoom out, or{" "}
           <Link href="/resident/stores" className="font-semibold text-brand-700">
             see the store list
@@ -138,7 +138,7 @@ export function StoresMap({ home, homeLabel }: { home: LatLng | null; homeLabel:
         </p>
       )}
       {!selected && data && data.total > data.stores.length && (
-        <p className="absolute inset-x-3 bottom-3 rounded-2xl bg-white px-4 py-3 text-center text-sm text-muted shadow-xl">
+        <p className="absolute inset-x-3 bottom-3 md:left-auto md:w-[400px] rounded-2xl bg-white px-4 py-3 text-center text-sm text-muted shadow-xl">
           Showing {data.stores.length} of {data.total} stores here. Zoom in to see the rest.
         </p>
       )}

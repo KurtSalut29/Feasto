@@ -105,7 +105,7 @@ export function JobList({ initial, pageSize, busy }: { initial: JobsPage; pageSi
         />
       ) : (
         <>
-          <ul className="space-y-3">
+          <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {jobs.map((job) => (
               <JobCard key={job.id} job={job} me={position} busy={busy} />
             ))}

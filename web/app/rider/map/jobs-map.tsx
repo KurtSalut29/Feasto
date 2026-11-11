@@ -55,7 +55,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
   ];
 
   return (
-    <FullMapFrame>
+    <FullMapFrame role="RIDER">
       <FeastoMap
         pins={pins}
         start={{ center: DEFAULT_CENTER, zoom: 15 }}
@@ -72,7 +72,46 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         }}
       />
 
-      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+      {/* Laptops up: every job in view listed beside the map; choosing one shows its pin */}
+      <aside aria-label="Jobs in view" className="absolute top-3 bottom-3 left-3 z-[1] hidden w-[320px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5 lg:flex">
+        <div className="shrink-0 border-b border-line px-4 py-3">
+          <p className="font-semibold text-ink">{online ? `${total} open ${total === 1 ? "job" : "jobs"} in view` : "You're offline"}</p>
+          <p className="text-xs text-muted">{online ? "Move the map to see jobs elsewhere." : "Go online to see and take jobs."}</p>
+        </div>
+        {online && groups.length === 0 ? (
+          <p className="p-4 text-sm text-muted">No open jobs in this part of the map.</p>
+        ) : (
+          <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
+            {groups.flatMap((group) =>
+              group.jobs.map((job) => (
+                <li key={job.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedId(group.id);
+                      setFocus(group.at);
+                    }}
+                    aria-pressed={group.id === selectedId}
+                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-canvas focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
+                      group.id === selectedId ? "bg-brand-50/70" : ""
+                    }`}
+                  >
+                    <Store className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">{job.vendor.name}</span>
+                      <span className="block truncate text-xs text-muted">To {job.checkout.deliveryAddress}</span>
+                      {me && <span className="block text-xs text-sky-700">{formatDistance(distanceKm(me, group.at))} from you</span>}
+                    </span>
+                    <span className="shrink-0 text-sm font-bold text-ink tabular-nums">{formatPeso(job.deliveryFee)}</span>
+                  </button>
+                </li>
+              )),
+            )}
+          </ul>
+        )}
+      </aside>
+
+      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 lg:left-[344px]">
         <div className="pointer-events-auto flex flex-col items-start gap-2">
           <p className="rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-ink shadow-md ring-1 ring-black/5">
             {online ? `${total} open ${total === 1 ? "job" : "jobs"} here` : "You're offline"}
@@ -102,12 +141,12 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         </div>
       </div>
       {error === "blocked" && (
-        <p className="absolute inset-x-3 top-24 rounded-xl bg-white px-3 py-2 text-sm text-red-600 shadow-md">
+        <p className="absolute inset-x-3 top-24 rounded-xl md:right-auto md:max-w-sm lg:left-[344px] bg-white px-3 py-2 text-sm text-red-600 shadow-md">
           Location is blocked. Allow it in your browser settings to see yourself on the map.
         </p>
       )}
 
-      <div className="absolute inset-x-3 bottom-3 space-y-2">
+      <div className="absolute inset-x-3 bottom-3 space-y-2 md:left-auto md:w-[380px]">
         {!online && (
           <div className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-black/5">
             <Power className="size-5 shrink-0 text-muted" aria-hidden />

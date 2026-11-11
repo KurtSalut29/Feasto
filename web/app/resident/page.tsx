@@ -43,7 +43,8 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
     <>
       <HomeHero firstName={user.name.split(" ")[0]} addresses={addresses} />
 
-      <div className="mt-4">
+      {/* Big screens search from the top bar */}
+      <div className="mt-4 lg:hidden">
         <StoreSearch filters={NO_FILTERS} />
       </div>
 
@@ -53,10 +54,10 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
         </div>
       ) : (
         <>
-          <section className="mt-6" aria-label="Categories">
+          <section className="mt-6 md:mt-8" aria-label="Categories">
             <SectionHeading title="Categories" seeAll={{ href: browseHref(NO_FILTERS), label: `All ${sections.total} stores` }} />
             <CategoryGrid categories={sections.categories} />
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3 md:max-w-md">
               <Shortcut href={browseHref({ ...NO_FILTERS, bookable: true })} Icon={CalendarDays} label="Book a table" />
               <Shortcut href="/resident/saved" Icon={Heart} label="Saved stores" />
             </div>
@@ -125,9 +126,10 @@ function StoreRow({
 }) {
   if (stores.length === 0) return null;
   return (
-    <section className="mt-7" aria-label={title}>
+    <section className="mt-7 md:mt-10" aria-label={title}>
       <SectionHeading title={title} subtitle={subtitle} seeAll={seeAll} />
-      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+      {/* Phones: a row that scrolls sideways. Big screens: a grid of the first ones, "See all" for the rest. */}
+      <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-4 md:overflow-visible md:px-0 md:[&>li:nth-child(n+9)]:hidden lg:grid-cols-6 lg:gap-4 lg:[&>li:nth-child(n+7)]:hidden">
         {stores.map((store) => (
           <li key={store.id} className="contents">
             <StoreTile store={store} href={`/resident/stores/${store.id}`} />

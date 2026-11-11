@@ -51,7 +51,7 @@ export function DeliveryMap({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-line">
-      <FeastoMap pins={pins} route={from && target ? { from, to: target } : null} onRoute={setRoute} label={label} className="h-60" />
+      <FeastoMap pins={pins} route={from && target ? { from, to: target } : null} onRoute={setRoute} label={label} className="h-60 lg:h-[420px]" />
       <div className="space-y-0.5 border-t border-line px-4 py-3 text-sm empty:hidden">
         {route && from && target && (
           <p className="flex items-center gap-2 font-semibold text-ink">

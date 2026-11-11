@@ -64,7 +64,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
       </div>
 
-      <div className="space-y-4">
+      {/* Big screens: two columns, read top to bottom (the live map first) */}
+      <div className="space-y-4 lg:block lg:columns-2 lg:gap-6 lg:space-y-0 lg:[&>*]:mb-4 lg:[&>*]:break-inside-avoid">
         {/* Live tracking comes first: it's what the resident opens this page for */}
         {onTheWay && (
           <RiderTracking

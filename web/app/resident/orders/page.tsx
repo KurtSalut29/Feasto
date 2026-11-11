@@ -193,7 +193,7 @@ async function ResidentOrders() {
           <h2 id="orders-active" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
             In progress
           </h2>
-          <ul className="space-y-3">
+          <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {active.map((o) => (
               <LiveOrder key={o.id} order={o} />
             ))}
@@ -216,7 +216,7 @@ async function ResidentOrders() {
             {[...days].map(([label, list]) => (
               <div key={label}>
                 <h3 className="mb-2 text-[13px] font-semibold text-ink">{label}</h3>
-                <ul className="space-y-2">
+                <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                   {list.map((o) => (
                     <PastOrder key={o.id} order={o} />
                   ))}

@@ -59,7 +59,9 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
   const TypeIcon = STORE_TYPE_ICON[store.storeType];
 
   return (
-    <>
+    // Big screens: the store and its menu on the left, where and when plus reviews on the right
+    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-10">
+    <div className="min-w-0">
       {/* The store's logo in a circle, with its name, hours and description centered under it */}
       <div className="relative -mx-4 -mt-5 px-4 pt-7">
         <div aria-hidden className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-brand-50 to-white" />
@@ -144,12 +146,15 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
           otherStores={cart.groups.filter((g) => g.store.id !== store.id).length}
           items={store.menuItems} quantities={quantities} ordering={{ canOrder: open, closedText }} />
       )}
+    </div>
 
+    <div className="min-w-0 lg:[&>section:first-child]:mt-8">
       <StoreInfo store={store} status={status} open={open} distance={distance} address={address} storePin={storePin} homePin={homePin} />
       <Reviews store={store} />
       {/* Room at the end so the cart bar never covers the last review */}
       <div className="h-16" aria-hidden />
-    </>
+    </div>
+    </div>
   );
 }
 
