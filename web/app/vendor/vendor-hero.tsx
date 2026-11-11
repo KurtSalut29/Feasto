@@ -2,7 +2,7 @@ import { CalendarDays, Clock, Store, UtensilsCrossed, type LucideIcon } from "lu
 import Image from "next/image";
 import Link from "next/link";
 import { storeState } from "@/components/app/store-status";
-import { formatTime, greeting } from "@/lib/format";
+import { formatHours, greeting } from "@/lib/format";
 
 type HeroStore = {
   name: string;
@@ -36,7 +36,7 @@ export function VendorHero({
   const { open, label } = storeState(store);
   const facts: { href: string; Icon: LucideIcon; text: string }[] = [
     { href: "/vendor/menu", Icon: UtensilsCrossed, text: `${dishes} ${dishes === 1 ? "dish" : "dishes"} on the menu` },
-    { href: "/vendor/store", Icon: Clock, text: `${formatTime(store.opensAt)} – ${formatTime(store.closesAt)}` },
+    { href: "/vendor/store", Icon: Clock, text: formatHours(store) },
     ...(store.acceptsReservations
       ? [{ href: "/vendor/reservations", Icon: CalendarDays, text: `${bookings} upcoming ${bookings === 1 ? "booking" : "bookings"}` }]
       : []),

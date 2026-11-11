@@ -11,7 +11,10 @@ export function manilaTime(now = new Date()) {
   return manilaClock.format(now);
 }
 
-/** Open = inside opening hours and not switched to "temporarily closed". */
+/**
+ * Open = inside opening hours and not switched to "temporarily closed". Closing at "24:00" means
+ * midnight at the end of the day, so a store with 00:00–24:00 is open 24 hours.
+ */
 export function isStoreOpen(store: { opensAt: string; closesAt: string; isTemporarilyClosed: boolean }, now = new Date()) {
   if (store.isTemporarilyClosed) return false;
   const time = manilaTime(now);

@@ -17,7 +17,7 @@ import { Alert } from "@/components/ui/alert";
 import { ButtonLink, buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, formatTime } from "@/lib/format";
+import { formatHours, formatPeso, formatTime, isOpenAllDay } from "@/lib/format";
 import { distanceKm, formatDistance, pinOf } from "@/lib/geo";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_ICON } from "@/lib/store-type-icons";
@@ -54,7 +54,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
   const distance = storePin && homePin ? distanceKm(storePin, homePin) : null;
   const quantities = Object.fromEntries(cart.groups.find((g) => g.store.id === store.id)?.items.map((i) => [i.menuItemId, i.quantity]) ?? []);
   const { open, label } = storeState(store);
-  const status = open ? `Open until ${formatTime(store.closesAt)}` : label;
+  const status = open ? (isOpenAllDay(store) ? "Open 24 hours" : `Open until ${formatTime(store.closesAt)}`) : label;
   const closedText = store.isTemporarilyClosed ? "Not taking orders right now" : `Ordering opens at ${formatTime(store.opensAt)}`;
   const TypeIcon = STORE_TYPE_ICON[store.storeType];
 
@@ -242,9 +242,7 @@ function StoreInfo({
         </div>
         <dl className="divide-y divide-line">
           <InfoRow Icon={Clock} label="Hours">
-            <span className="block whitespace-nowrap">
-              {formatTime(store.opensAt)} – {formatTime(store.closesAt)}
-            </span>
+            <span className="block whitespace-nowrap">{formatHours(store)}</span>
             <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
               <span className={`inline-flex items-center gap-1.5 font-semibold ${open ? "text-emerald-700" : "text-gray-600"}`}>
                 <span className={`size-1.5 rounded-full ${open ? "bg-emerald-500" : "bg-gray-400"}`} aria-hidden />

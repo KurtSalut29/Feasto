@@ -6,7 +6,7 @@ import { StoreCover } from "@/components/app/store-card";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatTime } from "@/lib/format";
+import { formatHours, isOpenAllDay } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { StoreDetail } from "@/lib/types";
 import { BookingForm } from "./booking-form";
@@ -41,7 +41,7 @@ async function Book({ params }: Pick<PageProps<"/resident/stores/[id]/book">, "p
           </p>
           <p className="flex items-center gap-1.5">
             <Clock className="size-3.5 shrink-0" aria-hidden />
-            {formatTime(store.opensAt)} – {formatTime(store.closesAt)} daily
+            {isOpenAllDay(store) ? "Open 24 hours, every day" : `${formatHours(store)} daily`}
           </p>
           {store.canBook && (
             <p className="flex items-center gap-1.5">

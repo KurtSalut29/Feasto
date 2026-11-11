@@ -1,7 +1,7 @@
 import { CalendarDays, Store, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatTime } from "@/lib/format";
+import { formatTime, isOpenAllDay } from "@/lib/format";
 import { formatDistance } from "@/lib/geo";
 import { STORE_TYPE_ICON } from "@/lib/store-type-icons";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
@@ -106,7 +106,7 @@ export function StoreCard({
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
           <span className={`inline-flex items-center gap-1.5 font-medium ${open ? "text-emerald-700" : "text-gray-600"}`}>
             <span className={`size-1.5 rounded-full ${open ? "bg-emerald-500" : "bg-gray-400"}`} aria-hidden />
-            {open ? `Open until ${formatTime(store.closesAt)}` : label}
+            {open ? (isOpenAllDay(store) ? "Open 24 hours" : `Open until ${formatTime(store.closesAt)}`) : label}
           </span>
           {store.acceptsReservations && (
             <span className="inline-flex items-center gap-1 text-muted">

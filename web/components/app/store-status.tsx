@@ -1,4 +1,4 @@
-import { formatTime } from "@/lib/format";
+import { formatTime, isOpenAllDay } from "@/lib/format";
 
 type Hours = { opensAt: string; closesAt: string; isTemporarilyClosed: boolean };
 
@@ -6,6 +6,7 @@ type Hours = { opensAt: string; closesAt: string; isTemporarilyClosed: boolean }
 export function storeState(store: Hours) {
   if (store.isTemporarilyClosed) return { open: false, label: "Temporarily closed" };
   const now = new Date().toLocaleTimeString("en-GB", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  if (isOpenAllDay(store)) return { open: true, label: "Open 24 hours" };
   if (now >= store.opensAt && now < store.closesAt) return { open: true, label: `Open now · until ${formatTime(store.closesAt)}` };
   return { open: false, label: `Closed · opens ${formatTime(store.opensAt)}` };
 }

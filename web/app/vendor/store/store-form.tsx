@@ -17,7 +17,7 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
-import { formatTime } from "@/lib/format";
+import { formatHours, formatTime, isOpenAllDay, OPEN_ALL_DAY } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
 import { STORE_TYPE_LABEL, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { OnlinePayment, StoreType } from "@/lib/types";
@@ -80,7 +80,7 @@ function Preview({ values }: { values: StoreSettings }) {
       <div className="p-3.5">
         <p className="truncate font-semibold text-ink">{values.name || "Your store name"}</p>
         <p className="text-xs text-muted">
-          {STORE_TYPE_LABEL[values.storeType]} · {formatTime(values.opensAt)} – {formatTime(values.closesAt)}
+          {STORE_TYPE_LABEL[values.storeType]} · {formatHours(values)}
         </p>
         {values.description && <p className="mt-2 line-clamp-2 text-sm text-muted">{values.description}</p>}
         <p className="mt-2 flex items-start gap-1.5 text-xs text-muted">
@@ -181,12 +181,28 @@ export function StoreForm({ initial, permit, account }: { initial: StoreSettings
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const dirty = JSON.stringify(values) !== JSON.stringify(savedValues);
   const hours = hoursOpen(values.opensAt, values.closesAt);
+  const allDay = isOpenAllDay(values);
+  // The hours from before "Open 24 hours" was switched on, to put back when it's switched off
+  const [usualHours, setUsualHours] = useState(() => (isOpenAllDay(initial) ? { opensAt: "08:00", closesAt: "21:00" } : { opensAt: initial.opensAt, closesAt: initial.closesAt }));
   const noPayment = !values.acceptsCash && values.onlinePayments.length === 0;
 
   function set<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
     setValues((v) => ({ ...v, [key]: value }));
     setJustSaved(false);
     setFieldErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
+  }
+
+  function setHours(hoursNow: { opensAt: string; closesAt: string }) {
+    setValues((v) => ({ ...v, ...hoursNow }));
+    setJustSaved(false);
+    setFieldErrors((e) => ({ ...e, opensAt: undefined, closesAt: undefined }));
+  }
+
+  function setAllDay(on: boolean) {
+    if (on) {
+      setUsualHours({ opensAt: values.opensAt, closesAt: values.closesAt });
+      setHours(OPEN_ALL_DAY);
+    } else setHours(usualHours);
   }
 
   function setOnline(methods: OnlinePayment[], on: boolean) {
@@ -305,17 +321,40 @@ export function StoreForm({ initial, permit, account }: { initial: StoreSettings
             <Card title="Opening hours" description="Philippine time. Residents can only order while you're open." Icon={Clock}>
               <div className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] md:items-start">
                 <div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <TextField label="Opens" type="time" value={values.opensAt} onChange={(e) => set("opensAt", e.target.value)} error={err("opensAt")} />
-                    <TextField label="Closes" type="time" value={values.closesAt} onChange={(e) => set("closesAt", e.target.value)} error={err("closesAt")} />
-                  </div>
-                  {hours !== null && (
-                    <p className="mt-2 text-sm text-muted">
-                      Open every day, {formatTime(values.opensAt)} – {formatTime(values.closesAt)}{" "}
-                      <span className="font-semibold whitespace-nowrap text-ink">
-                        ({hours} {hours === 1 ? "hour" : "hours"})
-                      </span>
+                  <SwitchField
+                    label="Open 24 hours"
+                    description="Take orders any time, day and night, every day."
+                    checked={allDay}
+                    onChange={setAllDay}
+                  />
+                  {allDay ? (
+                    <p className="mt-3 text-sm text-muted">
+                      Residents can order any time.{" "}
+                      <span className="font-semibold whitespace-nowrap text-ink">(24 hours)</span>
                     </p>
+                  ) : (
+                    <>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <TextField label="Opens" type="time" value={values.opensAt} onChange={(e) => set("opensAt", e.target.value)} error={err("opensAt")} />
+                        {/* 12:00 AM as the closing time means midnight at the end of the day (24:00) */}
+                        <TextField
+                          label="Closes"
+                          type="time"
+                          value={values.closesAt === "24:00" ? "00:00" : values.closesAt}
+                          onChange={(e) => set("closesAt", e.target.value === "00:00" ? "24:00" : e.target.value)}
+                          error={err("closesAt")}
+                        />
+                      </div>
+                      {hours !== null && (
+                        <p className="mt-2 text-sm text-muted">
+                          Open every day, {formatTime(values.opensAt)} – {formatTime(values.closesAt)}
+                          {values.closesAt === "24:00" && " (midnight)"}{" "}
+                          <span className="font-semibold whitespace-nowrap text-ink">
+                            ({hours} {hours === 1 ? "hour" : "hours"})
+                          </span>
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="md:pt-6">

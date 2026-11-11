@@ -32,6 +32,8 @@ export async function myVendorId(userId: string) {
 }
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 08:00.");
+// Closing can also be 24:00, midnight at the end of the day: 00:00–24:00 is open 24 hours
+const closingTime = z.string().regex(/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/, "Use a time like 21:00.");
 // Only accept photos uploaded through Feasto
 const photo = z
   .string()
@@ -54,7 +56,7 @@ const storeSchema = z
     storeType: z.enum(STORE_TYPES, "Choose your store type."),
     acceptsReservations: z.boolean(),
     opensAt: time,
-    closesAt: time,
+    closesAt: closingTime,
     isTemporarilyClosed: z.boolean(),
     imageUrl: photo,
     // Left out, the store keeps the ways to pay it already takes

@@ -1,8 +1,19 @@
-/** "08:00" -> "8:00 AM" */
+/** "08:00" -> "8:00 AM"; "24:00" (closing at midnight) -> "12:00 AM" */
 export function formatTime(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
-  const suffix = hours >= 12 ? "PM" : "AM";
+  const suffix = hours >= 12 && hours < 24 ? "PM" : "AM";
   return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+/** A store open all day: it opens at 00:00 and closes at 24:00 (midnight at the end of the day). */
+export const OPEN_ALL_DAY = { opensAt: "00:00", closesAt: "24:00" } as const;
+
+export const isOpenAllDay = (hours: { opensAt: string; closesAt: string }) =>
+  hours.opensAt === OPEN_ALL_DAY.opensAt && hours.closesAt === OPEN_ALL_DAY.closesAt;
+
+/** "8:00 AM – 9:00 PM", or "Open 24 hours" */
+export function formatHours(hours: { opensAt: string; closesAt: string }) {
+  return isOpenAllDay(hours) ? "Open 24 hours" : `${formatTime(hours.opensAt)} – ${formatTime(hours.closesAt)}`;
 }
 
 export function initials(name: string) {
