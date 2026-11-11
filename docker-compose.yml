@@ -116,6 +116,21 @@ services:
         condition: service_healthy
 
   # Real Naval stores instead of the demo (wipes everything first). See server/naval/README.md.
+  # Adds 30 days of sample orders and reviews to the stores (only adds; see server/src/history.ts)
+  history:
+    profiles: ["tools"]
+    build:
+      context: ./server
+      target: build
+    command: ["node", "dist/history.js"]
+    environment:
+      <<: *server-env
+    volumes:
+      - documents:/app/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   naval:
     profiles: ["tools"]
     build:

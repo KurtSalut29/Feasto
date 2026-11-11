@@ -14,6 +14,19 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile tools 
 
 No residents, riders or orders are created: people register those themselves.
 
+## Sample sales history
+
+So sales, reports, best sellers and ratings have something to show before real orders come in:
+
+```bash
+# Only adds: 24 sample residents, 6 sample riders, 30 days of finished orders and reviews
+docker compose --profile tools run --rm --build history
+```
+
+The sample people's e-mails end in `@sample.feasto.com` (password `demo1234`), and every sample
+order belongs to them. Running it again replaces the previous sample history and touches nothing
+else. Run it again before a presentation to bring the 30 days up to today.
+
 ## Store log-ins
 
 Every store can log in with its e-mail below and the `STORE_PASSWORD` from `.env`
