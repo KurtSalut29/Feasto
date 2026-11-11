@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, ChevronDown, Search, Users } from "lucide-react";
+import { Bike, ChevronDown, Search, Star, Users } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Avatar } from "@/components/app/avatar";
 
@@ -18,6 +18,9 @@ export type RosterRider = {
   stateText: string;
   deliveries: number;
   deliveriesToday: number;
+  /** Residents' average for this rider, null before the first rating */
+  rating: number | null;
+  ratingCount: number;
   /** A renewed license to check, or a license that needs renewing */
   needsAttention: boolean;
   details: ReactNode;
@@ -146,6 +149,13 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
                         <span className="truncate font-semibold text-ink">{rider.name}</span>
+                        {rider.rating !== null && (
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-ink" title={`${rider.ratingCount} ${rider.ratingCount === 1 ? "rating" : "ratings"}`}>
+                            <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                            {rider.rating.toFixed(1)}
+                            <span className="sr-only"> out of 5 from {rider.ratingCount} residents</span>
+                          </span>
+                        )}
                         {rider.needsAttention && (
                           <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">Check</span>
                         )}

@@ -12,6 +12,8 @@ import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayme
 import { notify } from "../lib/liveUpdates.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
+import { RATE_RIDER_DAYS, riderRatingSchema, shortName } from "../lib/riderRatings.js";
+import { ONLINE_LABEL } from "../lib/payments.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 /** A resident's own orders. */
@@ -21,11 +23,12 @@ ordersRouter.use(requireAuth, requireRole("RESIDENT"));
 const orderInclude = {
   vendor: { select: { id: true, name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
   items: { select: { id: true, name: true, unitPrice: true, quantity: true } },
-  rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true } } } },
+  rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true, ratingSum: true, ratingCount: true } } } },
   checkout: {
     select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
   },
   review: { select: { rating: true, comment: true, createdAt: true } },
+  riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },
 } as const;
 
 ordersRouter.get("/", async (req, res) => {
@@ -122,6 +125,51 @@ ordersRouter.post("/:id/review", async (req, res) => {
     link: "/vendor",
   });
   res.status(201).json({ ok: true });
+});
+
+/**
+ * Rate the rider who delivered it, once, and maybe tip them. The tip is paid online (simulated,
+ * like the checkout): with the order's own e-wallet or card, or one the resident picks for a cash
+ * order. The rating, the rider's running totals and the tip are saved together or not at all.
+ */
+ordersRouter.post("/:id/rider-rating", async (req, res) => {
+  const id = String(req.params.id);
+  const input = parseBody(riderRatingSchema, req.body);
+  const residentId = req.session!.userId;
+  const order = await prisma.order.findFirst({
+    where: { id, checkout: { residentId } },
+    select: { status: true, riderId: true, finishedAt: true, checkout: { select: { paymentMethod: true, onlineMethod: true, resident: { select: { name: true } } } } },
+  });
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  if (order.status !== "DELIVERED" || !order.riderId) throw new HttpError(400, "You can rate the rider once your order has been delivered.");
+  if (order.finishedAt && Date.now() - order.finishedAt.getTime() > RATE_RIDER_DAYS * 86400_000) {
+    throw new HttpError(400, `Riders can be rated for ${RATE_RIDER_DAYS} days after a delivery.`);
+  }
+  const riderId = order.riderId;
+  const tipMethod = input.tip > 0 ? (order.checkout.paymentMethod === "ONLINE" && order.checkout.onlineMethod) || input.tipMethod : undefined;
+  if (input.tip > 0 && !tipMethod) throw new HttpError(400, "Choose how to pay the tip.");
+
+  try {
+    await prisma.$transaction([
+      prisma.riderRating.create({ data: { orderId: id, riderId, residentId, rating: input.rating, tags: input.tags, comment: input.comment || null } }),
+      prisma.riderProfile.update({ where: { userId: riderId }, data: { ratingSum: { increment: input.rating }, ratingCount: { increment: 1 } } }),
+      ...(tipMethod ? [prisma.order.update({ where: { id }, data: { tip: input.tip, tipMethod } })] : []),
+    ]);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new HttpError(409, "You already rated this rider.");
+    }
+    throw error;
+  }
+
+  const who = shortName(order.checkout.resident.name);
+  const said = input.comment ? `"${input.comment.slice(0, 80)}"` : input.tags.length ? input.tags.join(" · ") : `For order ${orderCode(id)}.`;
+  await notify(riderId, {
+    title: tipMethod ? `${who} tipped you ₱${input.tip}` : `New ${input.rating}-star rating`,
+    body: tipMethod ? `${input.rating} stars on ${orderCode(id)}. ${said}` : said,
+    link: "/rider/ratings",
+  });
+  res.status(201).json({ ok: true, tipMethod: tipMethod ? ONLINE_LABEL[tipMethod] : null });
 });
 
 // ---------- Order again ----------

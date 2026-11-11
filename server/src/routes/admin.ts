@@ -126,6 +126,8 @@ adminRouter.get("/approvals", async (req, res) => {
             emergencyName: true,
             emergencyPhone: true,
             suspendedByAdmin: true,
+            ratingSum: true,
+            ratingCount: true,
             vendor: { select: { name: true } },
             status: true,
             reviewNote: true,

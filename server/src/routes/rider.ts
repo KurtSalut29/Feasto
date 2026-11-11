@@ -10,6 +10,7 @@ import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { hasExpired } from "../lib/renewals.js";
 import { marshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
+import { averageOf, shortName } from "../lib/riderRatings.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
@@ -266,30 +267,79 @@ riderRouter.post("/location", async (req, res) => {
 
 riderRouter.get("/history", async (req, res) => {
   const userId = req.session!.userId;
-  const deliveries = await prisma.order.findMany({
-    where: { riderId: userId, status: "DELIVERED" },
-    orderBy: { finishedAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      finishedAt: true,
-      deliveryFee: true,
-      subtotal: true,
-      vendor: { select: { name: true, imageUrl: true } },
-      items: { select: { quantity: true } },
-      checkout: { select: { deliveryAddress: true, paymentMethod: true } },
-    },
-  });
-  const [all, today] = await Promise.all([
-    prisma.order.aggregate({ where: { riderId: userId, status: "DELIVERED" }, _sum: { deliveryFee: true }, _count: true }),
-    prisma.order.aggregate({ where: { riderId: userId, status: "DELIVERED", finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true }, _count: true }),
+  const delivered = { riderId: userId, status: "DELIVERED" } as const;
+  const [deliveries, all, today, profile] = await Promise.all([
+    prisma.order.findMany({
+      where: delivered,
+      orderBy: { finishedAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        finishedAt: true,
+        deliveryFee: true,
+        tip: true,
+        subtotal: true,
+        vendor: { select: { name: true, imageUrl: true } },
+        items: { select: { quantity: true } },
+        checkout: { select: { deliveryAddress: true, paymentMethod: true } },
+        riderRating: { select: { rating: true } },
+      },
+    }),
+    prisma.order.aggregate({ where: delivered, _sum: { deliveryFee: true, tip: true }, _count: true }),
+    prisma.order.aggregate({ where: { ...delivered, finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true, tip: true }, _count: true }),
+    prisma.riderProfile.findUnique({ where: { userId }, select: { ratingSum: true, ratingCount: true } }),
   ]);
+  // Earnings are the delivery fees plus every tip, which all go to the rider
+  const earned = (sum: { deliveryFee: Prisma.Decimal | null; tip: Prisma.Decimal | null }) => Number(sum.deliveryFee ?? 0) + Number(sum.tip ?? 0);
   res.json({
     deliveries,
     today: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     totals: {
-      today: { count: today._count, earnings: Number(today._sum.deliveryFee ?? 0) },
-      allTime: { count: all._count, earnings: Number(all._sum.deliveryFee ?? 0) },
+      today: { count: today._count, earnings: earned(today._sum), tips: Number(today._sum.tip ?? 0) },
+      allTime: { count: all._count, earnings: earned(all._sum), tips: Number(all._sum.tip ?? 0) },
     },
+    rating: { average: averageOf(profile?.ratingSum ?? 0, profile?.ratingCount ?? 0), count: profile?.ratingCount ?? 0 },
+  });
+});
+
+/** What residents said: the average, how many of each star, the most-tapped praise, and the latest ratings. */
+riderRouter.get("/ratings", async (req, res) => {
+  const riderId = req.session!.userId;
+  const [profile, stars, tags, latest, tips] = await Promise.all([
+    prisma.riderProfile.findUnique({ where: { userId: riderId }, select: { ratingSum: true, ratingCount: true } }),
+    prisma.riderRating.groupBy({ by: ["rating"], where: { riderId }, _count: { _all: true } }),
+    prisma.$queryRaw<{ tag: string; count: bigint }[]>`
+      SELECT tag, count(*) AS count FROM "RiderRating", unnest(tags) AS tag
+      WHERE "riderId" = ${riderId} GROUP BY tag ORDER BY count DESC, tag`,
+    prisma.riderRating.findMany({
+      where: { riderId },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      select: {
+        id: true,
+        rating: true,
+        tags: true,
+        comment: true,
+        createdAt: true,
+        resident: { select: { name: true } },
+        order: { select: { id: true, tip: true, vendor: { select: { name: true } } } },
+      },
+    }),
+    prisma.order.aggregate({ where: { riderId, status: "DELIVERED", tip: { gt: 0 } }, _sum: { tip: true }, _count: true }),
+  ]);
+  const count = profile?.ratingCount ?? 0;
+  res.json({
+    average: averageOf(profile?.ratingSum ?? 0, count),
+    count,
+    stars: [5, 4, 3, 2, 1].map((n) => ({ stars: n, count: stars.find((s) => s.rating === n)?._count._all ?? 0 })),
+    tags: tags.map((t) => ({ tag: t.tag, count: Number(t.count) })),
+    tips: { total: Number(tips._sum.tip ?? 0), count: tips._count },
+    ratings: latest.map(({ resident, order, ...rating }) => ({
+      ...rating,
+      author: shortName(resident.name),
+      orderId: order.id,
+      storeName: order.vendor.name,
+      tip: Number(order.tip),
+    })),
   });
 });

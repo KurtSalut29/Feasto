@@ -142,6 +142,8 @@ model User {
   orderMessages OrderMessage[]  @relation("OrderMessages")
   chatReads     OrderChatRead[]
   pushDevices   PushSubscription[]
+  riderRatings  RiderRating[]  @relation("RatingsReceived")
+  ratingsGiven  RiderRating[]  @relation("RatingsGiven")
 }
 
 /// A resident's saved delivery address.
@@ -235,6 +237,9 @@ model RiderProfile {
   /// Only the admin can lift a suspension the admin made, not the rider's store
   suspendedByAdmin Boolean        @default(false)
   isOnline         Boolean        @default(false)
+  /// Running totals of residents' ratings of this rider, updated with each new rating
+  ratingSum        Int            @default(0)
+  ratingCount      Int            @default(0)
   createdAt        DateTime       @default(now())
 
   renewals DocumentRenewal[]
@@ -372,6 +377,10 @@ model Order {
   rejectReason     String?
   /// Photo the rider took at the door, under /uploads/
   deliveryPhotoUrl String?
+  /// What the resident gave the rider on top of the delivery fee, after it arrived. All of it goes to the rider.
+  tip              Decimal     @default(0) @db.Decimal(10, 2)
+  /// The e-wallet or card the tip was paid with
+  tipMethod        OnlinePayment?
   dispatch         JobDispatch @default(NEW)
   /// When the job should reach more riders; null when there's nothing left to do
   nextDispatchAt   DateTime?
@@ -384,6 +393,7 @@ model Order {
 
   items     OrderItem[]
   review    Review?
+  riderRating RiderRating?
   offers    JobOffer[]
   messages  OrderMessage[]
   chatReads OrderChatRead[]
@@ -508,6 +518,24 @@ model Review {
   createdAt  DateTime @default(now())
 
   @@index([vendorId, createdAt])
+}
+
+/// A resident's rating of the rider who delivered their order. One per order, separate from the store's.
+model RiderRating {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  riderId     String
+  rider       User     @relation("RatingsReceived", fields: [riderId], references: [id])
+  residentId  String
+  resident    User     @relation("RatingsGiven", fields: [residentId], references: [id])
+  rating      Int // 1 to 5 stars
+  /// Quick picks: what went well ("On time") or, for 1 to 3 stars, what didn't ("Late")
+  tags        String[] @default([])
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  @@index([riderId, createdAt])
 }
 
 /// A store a resident saved to find again quickly.

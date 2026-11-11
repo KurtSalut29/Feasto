@@ -11,3 +11,16 @@ export function storeRefusing(stores: Takes[], method: "COD" | "ONLINE" | Online
     method === "COD" ? !s.acceptsCash : method === "ONLINE" ? s.onlinePayments.length === 0 : !s.onlinePayments.includes(method),
   );
 }
+
+/** How residents and riders see each one */
+export const ONLINE_LABEL: Record<OnlinePayment, string> = {
+  GCASH: "GCash",
+  MAYA: "Maya",
+  GRABPAY: "GrabPay",
+  SHOPEEPAY: "ShopeePay",
+  COINS: "Coins.ph",
+  VISA: "Visa",
+  MASTERCARD: "Mastercard",
+  JCB: "JCB",
+  AMEX: "American Express",
+};

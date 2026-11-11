@@ -1,4 +1,4 @@
-import { Bike, Building2, CalendarCheck, CalendarClock, Cake, FileBadge, HeartPulse, House, Mail, MapPin, Phone, ShieldCheck, Store, type LucideIcon } from "lucide-react";
+import { Bike, Building2, Cake, CalendarCheck, CalendarClock, FileBadge, HeartPulse, House, Mail, MapPin, Phone, ShieldCheck, Star, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/app/avatar";
@@ -16,6 +16,7 @@ import { formatDate, isExpired, timeAgo } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { ApprovalStatus, StoreType } from "@/lib/types";
+import { riderAverage } from "@/lib/rider-ratings";
 
 export const metadata: Metadata = { title: "Approvals" };
 
@@ -50,6 +51,8 @@ type RiderItem = Review & {
   emergencyName: string | null;
   emergencyPhone: string | null;
   suspendedByAdmin: boolean;
+  ratingSum: number;
+  ratingCount: number;
   vendor: { name: string } | null;
   user: Contact;
 };
@@ -225,6 +228,13 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
           <Detail Icon={ShieldCheck} label="License">
             {rider.licenseNumber ?? "Not given"}
           </Detail>
+          {(rider.status === "APPROVED" || rider.status === "SUSPENDED") && (
+            <Detail Icon={Star} label="Rating">
+              {rider.ratingCount
+                ? `${riderAverage(rider)!.toFixed(1)} of 5 from ${rider.ratingCount} ${rider.ratingCount === 1 ? "resident" : "residents"}`
+                : "No ratings yet"}
+            </Detail>
+          )}
           <Detail Icon={CalendarClock} label="Expiry">
             <Expiry date={rider.licenseExpiresAt} />
           </Detail>

@@ -211,7 +211,16 @@ type OrderBase = {
 /** An order as the resident sees it. */
 export type ResidentOrder = OrderBase & {
   vendor: Pin & { id: string; name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
-  rider: { name: string; phone: string | null; riderProfile: { vehicleModel: string | null; plateNumber: string | null } | null } | null;
+  rider: {
+    name: string;
+    phone: string | null;
+    riderProfile: { vehicleModel: string | null; plateNumber: string | null; ratingSum?: number; ratingCount?: number } | null;
+  } | null;
+  /** What the resident tipped the rider, after delivery ("0.00" for none) */
+  tip?: string;
+  tipMethod?: OnlinePayment | null;
+  /** The resident's rating of the rider, once they've given one */
+  riderRating?: RiderRatingGiven | null;
   checkout: {
     id: string;
     paymentMethod: PaymentMethod;
@@ -227,6 +236,9 @@ export type ResidentOrder = OrderBase & {
   /** The resident's rating, once they've given one */
   review: { rating: number; comment: string | null; createdAt: string } | null;
 };
+
+/** A resident's rating of their rider */
+export type RiderRatingGiven = { rating: number; tags: string[]; comment: string | null; createdAt: string };
 
 /** An order as the store sees it. */
 /** How far a delivery job has spread among riders. */

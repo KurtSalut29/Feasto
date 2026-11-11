@@ -18,6 +18,7 @@ import { distanceKm } from "./lib/geo.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
 import { DEFAULT_SETTINGS } from "./lib/settings.js";
+import { RIDER_ISSUES, RIDER_PRAISE } from "./lib/riderRatings.js";
 
 const DAYS = 30;
 const DOMAIN = "@sample.feasto.com";
@@ -87,6 +88,19 @@ const COMMENTS: Record<number, string[]> = {
   2: ["Mas maliit ang serving kaysa dati."],
   1: ["Mali ang order na dumating."],
 };
+/** What residents tap and write about the rider */
+const RIDER_COMMENTS: Record<number, string[]> = {
+  5: ["Salamat kuya, ingat po!", "Ang bilis, mainit pa ang pagkain.", "Very polite, tumawag pa bago dumating.", "Sinundan ang note ko. Thank you!"],
+  4: ["Okay naman, medyo natagalan lang sa traffic.", "Mabait si kuya."],
+  3: ["Medyo late, pero okay pa rin ang pagkain."],
+  2: ["Hindi agad nahanap ang bahay."],
+  1: ["Natapon ang sabaw."],
+};
+const pickTags = (rating: number) => {
+  const tags = rating >= 4 ? [...RIDER_PRAISE] : [...RIDER_ISSUES];
+  return tags.filter(() => chance(rating >= 4 ? 0.35 : 0.3)).slice(0, 3);
+};
+
 function weightedRating() {
   const r = random();
   return r < 0.58 ? 5 : r < 0.88 ? 4 : r < 0.96 ? 3 : r < 0.99 ? 2 : 1;
@@ -136,6 +150,7 @@ async function removeSamples() {
     prisma.order.updateMany({ where: { riderId: { in: ids }, id: { notIn: orderIds } }, data: { riderId: null } }),
     prisma.jobOffer.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { riderId: { in: ids } }] } }),
     prisma.review.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { residentId: { in: ids } }] } }),
+    prisma.riderRating.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { residentId: { in: ids } }, { riderId: { in: ids } }] } }),
     prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
     prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
     prisma.checkout.deleteMany({ where: { residentId: { in: ids } } }),
@@ -235,6 +250,7 @@ async function main() {
   console.log(`Creating ${DAYS} days of orders for ${stores.length} stores…`);
   let orders = 0;
   let reviews = 0;
+  let riderRatings = 0;
   let key = 0;
   const batch = randomBytes(4).toString("hex");
 
@@ -289,6 +305,9 @@ async function main() {
     const rider = fulfillment === "DELIVERY" && !failed ? pick(riders) : null;
     const at = (m: number) => new Date(createdAt.getTime() + minutes(m));
     const ready = between(12, 25);
+    // About half the deliveries get the rider rated, and some of those a tip (paid online)
+    const riderStars = rider && chance(0.5) ? weightedRating() : null;
+    const tip = riderStars !== null && riderStars >= 4 && chance(0.3) ? pick([10, 20, 20, 20, 30, 50, 50, 100]) : 0;
 
     const checkout = await prisma.checkout.create({
       data: {
@@ -316,6 +335,8 @@ async function main() {
         subtotal,
         deliveryFee,
         deliveryKm: fulfillment === "DELIVERY" ? km : null,
+        tip,
+        tipMethod: tip ? (onlineMethod ?? pick(["GCASH", "GCASH", "MAYA"] as const)) : null,
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early.", "Too many orders right now."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
         acceptedAt: status === "REJECTED" ? null : failed ? null : at(between(1, 4)),
         readyAt: failed ? null : at(ready),
@@ -341,6 +362,20 @@ async function main() {
       });
       reviews++;
     }
+    if (rider && riderStars !== null) {
+      await prisma.riderRating.create({
+        data: {
+          orderId: order.id,
+          riderId: rider.id,
+          residentId: resident.user.id,
+          rating: riderStars,
+          tags: pickTags(riderStars),
+          comment: chance(0.3) ? pick(RIDER_COMMENTS[riderStars]) : null,
+          createdAt: at(ready + between(40, 300)),
+        },
+      });
+      riderRatings++;
+    }
   }
 
   // Every store's stars from all its reviews (real ones included)
@@ -349,6 +384,12 @@ async function main() {
   for (const v of vendors) {
     const t = byStore.get(v.id);
     await prisma.vendor.update({ where: { id: v.id }, data: { ratingSum: t?._sum.rating ?? 0, ratingCount: t?._count ?? 0 } });
+  }
+
+  // Every rider's stars, the same way
+  const riderTotals = await prisma.riderRating.groupBy({ by: ["riderId"], _sum: { rating: true }, _count: true });
+  for (const t of riderTotals) {
+    await prisma.riderProfile.updateMany({ where: { userId: t.riderId }, data: { ratingSum: t._sum.rating ?? 0, ratingCount: t._count } });
   }
 
   // Store lists and pages are cached in Redis: drop them so the new numbers show right away

@@ -41,6 +41,8 @@ vendorRidersRouter.get("/riders", async (req, res) => {
           reviewedAt: true,
           suspendedByAdmin: true,
           isOnline: true,
+          ratingSum: true,
+          ratingCount: true,
           createdAt: true,
           user: { select: { name: true, email: true, phone: true } },
           renewals: { where: { status: "PENDING" }, select: { id: true, number: true, expiresAt: true, file: true, submittedAt: true } },

@@ -42,8 +42,8 @@ async function RiderAccount() {
   const user = await requireRole("RIDER");
   const profile = user.riderProfile;
   const approved = profile?.status === "APPROVED";
-  const [{ totals }, { order: active }, { unread }, jobs] = await Promise.all([
-    serverApi<{ totals: Totals }>("/rider/history"),
+  const [{ totals, rating }, { order: active }, { unread }, jobs] = await Promise.all([
+    serverApi<{ totals: Totals; rating: { average: number | null; count: number } }>("/rider/history"),
     serverApi<{ order: RiderDelivery | null }>("/rider/active"),
     serverApi<{ unread: number }>("/me/notifications?limit=1"),
     approved ? serverApi<JobsPage>("/rider/jobs?limit=1") : null,
@@ -60,6 +60,7 @@ async function RiderAccount() {
           stats={[
             { label: "Today", value: peso(totals.today.earnings), href: "/rider/history" },
             { label: "Deliveries", value: totals.allTime.count, href: "/rider/history" },
+            { label: "Rating", value: rating.average !== null ? `★ ${rating.average.toFixed(1)}` : "New", href: "/rider/ratings" },
             { label: "Earned", value: peso(totals.allTime.earnings), href: "/rider/history" },
           ]}
         />

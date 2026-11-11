@@ -10,6 +10,7 @@ import { getSettings } from "../lib/settings.js";
 import { isStoreOpen } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { shortName } from "../lib/riderRatings.js";
 
 /** Browsing approved stores and their menus. Results are cached in Redis for all API copies. */
 export const storesRouter = Router();
@@ -265,12 +266,6 @@ storesRouter.get("/:id", async (req, res) => {
     },
   });
 });
-
-function shortName(name: string) {
-  const [first, ...rest] = name.trim().split(/\s+/);
-  const last = rest.at(-1);
-  return last ? `${first} ${last[0].toUpperCase()}.` : first;
-}
 
 // ---------- Favorites (residents) ----------
 

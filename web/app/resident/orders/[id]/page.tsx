@@ -1,4 +1,4 @@
-import { Bike, LoaderCircle, MapPin, Phone, ReceiptText, Store, TimerReset } from "lucide-react";
+import { Bike, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -15,11 +15,13 @@ import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { formatClock, formatDateTime, formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
-import { hasReceipt, orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { hasReceipt, ONLINE_LABEL, orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
+import { canRateRider, riderAverage } from "@/lib/rider-ratings";
 import { serverApi } from "@/lib/server-api";
 import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
+import { RateRider } from "./rate-rider";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -53,6 +55,11 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
   const received = order.status === "DELIVERED" || order.status === "COMPLETED";
   const onTheWay = order.fulfillment === "DELIVERY" && ON_THE_WAY.includes(order.status);
+  const riderRating = riderAverage(order.rider?.riderProfile);
+  const vehicle = order.rider?.riderProfile
+    ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
+    : null;
+  const tip = Number(order.tip ?? 0);
 
   return (
     <>
@@ -103,13 +110,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             home={pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng)}
             homeAddress={order.checkout.deliveryAddress}
             rider={
-              order.rider && {
-                name: order.rider.name,
-                phone: order.rider.phone,
-                vehicle: order.rider.riderProfile
-                  ? [order.rider.riderProfile.vehicleModel ?? "Motorcycle", order.rider.riderProfile.plateNumber].filter(Boolean).join(" · ")
-                  : null,
-              }
+              order.rider && { name: order.rider.name, phone: order.rider.phone, vehicle, rating: riderRating }
             }
             pickedUp={order.status === "PICKED_UP"}
           />
@@ -161,6 +162,18 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         )}
 
         {received && <RateOrder orderId={order.id} storeName={order.vendor.name} review={order.review} />}
+        {/* The rider gets their own stars (and maybe a tip), apart from the store's */}
+        {order.status === "DELIVERED" && order.rider && (
+          <RateRider
+            orderId={order.id}
+            rider={{ name: order.rider.name, vehicle }}
+            given={order.riderRating ?? null}
+            tip={tip}
+            tipMethod={order.tipMethod ?? null}
+            paidWith={order.checkout.paymentMethod === "ONLINE" ? (order.checkout.onlineMethod ?? null) : null}
+            open={canRateRider(order.finishedAt)}
+          />
+        )}
 
         {order.deliveryPhotoUrl && (
           <Section title="Proof of delivery">
@@ -183,13 +196,17 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
                 <Bike className="size-5" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-ink">{order.rider.name}</p>
-                {order.rider.riderProfile && (
-                  <p className="text-sm text-muted">
-                    {order.rider.riderProfile.vehicleModel ?? "Motorcycle"}
-                    {order.rider.riderProfile.plateNumber && ` · ${order.rider.riderProfile.plateNumber}`}
-                  </p>
-                )}
+                <p className="flex items-center gap-1.5 font-semibold text-ink">
+                  <span className="truncate">{order.rider.name}</span>
+                  {riderRating !== null && (
+                    <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px]">
+                      <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                      {riderRating.toFixed(1)}
+                      <span className="sr-only"> out of 5 from residents</span>
+                    </span>
+                  )}
+                </p>
+                {vehicle && <p className="text-sm text-muted">{vehicle}</p>}
               </div>
               {order.rider.phone && (
                 <a
@@ -227,6 +244,17 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             <p className="text-sm text-muted">
               {paymentName(order.checkout)} · {paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
             </p>
+            {/* Paid on its own after the delivery, so it isn't part of the order's total */}
+            {tip > 0 && (
+              <p className="flex items-center justify-between gap-3 pt-1 text-[15px]">
+                <span className="flex items-center gap-1.5 text-muted">
+                  <HandCoins className="size-4 text-emerald-600" aria-hidden />
+                  Tip for {order.rider?.name.split(" ")[0] ?? "your rider"}
+                  {order.tipMethod && ` · ${ONLINE_LABEL[order.tipMethod]}`}
+                </span>
+                <span className="font-semibold text-emerald-700 tabular-nums">{formatPeso(tip)}</span>
+              </p>
+            )}
           </div>
         </Section>
 

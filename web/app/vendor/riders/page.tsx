@@ -16,6 +16,7 @@ import { daysLeft, formatDate, timeAgo } from "@/lib/format";
 import { orderCode } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus, OrderStatus } from "@/lib/types";
+import { riderAverage } from "@/lib/rider-ratings";
 import { RemoveRiderButton, RiderCode } from "./rider-controls";
 import { Roster, type RosterRider } from "./roster";
 
@@ -35,6 +36,8 @@ type StoreRider = {
   createdAt: string;
   deliveries: number;
   deliveriesToday: number;
+  ratingSum: number;
+  ratingCount: number;
   currentOrder: { id: string; status: OrderStatus; forThisStore: boolean } | null;
   user: { name: string; email: string; phone: string | null };
   renewal: { id: string; number: string | null; expiresAt: string; submittedAt: string; document: "image" | "pdf" | null } | null;
@@ -151,6 +154,8 @@ function toRosterRider(rider: StoreRider): RosterRider {
     stateText,
     deliveries: rider.deliveries,
     deliveriesToday: rider.deliveriesToday,
+    rating: riderAverage(rider),
+    ratingCount: rider.ratingCount,
     needsAttention: !inactive && (Boolean(rider.renewal) || license.tone === "expired" || license.tone === "soon"),
     details: <RiderDetails rider={rider} />,
   };

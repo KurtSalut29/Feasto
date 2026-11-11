@@ -12,7 +12,8 @@ const SHIFTS: Record<MealTime, { Icon: LucideIcon; label: string; line: string }
   late: { Icon: Moon, label: "Late night", line: "Late night. Fewer jobs, but some stores are still open." },
 };
 
-export type Totals = { today: { count: number; earnings: number }; allTime: { count: number; earnings: number } };
+/** Earnings are delivery fees plus tips; `tips` is the tips' part */
+export type Totals = { today: { count: number; earnings: number; tips: number }; allTime: { count: number; earnings: number; tips: number } };
 
 /**
  * The top of the rider's Home: hello by name, the rush it is now and whether they're getting

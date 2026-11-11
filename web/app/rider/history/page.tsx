@@ -1,4 +1,5 @@
-import { History } from "lucide-react";
+import { ChevronRight, History, Star } from "lucide-react";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
@@ -11,6 +12,7 @@ import { formatClock, formatDay, formatPeso } from "@/lib/format";
 import { orderCode } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { PaymentMethod, SalesDay } from "@/lib/types";
+import type { Totals } from "../rider-hero";
 
 export const metadata: Metadata = { title: "History" };
 
@@ -18,15 +20,19 @@ type Delivery = {
   id: string;
   finishedAt: string;
   deliveryFee: string;
+  /** What the resident tipped, after it arrived */
+  tip: string;
   subtotal: string;
   vendor: { name: string; imageUrl: string | null };
   items: { quantity: number }[];
   checkout: { deliveryAddress: string | null; paymentMethod: PaymentMethod };
+  riderRating: { rating: number } | null;
 };
 type HistoryResponse = {
   deliveries: Delivery[];
   today: string;
-  totals: { today: { count: number; earnings: number }; allTime: { count: number; earnings: number } };
+  totals: Totals;
+  rating: { average: number | null; count: number };
 };
 
 /** The server sends a rider's latest deliveries, up to this many */
@@ -44,7 +50,9 @@ export default function RiderHistoryPage() {
 const manilaDay = (iso: string) => new Date(new Date(iso).getTime() + 8 * 3600_000).toISOString().slice(0, 10);
 const dayBefore = (day: string, n: number) => new Date(new Date(`${day}T12:00:00Z`).getTime() - n * 86400_000).toISOString().slice(0, 10);
 const plural = (n: number) => `${n} ${n === 1 ? "delivery" : "deliveries"}`;
-const sum = (list: Delivery[]) => list.reduce((n, d) => n + Number(d.deliveryFee), 0);
+/** A delivery's pay: its fee plus any tip, all of which goes to the rider */
+const pay = (d: Delivery) => Number(d.deliveryFee) + Number(d.tip ?? 0);
+const sum = (list: Delivery[]) => list.reduce((n, d) => n + pay(d), 0);
 const itemCount = (d: Delivery) => (d.items ?? []).reduce((n, i) => n + i.quantity, 0);
 
 /** Earnings per day for the last 7 days (Philippine dates), from the delivery list. */
@@ -75,7 +83,7 @@ function byDay(deliveries: Delivery[], today: string) {
  */
 async function RiderHistory() {
   await requireRole("RIDER");
-  const { deliveries, totals, today } = await serverApi<HistoryResponse>("/rider/history");
+  const { deliveries, totals, today, rating } = await serverApi<HistoryResponse>("/rider/history");
 
   if (deliveries.length === 0) {
     return (
@@ -104,7 +112,10 @@ async function RiderHistory() {
         <div className="relative">
           <p className="text-xs text-white/80">Earned today</p>
           <p className="text-[32px] leading-tight font-bold tracking-tight tabular-nums">{formatPeso(totals.today.earnings)}</p>
-          <p className="text-sm text-white/90">{plural(totals.today.count)}</p>
+          <p className="text-sm text-white/90">
+            {plural(totals.today.count)}
+            {totals.today.tips > 0 && ` · ${formatPeso(totals.today.tips)} in tips`}
+          </p>
         </div>
         <dl className="relative mt-4 grid grid-cols-2 divide-x divide-white/25 rounded-2xl bg-white/15 py-2.5 ring-1 ring-white/25">
           <div className="flex flex-col-reverse px-3.5">
@@ -117,6 +128,24 @@ async function RiderHistory() {
           </div>
         </dl>
       </section>
+
+      <Link
+        href="/rider/ratings"
+        className="mb-5 flex items-center gap-3 rounded-2xl border border-line px-4 py-3 transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+      >
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-50">
+          <Star className="size-5 fill-amber-400 text-amber-400" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-ink">
+            {rating.average !== null ? `${rating.average.toFixed(1)} from ${rating.count} ${rating.count === 1 ? "rating" : "ratings"}` : "No ratings yet"}
+          </span>
+          <span className="block truncate text-[13px] text-muted">
+            {totals.allTime.tips > 0 ? `${formatPeso(totals.allTime.tips)} in tips so far · See what residents said` : "See what residents say about your deliveries"}
+          </span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />
+      </Link>
 
       <section className="mb-6 rounded-2xl border border-line p-4">
         <h2 className="text-sm font-semibold text-ink">Earnings, last 7 days</h2>
@@ -150,7 +179,17 @@ async function RiderHistory() {
                       </p>
                     )}
                   </div>
-                  <p className="shrink-0 font-semibold text-emerald-700 tabular-nums">+{formatPeso(d.deliveryFee)}</p>
+                  <div className="shrink-0 text-right">
+                    <p className="font-semibold text-emerald-700 tabular-nums">+{formatPeso(pay(d))}</p>
+                    {Number(d.tip) > 0 && <p className="text-[11px] font-medium text-emerald-700 tabular-nums">incl. {formatPeso(d.tip)} tip</p>}
+                    {d.riderRating && (
+                      <p className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-ink">
+                        <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden />
+                        {d.riderRating.rating}
+                        <span className="sr-only"> stars from the resident</span>
+                      </p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
