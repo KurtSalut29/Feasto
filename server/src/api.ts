@@ -12,6 +12,7 @@ import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, vendorBookingsRouter } from "./routes/bookings.js";
 import { cartRouter } from "./routes/cart.js";
+import { chatRouter } from "./routes/chat.js";
 import { checkoutRouter } from "./routes/checkout.js";
 import { meRouter } from "./routes/me.js";
 import { ordersRouter } from "./routes/orders.js";
@@ -76,6 +77,7 @@ app.use("/api/stores", storesRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/checkout", checkoutRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/chat", chatRouter);
 
 app.use(errorHandler);
 

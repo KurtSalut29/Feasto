@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
+import { OrderChat } from "@/components/app/order-chat";
 import { OrderProgress } from "@/components/app/order-progress";
 import { OrderMoments } from "@/components/app/receipt-moment";
 import { RiderTracking } from "@/components/app/rider-tracking";
@@ -88,6 +89,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
 
       {/* Big screens: two columns, read top to bottom (the live map first) */}
       <div className="space-y-4 lg:block lg:columns-2 lg:gap-6 lg:space-y-0 lg:[&>*]:mb-4 lg:[&>*]:break-inside-avoid">
+        {/* Talk to the store and the rider (hidden once the chat has closed with nothing in it) */}
+        <OrderChat orderId={order.id} />
         {/* Live tracking comes first: it's what the resident opens this page for */}
         {onTheWay && (
           <RiderTracking

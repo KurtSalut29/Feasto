@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast, type ToastTone } from "@/components/ui/toast";
+import { isChatOpen } from "@/lib/chat-open";
 
 export type LiveEvent =
   | { type: "notification"; notification: { id: string; title: string; body: string; link: string | null; createdAt: string } }
@@ -11,7 +12,19 @@ export type LiveEvent =
   | { type: "rider.location"; orderId: string; lat: number; lng: number; at: string }
   | { type: "booking.updated"; bookingId: string; status: string }
   | { type: "report.ready"; reportId: string }
+  | {
+      type: "chat.message";
+      orderId: string;
+      code: string;
+      /** Where this person opens the order's chat */
+      link: string;
+      message: ChatMessage;
+    }
   | { type: "session.ended" };
+
+export type ChatMessage = { id: string; body: string; part: "RESIDENT" | "VENDOR" | "RIDER"; name: string; mine: boolean; createdAt: string };
+
+const PART_LABEL = { RESIDENT: "Customer", VENDOR: "Store", RIDER: "Rider" } as const;
 
 type Listener = (event: LiveEvent) => void;
 const LiveContext = createContext<((listener: Listener) => () => void) | null>(null);
@@ -75,6 +88,20 @@ export function LiveUpdates({ children }: { children: ReactNode }) {
         return;
       }
       if (event.type === "rider.location") return; // too frequent to refresh the whole page
+      if (event.type === "chat.message") {
+        // The open chat shows it by itself; anywhere else it pops up with a way to answer
+        if (!isChatOpen(event.orderId)) {
+          const { name, part, body } = event.message;
+          toast.show({
+            tone: "info",
+            title: `${name} · ${PART_LABEL[part]}`,
+            description: body.length > 120 ? `${body.slice(0, 117)}…` : body,
+            action: { label: "Reply", href: `${event.link}${event.link.includes("?") ? "&" : "?"}chat=${event.orderId}` },
+            duration: 7000,
+          });
+        }
+        return; // a message doesn't change the page around it
+      }
       if (event.type === "notification") {
         const { title, body, link } = event.notification;
         toast.show({ tone: toneOf(title), title, description: body, action: link ? { label: "View", href: link } : undefined, duration: 6000 });

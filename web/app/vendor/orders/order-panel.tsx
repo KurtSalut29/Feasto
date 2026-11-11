@@ -1,5 +1,6 @@
 import { Banknote, Bike, ChevronRight, CreditCard, MapPin, MessageSquareText, Phone, Printer, Store, TimerReset } from "lucide-react";
 import Link from "next/link";
+import { OrderChat } from "@/components/app/order-chat";
 import { Badge } from "@/components/ui/badge";
 import { formatClock, formatPeso } from "@/lib/format";
 import { pinOf, type LatLng } from "@/lib/geo";
@@ -167,6 +168,7 @@ export function OrderPanel({
               {order.checkout.resident.phone}
             </a>
           )}
+          <OrderChat orderId={order.id} look="link" label="Order chat" />
         </div>
         <div className="space-y-1.5 rounded-2xl bg-canvas px-4 py-3 text-sm">
           <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">{delivery ? "Deliver to" : "Pickup"}</p>

@@ -23,6 +23,14 @@ export type RealtimeEvent =
   | { type: "rider.location"; orderId: string; lat: number; lng: number; at: string }
   | { type: "booking.updated"; bookingId: string; status: string }
   | { type: "report.ready"; reportId: string }
+  /** A new message in an order's chat; `link` is where this person opens that chat */
+  | {
+      type: "chat.message";
+      orderId: string;
+      code: string;
+      link: string;
+      message: { id: string; body: string; part: string; name: string; mine: boolean; createdAt: string };
+    }
   /** The account was disabled: open pages should log out */
   | { type: "session.ended" };
 

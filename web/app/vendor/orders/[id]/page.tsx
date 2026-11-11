@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { OrderChat } from "@/components/app/order-chat";
 import { OrderProgress } from "@/components/app/order-progress";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -160,6 +161,7 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                   {order.checkout.resident.phone}
                 </a>
               )}
+              <OrderChat orderId={order.id} look="link" label="Order chat" />
               {delivery && order.checkout.deliveryAddress && (
                 <p className="flex gap-2 text-muted">
                   <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />

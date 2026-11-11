@@ -139,6 +139,8 @@ model User {
   notifications Notification[]
   reviews       Review[]
   favorites     Favorite[]
+  orderMessages OrderMessage[]  @relation("OrderMessages")
+  chatReads     OrderChatRead[]
 }
 
 /// A resident's saved delivery address.
@@ -376,9 +378,11 @@ model Order {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  items  OrderItem[]
-  review Review?
-  offers JobOffer[]
+  items     OrderItem[]
+  review    Review?
+  offers    JobOffer[]
+  messages  OrderMessage[]
+  chatReads OrderChatRead[]
 
   @@index([vendorId, status])
   @@index([riderId])
@@ -397,6 +401,33 @@ model JobOffer {
 
   @@unique([orderId, riderId])
   @@index([riderId])
+}
+
+/// The order's chat: the resident, the store and (once there is one) the rider, in one thread.
+/// Deleting the order or the account deletes its messages.
+model OrderMessage {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("OrderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  /// The sender's part in the order: RESIDENT, VENDOR (the store) or RIDER
+  senderRole Role
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+/// When each person last read an order's chat, for the unread count on its Chat button.
+model OrderChatRead {
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt  DateTime @default(now())
+
+  @@id([orderId, userId])
 }
 
 model OrderItem {

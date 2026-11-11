@@ -13,6 +13,7 @@ import { pinOf, type LatLng } from "@/lib/geo";
 import { deliverySteps, orderCode, paymentName, riderPayment, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
+import { OrderChat } from "@/components/app/order-chat";
 import { DeliveryActions } from "./delivery-actions";
 import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
@@ -46,6 +47,7 @@ function Stop({
   kind,
   done,
   last,
+  extra,
 }: {
   Icon: LucideIcon;
   /** The store's photo, shown in the dot in place of the icon */
@@ -60,6 +62,8 @@ function Stop({
   kind: "store" | "home";
   done?: boolean;
   last?: boolean;
+  /** More buttons beside Directions and Call */
+  extra?: ReactNode;
 }) {
   return (
     <li className={`relative flex gap-3 ${last ? "" : "pb-5"}`}>
@@ -94,6 +98,7 @@ function Stop({
               Call
             </a>
           )}
+          {extra}
         </div>
       </div>
     </li>
@@ -220,6 +225,7 @@ async function RiderActive() {
               title={order.checkout.resident.name}
               address={order.checkout.deliveryAddress ?? ""}
               phone={order.checkout.resident.phone}
+              extra={<OrderChat orderId={order.id} look="pill" />}
             />
           </ol>
         </Box>
