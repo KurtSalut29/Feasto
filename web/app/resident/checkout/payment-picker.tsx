@@ -32,7 +32,10 @@ export function PaymentPicker({
   delivery,
   parts,
   refusedBy = () => null,
+  realPayments = false,
 }: {
+  /** Paid on Xendit's page (test mode) instead of simulated */
+  realPayments?: boolean;
   value: PayChoice;
   onChange: (value: PayChoice) => void;
   /** The store in the cart that doesn't take this way to pay, if any */
@@ -93,7 +96,7 @@ export function PaymentPicker({
         )}
       </fieldset>
 
-      <PayCard key={chosen.value} option={chosen} total={total} holder={holder} phone={phone} delivery={delivery} parts={parts} />
+      <PayCard key={chosen.value} option={chosen} total={total} holder={holder} phone={phone} delivery={delivery} parts={parts} real={realPayments} />
     </div>
   );
 }
@@ -141,7 +144,9 @@ function PayCard({
   phone,
   delivery,
   parts,
+  real,
 }: {
+  real: boolean;
   option: Option;
   total: number;
   holder: string;
@@ -158,7 +163,7 @@ function PayCard({
     <figure className="mt-4">
       <div
         role="img"
-        aria-label={isCash ? `Cash, ${formatPeso(total)}` : `${option.name} ${isCard ? `card ending ${option.number?.slice(-4)}` : maskPhone(phone)}, ${holder}`}
+        aria-label={isCash ? `Cash, ${formatPeso(total)}` : `${option.name} ${isCard ? (real ? "card" : `card ending ${option.number?.slice(-4)}`) : maskPhone(phone)}, ${holder}`}
         className={`relative mx-auto aspect-[1.586] w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-br p-5 text-white shadow-[0_18px_40px_-18px_rgba(16,24,40,0.55)] transition duration-300 starting:translate-y-2 starting:opacity-0 motion-reduce:transition-none ${option.face}`}
       >
         {/* Soft rings in the corner, like the print on a real card */}
@@ -201,7 +206,7 @@ function PayCard({
               </p>
             )}
             <p className={`h-8 leading-8 tabular-nums ${isCash ? "text-2xl font-bold" : "font-mono text-lg tracking-[0.16em]"}`}>
-              {isCash ? formatPeso(total) : isCard ? option.number : maskPhone(phone)}
+              {isCash ? formatPeso(total) : isCard ? (real ? "•••• •••• •••• ••••" : option.number) : maskPhone(phone)}
             </p>
           </div>
 
@@ -230,7 +235,9 @@ function PayCard({
             : delivery
               ? "Have the exact amount ready if you can."
               : "Pay when you collect your order."
-          : `${split ? `One ${option.name} payment covers all ${parts.length} stores: ${formatPeso(total)}.` : `You'll pay ${formatPeso(total)} with ${option.name} when you place the order.`} Simulated for this project: no real money moves${isCard ? " and no real card is needed" : ""}.`}
+          : real
+            ? `${split ? `One ${option.name} payment covers all ${parts.length} stores: ${formatPeso(total)}.` : `You'll pay ${formatPeso(total)} with ${option.name}.`} Next you'll ${isCard ? "enter your card" : `log in to ${option.name}`} on Xendit's secure payment page; Feasto never sees ${isCard ? "your card number" : "your account"}. Test mode: ${isCard ? "use a test card" : "a test page"}, no real money moves.`
+            : `${split ? `One ${option.name} payment covers all ${parts.length} stores: ${formatPeso(total)}.` : `You'll pay ${formatPeso(total)} with ${option.name} when you place the order.`} Simulated for this project: no real money moves${isCard ? " and no real card is needed" : ""}.`}
       </figcaption>
       {isCash && split && (
         <ul className="mx-auto mt-2 max-w-sm divide-y divide-line rounded-xl border border-line text-sm" aria-label="What to pay each">

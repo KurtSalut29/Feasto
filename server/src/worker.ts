@@ -1,15 +1,17 @@
 import type { ConsumeMessage } from "amqplib";
 import { availableParallelism } from "node:os";
 import { config } from "./config.js";
-import { invalidateStore } from "./lib/redisCache.js";
 import { runDueDispatches } from "./lib/dispatch.js";
 import { prisma } from "./lib/db.js";
-import { broadcastOrder, orderCode, restoreStock, settlePayment } from "./lib/orders.js";
-import { enqueue, relayOutbox } from "./lib/outbox.js";
+import { broadcastOrder, orderCode } from "./lib/orders.js";
+import { checkWaitingPayments, confirmPaid, failPayment } from "./lib/paymentFlow.js";
+import { ONLINE_LABEL } from "./lib/payments.js";
+import { refundInvoice, XenditError } from "./lib/xendit.js";
+import { relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
 import { autoCancelStaleOrders } from "./lib/autoCancel.js";
-import { announceScheduled, clockWords, sendDueScheduledOrders } from "./lib/schedule.js";
+import { clockWords, sendDueScheduledOrders } from "./lib/schedule.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/rabbitmq.js";
 import { CHANNELS, notify, publish as publishRealtime } from "./lib/liveUpdates.js";
 import { marshal, unmarshal } from "./lib/marshalling.js";
@@ -92,56 +94,45 @@ await consume<{ orderId: string }>(QUEUES.ordersPlaced, async ({ orderId }) => {
   log(`order ${orderCode(order.id)} for ${order.vendor.name} processed in ${Date.now() - started} ms`);
 });
 
-// ---------- Online payment (simulated) and its saga ----------
+// ---------- Online payment (simulated) and refunds; the saga itself is in lib/paymentFlow.ts ----------
 
 await consume<{ checkoutId: string; simulateFailure: boolean }>(QUEUES.paymentRequested, async ({ checkoutId, simulateFailure }) => {
-  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, include: { orders: { select: { id: true, vendorId: true, scheduledFor: true } } } });
+  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, select: { paymentStatus: true } });
   if (!checkout || checkout.paymentStatus !== "PENDING") return;
-
   await sleep(config.paymentDelayMs); // talking to the payment provider (simulated)
+  if (simulateFailure) await failPayment(checkoutId, "Online payment failed", log);
+  else await confirmPaid(checkoutId, null, log);
+});
 
-  if (!simulateFailure) {
-    await prisma.$transaction(async (tx) => {
-      const { count } = await tx.checkout.updateMany({ where: { id: checkoutId, paymentStatus: "PENDING" }, data: { paymentStatus: "PAID" } });
-      if (count === 0) return;
-      for (const order of checkout.orders) {
-        // An order for later waits for its time; the others go to their stores now
-        const moved = await tx.order.updateMany({
-          where: { id: order.id, status: "AWAITING_PAYMENT" },
-          data: order.scheduledFor ? { status: "SCHEDULED" } : { status: "PLACED", placedAt: new Date() },
-        });
-        // Next step of the saga: the paid orders now go to their stores
-        if (moved.count && !order.scheduledFor) await enqueue(tx, QUEUES.ordersPlaced, { orderId: order.id });
-      }
-      // If the resident cancelled while paying, the money goes straight back
-      await settlePayment(tx, checkoutId);
-    });
-    await notify(checkout.residentId, { title: "Payment received", body: `₱${Number(checkout.total).toFixed(2)} paid online.`, link: "/resident/orders" });
-    for (const order of checkout.orders) if (order.scheduledFor) await announceScheduled(order.id);
-    log(`payment for checkout ${checkoutId} succeeded`);
-    return;
-  }
-
-  // Compensating steps: the payment failed, so undo what checkout did.
-  await prisma.$transaction(async (tx) => {
-    const { count } = await tx.checkout.updateMany({ where: { id: checkoutId, paymentStatus: "PENDING" }, data: { paymentStatus: "FAILED" } });
-    if (count === 0) return;
-    for (const order of checkout.orders) {
-      const cancelled = await tx.order.updateMany({
-        where: { id: order.id, status: "AWAITING_PAYMENT" },
-        data: { status: "CANCELLED", finishedAt: new Date(), rejectReason: "Online payment failed" },
-      });
-      if (cancelled.count) await restoreStock(tx, order.id); // put the reserved stock back
+/**
+ * Gives back one order's part of an online payment, after it was cancelled or declined. With
+ * Xendit the money really goes back to the card or e-wallet (in Test Mode, test money).
+ */
+await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) => {
+  if (!(await firstTime(`refund:${orderId}`))) return;
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { subtotal: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true } } },
+  });
+  if (!order) return;
+  const amount = Math.round((Number(order.subtotal) + Number(order.deliveryFee)) * 100) / 100;
+  let note = "Simulated refund";
+  if (order.checkout.paymentRef && config.payments === "xendit") {
+    try {
+      const refund = await refundInvoice({ invoiceId: order.checkout.paymentRef, amount, referenceId: orderId, reason: "CANCELLATION" });
+      note = `Refunded through Xendit (${refund.id}, ${refund.status.toLowerCase()})`;
+    } catch (error) {
+      // Not retried automatically: the admin sees why on the order and can refund it by hand
+      note = `Refund failed: ${error instanceof XenditError ? error.message : (error as Error).message}`.slice(0, 300);
+      log(`refund for ${orderCode(orderId)} failed: ${note}`);
     }
-  });
-  await Promise.all(checkout.orders.map((o) => invalidateStore(o.vendorId)));
-  await Promise.all(checkout.orders.map((o) => broadcastOrder(o.id)));
-  await notify(checkout.residentId, {
-    title: "Payment failed",
-    body: "Your order was cancelled and you weren't charged. You can try again.",
-    link: "/resident/orders",
-  });
-  log(`payment for checkout ${checkoutId} FAILED: orders cancelled and stock restored`);
+  }
+  await prisma.order.update({ where: { id: orderId }, data: { refundNote: note } });
+  if (!note.startsWith("Refund failed")) {
+    const to = order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet";
+    await notify(order.checkout.residentId, { title: `₱${amount.toFixed(2)} refunded`, body: `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled, so the money went back to ${to}.`, link: `/resident/orders/${orderId}` });
+  }
+  log(`refund for ${orderCode(orderId)}: ${note}`);
 });
 
 // ---------- Sales reports, map-reduce style ----------
@@ -252,6 +243,22 @@ const autoCancelTimer = setInterval(async () => {
   }
 }, 15_000);
 
+// ---------- Online payments whose result hasn't arrived (a lost webhook, a resident who closed the page) ----------
+
+let checkingPayments = false;
+const paymentsTimer = setInterval(async () => {
+  if (checkingPayments) return;
+  checkingPayments = true;
+  try {
+    // One worker at a time asks Xendit, so six workers don't send six times the calls
+    if ((await redis.set("lock:payments-check", config.instanceId, "EX", 25, "NX")) === "OK") await checkWaitingPayments(log);
+  } catch (error) {
+    console.error(`[${config.instanceId}] payment check failed`, error);
+  } finally {
+    checkingPayments = false;
+  }
+}, 30_000);
+
 // ---------- Expiring documents and stuck orders ----------
 
 let monitoring = false;
@@ -281,6 +288,7 @@ async function shutdown() {
   clearInterval(dispatchTimer);
   clearInterval(autoCancelTimer);
   clearInterval(monitorTimer);
+  clearInterval(paymentsTimer);
   stopHeartbeat();
   await channel.close();
   await connection.close();

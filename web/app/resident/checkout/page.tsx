@@ -19,8 +19,8 @@ export default function CheckoutPage() {
 
 async function Checkout() {
   const user = await requireRole("RESIDENT");
-  const [{ cart }, { addresses }] = await Promise.all([
-    serverApi<{ cart: Cart }>("/cart"),
+  const [{ cart, payments }, { addresses }] = await Promise.all([
+    serverApi<{ cart: Cart; payments: "simulated" | "xendit" }>("/cart"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
   ]);
   // Nothing to pay for, or something changed: back to the cart to fix it. A store that's only
@@ -30,7 +30,7 @@ async function Checkout() {
   return (
     <>
       <MobileHeading title="Checkout" />
-      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} />
+      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} realPayments={payments === "xendit"} />
     </>
   );
 }

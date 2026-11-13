@@ -1,3 +1,4 @@
+import { config } from "../config.js";
 import { Router } from "express";
 import { z } from "zod";
 import { ACTIVE_STORE } from "../lib/accounts.js";
@@ -16,7 +17,8 @@ cartRouter.use(requireAuth, requireRole("RESIDENT"));
 cartRouter.get("/", async (req, res) => {
   const addressId = typeof req.query.addressId === "string" && req.query.addressId ? req.query.addressId : undefined;
   const at = typeof req.query.at === "string" && !Number.isNaN(Date.parse(req.query.at)) ? new Date(req.query.at) : undefined;
-  res.json({ cart: await buildCart(req.session!.userId, addressId, at) });
+  // The checkout page shows the "make the payment fail" demo switch only for simulated payments
+  res.json({ cart: await buildCart(req.session!.userId, addressId, at), payments: config.payments });
 });
 
 /** A lighter call for the cart badge: just the number of items. */

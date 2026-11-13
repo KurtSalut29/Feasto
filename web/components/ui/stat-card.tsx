@@ -1,7 +1,8 @@
 import { ArrowUpRight, Minus, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 
-const ACCENTS = {
+/** Tinted icon tiles, shared by stat cards and card headers so every icon looks the same */
+export const ACCENTS = {
   brand: "bg-brand-50 text-brand-600 ring-brand-100",
   emerald: "bg-emerald-50 text-emerald-600 ring-emerald-100",
   sky: "bg-sky-50 text-sky-600 ring-sky-100",

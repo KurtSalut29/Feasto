@@ -1,11 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { ACCENTS, type Accent } from "./stat-card";
 
 /** A white panel. Give it a title to get a header row with optional actions on the right, and a footer row below. */
 export function Card({
   title,
   description,
   Icon,
+  accent = "brand",
   actions,
   footer,
   children,
@@ -15,6 +17,8 @@ export function Card({
   description?: ReactNode;
   /** Small icon tile before the title */
   Icon?: LucideIcon;
+  /** The icon tile's color; Feasto orange unless the card means something else */
+  accent?: Accent;
   actions?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -26,7 +30,7 @@ export function Card({
         <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-line px-5 py-4">
           <div className="flex min-w-0 items-center gap-3">
             {Icon && (
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted ring-1 ring-line/70">
+              <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ring-1 ${ACCENTS[accent]}`}>
                 <Icon className="size-[18px]" aria-hidden />
               </span>
             )}

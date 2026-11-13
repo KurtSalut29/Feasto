@@ -8,6 +8,8 @@ export const QUEUES = {
   ordersPlaced: "orders.placed",
   /** One message per online checkout; the worker charges it (simulated) and runs the saga */
   paymentRequested: "payment.requested",
+  /** One order to give back, part of an online payment (cancelled or declined after paying) */
+  refundRequested: "refund.requested",
   /** A sales report request; the worker splits it into one job per store */
   reportRequested: "report.requested",
   /** One store's part of a report, computed by any worker in parallel */

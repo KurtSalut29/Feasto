@@ -20,6 +20,11 @@ x-server-env: &server-env
   VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
   VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
   VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@feasto.com}
+  # Real online payments through Xendit (optional: without the key, payments are simulated).
+  # PAYMENTS=simulated switches back to the simulation even with a key, e.g. without internet.
+  XENDIT_SECRET_KEY: ${XENDIT_SECRET_KEY:-}
+  XENDIT_CALLBACK_TOKEN: ${XENDIT_CALLBACK_TOKEN:-}
+  PAYMENTS: ${PAYMENTS:-}
   # Requests one signed-in account may make per minute (0 = off, for the stress test in loadtest/)
   API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-1200}
 

@@ -1,5 +1,6 @@
 import { Bike, CalendarClock, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import Image from "next/image";
 import { Suspense } from "react";
 import { MobileSkeleton } from "@/components/app/mobile-shell";
@@ -143,9 +144,17 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </div>
         )}
         {order.status === "AWAITING_PAYMENT" && (
-          <div className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-amber-900">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-amber-900">
             <LoaderCircle className="size-5 animate-spin" aria-hidden />
-            <p className="text-sm font-medium">Confirming your online payment…</p>
+            <p className="min-w-0 flex-1 text-sm font-medium">Waiting for your online payment…</p>
+            {order.checkout.paymentUrl && (
+              <Link
+                href={`/resident/checkout/paying?checkout=${order.checkout.id}`}
+                className="rounded-lg bg-amber-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+              >
+                Finish paying
+              </Link>
+            )}
           </div>
         )}
         {/* Ordered for later: when it comes and when the store starts on it, in place of the steps */}
@@ -179,7 +188,11 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         {dropped ? (
           <Alert tone="error" title={order.status === "REJECTED" ? "The store couldn't take this order" : "This order was cancelled"}>
             {order.rejectReason ?? "No reason given."}
-            {order.checkout.paymentStatus === "REFUNDED" && " Your online payment was refunded."}
+            {order.refundedAt
+              ? order.refundNote?.startsWith("Refund failed")
+                ? " Your refund is being sorted out by Feasto. You'll get a notification once it's back."
+                : ` ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} went back to ${order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet"}.`
+              : order.checkout.paymentStatus === "REFUNDED" && " Your online payment was refunded."}
           </Alert>
         ) : scheduled ? null : (
           <Section title="Progress">

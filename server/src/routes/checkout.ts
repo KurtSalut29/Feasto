@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { Request } from "express";
+import { config } from "../config.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { invalidateStore } from "../lib/redisCache.js";
 import { ONLINE_PAYMENTS, storeRefusing } from "../lib/payments.js";
@@ -8,6 +10,7 @@ import { prisma } from "../lib/db.js";
 import { feastoShare } from "../lib/earnings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
+import { startOnlinePayment, syncPayment } from "../lib/paymentFlow.js";
 import { QUEUES } from "../lib/rabbitmq.js";
 import { perAccount } from "../lib/rateLimit.js";
 import { announceScheduled, scheduleProblem } from "../lib/schedule.js";
@@ -42,7 +45,17 @@ const checkoutSchema = z
   })
   .refine((v) => v.fulfillment === "PICKUP" || v.addressId, { path: ["addressId"], message: "Choose where to deliver." });
 
-const checkoutSummary = { id: true, orders: { select: { id: true } } } as const;
+const checkoutSummary = { id: true, paymentStatus: true, paymentUrl: true, orders: { select: { id: true } } } as const;
+
+/** Where the resident's browser opened Feasto, so the payment page can send them back to it */
+function originOf(req: Request) {
+  const origin = req.get("origin");
+  if (origin && /^https?:\/\/[\w.:-]+$/.test(origin)) return origin;
+  return `${req.protocol}://${req.get("host")}`;
+}
+
+/** A checkout still waiting for its online payment keeps its payment page, so a retry goes back to it */
+const pendingPage = (c: { paymentStatus: string; paymentUrl: string | null }) => (c.paymentStatus === "PENDING" ? c.paymentUrl : null);
 
 checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of orders just now."), async (req, res) => {
   const input = parseBody(checkoutSchema, req.body);
@@ -52,7 +65,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   const existing = await prisma.checkout.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { ...checkoutSummary, residentId: true } });
   if (existing) {
     if (existing.residentId !== userId) throw new HttpError(409, "Please refresh the page and try again.");
-    res.json({ checkoutId: existing.id, orderIds: existing.orders.map((o) => o.id), repeated: true });
+    res.json({ checkoutId: existing.id, orderIds: existing.orders.map((o) => o.id), paymentUrl: pendingPage(existing), repeated: true });
     return;
   }
 
@@ -155,7 +168,8 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
       });
 
       if (input.paymentMethod === "ONLINE") {
-        await enqueue(tx, QUEUES.paymentRequested, { checkoutId: created.id, simulateFailure: Boolean(input.simulatePaymentFailure) });
+        // Real payments open Xendit's payment page after this commits; the simulation is a queued job
+        if (config.payments === "simulated") await enqueue(tx, QUEUES.paymentRequested, { checkoutId: created.id, simulateFailure: Boolean(input.simulatePaymentFailure) });
       } else if (!scheduledFor) {
         for (const order of created.orders) await enqueue(tx, QUEUES.ordersPlaced, { orderId: order.id });
       }
@@ -164,6 +178,13 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
 
     await clearCart(userId);
     await Promise.all(cart.groups.map((g) => invalidateStore(g.store.id))); // stock changed
+    // Card or e-wallet through Xendit: the resident pays on Xendit's page, which sends them back after
+    if (input.paymentMethod === "ONLINE" && config.payments === "xendit") {
+      const paymentUrl = await startOnlinePayment(checkout.id, originOf(req));
+      if (!paymentUrl) throw new HttpError(502, "We couldn't open the payment page, so your order was cancelled and the items went back to the store. Check your connection and try again, or pay with cash.");
+      res.status(201).json({ checkoutId: checkout.id, orderIds: checkout.orders.map((o) => o.id), paymentUrl });
+      return;
+    }
     // A cash order for later is booked already: let the stores know it's coming
     if (scheduledFor && input.paymentMethod === "COD") await Promise.all(checkout.orders.map((o) => announceScheduled(o.id)));
     res.status(201).json({ checkoutId: checkout.id, orderIds: checkout.orders.map((o) => o.id) });
@@ -171,9 +192,33 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     // Two requests with the same key at the same moment: the unique index lets one in
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const winner = await prisma.checkout.findUniqueOrThrow({ where: { idempotencyKey: input.idempotencyKey }, select: checkoutSummary });
-      res.json({ checkoutId: winner.id, orderIds: winner.orders.map((o) => o.id), repeated: true });
+      res.json({ checkoutId: winner.id, orderIds: winner.orders.map((o) => o.id), paymentUrl: pendingPage(winner), repeated: true });
       return;
     }
     throw error;
   }
+});
+
+/**
+ * How a checkout's online payment went, for the page the resident lands on when Xendit sends them
+ * back. Asks Xendit directly too, so it works even where Xendit's webhook can't reach Feasto
+ * (the classroom laptop on WiFi).
+ */
+checkoutRouter.get("/:id/payment", async (req, res) => {
+  const id = String(req.params.id);
+  const mine = await prisma.checkout.findFirst({ where: { id, residentId: req.session!.userId }, select: { id: true } });
+  if (!mine) throw new HttpError(404, "We couldn't find this order.");
+  if (config.payments === "xendit") await syncPayment(id).catch(() => null); // Xendit unreachable: show what Feasto knows
+  const checkout = await prisma.checkout.findUniqueOrThrow({
+    where: { id },
+    select: { paymentStatus: true, paymentUrl: true, onlineMethod: true, paidChannel: true, total: true, orders: { select: { id: true, status: true, rejectReason: true } } },
+  });
+  res.json({
+    status: checkout.paymentStatus,
+    paymentUrl: pendingPage(checkout),
+    onlineMethod: checkout.onlineMethod,
+    total: checkout.total,
+    orderIds: checkout.orders.map((o) => o.id),
+    reason: checkout.orders.find((o) => o.rejectReason)?.rejectReason ?? null,
+  });
 });

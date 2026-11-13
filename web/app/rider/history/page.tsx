@@ -227,7 +227,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
   return (
     <section aria-label="Your pay and Feasto's share" className="mb-5 overflow-hidden rounded-2xl border border-line">
       <div className="flex items-center gap-3 px-4 py-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-canvas text-muted">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600 ring-1 ring-brand-100">
           <HandCoins className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">

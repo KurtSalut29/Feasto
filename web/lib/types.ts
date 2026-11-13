@@ -218,6 +218,9 @@ type OrderBase = {
 
 /** An order as the resident sees it. */
 export type ResidentOrder = OrderBase & {
+  /** When this order's part of an online payment went back, and how (cancelled or declined after paying) */
+  refundedAt?: string | null;
+  refundNote?: string | null;
   vendor: Pin & { id: string; name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
   rider: {
     name: string;
@@ -234,6 +237,8 @@ export type ResidentOrder = OrderBase & {
     paymentMethod: PaymentMethod;
     onlineMethod?: OnlinePayment | null;
     paymentStatus: PaymentStatus;
+    /** Xendit's payment page, while the online payment is still waiting */
+    paymentUrl?: string | null;
     deliveryAddress: string | null;
     deliveryLat: number | null;
     deliveryLng: number | null;

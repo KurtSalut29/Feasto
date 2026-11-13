@@ -71,7 +71,20 @@ function Step({ n, title, action, children }: { n: number; title: string; action
   );
 }
 
-export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; addresses: Address[]; holder: string; phone: string | null }) {
+export function CheckoutForm({
+  cart,
+  addresses,
+  holder,
+  phone,
+  realPayments,
+}: {
+  cart: Cart;
+  addresses: Address[];
+  holder: string;
+  phone: string | null;
+  /** Online payments go through Xendit's payment page (in its test mode); otherwise they're simulated */
+  realPayments: boolean;
+}) {
   const router = useRouter();
   // Made once per visit: if "Place order" is clicked twice or the request is retried,
   // the server sees the same key and won't create a second order.
@@ -119,7 +132,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
   async function placeOrder() {
     setPlacing(true);
     setError(undefined);
-    const result = await apiRequest<{ checkoutId: string; orderIds: string[] }>("/checkout", {
+    const result = await apiRequest<{ checkoutId: string; orderIds: string[]; paymentUrl?: string | null }>("/checkout", {
       method: "POST",
       body: {
         idempotencyKey,
@@ -130,7 +143,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
         notes,
         scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
-        simulatePaymentFailure: paymentMethod === "ONLINE" && simulateFailure,
+        simulatePaymentFailure: paymentMethod === "ONLINE" && !realPayments && simulateFailure,
       },
     });
     if (!result.ok) {
@@ -140,7 +153,13 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
       setQuoteKey((k) => k + 1);
       return;
     }
-    const { orderIds } = result.data;
+    const { orderIds, paymentUrl } = result.data;
+    // Card or e-wallet: pay on Xendit's secure page, which brings the resident back to Feasto after.
+    // The button keeps spinning while the browser leaves.
+    if (paymentUrl) {
+      window.location.assign(paymentUrl);
+      return;
+    }
     const names = cart.groups.map((g) => g.store.name);
     const storesText = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
     // Chef Feasto pops up and stays while the app moves on to the order
@@ -254,6 +273,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
 
       <Step n={4} title="Payment">
         <PaymentPicker
+          realPayments={realPayments}
           value={pay}
           onChange={setPay}
           refusedBy={refusedBy}
@@ -263,7 +283,7 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
           delivery={fulfillment === "DELIVERY"}
           parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? (quoteOf(g.store.id)?.fee ?? 0) : 0) }))}
         />
-        {paymentMethod === "ONLINE" && (
+        {paymentMethod === "ONLINE" && !realPayments && (
           <div className="mt-3">
             <SwitchField
               label="Demo: make the payment fail"
@@ -359,7 +379,15 @@ export function CheckoutForm({ cart, addresses, holder, phone }: { cart: Cart; a
           disabled={(fulfillment === "DELIVERY" && (!addressId || !priced)) || (later && !scheduledFor)}
           onClick={placeOrder}
         >
-          {placing ? (later ? "Scheduling…" : "Placing order…") : `${later ? "Schedule order" : "Place order"} · ${formatPeso(total)}`}
+          {placing
+            ? realPayments && paymentMethod === "ONLINE"
+              ? "Opening the payment page…"
+              : later
+                ? "Scheduling…"
+                : "Placing order…"
+            : realPayments && paymentMethod === "ONLINE"
+              ? `Continue to payment · ${formatPeso(total)}`
+              : `${later ? "Schedule order" : "Place order"} · ${formatPeso(total)}`}
         </Button>
       </div>
     </div>

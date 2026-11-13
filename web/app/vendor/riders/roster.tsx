@@ -70,7 +70,7 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
     <section aria-labelledby="roster-title" className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-canvas text-muted ring-1 ring-line/70">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
             <Users className="size-[18px]" aria-hidden />
           </span>
           <div>

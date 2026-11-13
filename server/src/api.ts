@@ -21,6 +21,7 @@ import { storesRouter } from "./routes/stores.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { adminToolsRouter } from "./routes/adminTools.js";
 import { adminEarningsRouter, riderEarningsRouter, vendorEarningsRouter } from "./routes/earnings.js";
+import { paymentsRouter } from "./routes/payments.js";
 import { documentsRouter } from "./routes/documents.js";
 import { vendorRidersRouter } from "./routes/vendorRiders.js";
 import { vendorRouter } from "./routes/vendor.js";
@@ -80,6 +81,7 @@ app.use("/api/rider", riderEarningsRouter);
 app.use("/api/stores", storesRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/checkout", checkoutRouter);
+app.use("/api/payments", paymentsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/chat", chatRouter);
 

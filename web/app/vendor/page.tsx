@@ -25,6 +25,7 @@ import { Stars } from "@/components/app/rating";
 import { SalesChart } from "@/components/app/sales-chart";
 import { VerificationForm } from "@/components/app/verification-form";
 import { Card, CARD_LINK } from "@/components/ui/card";
+import { ACCENTS, type Accent } from "@/components/ui/stat-card";
 import { percentChange, Trend } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, renderTime, timeAgo } from "@/lib/format";
@@ -179,10 +180,11 @@ async function VendorOverview() {
 
       {/* Today in four numbers. The two that ask for work open the queue. */}
       <section aria-label="Today" className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Figure Icon={Wallet} label="Sales today" value={formatPeso(stats.salesToday)} hint="Food only, before delivery fees" />
-        <Figure Icon={ReceiptText} label="Orders today" value={String(stats.ordersToday)} hint="Since midnight" />
+        <Figure Icon={Wallet} accent="brand" label="Sales today" value={formatPeso(stats.salesToday)} hint="Food only, before delivery fees" />
+        <Figure Icon={ReceiptText} accent="sky" label="Orders today" value={String(stats.ordersToday)} hint="Since midnight" />
         <Figure
           Icon={ClipboardList}
+          accent="amber"
           label="New orders"
           value={String(stats.pending)}
           hint={stats.pending ? "Waiting for you to accept" : "Nothing waiting"}
@@ -191,6 +193,7 @@ async function VendorOverview() {
         />
         <Figure
           Icon={CookingPot}
+          accent="violet"
           label="In the kitchen"
           value={String(stats.inKitchen)}
           hint={readyCount ? `${readyCount} more ready or on the way` : "Being prepared"}
@@ -373,13 +376,30 @@ async function VendorOverview() {
 }
 
 /** One of today's numbers. The ones that need action open the order queue. */
-function Figure({ Icon, label, value, hint, href, alert }: { Icon: LucideIcon; label: string; value: string; hint: string; href?: string; alert?: boolean }) {
+function Figure({
+  Icon,
+  label,
+  value,
+  hint,
+  href,
+  alert,
+  accent,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  value: string;
+  hint: string;
+  href?: string;
+  alert?: boolean;
+  /** The icon tile's color, the same palette as the admin's numbers */
+  accent: Accent;
+}) {
   const body = (
     <>
       <span className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-medium text-muted">
           <span
-            className={`flex size-8 items-center justify-center rounded-lg ring-1 ${alert ? "bg-brand-600 text-white ring-brand-600" : "bg-canvas text-muted ring-line"}`}
+            className={`flex size-8 items-center justify-center rounded-lg ring-1 ${alert ? "bg-brand-600 text-white ring-brand-600" : ACCENTS[accent]}`}
           >
             <Icon className="size-4" aria-hidden />
           </span>

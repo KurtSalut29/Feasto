@@ -3,6 +3,8 @@ import { invalidateStore } from "./redisCache.js";
 import { prisma } from "./db.js";
 import { HttpError } from "./http.js";
 import { CHANNELS, notify, publish } from "./liveUpdates.js";
+import { enqueue } from "./outbox.js";
+import { QUEUES } from "./rabbitmq.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -45,13 +47,22 @@ export async function restoreStock(tx: Tx, orderId: string) {
 
 /**
  * Keeps the checkout's payment status in step with its orders:
+ * - online and paid: each order cancelled or declined since gets its part refunded, once
  * - online and every order cancelled/rejected -> REFUNDED
  * - cash and every remaining order delivered/collected -> PAID
  */
 export async function settlePayment(tx: Tx, checkoutId: string) {
-  const checkout = await tx.checkout.findUniqueOrThrow({ where: { id: checkoutId }, include: { orders: { select: { status: true } } } });
+  const checkout = await tx.checkout.findUniqueOrThrow({ where: { id: checkoutId }, include: { orders: { select: { id: true, status: true, refundedAt: true } } } });
   const statuses = checkout.orders.map((o) => o.status);
   const dropped = (s: OrderStatus) => s === "CANCELLED" || s === "REJECTED";
+  if (checkout.paymentMethod === "ONLINE" && (checkout.paymentStatus === "PAID" || checkout.paymentStatus === "REFUNDED")) {
+    for (const order of checkout.orders.filter((o) => dropped(o.status) && !o.refundedAt)) {
+      // Marked in the same transaction as the cancel, and only once even if two calls race;
+      // the outbox then hands the refund to a worker, which asks the payment provider
+      const { count } = await tx.order.updateMany({ where: { id: order.id, refundedAt: null }, data: { refundedAt: new Date() } });
+      if (count) await enqueue(tx, QUEUES.refundRequested, { orderId: order.id });
+    }
+  }
   if (checkout.paymentMethod === "ONLINE" && checkout.paymentStatus === "PAID" && statuses.every(dropped)) {
     await tx.checkout.update({ where: { id: checkoutId }, data: { paymentStatus: "REFUNDED" } });
   }

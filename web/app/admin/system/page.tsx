@@ -253,7 +253,7 @@ async function SystemMonitor() {
               },
             ].map(({ Icon, name, role, up, stats }) => (
               <li key={name} className="flex items-start gap-3 px-5 py-4">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted ring-1 ring-line/70">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
                   <Icon className="size-[18px]" aria-hidden />
                 </span>
                 <div className="min-w-0 flex-1">

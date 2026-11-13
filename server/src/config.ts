@@ -43,6 +43,14 @@ export const config = {
   // Requests one signed-in account may make per minute (0 = no limit, for the raw stress test in
   // loadtest/browse.js). A person tapping around never comes close; it stops a script flooding the API.
   apiRequestsPerMinute: Number(process.env.API_REQUESTS_PER_MINUTE ?? 1200),
+  // Online payments. With a Xendit key they're real (in Xendit's test mode no real money moves);
+  // PAYMENTS=simulated keeps the built-in simulation, e.g. for a demo without internet.
+  xendit: {
+    secretKey: process.env.XENDIT_SECRET_KEY ?? "",
+    /** Xendit sends this with every webhook, so Feasto knows the call really came from Xendit */
+    callbackToken: process.env.XENDIT_CALLBACK_TOKEN ?? "",
+  },
+  payments: (process.env.PAYMENTS === "simulated" || !process.env.XENDIT_SECRET_KEY ? "simulated" : "xendit") as "simulated" | "xendit",
   // Name shown in responses and logs so you can see which copy handled the work.
   instanceId: process.env.INSTANCE_ID ?? os.hostname(),
 };

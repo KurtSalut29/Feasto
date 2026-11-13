@@ -363,6 +363,11 @@ model Checkout {
   onlineMethod    OnlinePayment?
   total           Decimal       @db.Decimal(10, 2)
   paymentStatus   PaymentStatus @default(PENDING)
+  /// Online payments through Xendit: the invoice's id, and its payment page the resident is sent to
+  paymentRef      String?       @unique
+  paymentUrl      String?
+  /// What the resident actually paid with on that page, e.g. GCASH or CREDIT_CARD
+  paidChannel     String?
   /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.
   idempotencyKey  String        @unique
   deliveryAddress String? // empty for pickup
@@ -397,6 +402,11 @@ model Order {
   tip              Decimal     @default(0) @db.Decimal(10, 2)
   /// The e-wallet or card the tip was paid with
   tipMethod        OnlinePayment?
+  /// When this order's part of an online payment was given back, because it was cancelled or
+  /// declined after the resident paid. Once set, it's never refunded again.
+  refundedAt       DateTime?
+  /// The payment provider's refund id, or why it couldn't refund it
+  refundNote       String?
   /// Feasto's commission, copied at checkout like the delivery fee: the percent and what it comes to.
   /// Feasto earns it only once the order is delivered or collected; cancelled and declined orders pay nothing.
   commissionRate   Decimal     @default(0) @db.Decimal(4, 1)

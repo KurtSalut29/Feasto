@@ -42,7 +42,7 @@ export function AccountSecurityCard({ name, email, roleLabel }: { name: string; 
   return (
     <section aria-labelledby="account-security" className="@container overflow-hidden rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <header className="flex items-center gap-3 border-b border-line px-5 py-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted ring-1 ring-line/70">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
           <ShieldCheck className="size-[18px]" aria-hidden />
         </span>
         <div className="min-w-0">

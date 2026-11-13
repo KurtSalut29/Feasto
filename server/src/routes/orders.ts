@@ -15,6 +15,7 @@ import { redis } from "../lib/redis.js";
 import { whenWords } from "../lib/schedule.js";
 import { RATE_RIDER_DAYS, riderRatingSchema, shortName } from "../lib/riderRatings.js";
 import { ONLINE_LABEL } from "../lib/payments.js";
+import { closeUnpaidPage } from "../lib/paymentFlow.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 /** A resident's own orders. */
@@ -26,7 +27,7 @@ const orderInclude = {
   items: { select: { id: true, name: true, unitPrice: true, quantity: true, note: true } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true, ratingSum: true, ratingCount: true } } } },
   checkout: {
-    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
+    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
   },
   review: { select: { rating: true, comment: true, createdAt: true } },
   riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },
@@ -101,6 +102,8 @@ ordersRouter.post("/:id/cancel", async (req, res) => {
   });
 
   await refreshStoreCache(vendorId);
+  // Cancelled while still paying: close Xendit's page so it can't be paid any more
+  if (order.status === "AWAITING_PAYMENT") await closeUnpaidPage(order.checkoutId).catch(() => {});
   await notify(order.vendor.ownerId, {
     title: order.status === "SCHEDULED" ? `A scheduled order was cancelled` : "An order was cancelled",
     body:
