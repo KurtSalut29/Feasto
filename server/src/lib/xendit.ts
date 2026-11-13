@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import type { OnlinePayment } from "../generated/prisma/client.js";
+import type { OnlinePayment, PayoutChannel } from "../generated/prisma/client.js";
 import { config } from "../config.js";
 import { marshal, recordUnmarshal } from "./marshalling.js";
 
@@ -26,12 +26,12 @@ export class XenditError extends Error {
   }
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST", path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
   const auth = Buffer.from(`${config.xendit.secretKey}:`).toString("base64");
-  const where = { transport: "http" as const, channel: `xendit ${method} ${path.replace(/[0-9a-f]{24}/g, ":id")}`, kind: "xendit" };
+  const where = { transport: "http" as const, channel: `xendit ${method} ${path.replace(/[0-9a-f]{24}|disb-[\w-]+/g, ":id").replace(/\?.*/, "")}`, kind: "xendit" };
   const response = await fetch(`${BASE}${path}`, {
     method,
-    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json", ...headers },
     body: body === undefined ? undefined : marshal(body, where),
     // Never leave a resident waiting on a slow network
     signal: AbortSignal.timeout(12_000),
@@ -122,6 +122,53 @@ export const refundInvoice = (input: { invoiceId: string; amount: number; refere
     reason: input.reason,
     reference_id: input.referenceId,
   });
+
+// ---------- Payouts: Feasto sending money out to stores and riders ----------
+
+/** Xendit's channel codes for the e-wallets and banks a store or rider can be paid to */
+const PAYOUT_CHANNEL: Record<PayoutChannel, string> = {
+  GCASH: "PH_GCASH",
+  MAYA: "PH_PAYMAYA",
+  BDO: "PH_BDO",
+  BPI: "PH_BPI",
+  METROBANK: "PH_MET",
+  LANDBANK: "PH_LBP",
+  UNIONBANK: "PH_UBP",
+  SECURITY_BANK: "PH_SEC",
+};
+
+export type XenditPayout = {
+  id: string;
+  reference_id: string;
+  amount: number;
+  status: "ACCEPTED" | "REQUESTED" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "REVERSED";
+  failure_code?: string;
+};
+
+/**
+ * Sends money from Feasto's Xendit balance to a store's or rider's e-wallet or bank. The
+ * idempotency key makes a repeated call (a timeout, a redelivered message) return the same payout
+ * instead of sending the money twice.
+ */
+export const createPayout = (input: { referenceId: string; idempotencyKey: string; amount: number; channel: PayoutChannel; accountName: string; accountNumber: string; description: string }) =>
+  call<XenditPayout>(
+    "POST",
+    "/v2/payouts",
+    {
+      reference_id: input.referenceId,
+      channel_code: PAYOUT_CHANNEL[input.channel],
+      channel_properties: { account_holder_name: input.accountName, account_number: input.accountNumber },
+      amount: input.amount,
+      currency: "PHP",
+      description: input.description,
+    },
+    { "Idempotency-key": input.idempotencyKey },
+  );
+
+export const getPayout = (id: string) => call<XenditPayout>("GET", `/v2/payouts/${encodeURIComponent(id)}`);
+
+/** Feasto's money at Xendit (test money in Test Mode), which payouts are sent from */
+export const getBalance = () => call<{ balance: number }>("GET", "/balance?account_type=CASH&currency=PHP");
 
 /** True when a webhook carries the token from the Xendit dashboard (compared in constant time). */
 export function isFromXendit(token: string | undefined) {

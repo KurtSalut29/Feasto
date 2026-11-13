@@ -1,4 +1,5 @@
-import { Prisma, type Fulfillment } from "../generated/prisma/client.js";
+import { Prisma, type Fulfillment, type PayoutChannel } from "../generated/prisma/client.js";
+import { accountWords } from "./payouts.js";
 import type { Settings } from "./settings.js";
 import { prisma } from "./db.js";
 
@@ -44,7 +45,8 @@ export const freeUntil = (days: number, from = new Date()) => (days > 0 ? new Da
  * Where an order's money goes, in the order of events:
  * - Online (e-wallet or card): Feasto holds the payment until the order is delivered or collected,
  *   in case it has to be refunded. Then it's split right away: the store gets the food minus the
- *   commission, the rider the fee minus Feasto's share, and Feasto keeps the rest. Nothing to settle.
+ *   commission, the rider the fee minus Feasto's share, and Feasto keeps the rest. Nothing to settle:
+ *   the shares are sent to their e-wallet or bank through Xendit Payouts (lib/payouts.ts).
  * - Cash: the resident pays the rider or the store directly, so Feasto never holds it. The store
  *   and the rider then owe Feasto its share, which the admin collects every week.
  */
@@ -70,7 +72,15 @@ const peso = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDig
 export async function payoutWords(orderId: string) {
   const o = await prisma.order.findUniqueOrThrow({
     where: { id: orderId },
-    select: { subtotal: true, commission: true, deliveryFee: true, riderCut: true, checkout: { select: { paymentMethod: true } } },
+    select: {
+      subtotal: true,
+      commission: true,
+      deliveryFee: true,
+      riderCut: true,
+      checkout: { select: { paymentMethod: true } },
+      vendor: { select: { payoutChannel: true, payoutNumber: true } },
+      rider: { select: { riderProfile: { select: { payoutChannel: true, payoutNumber: true } } } },
+    },
   });
   const p = payoutOf({
     paymentMethod: o.checkout.paymentMethod,
@@ -81,14 +91,17 @@ export async function payoutWords(orderId: string) {
   });
   const commission = Number(o.commission);
   const riderCut = Number(o.riderCut);
+  // Where the online share goes: their e-wallet or bank, or held until they add one
+  const sending = (account: { payoutChannel: PayoutChannel | null; payoutNumber: string | null } | null | undefined, settings: string) =>
+    account?.payoutChannel && account.payoutNumber ? `is being sent to your ${accountWords(account.payoutChannel, account.payoutNumber)}` : `is waiting for you: add your GCash, Maya or bank in ${settings} to receive it`;
   return {
     store: p.online
-      ? `${peso(p.store)} for the food was sent to you${commission ? `, after Feasto's ${peso(commission)} commission` : ""}.`
+      ? `${peso(p.store)} for the food ${sending(o.vendor, "Reports")}${commission ? `, after Feasto's ${peso(commission)} commission` : ""}.`
       : commission
         ? `Paid in cash. Feasto's ${peso(commission)} commission is added to what you pay Feasto each week.`
         : "Paid in cash. No commission: it's your free month.",
     rider: p.online
-      ? `${peso(p.rider)} was sent to you${riderCut ? `, after Feasto's ${peso(riderCut)}` : ""}.`
+      ? `${peso(p.rider)} ${sending(o.rider?.riderProfile, "History")}${riderCut ? `, after Feasto's ${peso(riderCut)}` : ""}.`
       : `You keep ${peso(p.rider)} of the cash fee${riderCut ? `. Feasto's ${peso(riderCut)} is added to what you pay Feasto each week` : ""}.`,
   };
 }

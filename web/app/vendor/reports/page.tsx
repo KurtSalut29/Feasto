@@ -13,8 +13,9 @@ import { requireRole } from "@/lib/auth";
 import { formatDate, formatPeso, formatRange } from "@/lib/format";
 import { periodFromParams, previousPeriod } from "@/lib/report-period";
 import { serverApi } from "@/lib/server-api";
-import type { SalesDay } from "@/lib/types";
+import type { PayoutsData, SalesDay } from "@/lib/types";
 import { PayFeastoButton } from "@/components/app/pay-feasto";
+import { PayoutsCard } from "@/components/app/payouts-card";
 import { ONLINE_LABEL } from "@/lib/order-status";
 import { PeriodPicker } from "./period-picker";
 
@@ -89,10 +90,11 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
   const period = periodFromParams(await searchParams);
   const before = previousPeriod(period);
   const query = (p: { from: string; to: string }) => `from=${p.from}&to=${p.to}`;
-  const [{ report }, { report: previous }, earnings] = await Promise.all([
+  const [{ report }, { report: previous }, earnings, payouts] = await Promise.all([
     serverApi<{ report: StoreReport }>(`/vendor/reports?${query(period)}`),
     serverApi<{ report: StoreReport }>(`/vendor/reports?${query(before)}`),
     serverApi<StoreEarnings>("/vendor/earnings"),
+    serverApi<PayoutsData>("/vendor/payouts"),
   ]);
   const { totals } = report;
   const vs = `vs ${formatRange(before.from, before.to)}`;
@@ -209,6 +211,8 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
 
           <CommissionCard earnings={earnings} totals={totals} />
 
+          <PayoutsCard who="store" data={payouts} />
+
           <Card title="How residents paid" Icon={Wallet}>
             <Breakdown rows={report.payments.map((p) => ({ name: p.method, orders: p.orders, sales: p.sales }))} total={totals.sales} />
           </Card>
@@ -240,7 +244,7 @@ function CommissionCard({ earnings, totals }: { earnings: StoreEarnings; totals:
             <span className="font-medium text-ink">Online orders</span>
             <span className="font-semibold text-emerald-700 tabular-nums">{formatPeso(totals.sentOnline)}</span>
           </dt>
-          <dd className="mt-0.5 text-xs text-muted">Sent to you in this period, each as soon as it was delivered or collected. Feasto&apos;s commission was already taken out.</dd>
+          <dd className="mt-0.5 text-xs text-muted">Your share in this period, after Feasto&apos;s commission. Each is sent to your GCash, Maya or bank as soon as it&apos;s delivered or collected (see Money sent to you).</dd>
         </div>
         <div className="px-5 py-3">
           <dt className="flex items-baseline justify-between gap-3">

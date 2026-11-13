@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { PayFeastoButton } from "@/components/app/pay-feasto";
+import { PayoutsCard } from "@/components/app/payouts-card";
 import { SalesChart } from "@/components/app/sales-chart";
 import { StoreCover } from "@/components/app/store-card";
 import { ButtonLink } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { requireRole } from "@/lib/auth";
 import { formatClock, formatDate, formatDay, formatPeso } from "@/lib/format";
 import { orderCode, riderEarns } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { PaymentMethod, SalesDay } from "@/lib/types";
+import type { PaymentMethod, PayoutsData, SalesDay } from "@/lib/types";
 import type { Totals } from "../rider-hero";
 
 export const metadata: Metadata = { title: "History" };
@@ -93,9 +94,10 @@ function byDay(deliveries: Delivery[], today: string) {
  */
 async function RiderHistory() {
   await requireRole("RIDER");
-  const [{ deliveries, totals, today, rating }, earnings] = await Promise.all([
+  const [{ deliveries, totals, today, rating }, earnings, payouts] = await Promise.all([
     serverApi<HistoryResponse>("/rider/history"),
     serverApi<RiderEarnings>("/rider/earnings"),
+    serverApi<PayoutsData>("/rider/payouts"),
   ]);
 
   if (deliveries.length === 0) {
@@ -161,6 +163,10 @@ async function RiderHistory() {
       </Link>
 
       <BalanceCard earnings={earnings} feastoShare={totals.allTime.feastoShare ?? 0} />
+
+      <div className="mb-5">
+        <PayoutsCard who="rider" data={payouts} />
+      </div>
 
       <section className="mb-6 rounded-2xl border border-line p-4">
         <h2 className="text-sm font-semibold text-ink">Earnings, last 7 days</h2>
@@ -245,7 +251,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
       <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[13px]">
         <div>
           <dt className="font-semibold text-ink">Paid online</dt>
-          <dd className="text-muted">Your part of the fee, and the whole tip, is sent to you as soon as you deliver.</dd>
+          <dd className="text-muted">Your part of the fee is sent to your GCash, Maya or bank as soon as you deliver. See it below.</dd>
         </div>
         <div>
           <dt className="font-semibold text-ink">Paid in cash</dt>

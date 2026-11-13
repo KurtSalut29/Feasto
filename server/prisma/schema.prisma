@@ -89,6 +89,35 @@ enum ActivityCategory {
   EARNINGS
 }
 
+/// Where Feasto sends a store's or rider's money from online orders (through Xendit Payouts)
+enum PayoutChannel {
+  GCASH
+  MAYA
+  BDO
+  BPI
+  METROBANK
+  LANDBANK
+  UNIONBANK
+  SECURITY_BANK
+}
+
+enum PayoutParty {
+  STORE
+  RIDER
+}
+
+enum PayoutStatus {
+  /// Waiting for a worker to send it
+  PENDING
+  /// The store or rider hasn't said where to send money yet; sent once they do
+  NEEDS_ACCOUNT
+  /// Xendit accepted it and is sending it to the e-wallet or bank
+  SENDING
+  SENT
+  /// Xendit couldn't send it (wrong account, low balance...); can be sent again
+  FAILED
+}
+
 enum Fulfillment {
   DELIVERY
   PICKUP
@@ -137,6 +166,7 @@ model User {
   checkouts     Checkout[]
   deliveries    Order[]        @relation("RiderDeliveries")
   settlements   Settlement[]   @relation("RiderSettlements")
+  payouts       Payout[]       @relation("RiderPayouts")
   jobOffers     JobOffer[]
   bookings      Booking[]
   addresses     Address[]
@@ -207,10 +237,15 @@ model Vendor {
   /// A new store's first month is free: orders before this pay Feasto no commission.
   /// Set once, when the admin first approves the store.
   commissionFreeUntil DateTime?
+  /// Where Feasto sends the store's money from online orders: an e-wallet or bank account
+  payoutChannel       PayoutChannel?
+  payoutName          String?
+  payoutNumber        String?
   createdAt           DateTime       @default(now())
 
   menuItems   MenuItem[]
   settlements Settlement[]
+  payouts     Payout[]
   orders    Order[]
   tables    DiningTable[]
   reviews   Review[]
@@ -248,6 +283,10 @@ model RiderProfile {
   /// Running totals of residents' ratings of this rider, updated with each new rating
   ratingSum        Int            @default(0)
   ratingCount      Int            @default(0)
+  /// Where Feasto sends the rider's money from online orders: an e-wallet or bank account
+  payoutChannel    PayoutChannel?
+  payoutName       String?
+  payoutNumber     String?
   createdAt        DateTime       @default(now())
 
   renewals DocumentRenewal[]
@@ -434,6 +473,7 @@ model Order {
   riderRating RiderRating?
   offers    JobOffer[]
   messages  OrderMessage[]
+  payouts   Payout[]
   chatReads OrderChatRead[]
 
   @@index([vendorId, status])
@@ -469,6 +509,41 @@ model Settlement {
 
   @@index([vendorId, createdAt])
   @@index([riderId, createdAt])
+}
+
+/// Money Feasto sends out after an online order is delivered or collected: the store's food
+/// minus the commission, and the rider's fee minus Feasto's share. One per order and party.
+/// Sent through Xendit Payouts (test mode) to the e-wallet or bank they chose.
+model Payout {
+  id            String        @id @default(cuid())
+  orderId       String
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  party         PayoutParty
+  /// Exactly one of these, matching the party
+  vendorId      String?
+  vendor        Vendor?       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  riderId       String?
+  rider         User?         @relation("RiderPayouts", fields: [riderId], references: [id], onDelete: Restrict)
+  amount        Decimal       @db.Decimal(12, 2)
+  status        PayoutStatus  @default(PENDING)
+  /// Copied when it's sent, so the line stays true after they change their account
+  channel       PayoutChannel?
+  accountName   String?
+  accountNumber String?
+  /// Xendit's id for this payout; empty while simulated or not sent yet
+  xenditId      String?       @unique
+  /// Each try uses a new idempotency key, so a retry after a failure is a new payout at Xendit
+  attempts      Int           @default(0)
+  /// Why it failed, in plain words
+  failure       String?
+  sentAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([orderId, party])
+  @@index([vendorId, createdAt])
+  @@index([riderId, createdAt])
+  @@index([status])
 }
 
 /// A free rider this job has reached so far. Only they can see and accept it until it opens to everyone.

@@ -4,6 +4,7 @@ import { prisma } from "./db.js";
 import { HttpError } from "./http.js";
 import { CHANNELS, notify, publish } from "./liveUpdates.js";
 import { enqueue } from "./outbox.js";
+import { queuePayouts } from "./payouts.js";
 import { QUEUES } from "./rabbitmq.js";
 
 type Tx = Prisma.TransactionClient;
@@ -50,6 +51,8 @@ export async function restoreStock(tx: Tx, orderId: string) {
  * - online and paid: each order cancelled or declined since gets its part refunded, once
  * - online and every order cancelled/rejected -> REFUNDED
  * - cash and every remaining order delivered/collected -> PAID
+ * - online and paid: each order delivered or collected has the store's and rider's shares queued
+ *   to be sent to them (payouts), once
  */
 export async function settlePayment(tx: Tx, checkoutId: string) {
   const checkout = await tx.checkout.findUniqueOrThrow({ where: { id: checkoutId }, include: { orders: { select: { id: true, status: true, refundedAt: true } } } });
@@ -62,6 +65,9 @@ export async function settlePayment(tx: Tx, checkoutId: string) {
       const { count } = await tx.order.updateMany({ where: { id: order.id, refundedAt: null }, data: { refundedAt: new Date() } });
       if (count) await enqueue(tx, QUEUES.refundRequested, { orderId: order.id });
     }
+  }
+  if (checkout.paymentMethod === "ONLINE" && checkout.paymentStatus === "PAID" && statuses.some((s) => s === "DELIVERED" || s === "COMPLETED")) {
+    await queuePayouts(tx, checkoutId);
   }
   if (checkout.paymentMethod === "ONLINE" && checkout.paymentStatus === "PAID" && statuses.every(dropped)) {
     await tx.checkout.update({ where: { id: checkoutId }, data: { paymentStatus: "REFUNDED" } });

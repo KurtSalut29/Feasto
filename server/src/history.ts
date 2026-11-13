@@ -155,6 +155,7 @@ async function removeSamples() {
     prisma.jobOffer.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { riderId: { in: ids } }] } }),
     prisma.review.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { residentId: { in: ids } }] } }),
     prisma.riderRating.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { residentId: { in: ids } }, { riderId: { in: ids } }] } }),
+    prisma.payout.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { riderId: { in: ids } }] } }),
     prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
     prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
     prisma.checkout.deleteMany({ where: { residentId: { in: ids } } }),

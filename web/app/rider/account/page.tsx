@@ -1,4 +1,4 @@
-import { Bell, Bike, FileBadge, History, IdCard, KeyRound, Package, Store, UserPen } from "lucide-react";
+import { Bell, Bike, FileBadge, History, IdCard, KeyRound, Landmark, Package, Store, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NowCard, Tile } from "@/components/app/account-tiles";
@@ -97,6 +97,7 @@ async function RiderAccount() {
         <InstallAppRow />
         <RowGroup title="Settings">
           <Row Icon={UserPen} label="Edit profile" value="Name and phone" href="/rider/profile" />
+          <Row Icon={Landmark} label="Where Feasto sends your pay" value="GCash, Maya or bank" href="/rider/history#payout" />
           <Row Icon={KeyRound} label="Change password" href="/rider/password" />
         </RowGroup>
         <LogoutButton variant="row" />

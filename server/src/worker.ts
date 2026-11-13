@@ -5,6 +5,7 @@ import { runDueDispatches } from "./lib/dispatch.js";
 import { prisma } from "./lib/db.js";
 import { broadcastOrder, orderCode } from "./lib/orders.js";
 import { checkWaitingPayments, confirmPaid, failPayment } from "./lib/paymentFlow.js";
+import { checkPayouts, sendPayout } from "./lib/payouts.js";
 import { ONLINE_LABEL } from "./lib/payments.js";
 import { refundInvoice, XenditError } from "./lib/xendit.js";
 import { relayOutbox } from "./lib/outbox.js";
@@ -135,6 +136,12 @@ await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) =
   log(`refund for ${orderCode(orderId)}: ${note}`);
 });
 
+/**
+ * Sends a store's or rider's share of a finished online order to their e-wallet or bank, through
+ * Xendit Payouts. sendPayout claims it first, so a redelivered message never sends it twice.
+ */
+await consume<{ payoutId: string }>(QUEUES.payoutRequested, ({ payoutId }) => sendPayout(payoutId, log));
+
 // ---------- Sales reports, map-reduce style ----------
 
 /** Map: split the report into one job per store. */
@@ -251,7 +258,10 @@ const paymentsTimer = setInterval(async () => {
   checkingPayments = true;
   try {
     // One worker at a time asks Xendit, so six workers don't send six times the calls
-    if ((await redis.set("lock:payments-check", config.instanceId, "EX", 25, "NX")) === "OK") await checkWaitingPayments(log);
+    if ((await redis.set("lock:payments-check", config.instanceId, "EX", 25, "NX")) === "OK") {
+      await checkWaitingPayments(log);
+      await checkPayouts(log);
+    }
   } catch (error) {
     console.error(`[${config.instanceId}] payment check failed`, error);
   } finally {

@@ -12,8 +12,9 @@ import { formatDate, formatDateTime, formatPeso, formatRange } from "@/lib/forma
 import { periodFromParams, previousPeriod } from "@/lib/report-period";
 import { ONLINE_LABEL } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
-import type { SalesDay } from "@/lib/types";
+import type { PayoutsData, SalesDay } from "@/lib/types";
 import { PeriodPicker } from "../../vendor/reports/period-picker";
+import { PayoutsPanel } from "./payouts-panel";
 import { SettleButton, type OpenBalance } from "./settle-button";
 
 export const metadata: Metadata = { title: "Earnings" };
@@ -60,9 +61,10 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
   const period = periodFromParams(await searchParams, 30);
   const before = previousPeriod(period);
   const query = (p: { from: string; to: string }) => `from=${p.from}&to=${p.to}`;
-  const [data, previous] = await Promise.all([
+  const [data, previous, payouts] = await Promise.all([
     serverApi<Earnings>(`/admin/earnings?${query(period)}`),
     serverApi<Earnings>(`/admin/earnings?${query(before)}`),
+    serverApi<PayoutsData>("/admin/payouts"),
   ]);
   const { totals, rates } = data;
   const vs = `vs ${formatRange(before.from, before.to)}`;
@@ -192,9 +194,9 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
               <div className="px-5 py-3">
                 <dt className="font-medium text-ink">Online orders · split automatically</dt>
                 <dd className="mt-0.5 text-muted">
-                  When each of the {data.paidOut.orders.toLocaleString("en-PH")} online orders was delivered, Feasto sent{" "}
-                  <span className="font-semibold text-ink tabular-nums">{formatPeso(data.paidOut.stores)}</span> to the stores and{" "}
-                  <span className="font-semibold text-ink tabular-nums">{formatPeso(data.paidOut.riders)}</span> to the riders (tips included), and kept its share.
+                  When each of the {data.paidOut.orders.toLocaleString("en-PH")} online orders was delivered,{" "}
+                  <span className="font-semibold text-ink tabular-nums">{formatPeso(data.paidOut.stores)}</span> was the stores&apos; share and{" "}
+                  <span className="font-semibold text-ink tabular-nums">{formatPeso(data.paidOut.riders)}</span> the riders&apos; (tips included); Feasto kept the rest. Each transfer is under Payouts.
                 </dd>
               </div>
               <div className="px-5 py-3">
@@ -203,6 +205,8 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
               </div>
             </dl>
           </Card>
+
+          <PayoutsPanel data={payouts} />
 
           <Card
             title="Still owed from cash"

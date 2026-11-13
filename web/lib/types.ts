@@ -370,3 +370,47 @@ export type RiderDelivery = {
     resident: { name: string; phone: string | null };
   };
 };
+
+// ---------- Payouts: Feasto sending stores and riders their share of online orders ----------
+
+export type PayoutChannel = "GCASH" | "MAYA" | "BDO" | "BPI" | "METROBANK" | "LANDBANK" | "UNIONBANK" | "SECURITY_BANK";
+export type PayoutStatus = "PENDING" | "NEEDS_ACCOUNT" | "SENDING" | "SENT" | "FAILED";
+export type PayoutAccount = { channel: PayoutChannel; name: string; number: string };
+
+export type Payout = {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  party: "STORE" | "RIDER";
+  /** The store's or rider's name */
+  to: string;
+  amount: number;
+  status: PayoutStatus;
+  /** "GCash ••4567", once it was sent there */
+  account: string | null;
+  /** Xendit's id for it, the proof on Xendit's dashboard */
+  reference: string | null;
+  failure: string | null;
+  sentAt: string | null;
+  createdAt: string;
+};
+
+export type PayoutTotals = {
+  sent: number;
+  sentCount: number;
+  onTheWay: number;
+  onTheWayCount: number;
+  held: number;
+  heldCount: number;
+  failed: number;
+  failedCount: number;
+};
+
+export type PayoutsData = {
+  account?: PayoutAccount | null;
+  payouts: Payout[];
+  totals: PayoutTotals;
+  mode: "simulated" | "xendit";
+  /** Admin only: Feasto's balance at Xendit, null when it can't be read */
+  balance?: number | null;
+};
