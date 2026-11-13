@@ -5,7 +5,7 @@ import { StoreCover } from "@/components/app/store-card";
 import { Badge } from "@/components/ui/badge";
 import { formatPeso, timeAgo } from "@/lib/format";
 import { distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
-import { itemsSummary, riderPayment } from "@/lib/order-status";
+import { itemsSummary, riderEarns, riderPayment } from "@/lib/order-status";
 import { clockOf } from "@/lib/schedule";
 import type { RiderJob } from "@/lib/types";
 import { AcceptJobButton } from "./accept-job-button";
@@ -28,7 +28,12 @@ export function JobCard({ job, me, busy }: { job: RiderJob; me: LatLng | null; b
       <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas/60 px-4 py-3">
         <div>
           <p className="text-xs font-medium text-muted">You earn</p>
-          <p className="text-xl leading-tight font-bold text-ink">{formatPeso(job.deliveryFee)}</p>
+          <p className="text-xl leading-tight font-bold text-ink">{formatPeso(riderEarns(job))}</p>
+          {Number(job.riderCut) > 0 && (
+            <p className="text-[11px] text-muted tabular-nums">
+              {formatPeso(job.deliveryFee)} fee − {formatPeso(job.riderCut!)} Feasto · tips all yours
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1">
           <Badge tone={job.status === "READY" ? "success" : "neutral"}>{job.status === "READY" ? "Ready now" : "Being prepared"}</Badge>

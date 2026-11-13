@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Clock, Hourglass, Route, ShieldCheck, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
+import { BadgePercent, Bike, CalendarHeart, Clock, Hourglass, Percent, Route, ShieldCheck, Store, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -27,6 +27,13 @@ export type PlatformSettings = {
   autoCancelMinutes: number;
   /** Accounts one network may create in 10 minutes (where Feasto can tell networks apart) */
   signupsPerNetwork: number;
+  /** Feasto's commission on a delivery order's food, in percent */
+  commissionPercent: number;
+  pickupCommissionPercent: number;
+  /** Feasto's share of the delivery fee, in percent; tips are never shared */
+  riderFeePercent: number;
+  /** A newly approved store pays no commission for this many days */
+  freeTrialDays: number;
 };
 type Key = Exclude<keyof PlatformSettings, "peakHours">;
 
@@ -79,6 +86,40 @@ function WaveTimeline({ storeSeconds, waveSeconds }: { storeSeconds: number; wav
   );
 }
 
+/** One order worked out with the rates being typed, so the admin sees who gets what. */
+function EarningsExample({ commission, pickup, riderFee, deliveryFee }: { commission: number; pickup: number; riderFee: number; deliveryFee: number }) {
+  const food = 300;
+  const cut = (amount: number, percent: number) => Math.round(amount * percent) / 100;
+  const rows = [
+    { what: "Delivery order", food, fee: deliveryFee, commission: cut(food, commission), riderCut: cut(deliveryFee, riderFee) },
+    { what: "Pickup order", food, fee: 0, commission: cut(food, pickup), riderCut: 0 },
+  ];
+  return (
+    <div className="overflow-x-auto rounded-xl border border-line">
+      <table className="w-full min-w-[460px] text-sm">
+        <thead className="bg-canvas text-left text-xs font-semibold tracking-wide text-muted uppercase">
+          <tr>
+            <th className="px-3 py-2">{formatPeso(food)} of food</th>
+            <th className="px-3 py-2 text-right">Store gets</th>
+            <th className="px-3 py-2 text-right">Rider gets</th>
+            <th className="px-3 py-2 text-right">Feasto earns</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {rows.map((r) => (
+            <tr key={r.what}>
+              <td className="px-3 py-2 text-ink">{r.what}</td>
+              <td className="px-3 py-2 text-right text-ink tabular-nums">{formatPeso(r.food - r.commission)}</td>
+              <td className="px-3 py-2 text-right text-ink tabular-nums">{r.fee ? `${formatPeso(r.fee - r.riderCut)} + tips` : "—"}</td>
+              <td className="px-3 py-2 text-right font-semibold text-ink tabular-nums">{formatPeso(r.commission + r.riderCut)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function SettingsForm({ initial }: { initial: PlatformSettings }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<Key, string>>({
@@ -91,6 +132,10 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     stuckMinutes: String(initial.stuckMinutes),
     autoCancelMinutes: String(initial.autoCancelMinutes),
     signupsPerNetwork: String(initial.signupsPerNetwork),
+    commissionPercent: String(initial.commissionPercent),
+    pickupCommissionPercent: String(initial.pickupCommissionPercent),
+    riderFeePercent: String(initial.riderFeePercent),
+    freeTrialDays: String(initial.freeTrialDays),
   });
   const [peakHours, setPeakHours] = useState<PeakWindow[]>(initial.peakHours);
   const [saving, setSaving] = useState(false);
@@ -131,6 +176,10 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         stuckMinutes: number("stuckMinutes"),
         autoCancelMinutes: number("autoCancelMinutes"),
         signupsPerNetwork: number("signupsPerNetwork"),
+        commissionPercent: number("commissionPercent"),
+        pickupCommissionPercent: number("pickupCommissionPercent"),
+        riderFeePercent: number("riderFeePercent"),
+        freeTrialDays: number("freeTrialDays"),
       },
     });
     setSaving(false);
@@ -184,6 +233,32 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
               peakFee={Number(values.deliveryPeakFee) || 0}
               errors={fieldErrors.peakHours}
             />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="Feasto's earnings"
+        Icon={BadgePercent}
+        description="What Feasto keeps from each finished order. Residents pay nothing extra, and every tip goes to the rider."
+      >
+        <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+          <div className="grid content-start gap-4 sm:grid-cols-2">
+            <TextField label="Commission on delivery orders (%)" step="0.5" min="0" icon={Percent} hint="0 to 30. Taken from the store's food sales." {...field("commissionPercent")} />
+            <TextField label="Commission on pickup orders (%)" step="0.5" min="0" icon={Store} hint="0 to 30. Lower, because no rider is needed." {...field("pickupCommissionPercent")} />
+            <TextField label="Share of the delivery fee (%)" step="0.5" min="0" icon={Bike} hint="0 to 30. Taken from the rider's fee, never from tips." {...field("riderFeePercent")} />
+            <TextField label="Free days for new stores" min="0" icon={CalendarHeart} hint="0 to 365. A newly approved store pays no commission for this long." {...field("freeTrialDays")} />
+          </div>
+          <div className="min-w-0 space-y-3 xl:border-l xl:border-line xl:pl-6">
+            <EarningsExample
+              commission={Number(values.commissionPercent) || 0}
+              pickup={Number(values.pickupCommissionPercent) || 0}
+              riderFee={Number(values.riderFeePercent) || 0}
+              deliveryFee={Number(values.deliveryFee) || 0}
+            />
+            <p className="text-sm text-muted">
+              New checkouts use these rates. Orders already placed keep theirs, and cancelled or declined orders pay nothing. Each store and rider sees the same breakdown in their reports.
+            </p>
           </div>
         </div>
       </Card>

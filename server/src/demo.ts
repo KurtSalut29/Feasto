@@ -12,6 +12,7 @@ import { config } from "./config.js";
 import type { DiningTable, Fulfillment, MenuItem, OrderStatus, PaymentMethod, StoreType, User, Vendor } from "./generated/prisma/client.js";
 import { hashPassword } from "./lib/auth.js";
 import { priceDelivery } from "./lib/deliveryFee.js";
+import { feastoShare } from "./lib/earnings.js";
 import { distanceKm } from "./lib/geo.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
@@ -604,6 +605,7 @@ async function main() {
         subtotal,
         deliveryFee,
         deliveryKm,
+        ...feastoShare({ fulfillment, subtotal, deliveryFee, commissionFreeUntil: null }, DEFAULT_SETTINGS, createdAt),
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
         acceptedAt: !failed && status !== "PLACED" ? at(3) : null,
         readyAt: reached(["READY", "PICKED_UP", "DELIVERED", "COMPLETED"]) ? at(between(15, 25)) : null,

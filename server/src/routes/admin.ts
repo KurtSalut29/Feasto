@@ -21,6 +21,7 @@ import { platformDocument } from "../lib/reportExport/document.js";
 import { exportFormat, onScreen, sendReport } from "../lib/reportExport/index.js";
 import { manilaToday } from "../lib/renewals.js";
 import { dailySales } from "../lib/sales.js";
+import { freeUntil } from "../lib/earnings.js";
 import { getSettings } from "../lib/settings.js";
 import { ALLOWED_FROM, decisionVerbs, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
@@ -161,7 +162,12 @@ adminRouter.post("/stores/:id/review", async (req, res) => {
       data: { status: decision, reviewNote: decision === "APPROVED" ? null : note, reviewedAt: new Date() },
     });
     if (count === 0) throw new HttpError(409, "This store was already reviewed or changed. Refresh to see its current status.");
-    const reviewed = await tx.vendor.findUniqueOrThrow({ where: { id }, select: { ownerId: true, name: true } });
+    // A new store's first days are free of commission: set once, on its first approval, for a store with no orders yet
+    const { freeTrialDays } = await getSettings();
+    if (decision === "APPROVED" && freeTrialDays > 0) {
+      await tx.vendor.updateMany({ where: { id, commissionFreeUntil: null, orders: { none: {} } }, data: { commissionFreeUntil: freeUntil(freeTrialDays) } });
+    }
+    const reviewed = await tx.vendor.findUniqueOrThrow({ where: { id }, select: { ownerId: true, name: true, commissionFreeUntil: true } });
     await logActivity(tx, { userId: req.session!.userId, name: req.session!.name }, {
       category: "APPROVALS",
       action: `${decisionVerbs[decision]} store`,
@@ -173,7 +179,14 @@ adminRouter.post("/stores/:id/review", async (req, res) => {
   await invalidateStore(id);
   await notify(store.ownerId, {
     title: `${store.name} was ${decisionWords[decision]}`,
-    body: decision === "APPROVED" ? "Residents can now see your store and order from it." : `Reason: ${note}`,
+    body:
+      decision === "APPROVED"
+        ? `Residents can now see your store and order from it.${
+            store.commissionFreeUntil && store.commissionFreeUntil > new Date()
+              ? ` No Feasto commission until ${store.commissionFreeUntil.toLocaleDateString("en-PH", { month: "long", day: "numeric", timeZone: "Asia/Manila" })}.`
+              : ""
+          }`
+        : `Reason: ${note}`,
     link: "/vendor",
   });
   res.json({ ok: true });

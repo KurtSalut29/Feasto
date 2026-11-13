@@ -46,7 +46,7 @@ export function OrderActions({
   async function run(step: Step | "reject", body?: unknown) {
     setBusy(step);
     setError(undefined);
-    const result = await apiRequest(`/vendor/orders/${orderId}/${step}`, { method: "POST", body });
+    const result = await apiRequest<{ payout?: string }>(`/vendor/orders/${orderId}/${step}`, { method: "POST", body });
     setBusy(null);
     if (!result.ok) {
       setError(result.fieldErrors?.reason?.[0] ?? result.error);
@@ -59,7 +59,7 @@ export function OrderActions({
       complete: ["Order completed", "Nice! It's moved to your history."],
       reject: ["Order declined", "The resident was told why. Any online payment is refunded."],
     } as const;
-    const [title, description] = done[step];
+    const [title, description] = step === "complete" && result.data.payout ? [done.complete[0], result.data.payout] : done[step];
     if (step === "reject") toast.info(title, description);
     else toast.success(title, description);
     router.refresh();

@@ -29,6 +29,14 @@ export const DEFAULT_SETTINGS = {
   autoCancelMinutes: 10,
   /** Accounts one network may create in 10 minutes (where Feasto can tell networks apart) */
   signupsPerNetwork: 20,
+  /** Feasto's commission on the food of a delivery order, in percent */
+  commissionPercent: 10,
+  /** On a pickup order: lower, because no rider is needed */
+  pickupCommissionPercent: 5,
+  /** Feasto's share of the delivery fee, in percent. Tips are never shared. */
+  riderFeePercent: 10,
+  /** A newly approved store pays no commission for this many days */
+  freeTrialDays: 30,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -45,6 +53,15 @@ const peso = (max: number) => {
     .min(0, message)
     .max(max, message)
     .refine((value) => Number.isInteger(Math.round(value * 1e6) / 1e4), "Use at most two decimal places.");
+};
+
+const percent = (max: number) => {
+  const message = `Enter 0 to ${max}%.`;
+  return z
+    .number(message)
+    .min(0, message)
+    .max(max, message)
+    .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 7.5.");
 };
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -98,6 +115,10 @@ export const settingsSchema = z.object({
     .int("Enter 0 to turn it off, or 3 to 120 minutes.")
     .refine((v) => v === 0 || (v >= 3 && v <= 120), "Enter 0 to turn it off, or 3 to 120 minutes."),
   signupsPerNetwork: whole(5, 1000, "sign-ups"),
+  commissionPercent: percent(30),
+  pickupCommissionPercent: percent(30),
+  riderFeePercent: percent(30),
+  freeTrialDays: whole(0, 365, "days"),
 });
 
 /**
@@ -108,7 +129,7 @@ export function getSettings(): Promise<Settings> {
   return cached(CACHE_KEYS.settings, 60, async () => {
     const row = await prisma.platformSettings.findUnique({ where: { id: 1 } });
     if (!row) return DEFAULT_SETTINGS;
-    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork } = row;
+    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork, freeTrialDays } = row;
     const saved = peakHours.safeParse(row.peakHours);
     return {
       deliveryFee: Number(deliveryFee),
@@ -121,6 +142,10 @@ export function getSettings(): Promise<Settings> {
       stuckMinutes,
       autoCancelMinutes,
       signupsPerNetwork,
+      commissionPercent: Number(row.commissionPercent),
+      pickupCommissionPercent: Number(row.pickupCommissionPercent),
+      riderFeePercent: Number(row.riderFeePercent),
+      freeTrialDays,
     };
   });
 }

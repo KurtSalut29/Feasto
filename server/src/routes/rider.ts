@@ -11,6 +11,7 @@ import { hasExpired } from "../lib/renewals.js";
 import { marshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
 import { averageOf, shortName } from "../lib/riderRatings.js";
+import { payoutWords } from "../lib/earnings.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
@@ -125,6 +126,7 @@ riderRouter.get("/jobs", async (req, res) => {
       id: true,
       status: true,
       deliveryFee: true,
+      riderCut: true,
       createdAt: true,
       scheduledFor: true,
       subtotal: true,
@@ -230,9 +232,11 @@ riderRouter.post("/active/:id/delivered", async (req, res) => {
   });
   await redis.del(locationKey(id));
   await notifyResident(id);
-  await notify(order.vendor.ownerId, { title: `${orderCode(id)} was delivered`, body: "The rider handed it over and took a photo.", link: "/vendor/orders?tab=done" });
+  // Online payments are split now: the store's and the rider's parts go to them right away
+  const payout = await payoutWords(id);
+  await notify(order.vendor.ownerId, { title: `${orderCode(id)} was delivered`, body: `The rider handed it over. ${payout.store}`, link: "/vendor/orders?tab=done" });
   await broadcastOrder(id);
-  res.json({ ok: true });
+  res.json({ ok: true, payout: payout.rider });
 });
 
 // ---------- Live location ----------
@@ -278,6 +282,7 @@ riderRouter.get("/history", async (req, res) => {
         id: true,
         finishedAt: true,
         deliveryFee: true,
+        riderCut: true,
         tip: true,
         subtotal: true,
         vendor: { select: { name: true, imageUrl: true } },
@@ -286,18 +291,19 @@ riderRouter.get("/history", async (req, res) => {
         riderRating: { select: { rating: true } },
       },
     }),
-    prisma.order.aggregate({ where: delivered, _sum: { deliveryFee: true, tip: true }, _count: true }),
-    prisma.order.aggregate({ where: { ...delivered, finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true, tip: true }, _count: true }),
+    prisma.order.aggregate({ where: delivered, _sum: { deliveryFee: true, riderCut: true, tip: true }, _count: true }),
+    prisma.order.aggregate({ where: { ...delivered, finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true, riderCut: true, tip: true }, _count: true }),
     prisma.riderProfile.findUnique({ where: { userId }, select: { ratingSum: true, ratingCount: true } }),
   ]);
-  // Earnings are the delivery fees plus every tip, which all go to the rider
-  const earned = (sum: { deliveryFee: Prisma.Decimal | null; tip: Prisma.Decimal | null }) => Number(sum.deliveryFee ?? 0) + Number(sum.tip ?? 0);
+  // Earnings are the delivery fees after Feasto's share, plus every tip, which all go to the rider
+  const earned = (sum: { deliveryFee: Prisma.Decimal | null; riderCut: Prisma.Decimal | null; tip: Prisma.Decimal | null }) =>
+    Math.round((Number(sum.deliveryFee ?? 0) - Number(sum.riderCut ?? 0) + Number(sum.tip ?? 0)) * 100) / 100;
   res.json({
     deliveries,
     today: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     totals: {
-      today: { count: today._count, earnings: earned(today._sum), tips: Number(today._sum.tip ?? 0) },
-      allTime: { count: all._count, earnings: earned(all._sum), tips: Number(all._sum.tip ?? 0) },
+      today: { count: today._count, earnings: earned(today._sum), tips: Number(today._sum.tip ?? 0), feastoShare: Number(today._sum.riderCut ?? 0) },
+      allTime: { count: all._count, earnings: earned(all._sum), tips: Number(all._sum.tip ?? 0), feastoShare: Number(all._sum.riderCut ?? 0) },
     },
     rating: { average: averageOf(profile?.ratingSum ?? 0, profile?.ratingCount ?? 0), count: profile?.ratingCount ?? 0 },
   });

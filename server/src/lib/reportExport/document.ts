@@ -67,6 +67,7 @@ export function cellText(value: Cell, kind: CellKind) {
   return String(value);
 }
 
+const pesoText = (value: number) => peso.format(value);
 const compactDate = (d: string) => d.slice(2).replaceAll("-", "");
 /** FR-S-261001-261011-A1B2: Feasto Report · S(tore) or P(latform) · period · whose */
 export const reportNumber = (scope: "S" | "P", from: string, to: string, key: string) =>
@@ -108,8 +109,13 @@ export function storeDocument(report: StoreReport, preparedFor: string): ReportD
     ],
     summary: [
       { label: "Sales", value: totals.sales, kind: "peso", note: "Before delivery fees" },
-      { label: "Orders", value: totals.orders, kind: "int", note: `${totals.itemsSold.toLocaleString("en-PH")} items sold` },
-      { label: "Average order", value: totals.averageOrder, kind: "peso", note: "Sales ÷ orders" },
+      {
+        label: "Orders",
+        value: totals.orders,
+        kind: "int",
+        note: `${totals.itemsSold.toLocaleString("en-PH")} items sold · ${pesoText(totals.averageOrder)} average`,
+      },
+      { label: "After Feasto's commission", value: totals.afterCommission, kind: "peso", note: `Commission ${pesoText(totals.commission)}` },
       {
         label: "Not completed",
         value: totals.cancelled + totals.declined,
@@ -186,12 +192,14 @@ export function storeDocument(report: StoreReport, preparedFor: string): ReportD
           { label: "Items", kind: "text", width: 4 },
           { label: "Subtotal", kind: "peso", width: 1.2 },
           { label: "Delivery fee", kind: "peso", width: 1.2 },
+          { label: "Feasto commission", kind: "peso", width: 1.3 },
         ],
-        rows: report.orders.map((o) => [o.code, formatStamp(new Date(o.placedAt)), o.customer, o.type, o.payment, o.status, o.items, o.subtotal, o.deliveryFee]),
+        rows: report.orders.map((o) => [o.code, formatStamp(new Date(o.placedAt)), o.customer, o.type, o.payment, o.status, o.items, o.subtotal, o.deliveryFee, o.commission]),
       },
     ],
     notes: [
       "Sales count every order that wasn't cancelled or declined, before delivery fees. Delivery fees go to the riders.",
+      "Feasto's commission is taken only from delivered and collected orders, at the rate each order was placed with. Cancelled and declined orders pay none.",
       "Dates and times are Philippine time. Amounts are in Philippine pesos (₱).",
       "Online payments in Feasto are simulated for this project; no real money moved.",
     ],

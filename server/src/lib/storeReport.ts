@@ -1,4 +1,5 @@
 import { prisma } from "./db.js";
+import { EARNED } from "./earnings.js";
 import { datesBetween, dayCount, manilaRange } from "./reportDates.js";
 
 /** What a store's sales report shows, for any period the vendor picks. Sales are before delivery fees. */
@@ -11,6 +12,14 @@ export type StoreReport = {
     orders: number;
     sales: number;
     deliveryFees: number;
+    /** Feasto's commission on the delivered and collected orders */
+    commission: number;
+    /** Sales after that commission */
+    afterCommission: number;
+    /** Online orders: already sent to the store when each was delivered or collected, after commission */
+    sentOnline: number;
+    /** Cash orders: Feasto's commission on them, which the store pays Feasto */
+    cashCommission: number;
     itemsSold: number;
     averageOrder: number;
     cancelled: number;
@@ -23,7 +32,7 @@ export type StoreReport = {
   payments: { method: string; orders: number; sales: number }[];
   fulfillment: { type: "Delivery" | "Pickup"; orders: number; sales: number }[];
   /** Every sold order, newest first (for the Excel file) */
-  orders: { code: string; placedAt: string; customer: string; type: string; payment: string; status: string; items: string; subtotal: number; deliveryFee: number }[];
+  orders: { code: string; placedAt: string; customer: string; type: string; payment: string; status: string; items: string; subtotal: number; deliveryFee: number; commission: number }[];
 };
 
 export const PAYMENT_NAMES: Record<string, string> = {
@@ -59,9 +68,15 @@ const SOLD = ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP", "DELIVERE
 export async function storeReport(vendorId: string, from: string, to: string): Promise<StoreReport> {
   const range = manilaRange(from, to);
   const { gte, lt } = range;
-  const [store, sold, cancelled, declined, daily, dishes, payments, fulfillment, hours, orders] = await Promise.all([
+  const [store, sold, earned, cancelled, declined, daily, dishes, payments, fulfillment, hours, orders] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true, address: true, storeType: true } }),
     prisma.order.aggregate({ where: { vendorId, createdAt: range, status: { in: [...SOLD] } }, _count: true, _sum: { subtotal: true, deliveryFee: true } }),
+    prisma.$queryRaw<{ commission: string | null; sent_online: string | null; cash_commission: string | null }[]>`
+      SELECT sum(o.commission)::text AS commission,
+        sum(CASE WHEN c."paymentMethod" = 'ONLINE' THEN o.subtotal - o.commission ELSE 0 END)::text AS sent_online,
+        sum(CASE WHEN c."paymentMethod" = 'COD' THEN o.commission ELSE 0 END)::text AS cash_commission
+      FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
+      WHERE o."vendorId" = ${vendorId} AND o."createdAt" >= ${gte} AND o."createdAt" < ${lt} AND o.status IN ('DELIVERED', 'COMPLETED')`,
     prisma.order.count({ where: { vendorId, createdAt: range, status: "CANCELLED" } }),
     prisma.order.count({ where: { vendorId, createdAt: range, status: "REJECTED" } }),
     prisma.$queryRaw<{ day: string; orders: bigint; sales: string }[]>`
@@ -96,6 +111,7 @@ export async function storeReport(vendorId: string, from: string, to: string): P
         fulfillment: true,
         subtotal: true,
         deliveryFee: true,
+        commission: true,
         items: { select: { name: true, quantity: true } },
         checkout: { select: { paymentMethod: true, onlineMethod: true, resident: { select: { name: true } } } },
       },
@@ -105,6 +121,7 @@ export async function storeReport(vendorId: string, from: string, to: string): P
   const byDay = new Map(daily.map((d) => [d.day, d]));
   const salesTotal = Number(sold._sum.subtotal ?? 0);
   const itemsSold = dishes.reduce((n, d) => n + Number(d.quantity), 0);
+  const commission = Number(earned[0]?.commission ?? 0);
 
   // Wallets and cards by name; older online orders without a wallet show as "Online"
   const paymentRows = new Map<string, { orders: number; sales: number }>();
@@ -125,6 +142,10 @@ export async function storeReport(vendorId: string, from: string, to: string): P
       orders: sold._count,
       sales: salesTotal,
       deliveryFees: Number(sold._sum.deliveryFee ?? 0),
+      commission,
+      afterCommission: Math.round((salesTotal - commission) * 100) / 100,
+      sentOnline: Number(earned[0]?.sent_online ?? 0),
+      cashCommission: Number(earned[0]?.cash_commission ?? 0),
       itemsSold,
       averageOrder: sold._count ? salesTotal / sold._count : 0,
       cancelled,
@@ -148,6 +169,8 @@ export async function storeReport(vendorId: string, from: string, to: string): P
       items: o.items.map((i) => `${i.quantity}× ${i.name}`).join(", "),
       subtotal: Number(o.subtotal),
       deliveryFee: Number(o.deliveryFee),
+      // Only delivered and collected orders pay it
+      commission: (EARNED as readonly string[]).includes(o.status) ? Number(o.commission) : 0,
     })),
   };
 }

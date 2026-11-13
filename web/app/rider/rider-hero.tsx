@@ -13,7 +13,9 @@ const SHIFTS: Record<MealTime, { Icon: LucideIcon; label: string; line: string }
 };
 
 /** Earnings are delivery fees plus tips; `tips` is the tips' part */
-export type Totals = { today: { count: number; earnings: number; tips: number }; allTime: { count: number; earnings: number; tips: number } };
+/** Earnings are the delivery fees minus Feasto's share, plus every tip */
+type Earned = { count: number; earnings: number; tips: number; feastoShare?: number };
+export type Totals = { today: Earned; allTime: Earned };
 
 /**
  * The top of the rider's Home: hello by name, the rush it is now and whether they're getting

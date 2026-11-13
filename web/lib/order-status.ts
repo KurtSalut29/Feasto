@@ -82,6 +82,10 @@ export function deliverySteps(status: OrderStatus) {
   return { steps, done: at[status] ?? 0 };
 }
 
+/** What a rider keeps from a delivery: the fee minus Feasto's share (tips come on top, all theirs). */
+export const riderEarns = (order: { deliveryFee: string | number; riderCut?: string | number | null }) =>
+  Math.round((Number(order.deliveryFee) - Number(order.riderCut ?? 0)) * 100) / 100;
+
 /** For a rider: whether to collect cash at the door, or the order is already paid. */
 export function riderPayment(checkout: { paymentMethod: PaymentMethod; onlineMethod?: OnlinePayment | null; paymentStatus: PaymentStatus }) {
   const cash = checkout.paymentMethod === "COD" && checkout.paymentStatus !== "PAID";

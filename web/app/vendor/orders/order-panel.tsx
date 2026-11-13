@@ -8,7 +8,7 @@ import { pinOf, type LatLng } from "@/lib/geo";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import type { VendorOrder } from "@/lib/types";
 import { OrderActions } from "./order-actions";
-import { DishThumb, paymentLine } from "./order-parts";
+import { commissionLine, DishThumb, paymentLine } from "./order-parts";
 import { RiderLive } from "./rider-live";
 import { WaitClock } from "./wait-clock";
 
@@ -35,6 +35,7 @@ export function OrderPanel({
   const delivery = order.fulfillment === "DELIVERY";
   const fee = Number(order.deliveryFee);
   const payment = paymentLine(order);
+  const cut = commissionLine(order);
   const riderShown = Boolean(delivery && order.rider);
 
   return (
@@ -163,6 +164,19 @@ export function OrderPanel({
             <dt>Customer pays</dt>
             <dd className="tabular-nums">{formatPeso(payment.total)}</dd>
           </div>
+          {cut && (
+            <>
+              <div className="flex justify-between pt-1 text-[13px]">
+                <dt className="text-muted">{cut.label}</dt>
+                <dd className="text-muted tabular-nums">{cut.commission ? `−${formatPeso(cut.commission)}` : formatPeso(0)}</dd>
+              </div>
+              <div className="flex justify-between text-[13px] font-semibold text-ink">
+                <dt>You receive for the food</dt>
+                <dd className="tabular-nums">{formatPeso(cut.youReceive)}</dd>
+              </div>
+              <p className="text-xs text-muted">{cut.how}.</p>
+            </>
+          )}
         </dl>
         <p
           className={`mx-4 mb-3 flex w-fit items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold ${

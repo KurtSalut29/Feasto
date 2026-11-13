@@ -303,7 +303,7 @@ adminToolsRouter.post("/orders/:id/cancel", async (req, res) => {
 
 // ---------- Activity log ----------
 
-const ACTIVITY_CATEGORIES = ["APPROVALS", "DOCUMENTS", "ACCOUNTS", "ORDERS", "SETTINGS"] as const satisfies ActivityCategory[];
+const ACTIVITY_CATEGORIES = ["APPROVALS", "DOCUMENTS", "ACCOUNTS", "ORDERS", "SETTINGS", "EARNINGS"] as const satisfies ActivityCategory[];
 
 adminToolsRouter.get("/activity", async (req, res) => {
   const { category, q, page } = z
@@ -361,6 +361,10 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   stuckMinutes: { label: "Stuck after", show: (value) => `${value} min` },
   autoCancelMinutes: { label: "Cancel automatically after", show: (value) => (value ? `${value} min` : "off") },
   signupsPerNetwork: { label: "Sign-ups per network", show: (value) => `${value} per 10 min` },
+  commissionPercent: { label: "Commission on delivery orders", show: (value) => `${value}%` },
+  pickupCommissionPercent: { label: "Commission on pickup orders", show: (value) => `${value}%` },
+  riderFeePercent: { label: "Feasto's share of the delivery fee", show: (value) => `${value}%` },
+  freeTrialDays: { label: "Free days for new stores", show: (value) => (value ? `${value} days` : "none") },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);

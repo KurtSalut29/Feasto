@@ -20,6 +20,7 @@ const CATEGORIES = {
   ACCOUNTS: { label: "Accounts", tone: "warning" },
   ORDERS: { label: "Orders", tone: "brand" },
   SETTINGS: { label: "Settings", tone: "neutral" },
+  EARNINGS: { label: "Earnings", tone: "success" },
 } as const satisfies Record<string, { label: string; tone: BadgeTone }>;
 type Category = keyof typeof CATEGORIES;
 

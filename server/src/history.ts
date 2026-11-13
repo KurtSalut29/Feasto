@@ -14,6 +14,7 @@ import { config } from "./config.js";
 import type { Fulfillment, MenuItem, OnlinePayment, OrderStatus, PaymentMethod, StoreType, User, Vendor } from "./generated/prisma/client.js";
 import { hashPassword } from "./lib/auth.js";
 import { priceDelivery } from "./lib/deliveryFee.js";
+import { feastoShare } from "./lib/earnings.js";
 import { distanceKm } from "./lib/geo.js";
 import { prisma } from "./lib/db.js";
 import { redis } from "./lib/redis.js";
@@ -23,6 +24,8 @@ import { RIDER_ISSUES, RIDER_PRAISE } from "./lib/riderRatings.js";
 const DAYS = 30;
 const DOMAIN = "@sample.feasto.com";
 const PASSWORD = "demo1234";
+/** Marks the weekly settlements this script makes, so a new run removes only those */
+const SAMPLE_SETTLEMENT = "Weekly settlement (sample history)";
 const DOCUMENT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "demo", "documents");
 
 // Same "random" data every run
@@ -146,6 +149,7 @@ async function removeSamples() {
   const orderIds = orders.map((o) => o.id);
   const licenses = await prisma.riderProfile.findMany({ where: { userId: { in: ids }, licenseFile: { not: null } }, select: { licenseFile: true } });
   await prisma.$transaction([
+    prisma.settlement.deleteMany({ where: { OR: [{ note: SAMPLE_SETTLEMENT }, { riderId: { in: ids } }] } }),
     // A real order a sample rider was offered or carried keeps existing, just without that rider
     prisma.order.updateMany({ where: { riderId: { in: ids }, id: { notIn: orderIds } }, data: { riderId: null } }),
     prisma.jobOffer.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { riderId: { in: ids } }] } }),
@@ -254,8 +258,39 @@ async function main() {
   let key = 0;
   const batch = randomBytes(4).toString("hex");
 
+  // What each store and sample rider owes Feasto from cash orders since the last Monday (online
+  // orders were split when delivered). Every Monday morning the admin collects it, so only this
+  // week's cash is still owed.
+  const owed = new Map<string, { vendorId?: string; riderId?: string; amount: number; orders: number }>();
+  const add = (key: string, party: { vendorId?: string; riderId?: string }, amount: number) => {
+    const row = owed.get(key) ?? { ...party, amount: 0, orders: 0 };
+    row.amount += amount;
+    row.orders += 1;
+    owed.set(key, row);
+  };
+  let settlements = 0;
+  async function settleWeek(at: Date) {
+    const rows = [...owed.values()].filter((r) => r.amount > 0);
+    await prisma.settlement.createMany({
+      data: rows.map((r) => ({ r, method: chance(0.75) ? pick(["GCASH", "GCASH", "GCASH", "MAYA"] as const) : null })).map(({ r, method }) => ({
+        vendorId: r.vendorId ?? null,
+        riderId: r.riderId ?? null,
+        amount: Math.round(r.amount * 100) / 100,
+        orders: r.orders,
+        // Most pay in the app; a few hand the cash to the admin
+        method,
+        settledByName: method ? "Paid in the app" : "Feasto admin",
+        note: SAMPLE_SETTLEMENT,
+        createdAt: at,
+      })),
+    });
+    settlements += rows.length;
+    owed.clear();
+  }
+
   for (let daysAgo = DAYS; daysAgo >= 0; daysAgo--) {
     const weekday = new Date(Date.now() + PH_OFFSET - daysAgo * 86400_000).getUTCDay();
+    if (weekday === 1 && daysAgo > 0 && daysAgo < DAYS) await settleWeek(manilaAt(daysAgo, 6 * 60));
     const busy = weekday === 0 || weekday === 5 || weekday === 6 ? 1.35 : 1;
     // Slowly growing: the first weeks are quieter than the last
     const growth = 0.75 + 0.35 * ((DAYS - daysAgo) / DAYS);
@@ -308,6 +343,11 @@ async function main() {
     // About half the deliveries get the rider rated, and some of those a tip (paid online)
     const riderStars = rider && chance(0.5) ? weightedRating() : null;
     const tip = riderStars !== null && riderStars >= 4 && chance(0.3) ? pick([10, 20, 20, 20, 30, 50, 50, 100]) : 0;
+    const share = feastoShare({ fulfillment, subtotal, deliveryFee, commissionFreeUntil: store.commissionFreeUntil }, DEFAULT_SETTINGS, createdAt);
+    if (!failed && paymentMethod === "COD") {
+      add(store.id, { vendorId: store.id }, share.commission);
+      if (rider) add(rider.id, { riderId: rider.id }, share.riderCut);
+    }
 
     const checkout = await prisma.checkout.create({
       data: {
@@ -335,6 +375,7 @@ async function main() {
         subtotal,
         deliveryFee,
         deliveryKm: fulfillment === "DELIVERY" ? km : null,
+        ...share,
         tip,
         tipMethod: tip ? (onlineMethod ?? pick(["GCASH", "GCASH", "MAYA"] as const)) : null,
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early.", "Too many orders right now."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
@@ -401,6 +442,7 @@ async function main() {
     cursor = next;
   } while (cursor !== "0");
 
+  console.log(`Collected Feasto's share of cash orders each Monday (${settlements} sample settlements); this week's is still owed.`);
   const sales = await prisma.order.aggregate({ where: { status: { in: ["DELIVERED", "COMPLETED"] }, checkout: { resident: { email: { endsWith: DOMAIN } } } }, _sum: { subtotal: true } });
   console.log(`\nDone: ${orders} orders and ${reviews} reviews over ${DAYS} days, ₱${Number(sales._sum.subtotal ?? 0).toLocaleString("en-PH")} in sales.`);
   console.log(`Sample residents and riders log in with ${PASSWORD} (emails end in ${DOMAIN}).`);

@@ -5,11 +5,13 @@ import { invalidateStore } from "../lib/redisCache.js";
 import { ONLINE_PAYMENTS, storeRefusing } from "../lib/payments.js";
 import { buildCart, clearCart } from "../lib/cart.js";
 import { prisma } from "../lib/db.js";
+import { feastoShare } from "../lib/earnings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
 import { QUEUES } from "../lib/rabbitmq.js";
 import { perAccount } from "../lib/rateLimit.js";
 import { announceScheduled, scheduleProblem } from "../lib/schedule.js";
+import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 export const checkoutRouter = Router();
@@ -90,6 +92,15 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   }
   const total = cart.itemsTotal + deliveryTotal;
 
+  // Feasto's share, copied onto each order like its fee. A store in its free first month pays no commission.
+  const [rates, freeUntil] = await Promise.all([
+    getSettings(),
+    prisma.vendor.findMany({ where: { id: { in: cart.groups.map((g) => g.store.id) } }, select: { id: true, commissionFreeUntil: true } }),
+  ]);
+  const freeOf = new Map(freeUntil.map((v) => [v.id, v.commissionFreeUntil]));
+  const shareOf = (group: (typeof cart.groups)[number]) =>
+    feastoShare({ fulfillment: input.fulfillment, subtotal: group.subtotal, deliveryFee: feeOf(group), commissionFreeUntil: freeOf.get(group.store.id) ?? null }, rates);
+
   try {
     const checkout = await prisma.$transaction(async (tx) => {
       // Reserve stock with a conditional update: it only succeeds while enough is left,
@@ -127,6 +138,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
               subtotal: group.subtotal,
               deliveryFee: feeOf(group),
               deliveryKm: delivery ? (group.delivery?.km ?? null) : null,
+              ...shareOf(group),
               items: {
                 create: group.items.map((item) => ({
                   menuItemId: item.menuItemId,

@@ -9,7 +9,7 @@ import { ProfileCard, Row, RowGroup } from "@/components/app/profile-parts";
 import { ApprovalBadge } from "@/components/app/status-badges";
 import { requireRole } from "@/lib/auth";
 import { daysLeft, formatDate, formatPeso, isExpired } from "@/lib/format";
-import { orderCode, statusLabel } from "@/lib/order-status";
+import { orderCode, riderEarns, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Totals } from "../rider-hero";
@@ -70,7 +70,7 @@ async function RiderAccount() {
             href="/rider/active"
             Icon={Bike}
             title={`Delivering ${orderCode(active.id)} from ${active.vendor.name}`}
-            text={`${statusLabel(active.status, "DELIVERY")} · +${formatPeso(active.deliveryFee)}`}
+            text={`${statusLabel(active.status, "DELIVERY")} · +${formatPeso(riderEarns(active))}`}
           />
         )}
 

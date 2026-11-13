@@ -10,7 +10,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
 import { pinOf, type LatLng } from "@/lib/geo";
-import { deliverySteps, orderCode, paymentName, riderPayment, statusLabel } from "@/lib/order-status";
+import { deliverySteps, orderCode, paymentName, riderEarns, riderPayment, statusLabel } from "@/lib/order-status";
 import { clockOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
@@ -172,7 +172,7 @@ async function RiderActive() {
             )}
           </div>
           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 tabular-nums">
-            <span className="sr-only">You earn </span>+{formatPeso(order.deliveryFee)}
+            <span className="sr-only">You earn </span>+{formatPeso(riderEarns(order))}
           </span>
         </div>
         <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
@@ -256,13 +256,18 @@ async function RiderActive() {
               <dd className="text-ink tabular-nums">{formatPeso(order.subtotal)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted">Delivery fee (your pay)</dt>
+              <dt className="text-muted">Delivery fee</dt>
               <dd className="text-ink tabular-nums">{formatPeso(order.deliveryFee)}</dd>
             </div>
             <div className="flex justify-between text-[15px] font-bold text-ink">
               <dt>Order total</dt>
               <dd className="tabular-nums">{formatPeso(total)}</dd>
             </div>
+            {Number(order.riderCut) > 0 && (
+              <p className="pt-1 text-xs text-muted">
+                Your pay: {formatPeso(riderEarns(order))}, the fee minus Feasto&apos;s {formatPeso(order.riderCut!)}. Any tip is all yours.
+              </p>
+            )}
             <div className="flex justify-between">
               <dt className="text-muted">Payment</dt>
               <dd className={`font-semibold ${payment.cash ? "text-amber-800" : "text-emerald-700"}`}>{payment.label}</dd>

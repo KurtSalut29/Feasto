@@ -1,15 +1,16 @@
-import { ChevronRight, History, Star } from "lucide-react";
+import { ChevronRight, HandCoins, History, Star } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
+import { PayFeastoButton } from "@/components/app/pay-feasto";
 import { SalesChart } from "@/components/app/sales-chart";
 import { StoreCover } from "@/components/app/store-card";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth";
-import { formatClock, formatDay, formatPeso } from "@/lib/format";
-import { orderCode } from "@/lib/order-status";
+import { formatClock, formatDate, formatDay, formatPeso } from "@/lib/format";
+import { orderCode, riderEarns } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { PaymentMethod, SalesDay } from "@/lib/types";
 import type { Totals } from "../rider-hero";
@@ -20,6 +21,8 @@ type Delivery = {
   id: string;
   finishedAt: string;
   deliveryFee: string;
+  /** Feasto's share of the fee */
+  riderCut?: string;
   /** What the resident tipped, after it arrived */
   tip: string;
   subtotal: string;
@@ -33,6 +36,13 @@ type HistoryResponse = {
   today: string;
   totals: Totals;
   rating: { average: number | null; count: number };
+};
+
+/** The rider's side of Feasto's share: what they still owe Feasto from fees collected in cash */
+type RiderEarnings = {
+  rate: number;
+  balance: { owed: number; orders: number; lastSettledAt: string | null };
+  settlements: { id: string; amount: string; method: string | null; createdAt: string }[];
 };
 
 /** The server sends a rider's latest deliveries, up to this many */
@@ -50,8 +60,8 @@ export default function RiderHistoryPage() {
 const manilaDay = (iso: string) => new Date(new Date(iso).getTime() + 8 * 3600_000).toISOString().slice(0, 10);
 const dayBefore = (day: string, n: number) => new Date(new Date(`${day}T12:00:00Z`).getTime() - n * 86400_000).toISOString().slice(0, 10);
 const plural = (n: number) => `${n} ${n === 1 ? "delivery" : "deliveries"}`;
-/** A delivery's pay: its fee plus any tip, all of which goes to the rider */
-const pay = (d: Delivery) => Number(d.deliveryFee) + Number(d.tip ?? 0);
+/** A delivery's pay: its fee minus Feasto's share, plus any tip, all of which goes to the rider */
+const pay = (d: Delivery) => riderEarns(d) + Number(d.tip ?? 0);
 const sum = (list: Delivery[]) => list.reduce((n, d) => n + pay(d), 0);
 const itemCount = (d: Delivery) => (d.items ?? []).reduce((n, i) => n + i.quantity, 0);
 
@@ -83,7 +93,10 @@ function byDay(deliveries: Delivery[], today: string) {
  */
 async function RiderHistory() {
   await requireRole("RIDER");
-  const { deliveries, totals, today, rating } = await serverApi<HistoryResponse>("/rider/history");
+  const [{ deliveries, totals, today, rating }, earnings] = await Promise.all([
+    serverApi<HistoryResponse>("/rider/history"),
+    serverApi<RiderEarnings>("/rider/earnings"),
+  ]);
 
   if (deliveries.length === 0) {
     return (
@@ -147,6 +160,8 @@ async function RiderHistory() {
         <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />
       </Link>
 
+      <BalanceCard earnings={earnings} feastoShare={totals.allTime.feastoShare ?? 0} />
+
       <section className="mb-6 rounded-2xl border border-line p-4">
         <h2 className="text-sm font-semibold text-ink">Earnings, last 7 days</h2>
         <div className="mt-4">
@@ -181,7 +196,12 @@ async function RiderHistory() {
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="font-semibold text-emerald-700 tabular-nums">+{formatPeso(pay(d))}</p>
-                    {Number(d.tip) > 0 && <p className="text-[11px] font-medium text-emerald-700 tabular-nums">incl. {formatPeso(d.tip)} tip</p>}
+                    {Number(d.riderCut) > 0 && (
+                      <p className="text-[11px] text-muted tabular-nums">
+                        {formatPeso(d.deliveryFee)} − {formatPeso(d.riderCut!)} Feasto
+                      </p>
+                    )}
+                    {Number(d.tip) > 0 && <p className="text-[11px] font-medium text-emerald-700 tabular-nums">+ {formatPeso(d.tip)} tip</p>}
                     {d.riderRating && (
                       <p className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-ink">
                         <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden />
@@ -198,5 +218,45 @@ async function RiderHistory() {
       </div>
       {deliveries.length >= LIST_LIMIT && <p className="mt-4 text-center text-xs text-muted">Showing your latest {LIST_LIMIT} deliveries.</p>}
     </>
+  );
+}
+
+/** How a rider's pay reaches them, and what they still owe Feasto from cash, in a rider's words */
+function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feastoShare: number }) {
+  const { balance, rate } = earnings;
+  return (
+    <section aria-label="Your pay and Feasto's share" className="mb-5 overflow-hidden rounded-2xl border border-line">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-canvas text-muted">
+          <HandCoins className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] text-muted">From cash deliveries, you owe Feasto</p>
+          <p className={`text-lg leading-tight font-bold tabular-nums ${balance.owed > 0 ? "text-amber-800" : "text-ink"}`}>
+            {balance.owed > 0 ? formatPeso(balance.owed) : "Nothing"}
+          </p>
+        </div>
+      </div>
+      {balance.owed > 0 && (
+        <div className="px-4 pb-3">
+          <PayFeastoButton owed={balance.owed} orders={balance.orders} who="rider" className="w-full" />
+        </div>
+      )}
+      <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[13px]">
+        <div>
+          <dt className="font-semibold text-ink">Paid online</dt>
+          <dd className="text-muted">Your part of the fee, and the whole tip, is sent to you as soon as you deliver.</dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-ink">Paid in cash</dt>
+          <dd className="text-muted">
+            You keep the cash, so you pay Feasto its {rate}% of those fees: here in the app, or in person to the admin.
+            {balance.orders > 0 &&
+              ` ${balance.orders} cash ${balance.orders === 1 ? "delivery" : "deliveries"} ${balance.lastSettledAt ? `since you last paid, ${formatDate(balance.lastSettledAt)}` : "so far"}.`}
+          </dd>
+        </div>
+        <p className="text-xs text-muted">Feasto&apos;s share of all your deliveries so far: {formatPeso(feastoShare)}.</p>
+      </dl>
+    </section>
   );
 }

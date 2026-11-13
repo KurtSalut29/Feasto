@@ -19,11 +19,11 @@ export function DeliveryActions({ orderId, status }: { orderId: string; status: 
   async function step(path: "picked-up" | "delivered", body?: object) {
     setBusy(true);
     setError(undefined);
-    const result = await apiRequest(`/rider/active/${orderId}/${path}`, { method: "POST", body });
+    const result = await apiRequest<{ payout?: string }>(`/rider/active/${orderId}/${path}`, { method: "POST", body });
     setBusy(false);
     if (!result.ok) return setError(result.error);
     if (path === "picked-up") toast.success("Pickup confirmed", "Now bring it to the customer. They can see you on their map.");
-    else celebrate({ title: "Delivered! Nice work.", message: "The delivery fee was added to today's earnings." });
+    else celebrate({ title: "Delivered! Nice work.", message: result.data.payout ?? "Your pay was added to today's earnings." });
     router.refresh();
   }
 

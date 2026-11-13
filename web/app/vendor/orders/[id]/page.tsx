@@ -17,7 +17,7 @@ import { isFinished, orderCode, STATUS_TONE, statusLabel } from "@/lib/order-sta
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrderDetail } from "@/lib/types";
 import { OrderActions } from "../order-actions";
-import { DishThumb, paymentLine } from "../order-parts";
+import { commissionLine, DishThumb, paymentLine } from "../order-parts";
 import { RiderLive } from "../rider-live";
 
 export const metadata: Metadata = { title: "Order" };
@@ -44,6 +44,7 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
   const count = order.items.reduce((n, i) => n + i.quantity, 0);
   const fee = Number(order.deliveryFee);
   const payment = paymentLine(order);
+  const cut = commissionLine(order);
   const store = pinOf(order.vendor.latitude, order.vendor.longitude);
   const home = pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng);
   const back = isFinished(order.status) ? "/vendor/orders?tab=done" : "/vendor/orders";
@@ -140,6 +141,19 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                 <dt>Customer pays</dt>
                 <dd className="tabular-nums">{formatPeso(payment.total)}</dd>
               </div>
+              {cut && (
+                <div className="mt-2 space-y-1 rounded-xl bg-canvas px-3 py-2">
+                  <div className="flex justify-between">
+                    <dt className="text-muted">{cut.label}</dt>
+                    <dd className="text-ink tabular-nums">{cut.commission ? `−${formatPeso(cut.commission)}` : formatPeso(0)}</dd>
+                  </div>
+                  <div className="flex justify-between font-semibold text-ink">
+                    <dt>You receive for the food</dt>
+                    <dd className="tabular-nums">{formatPeso(cut.youReceive)}</dd>
+                  </div>
+                  <p className="text-xs text-muted">{cut.how}.</p>
+                </div>
+              )}
               <div className="pt-2">
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${

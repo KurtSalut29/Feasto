@@ -85,6 +85,8 @@ enum ActivityCategory {
   ACCOUNTS
   ORDERS
   SETTINGS
+  /// Money settled with stores and riders
+  EARNINGS
 }
 
 enum Fulfillment {
@@ -134,6 +136,7 @@ model User {
   riderProfile  RiderProfile? // set when role = RIDER
   checkouts     Checkout[]
   deliveries    Order[]        @relation("RiderDeliveries")
+  settlements   Settlement[]   @relation("RiderSettlements")
   jobOffers     JobOffer[]
   bookings      Booking[]
   addresses     Address[]
@@ -201,9 +204,13 @@ model Vendor {
   /// so store lists can show the average without adding up every review
   ratingSum           Int            @default(0)
   ratingCount         Int            @default(0)
+  /// A new store's first month is free: orders before this pay Feasto no commission.
+  /// Set once, when the admin first approves the store.
+  commissionFreeUntil DateTime?
   createdAt           DateTime       @default(now())
 
-  menuItems MenuItem[]
+  menuItems   MenuItem[]
+  settlements Settlement[]
   orders    Order[]
   tables    DiningTable[]
   reviews   Review[]
@@ -313,6 +320,14 @@ model PlatformSettings {
   /// Accounts one network (one internet address) may create in 10 minutes. Only applies where
   /// Feasto can see addresses: through the tunnel and on a cloud server, not on the classroom laptop
   signupsPerNetwork Int      @default(20)
+  /// Feasto's commission on the food of a delivery order, in percent. Orders keep the rate they were placed with.
+  commissionPercent       Decimal @default(10) @db.Decimal(4, 1)
+  /// The same for pickup orders: lower, because no rider is needed
+  pickupCommissionPercent Decimal @default(5) @db.Decimal(4, 1)
+  /// Feasto's share of the delivery fee, in percent. Tips are never shared: they all go to the rider.
+  riderFeePercent         Decimal @default(10) @db.Decimal(4, 1)
+  /// How many days a newly approved store pays no commission
+  freeTrialDays           Int     @default(30)
   updatedAt         DateTime @updatedAt
 }
 
@@ -382,6 +397,13 @@ model Order {
   tip              Decimal     @default(0) @db.Decimal(10, 2)
   /// The e-wallet or card the tip was paid with
   tipMethod        OnlinePayment?
+  /// Feasto's commission, copied at checkout like the delivery fee: the percent and what it comes to.
+  /// Feasto earns it only once the order is delivered or collected; cancelled and declined orders pay nothing.
+  commissionRate   Decimal     @default(0) @db.Decimal(4, 1)
+  commission       Decimal     @default(0) @db.Decimal(10, 2)
+  /// Feasto's share of the delivery fee, the same way. The rider keeps the rest, and every tip.
+  riderCutRate     Decimal     @default(0) @db.Decimal(4, 1)
+  riderCut         Decimal     @default(0) @db.Decimal(10, 2)
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
   scheduledFor     DateTime?
   /// When it reached the store to accept: at checkout, after the online payment, or when a scheduled order was sent.
@@ -409,6 +431,34 @@ model Order {
   @@index([checkoutId])
   @@index([nextDispatchAt])
   @@index([status, scheduledFor])
+}
+
+/// Feasto's share of cash orders, collected from a store or a rider by the admin.
+/// Online payments need no settling: Feasto holds them until the order is delivered or collected,
+/// then sends the store and the rider their part right away. Cash goes straight to the store and
+/// the rider, so they owe Feasto its share; what's still owed is everything earned minus everything settled.
+model Settlement {
+  id            String   @id @default(cuid())
+  /// Exactly one of these: the store, or the rider (their user id)
+  vendorId      String?
+  vendor        Vendor?  @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  riderId       String?
+  rider         User?    @relation("RiderSettlements", fields: [riderId], references: [id], onDelete: Restrict)
+  /// What they paid Feasto: its share of their cash orders
+  amount        Decimal  @db.Decimal(12, 2)
+  /// Finished cash orders this settlement covered
+  orders        Int
+  /// How they paid: the e-wallet or card when the store or rider paid in the app (simulated);
+  /// empty when they handed the money to the admin, who marked it received
+  method        OnlinePayment?
+  settledById   String?
+  /// Copied, so the line stays true after a rename
+  settledByName String
+  note          String?
+  createdAt     DateTime @default(now())
+
+  @@index([vendorId, createdAt])
+  @@index([riderId, createdAt])
 }
 
 /// A free rider this job has reached so far. Only they can see and accept it until it opens to everyone.

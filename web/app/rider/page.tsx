@@ -10,7 +10,7 @@ import { StepBar } from "@/components/app/step-bar";
 import { StoreCover } from "@/components/app/store-card";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
-import { deliverySteps, orderCode, statusLabel } from "@/lib/order-status";
+import { deliverySteps, orderCode, riderEarns, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
@@ -91,7 +91,7 @@ function CurrentDelivery({ order }: { order: RiderDelivery }) {
           <Bike className="size-4" aria-hidden />
           Current delivery
         </p>
-        <span className="text-sm font-bold text-ink tabular-nums">+{formatPeso(order.deliveryFee)}</span>
+        <span className="text-sm font-bold text-ink tabular-nums">+{formatPeso(riderEarns(order))}</span>
       </div>
       <div className="mt-2 flex items-center gap-3">
         <StoreCover imageUrl={order.vendor.imageUrl} className="size-11 shrink-0 rounded-xl" />

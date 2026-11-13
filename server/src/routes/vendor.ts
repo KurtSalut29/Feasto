@@ -14,6 +14,7 @@ import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
 import { dailySales } from "../lib/sales.js";
 import { periodSchema } from "../lib/reportDates.js";
+import { payoutWords } from "../lib/earnings.js";
 import { storeDocument } from "../lib/reportExport/document.js";
 import { exportFormat, onScreen, sendReport } from "../lib/reportExport/index.js";
 import { storeReport } from "../lib/storeReport.js";
@@ -289,7 +290,8 @@ vendorRouter.post("/orders/:id/ready", async (req, res) => {
 /** Pickup orders: the resident collected it at the counter. */
 vendorRouter.post("/orders/:id/complete", async (req, res) => {
   await vendorStep(req.session!.userId, String(req.params.id), ["READY"], "COMPLETED", { finishedAt: new Date() }, { pickupOnly: true });
-  res.json({ ok: true });
+  // An online payment is split now: the store's part goes to it right away
+  res.json({ ok: true, payout: (await payoutWords(String(req.params.id))).store });
 });
 
 // ---------- Dashboard numbers ----------

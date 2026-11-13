@@ -9,6 +9,7 @@ import { FullMapFrame, MapButton } from "@/components/map/full-map";
 import { setDemoPosition, useGeolocation } from "@/components/map/use-my-location";
 import { formatPeso } from "@/lib/format";
 import { DEFAULT_CENTER, distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
+import { riderEarns } from "@/lib/order-status";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import { AcceptJobButton } from "../accept-job-button";
 import { groupJobsByStore, groupLabel, groupStores } from "../job-groups";
@@ -102,7 +103,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
                       <span className="block truncate text-xs text-muted">To {job.checkout.deliveryAddress}</span>
                       {me && <span className="block text-xs text-sky-700">{formatDistance(distanceKm(me, group.at))} from you</span>}
                     </span>
-                    <span className="shrink-0 text-sm font-bold text-ink tabular-nums">{formatPeso(job.deliveryFee)}</span>
+                    <span className="shrink-0 text-sm font-bold text-ink tabular-nums">{formatPeso(riderEarns(job))}</span>
                   </button>
                 </li>
               )),
@@ -195,7 +196,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
                         <span className="block truncate">{job.checkout.deliveryAddress}</span>
                       </span>
                     </p>
-                    <p className="shrink-0 font-bold text-ink">{formatPeso(job.deliveryFee)}</p>
+                    <p className="shrink-0 font-bold text-ink">{formatPeso(riderEarns(job))}</p>
                   </div>
                   <div className="mt-2">
                     {active ? <p className="text-center text-sm text-muted">Finish your current delivery first.</p> : <AcceptJobButton orderId={job.id} />}

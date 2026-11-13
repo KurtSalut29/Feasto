@@ -263,6 +263,9 @@ export type JobDispatch = "NEW" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYO
 export type AutoCancel = { at: string; why: "NO_STORE_REPLY" | "NO_RIDER" } | null;
 
 export type VendorOrder = Omit<OrderBase, "items"> & {
+  /** Feasto's commission on the food, copied at checkout: the percent and the amount */
+  commissionRate?: string;
+  commission?: string;
   autoCancel?: AutoCancel;
   dispatch: JobDispatch;
   /** Each dish, with its menu photo */
@@ -319,6 +322,8 @@ export type RiderJob = {
   status: OrderStatus;
   subtotal: string;
   deliveryFee: string;
+  /** Feasto's share of the fee; the rider keeps the rest */
+  riderCut?: string;
   createdAt: string;
   /** Ordered for later: when the resident wants it at their door */
   scheduledFor?: string | null;
@@ -344,6 +349,8 @@ export type RiderDelivery = {
   scheduledFor?: string | null;
   subtotal: string;
   deliveryFee: string;
+  /** Feasto's share of the fee; the rider keeps the rest */
+  riderCut?: string;
   readyAt: string | null;
   vendor: Pin & { name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
   items: { id: string; name: string; quantity: number; unitPrice: string }[];

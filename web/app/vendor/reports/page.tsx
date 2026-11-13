@@ -1,4 +1,4 @@
-import { BarChart3, Bike, Clock, Flame, ReceiptText, ShoppingBag, Store, Wallet, XCircle } from "lucide-react";
+import { BadgePercent, BarChart3, Bike, CalendarHeart, Clock, Flame, HandCoins, ReceiptText, Store, Wallet, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
@@ -10,10 +10,12 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { percentChange, StatCard } from "@/components/ui/stat-card";
 import { requireRole } from "@/lib/auth";
-import { formatPeso, formatRange } from "@/lib/format";
+import { formatDate, formatPeso, formatRange } from "@/lib/format";
 import { periodFromParams, previousPeriod } from "@/lib/report-period";
 import { serverApi } from "@/lib/server-api";
 import type { SalesDay } from "@/lib/types";
+import { PayFeastoButton } from "@/components/app/pay-feasto";
+import { ONLINE_LABEL } from "@/lib/order-status";
 import { PeriodPicker } from "./period-picker";
 
 export const metadata: Metadata = { title: "Reports" };
@@ -23,11 +25,35 @@ type StoreReport = {
   from: string;
   to: string;
   days: number;
-  totals: { orders: number; sales: number; deliveryFees: number; itemsSold: number; averageOrder: number; cancelled: number; declined: number; busiestHour: number | null };
+  totals: {
+    orders: number;
+    sales: number;
+    deliveryFees: number;
+    /** Feasto's commission on the delivered and collected orders */
+    commission: number;
+    afterCommission: number;
+    /** Online orders: already sent to the store when each was delivered or collected */
+    sentOnline: number;
+    /** Cash orders: Feasto's commission on them, which the store pays Feasto */
+    cashCommission: number;
+    itemsSold: number;
+    averageOrder: number;
+    cancelled: number;
+    declined: number;
+    busiestHour: number | null;
+  };
   daily: SalesDay[];
   dishes: { name: string; quantity: number; sales: number }[];
   payments: { method: string; orders: number; sales: number }[];
   fulfillment: { type: "Delivery" | "Pickup"; orders: number; sales: number }[];
+};
+
+/** The store's side of Feasto's commission: its rates, and what it still owes Feasto from cash orders */
+type StoreEarnings = {
+  rates: { delivery: number; pickup: number };
+  freeUntil: string | null;
+  balance: { owed: number; orders: number; lastSettledAt: string | null };
+  settlements: { id: string; amount: string; orders: number; method: string | null; createdAt: string }[];
 };
 
 export default function VendorReportsPage({ searchParams }: PageProps<"/vendor/reports">) {
@@ -63,9 +89,10 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
   const period = periodFromParams(await searchParams);
   const before = previousPeriod(period);
   const query = (p: { from: string; to: string }) => `from=${p.from}&to=${p.to}`;
-  const [{ report }, { report: previous }] = await Promise.all([
+  const [{ report }, { report: previous }, earnings] = await Promise.all([
     serverApi<{ report: StoreReport }>(`/vendor/reports?${query(period)}`),
     serverApi<{ report: StoreReport }>(`/vendor/reports?${query(before)}`),
+    serverApi<StoreEarnings>("/vendor/earnings"),
   ]);
   const { totals } = report;
   const vs = `vs ${formatRange(before.from, before.to)}`;
@@ -93,16 +120,16 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
         <StatCard label="Sales" value={formatPeso(totals.sales)} change={percentChange(totals.sales, previous.totals.sales)} hint={vs} Icon={Wallet} accent="brand" />
         <StatCard label="Orders" value={totals.orders} change={percentChange(totals.orders, previous.totals.orders)} hint={vs} Icon={ReceiptText} accent="sky" />
         <StatCard
-          label="Average order"
-          value={totals.orders ? formatPeso(totals.averageOrder) : "—"}
-          hint={`${totals.itemsSold.toLocaleString("en-PH")} items sold`}
-          Icon={ShoppingBag}
+          label="After Feasto's commission"
+          value={formatPeso(totals.afterCommission)}
+          hint={totals.commission ? `${formatPeso(totals.commission)} commission · delivered and collected orders` : "No commission in this period"}
+          Icon={BadgePercent}
           accent="violet"
         />
         <StatCard label="Not completed" value={totals.declined + totals.cancelled} hint={`${totals.declined} declined · ${totals.cancelled} cancelled`} Icon={XCircle} accent="gray" />
       </div>
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
           <Card
             title={series === report.daily ? "Sales by day" : "Sales by month"}
@@ -180,6 +207,8 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
             </div>
           </Card>
 
+          <CommissionCard earnings={earnings} totals={totals} />
+
           <Card title="How residents paid" Icon={Wallet}>
             <Breakdown rows={report.payments.map((p) => ({ name: p.method, orders: p.orders, sales: p.sales }))} total={totals.sales} />
           </Card>
@@ -190,6 +219,61 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
         </aside>
       </div>
     </>
+  );
+}
+
+function CommissionCard({ earnings, totals }: { earnings: StoreEarnings; totals: StoreReport["totals"] }) {
+  const { rates, freeUntil, balance, settlements } = earnings;
+  return (
+    <Card title="Your money and Feasto's commission" Icon={HandCoins} description={`${rates.delivery}% on delivery orders · ${rates.pickup}% on pickup · finished orders only`}>
+      {freeUntil && (
+        <p className="flex items-start gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-900">
+          <CalendarHeart className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>
+            <span className="font-semibold">Your first month is free.</span> Orders placed until {formatDate(freeUntil)} pay no commission.
+          </span>
+        </p>
+      )}
+      <dl className="divide-y divide-line text-sm">
+        <div className="px-5 py-3">
+          <dt className="flex items-baseline justify-between gap-3">
+            <span className="font-medium text-ink">Online orders</span>
+            <span className="font-semibold text-emerald-700 tabular-nums">{formatPeso(totals.sentOnline)}</span>
+          </dt>
+          <dd className="mt-0.5 text-xs text-muted">Sent to you in this period, each as soon as it was delivered or collected. Feasto&apos;s commission was already taken out.</dd>
+        </div>
+        <div className="px-5 py-3">
+          <dt className="flex items-baseline justify-between gap-3">
+            <span className="font-medium text-ink">Cash orders</span>
+            <span className={`font-semibold tabular-nums ${balance.owed > 0 ? "text-amber-800" : "text-ink"}`}>
+              {balance.owed > 0 ? `You owe ${formatPeso(balance.owed)}` : "Nothing owed"}
+            </span>
+          </dt>
+          <dd className="mt-0.5 text-xs text-muted">
+            You keep the cash, so you pay Feasto its commission on those orders.
+            {balance.orders > 0 &&
+              ` ${balance.orders} cash ${balance.orders === 1 ? "order" : "orders"} ${balance.lastSettledAt ? `since you last paid, ${formatDate(balance.lastSettledAt)}` : "so far"}.`}
+          </dd>
+          {balance.owed > 0 && (
+            <dd className="mt-3">
+              <PayFeastoButton owed={balance.owed} orders={balance.orders} who="store" className="w-full" />
+            </dd>
+          )}
+        </div>
+      </dl>
+      {settlements.length > 0 && (
+        <ul className="divide-y divide-line border-t border-line bg-canvas/40">
+          {settlements.slice(0, 3).map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+              <span className="text-muted">
+                Paid {s.method ? `with ${ONLINE_LABEL[s.method as keyof typeof ONLINE_LABEL]}` : "in person"} · {formatDate(s.createdAt)}
+              </span>
+              <span className="font-medium text-ink tabular-nums">{formatPeso(s.amount)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 

@@ -7,7 +7,7 @@ import { DateRangeButton, type Period } from "@/components/ui/date-range-picker"
 import { formatRange } from "@/lib/format";
 
 /** Changes the period in the address bar, so the page (and any link to it) shows that period */
-export function PeriodPicker({ value }: { value: Period }) {
+export function PeriodPicker({ value, path = "/vendor/reports" }: { value: Period; path?: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [next, setNext] = useState<Period>();
@@ -19,7 +19,7 @@ export function PeriodPicker({ value }: { value: Period }) {
         busy={pending}
         onChange={(p) => {
           setNext(p);
-          start(() => router.push(`/vendor/reports?from=${p.from}&to=${p.to}`));
+          start(() => router.push(`${path}?from=${p.from}&to=${p.to}`));
         }}
       />
       {pending && next && (
