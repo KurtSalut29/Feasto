@@ -1,9 +1,15 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-/** A centered pop-up built on the browser's <dialog>, which handles focus and the Esc key. */
+/** How long closing plays (dialog.fx-dialog in globals.css): the content stays until it's gone */
+const CLOSING_MS = 300;
+
+/**
+ * A pop-up built on the browser's <dialog>, which handles focus and the Esc key. Centered on bigger
+ * screens; a sheet that rises from the bottom on phones (both animated in globals.css).
+ */
 export function Dialog({
   open,
   onClose,
@@ -21,12 +27,18 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
+  // Keeps the content while the closing animation plays, so it doesn't shrink away empty
+  const [shown, setShown] = useState(open);
+  if (open && !shown) setShown(true);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
+    if (open) return;
+    const timer = setTimeout(() => setShown(false), CLOSING_MS);
+    return () => clearTimeout(timer);
   }, [open]);
 
   return (
@@ -39,11 +51,11 @@ export function Dialog({
         // Clicking the dimmed backdrop closes it
         if (e.target === ref.current) onClose();
       }}
-      className={`m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/40 ${
+      className={`fx-dialog m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/40 ${
         wide ? "max-w-2xl" : "max-w-md"
       }`}
     >
-      {open && (
+      {shown && (
         <div className="max-h-[85dvh] overflow-y-auto p-6">
           <div className="flex items-start justify-between gap-4">
             <div>

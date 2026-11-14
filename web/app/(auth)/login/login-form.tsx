@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, CircleCheck, LockKeyhole, Mail } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,15 @@ import { toast } from "@/components/ui/toast";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 
+/** How long "Welcome back, …!" shows before the app opens (none for people who asked for less motion) */
+const HELLO_MS = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
+
 export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  /** The first name, once logged in: the button says hello while the app loads */
+  const [welcome, setWelcome] = useState<string>();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,7 +42,11 @@ export function LoginForm() {
     // A full page load (not router.replace) after signing in: Next.js keeps visited pages
     // alive in the background, so this clears the old form, its loading state and the
     // typed password, and makes the next visit to /login or /register check the new session.
-    toast.later({ tone: "success", title: `Welcome back, ${result.data.user.name.split(" ")[0]}!`, description: "You're logged in." });
+    const first = result.data.user.name.split(" ")[0];
+    setWelcome(first);
+    toast.later({ tone: "success", title: `Welcome back, ${first}!`, description: "You're logged in." });
+    // A moment to read the hello, then the app rises in over this page (enter-app, globals.css)
+    await new Promise((resolve) => setTimeout(resolve, HELLO_MS));
     window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 
@@ -68,10 +77,17 @@ export function LoginForm() {
       />
 
       <div className="pt-1">
-        <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
-          {submitting ? "Logging in…" : "Log in"}
-          {!submitting && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
-        </Button>
+        {welcome ? (
+          <Button type="button" disabled className={`w-full disabled:opacity-100 ${AUTH_BUTTON}`}>
+            <CircleCheck className="fx-pop-in fx-draw size-5" aria-hidden />
+            <span role="status">Welcome back, {welcome}!</span>
+          </Button>
+        ) : (
+          <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
+            {submitting ? "Logging in…" : "Log in"}
+            {!submitting && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
+          </Button>
+        )}
       </div>
     </form>
   );

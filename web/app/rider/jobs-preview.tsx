@@ -64,7 +64,7 @@ export function JobsPreview({ initial, limit, busy, storeName }: { initial: Jobs
           </p>
           <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} me={position} busy={busy} />
+              <JobCard key={job.id} job={job} me={position} busy={busy} arrivals="rider-home-jobs" />
             ))}
           </ul>
           {total > jobs.length && (

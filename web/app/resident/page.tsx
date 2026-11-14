@@ -12,6 +12,7 @@ import type { Address, StoreSections, StoreSummary } from "@/lib/types";
 import { CategoryGrid } from "./category-grid";
 import { HomeHero } from "./home-hero";
 import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreSearch } from "./stores/store-browse";
+import { StaggerOnce } from "@/components/app/stagger-once";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -53,7 +54,7 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
           <EmptyState Icon={Store} title="No stores yet" text="Stores appear here once an admin approves them. Check back soon!" />
         </div>
       ) : (
-        <>
+        <StaggerOnce>
           <section className="mt-6 md:mt-8" aria-label="Categories">
             <SectionHeading title="Categories" seeAll={{ href: browseHref(NO_FILTERS), label: `All ${sections.total} stores` }} />
             <CategoryGrid categories={sections.categories} />
@@ -77,7 +78,7 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
             stores={sections.saved}
             seeAll={{ href: "/resident/saved", label: sections.savedCount > sections.saved.length ? `See all ${sections.savedCount}` : "See all" }}
           />
-        </>
+        </StaggerOnce>
       )}
     </>
   );

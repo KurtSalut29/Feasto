@@ -9,6 +9,7 @@ import { apiRequest } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
 import type { MenuItem } from "@/lib/types";
+import { TickNumber } from "@/components/ui/tick-number";
 
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 const isSoldOut = (item: MenuItem) => !item.isAvailable || item.stock === 0;
@@ -215,7 +216,7 @@ export function StoreMenu({
         {count > 0 && (
           <Link
             href="/resident/cart"
-            className="flex h-16 items-center gap-3 rounded-2xl bg-brand-600 pr-3 pl-3 text-white shadow-[0_12px_28px_-10px_rgba(210,70,0,0.6)] transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+            className="fx-bar-in flex h-16 items-center gap-3 rounded-2xl bg-brand-600 pr-3 pl-3 text-white shadow-[0_12px_28px_-10px_rgba(210,70,0,0.6)] transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
           >
             <span className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15" aria-hidden>
               <ShoppingBag className="size-5" />
@@ -511,8 +512,8 @@ function DishSheet({
                 >
                   <Minus className="size-4" aria-hidden />
                 </button>
-                <span className="min-w-7 text-center font-bold text-ink tabular-nums" aria-live="polite">
-                  {count}
+                <span className="min-w-7 overflow-hidden text-center font-bold text-ink tabular-nums" aria-live="polite">
+                  <TickNumber value={count} />
                 </span>
                 <button
                   type="button"

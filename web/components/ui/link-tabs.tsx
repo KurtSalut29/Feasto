@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { SlideIndicator } from "./slide-indicator";
 
 export type LinkTab = { href: string; label: string; count?: number; active: boolean; Icon?: LucideIcon };
 
@@ -11,13 +12,14 @@ export function LinkTabs({ tabs, variant = "underline", label }: { tabs: LinkTab
   if (variant === "segmented") {
     return (
       <nav aria-label={label} className="max-w-full overflow-x-auto">
-        <div className="inline-flex gap-1 rounded-xl bg-canvas p-1 ring-1 ring-line/70">
+        <div className="relative inline-flex gap-1 rounded-xl bg-canvas p-1 ring-1 ring-line/70">
+          <SlideIndicator kind="pill" />
           {tabs.map(({ href, label: text, count, active, Icon }) => (
             <Link
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+              className={`relative inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
                 active ? "bg-white font-semibold text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
               }`}
             >
@@ -60,13 +62,14 @@ export function LinkTabs({ tabs, variant = "underline", label }: { tabs: LinkTab
   }
 
   return (
-    <div className="flex gap-6 border-b border-line">
+    <div className="relative flex gap-6 border-b border-line">
+      <SlideIndicator kind="underline" />
       {tabs.map((tab) => (
         <Link
           key={tab.href}
           href={tab.href}
           aria-current={tab.active ? "page" : undefined}
-          className={`-mb-px inline-flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+          className={`relative -mb-px inline-flex items-center gap-2 border-b-2 pb-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
             tab.active ? "border-brand-600 text-brand-700" : "border-transparent text-muted hover:text-ink"
           }`}
         >

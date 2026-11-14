@@ -48,7 +48,7 @@ export function OrderProgress({
             <div className="relative flex flex-col items-center">
               {live && <span aria-hidden className="absolute top-0 size-6 rounded-full bg-brand-500/40 motion-safe:animate-ping" />}
               <span
-                className={`relative flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                className={`relative flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-300 ${
                   done ? "border-brand-600 bg-brand-600 text-white" : "border-gray-300 bg-white"
                 } ${current && !last ? "ring-4 ring-brand-100" : ""}`}
               >

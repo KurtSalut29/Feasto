@@ -1,6 +1,7 @@
 "use client";
 
 import { Banknote, CalendarClock, CreditCard, MapPin } from "lucide-react";
+import { useArrival } from "@/components/app/arrival";
 import { StoreCover } from "@/components/app/store-card";
 import { Badge } from "@/components/ui/badge";
 import { formatPeso, timeAgo } from "@/lib/format";
@@ -14,7 +15,8 @@ import { AcceptJobButton } from "./accept-job-button";
  * One open job: the pay, the store (with its photo) and the customer, how far, what's in the
  * order and what it costs, whether there's cash to collect, and the Accept button.
  */
-export function JobCard({ job, me, busy }: { job: RiderJob; me: LatLng | null; busy: boolean }) {
+export function JobCard({ job, me, busy, arrivals }: { job: RiderJob; me: LatLng | null; busy: boolean; /** The live list it's in: a job arriving later rises in */ arrivals?: string }) {
+  const arrived = useArrival(arrivals, job.id, "rise");
   const store = pinOf(job.vendor.latitude, job.vendor.longitude);
   const home = pinOf(job.checkout.deliveryLat, job.checkout.deliveryLng);
   const toPickup = me && store ? distanceKm(me, store) : null;
@@ -24,7 +26,7 @@ export function JobCard({ job, me, busy }: { job: RiderJob; me: LatLng | null; b
   const payment = riderPayment(job.checkout);
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_8px_24px_-20px_rgba(31,45,61,0.5)]">
+    <li onAnimationEnd={arrived.onAnimationEnd} className={`overflow-hidden rounded-2xl border border-line bg-white shadow-[0_8px_24px_-20px_rgba(31,45,61,0.5)] ${arrived.className}`}>
       <div className="flex items-center justify-between gap-2 border-b border-line bg-canvas/60 px-4 py-3">
         <div>
           <p className="text-xs font-medium text-muted">You earn</p>

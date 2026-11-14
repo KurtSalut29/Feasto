@@ -1,6 +1,7 @@
 import { ArrowDownWideNarrow, Bike, CalendarClock, ClipboardList, History, ListOrdered, MessageSquareText, Store } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Arrival } from "@/components/app/arrival";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { PushCard } from "@/components/app/push-card";
@@ -152,7 +153,10 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
               <ol className="divide-y divide-line">
                 {shown.map((order, i) => (
                   <li key={order.id}>
-                    <QueueRow order={order} position={i + 1} on={order.id === selected?.id} href={href({ order: order.id })} renderedAt={renderedAt} />
+                    {/* A new order slides into the queue with a glow, so it's noticed */}
+                    <Arrival list="vendor-queue" id={order.id}>
+                      <QueueRow order={order} position={i + 1} on={order.id === selected?.id} href={href({ order: order.id })} renderedAt={renderedAt} />
+                    </Arrival>
                     {/* Phones: the chosen order opens right under its row */}
                     {order.id === selected?.id && (
                       <div className="border-t border-brand-100 px-4 py-4 lg:hidden">

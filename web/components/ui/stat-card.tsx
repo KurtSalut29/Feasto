@@ -1,5 +1,6 @@
 import { ArrowUpRight, Minus, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { TickingValue } from "./ticking-value";
 
 /** Tinted icon tiles, shared by stat cards and card headers so every icon looks the same */
 export const ACCENTS = {
@@ -75,7 +76,9 @@ export function StatCard({
         {href && <ArrowUpRight className="size-4 text-gray-400 transition group-hover:text-brand-600" aria-hidden />}
       </div>
       <p className="mt-4 text-sm font-medium text-muted">{label}</p>
-      <p className="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-ink tabular-nums">{value}</p>
+      <p className="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-ink tabular-nums">
+        <TickingValue value={value} />
+      </p>
       <div className="mt-2 min-h-5">
         {change !== undefined ? <Trend change={change} label={hint ?? ""} /> : hint && <p className="text-xs text-muted">{hint}</p>}
       </div>

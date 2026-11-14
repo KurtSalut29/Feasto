@@ -3,6 +3,7 @@
 import { RotateCcw, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AutoRefresh } from "@/components/app/auto-refresh";
 import { PayoutRow, payoutsNote } from "@/components/app/payouts-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export function PayoutsPanel({ data }: { data: PayoutsData }) {
       footer={<p className="text-xs text-muted">{payoutsNote(mode)}</p>}
     >
       <div id="payouts" className="scroll-mt-24">
+        {totals.onTheWayCount > 0 && <AutoRefresh everyMs={8000} />}
         {mode === "xendit" && (
           <div className="border-b border-line px-5 py-3">
             <p className="text-xs text-muted">Feasto&apos;s balance at Xendit (test money)</p>

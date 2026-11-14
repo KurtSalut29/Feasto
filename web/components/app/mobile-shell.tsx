@@ -60,6 +60,7 @@ export function MobileShell({
         >
           {/* The app's top bar: phones (and tablets, for the rider) */}
           <header
+            style={{ viewTransitionName: "app-header" }}
             className={`sticky top-0 z-20 box-content flex h-14 items-center justify-between gap-3 border-b border-line bg-white/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur ${
               resident ? "md:hidden" : "lg:hidden"
             }`}

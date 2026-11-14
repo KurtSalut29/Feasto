@@ -4,6 +4,7 @@ import { LoaderCircle, Minus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiRequest } from "@/lib/browser-api";
+import { TickNumber } from "@/components/ui/tick-number";
 import { toast } from "@/components/ui/toast";
 
 /** "Add" button that turns into a − 2 + stepper. Saves each change to the cart. */
@@ -68,8 +69,8 @@ export function QuantityControl({
             {/* The last one goes out of the cart altogether, so say so with a bin */}
             {quantity === 1 ? <Trash2 className="size-4" aria-hidden /> : <Minus className="size-4" aria-hidden />}
           </button>
-          <span className="min-w-6 text-center text-sm font-semibold text-ink" aria-live="polite">
-            {quantity}
+          <span className="min-w-6 overflow-hidden text-center text-sm font-semibold text-ink" aria-live="polite">
+            <TickNumber value={quantity} />
           </span>
           <button
             type="button"

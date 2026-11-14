@@ -11,10 +11,13 @@ export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { stor
   const router = useRouter();
   const [saved, setSaved] = useState(isFavorite);
   const [busy, setBusy] = useState(false);
+  // The heart pops when saved here; the class goes once it has played
+  const [popping, setPopping] = useState(false);
 
   async function toggle() {
     const next = !saved;
     setSaved(next);
+    setPopping(next);
     setBusy(true);
     const result = await apiRequest(`/stores/${storeId}/favorite`, { method: next ? "PUT" : "DELETE" });
     setBusy(false);
@@ -38,11 +41,13 @@ export function FavoriteButton({ storeId, storeName, isFavorite, plain }: { stor
         plain ? "" : "bg-white/95 shadow-sm backdrop-blur"
       }`}
     >
-      <Heart
-        className={`size-5 transition ${saved ? "fill-brand-600 text-brand-600" : "text-ink"}`}
-        strokeWidth={saved ? 2 : 1.75}
-        aria-hidden
-      />
+      <span onAnimationEnd={() => setPopping(false)} className={`inline-flex ${popping ? "fx-heart" : ""}`}>
+        <Heart
+          className={`size-5 transition-colors ${saved ? "fill-brand-600 text-brand-600" : "text-ink"}`}
+          strokeWidth={saved ? 2 : 1.75}
+          aria-hidden
+        />
+      </span>
     </button>
   );
 }

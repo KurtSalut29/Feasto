@@ -129,13 +129,6 @@ body {
    Everything here only moves for people who haven't asked their phone to reduce motion;
    otherwise the same things simply appear. */
 
-/* A new page fades in (app/<role>/template.tsx). Only opacity: a transform here would pin the
-   page's fixed bars to the page for a moment. */
-@keyframes page-in {
-  from {
-    opacity: 0;
-  }
-}
 
 /* components/app/celebrate.tsx */
 @keyframes fx-fade-in {
@@ -267,9 +260,6 @@ body {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .fx-page {
-    animation: page-in 0.28s ease-out;
-  }
   .fx-backdrop {
     animation: fx-fade-in 0.25s ease-out both;
   }
@@ -311,6 +301,362 @@ body {
   }
   .fx-led {
     animation: printer-led 0.5s steps(1) 0.35s 4;
+  }
+}
+
+/* ---- Transitions: how things arrive, leave, move and change --------------------------------
+   Strong curves (the built-in ones are too weak to feel), and UI motion kept under 300ms.
+   Only transform, opacity and clip-path move, so phones don't have to lay the page out again. */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Page changes run as view transitions (React's <ViewTransition>, app/<role>/template.tsx).
+   Taps go straight to the new page while one plays. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* Switching bottom tabs: the next page slides in a little from the side its tab is on */
+::view-transition-old(.tab-forward) {
+  --fx-slide: -24px;
+  animation:
+    140ms var(--ease-out) both vt-fade reverse,
+    240ms var(--ease-out) both vt-slide reverse;
+}
+::view-transition-new(.tab-forward) {
+  --fx-slide: 24px;
+  animation:
+    200ms var(--ease-out) 60ms both vt-fade,
+    240ms var(--ease-out) both vt-slide;
+}
+::view-transition-old(.tab-back) {
+  --fx-slide: 24px;
+  animation:
+    140ms var(--ease-out) both vt-fade reverse,
+    240ms var(--ease-out) both vt-slide reverse;
+}
+::view-transition-new(.tab-back) {
+  --fx-slide: -24px;
+  animation:
+    200ms var(--ease-out) 60ms both vt-fade,
+    240ms var(--ease-out) both vt-slide;
+}
+@keyframes vt-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide {
+  from {
+    translate: var(--fx-slide) 0;
+  }
+}
+/* Logging in and out are full page loads, animated by the browser across the two pages.
+   lib/page-entrance.ts names which one it is. They happen once a visit, so they take their time
+   (longer than everyday UI motion) to read as arriving and leaving. */
+@view-transition {
+  navigation: auto;
+}
+/* Logging in: the login screen fades and the app rises into place */
+html:active-view-transition-type(enter-app)::view-transition-old(root) {
+  animation: 320ms ease both vt-fade reverse;
+}
+html:active-view-transition-type(enter-app)::view-transition-new(root) {
+  animation: 700ms var(--ease-out) 160ms both fx-app-in;
+}
+/* Logging out: the app sinks away and the login screen fades in behind it */
+html:active-view-transition-type(leave-app)::view-transition-old(root) {
+  animation: 520ms var(--ease-out) both fx-app-out;
+}
+html:active-view-transition-type(leave-app)::view-transition-new(root) {
+  animation: 560ms var(--ease-out) 280ms both vt-fade;
+}
+@keyframes fx-app-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+  }
+}
+@keyframes fx-app-out {
+  to {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+}
+
+/* Any other page change: the new page fades in over a quick fade-out of the old one */
+::view-transition-old(.fx-fade) {
+  animation: 120ms ease both vt-fade reverse;
+}
+::view-transition-new(.fx-fade) {
+  animation: 220ms var(--ease-out) both vt-fade;
+}
+
+/* The bars stay put while the page under them changes: they're the fixed point that shows
+   it's the page that moved, not the whole screen */
+::view-transition-group(app-header),
+::view-transition-group(tab-bar),
+::view-transition-group(dash-tab-bar) {
+  animation: none;
+  z-index: 50;
+}
+::view-transition-old(app-header),
+::view-transition-old(tab-bar),
+::view-transition-old(dash-tab-bar) {
+  display: none;
+}
+::view-transition-new(app-header),
+::view-transition-new(tab-bar),
+::view-transition-new(dash-tab-bar) {
+  animation: none;
+}
+
+/* A store's photo grows from the card that was tapped into the store page's logo */
+::view-transition-group(.fx-morph) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-in-out);
+}
+
+/* A cart line that's removed shrinks away; the lines under it move up instead of jumping */
+::view-transition-old(.fx-leave) {
+  animation: 180ms var(--ease-out) both vt-leave;
+}
+@keyframes vt-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+::view-transition-group(.fx-move) {
+  animation-duration: 240ms;
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(.fx-move) {
+  display: none;
+}
+::view-transition-new(.fx-move) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* Pop-ups (components/ui/dialog.tsx): scale up from 96% in the middle on bigger screens, rise
+   from the bottom as a sheet on phones. Closing plays the same way back. */
+dialog.fx-dialog {
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+dialog.fx-dialog:not([open]) {
+  opacity: 0;
+  transform: scale(0.96);
+}
+@starting-style {
+  dialog.fx-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+dialog.fx-dialog::backdrop {
+  transition:
+    opacity 200ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+dialog.fx-dialog:not([open])::backdrop {
+  opacity: 0;
+}
+@starting-style {
+  dialog.fx-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+@media (width < 40rem) {
+  dialog.fx-dialog {
+    margin: auto auto 0;
+    width: 100%;
+    max-width: none;
+    border-width: 1px 0 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    transition:
+      opacity 280ms var(--ease-drawer),
+      transform 280ms var(--ease-drawer),
+      overlay 280ms allow-discrete,
+      display 280ms allow-discrete;
+  }
+  dialog.fx-dialog:not([open]) {
+    opacity: 1;
+    transform: translateY(100%);
+  }
+  @starting-style {
+    dialog.fx-dialog[open] {
+      opacity: 1;
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* Sliding tab indicator (components/ui/slide-indicator.tsx): once it's measured, it draws the
+   chosen tab instead of the tab's own background or underline */
+[data-slide="on"] > a[aria-current="page"] {
+  background-color: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
+.fx-indicator {
+  clip-path: inset(var(--fx-t, 0) calc(100% - var(--fx-r, 0px)) var(--fx-b, 0) var(--fx-l, 0px) round var(--fx-round, 0));
+}
+.fx-indicator[data-moving] {
+  transition: clip-path 220ms var(--ease-in-out);
+}
+
+/* A number that changes by a step (cart quantity): the new one comes in from the direction it went */
+@keyframes fx-tick-up {
+  from {
+    opacity: 0;
+    transform: translateY(45%);
+  }
+}
+@keyframes fx-tick-down {
+  from {
+    opacity: 0;
+    transform: translateY(-45%);
+  }
+}
+
+/* Something that arrived while the page was open (a new order, a new job) */
+@keyframes fx-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes fx-glow {
+  from {
+    background-color: var(--color-brand-50);
+  }
+}
+@keyframes fx-rise-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+/* A check mark drawing itself (payout sent, payment received) */
+@keyframes fx-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+}
+@keyframes fx-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+/* The heart when a store is saved */
+@keyframes fx-heart {
+  40% {
+    transform: scale(1.3);
+  }
+}
+
+/* Home rows when Home opens: one after another, a few pixels */
+@keyframes fx-stagger {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fx-tick-up {
+    animation: fx-tick-up 160ms var(--ease-out);
+  }
+  .fx-tick-down {
+    animation: fx-tick-down 160ms var(--ease-out);
+  }
+  .fx-arrive {
+    animation:
+      fx-arrive 260ms var(--ease-out) both,
+      fx-glow 1.8s ease-out both;
+  }
+  .fx-rise-up {
+    animation: fx-rise-up 300ms var(--ease-drawer) both;
+  }
+  .fx-draw :is(path, polyline) {
+    stroke-dasharray: 24;
+    animation: fx-draw 400ms var(--ease-out) 120ms both;
+  }
+  .fx-pop-in {
+    animation: fx-pop-in 300ms var(--ease-out) both;
+  }
+  .fx-heart {
+    animation: fx-heart 300ms var(--ease-out);
+  }
+  .fx-stagger > * {
+    animation: fx-stagger 240ms var(--ease-out) both;
+  }
+  .fx-stagger > :nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .fx-stagger > :nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .fx-stagger > :nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .fx-stagger > :nth-child(5) {
+    animation-delay: 160ms;
+  }
+  .fx-stagger > :nth-child(n + 6) {
+    animation-delay: 200ms;
+  }
+  /* The "View cart" bar rises in when the first dish is added */
+  .fx-bar-in {
+    transition:
+      transform 280ms var(--ease-drawer),
+      opacity 280ms var(--ease-drawer),
+      background-color 150ms ease;
+    @starting-style {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+}
+/* Fewer and gentler for people who asked their phone to reduce motion: things fade, nothing travels */
+@media (prefers-reduced-motion: reduce) {
+  .fx-arrive {
+    animation: fx-glow 1.8s ease-out both;
+  }
+  .fx-pop-in,
+  .fx-rise-up {
+    animation: vt-fade 200ms ease both;
+  }
+  dialog.fx-dialog {
+    transform: none !important;
+  }
+  dialog.fx-dialog:not([open]) {
+    opacity: 0 !important;
   }
 }
 

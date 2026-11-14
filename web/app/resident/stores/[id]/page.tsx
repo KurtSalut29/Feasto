@@ -10,6 +10,7 @@ import { MobileSkeleton } from "@/components/app/mobile-shell";
 import { PAYMENT_OPTIONS, PaymentLogo } from "@/components/app/payment-brands";
 import { Stars } from "@/components/app/rating";
 import { StoreCover } from "@/components/app/store-card";
+import { MorphPhoto, StoreLoading } from "@/components/app/store-morph";
 import { storeState } from "@/components/app/store-status";
 import { DirectionsButton } from "@/components/map/directions-button";
 import { FeastoMap } from "@/components/map/feasto-map";
@@ -30,7 +31,7 @@ export const metadata: Metadata = { title: "Store" };
 
 export default function StorePage({ params }: PageProps<"/resident/stores/[id]">) {
   return (
-    <Suspense fallback={<MobileSkeleton />}>
+    <Suspense fallback={<StoreLoading fallback={<MobileSkeleton />} />}>
       <StoreView params={params} />
     </Suspense>
   );
@@ -68,12 +69,14 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
         <div className="absolute top-3 right-3">
           <FavoriteButton key={String(store.isFavorite)} storeId={store.id} storeName={store.name} isFavorite={store.isFavorite} />
         </div>
-        <StoreCover
-          imageUrl={store.imageUrl}
-          Icon={TypeIcon}
-          eager
-          className="mx-auto size-28 rounded-full shadow-[0_10px_24px_-12px_rgba(178,58,0,0.55)] ring-4 ring-white"
-        />
+        <MorphPhoto storeId={store.id} always>
+          <StoreCover
+            imageUrl={store.imageUrl}
+            Icon={TypeIcon}
+            eager
+            className="mx-auto size-28 rounded-full shadow-[0_10px_24px_-12px_rgba(178,58,0,0.55)] ring-4 ring-white"
+          />
+        </MorphPhoto>
       </div>
 
       <div className="text-center">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import { activeHref, isTabPage, NAVIGATION } from "@/lib/navigation";
+import { tabTypes } from "./page-transition";
 import type { Role } from "@/lib/types";
 
 type MobileRole = Extract<Role, "RESIDENT" | "RIDER">;
@@ -29,6 +30,7 @@ function Tabs({ role, pathname }: { role: MobileRole; pathname: string }) {
   const items = NAVIGATION[role];
   if (!isTabPage(role, pathname)) return null;
   const current = activeHref(items, pathname);
+  const here = items.findIndex((item) => item.href === current);
 
   return (
     // Hidden where the big-screen navigation takes over: the resident's top bar from tablets up,
@@ -36,17 +38,19 @@ function Tabs({ role, pathname }: { role: MobileRole; pathname: string }) {
     <nav
       aria-label="Main"
       data-tabbar={role === "RESIDENT" ? "md" : "lg"}
+      style={{ viewTransitionName: "tab-bar" }}
       className={`fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur ${
         role === "RESIDENT" ? "md:hidden" : "md:max-w-2xl lg:hidden"
       }`}
     >
       <ul className={`grid h-16 ${items.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const active = item.href === current;
           return (
             <li key={item.href}>
               <Link
                 href={item.href}
+                transitionTypes={tabTypes(here, index)}
                 aria-current={active ? "page" : undefined}
                 className={`flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
                   active ? "text-brand-700" : "text-muted hover:text-ink"

@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { SelectField } from "@/components/ui/select-field";
 import { TextField } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
+import { AutoRefresh } from "@/components/app/auto-refresh";
 import { apiRequest } from "@/lib/browser-api";
 import { formatDate, formatPeso } from "@/lib/format";
 import type { Payout, PayoutAccount, PayoutChannel, PayoutsData, PayoutStatus } from "@/lib/types";
@@ -121,6 +122,8 @@ export function PayoutsCard({ who, data }: { who: "store" | "rider"; data: Payou
         </ul>
       )}
 
+      {/* While money is on its way, check every few seconds so "Sent" shows without reloading */}
+      {totals.onTheWayCount > 0 && <AutoRefresh everyMs={8000} />}
       <AccountDialog open={editing} onClose={() => setEditing(false)} account={account ?? null} path={`${base}/payouts/account`} />
     </Card>
   );
@@ -131,6 +134,13 @@ export function PayoutRow({ payout: p, retryPath, retryBody = {}, showWho = fals
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const status = STATUS[p.status];
+  // Just turned Sent while the page was open: the check pops in and draws itself
+  const [shownStatus, setShownStatus] = useState(p.status);
+  const [justSent, setJustSent] = useState(false);
+  if (shownStatus !== p.status) {
+    setShownStatus(p.status);
+    setJustSent(p.status === "SENT");
+  }
   const Icon = p.status === "SENT" ? CircleCheck : p.status === "FAILED" ? CircleAlert : Clock;
   const tint = p.status === "SENT" ? "text-emerald-600" : p.status === "FAILED" ? "text-red-600" : p.status === "NEEDS_ACCOUNT" ? "text-amber-600" : "text-sky-600";
 
@@ -146,7 +156,7 @@ export function PayoutRow({ payout: p, retryPath, retryBody = {}, showWho = fals
 
   return (
     <li className="flex gap-3 px-5 py-3">
-      <Icon className={`mt-0.5 size-5 shrink-0 ${tint}`} aria-hidden />
+      <Icon key={p.status} onAnimationEnd={(e) => e.animationName === "fx-draw" && setJustSent(false)} className={`mt-0.5 size-5 shrink-0 ${tint} ${justSent ? "fx-pop-in fx-draw" : ""}`} aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
           <p className="min-w-0 truncate text-sm font-medium text-ink">
@@ -156,7 +166,9 @@ export function PayoutRow({ payout: p, retryPath, retryBody = {}, showWho = fals
           <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(p.amount)}</p>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-          <Badge tone={status.tone}>{status.label}</Badge>
+          <span key={p.status} className={justSent ? "fx-pop-in" : ""}>
+            <Badge tone={status.tone}>{status.label}</Badge>
+          </span>
           {p.account && <span>{p.account}</span>}
           <span>{formatDate(p.sentAt ?? p.createdAt)}</span>
         </div>

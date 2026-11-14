@@ -76,9 +76,9 @@ export function PaymentResult({ checkoutId, backedOut }: { checkoutId: string; b
   if (!payment || payment.status === "PAID" || (payment.status === "PENDING" && !backedOut && !slow)) {
     return (
       <Panel
-        tone="wait"
+        tone={payment?.status === "PAID" ? "good" : "wait"}
         title={payment?.status === "PAID" ? "Payment received" : "Confirming your payment…"}
-        text="Xendit is telling Feasto how your payment went. This takes a few seconds."
+        text={payment?.status === "PAID" ? "Opening your order…" : "Xendit is telling Feasto how your payment went. This takes a few seconds."}
       />
     );
   }
@@ -134,8 +134,9 @@ function Panel({ tone, title, text, actions }: { tone: "wait" | "good" | "bad"; 
   const tint = tone === "wait" ? "bg-brand-50 text-brand-600 ring-brand-100" : tone === "good" ? "bg-emerald-50 text-emerald-600 ring-emerald-100" : "bg-red-50 text-red-600 ring-red-100";
   return (
     <section role="status" className="mx-auto mt-6 max-w-md rounded-3xl border border-line bg-white p-6 text-center shadow-[0_8px_24px_-20px_rgba(31,45,61,0.5)]">
-      <span className={`mx-auto flex size-14 items-center justify-center rounded-2xl ring-1 ${tint}`}>
-        <Icon className={`size-7 ${tone === "wait" ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden />
+      {/* Keyed by tone: the spinner gives way to a check that pops in and draws itself */}
+      <span key={tone} className={`mx-auto flex size-14 items-center justify-center rounded-2xl ring-1 ${tint} ${tone === "wait" ? "" : "fx-pop-in"}`}>
+        <Icon className={`size-7 ${tone === "wait" ? "animate-spin motion-reduce:animate-none" : tone === "good" ? "fx-draw" : ""}`} aria-hidden />
       </span>
       <h2 className="mt-4 text-xl font-bold text-ink">{title}</h2>
       <p className="mt-1.5 text-sm text-muted">{text}</p>

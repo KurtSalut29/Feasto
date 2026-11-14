@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, MapPin, Store } from "lucide-react";
+import { Bike, LoaderCircle, MapPin, ShieldCheck, Store } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
@@ -9,7 +9,7 @@ import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
 import { useApiData } from "@/components/app/use-api-data";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -98,6 +98,18 @@ export function CheckoutForm({
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
   const [placing, setPlacing] = useState(false);
+  // Leaving for Xendit's payment page: a short cover so the jump to another site isn't a surprise
+  const [leaving, setLeaving] = useState(false);
+  // Coming back with the browser's Back button shows this page from memory: take the cover off again
+  useEffect(() => {
+    const restored = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setLeaving(false);
+      setPlacing(false);
+    };
+    window.addEventListener("pageshow", restored);
+    return () => window.removeEventListener("pageshow", restored);
+  }, []);
   const [error, setError] = useState<string>();
 
   const stores = cart.groups.length;
@@ -157,6 +169,7 @@ export function CheckoutForm({
     // Card or e-wallet: pay on Xendit's secure page, which brings the resident back to Feasto after.
     // The button keeps spinning while the browser leaves.
     if (paymentUrl) {
+      setLeaving(true);
       window.location.assign(paymentUrl);
       return;
     }
@@ -390,6 +403,18 @@ export function CheckoutForm({
               : `${later ? "Schedule order" : "Place order"} · ${formatPeso(total)}`}
         </Button>
       </div>
+      {leaving && (
+        <div role="status" className="fx-backdrop fixed inset-0 z-50 flex items-center justify-center bg-white/85 px-6 backdrop-blur-sm">
+          <div className="fx-pop-in w-full max-w-xs rounded-3xl border border-line bg-white p-6 text-center shadow-2xl">
+            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
+              <ShieldCheck className="size-7" aria-hidden />
+            </span>
+            <p className="mt-4 font-semibold text-ink">Opening the secure payment page</p>
+            <p className="mt-1 text-sm text-muted">You&apos;ll pay {formatPeso(total)} on Xendit, then come back to Feasto.</p>
+            <LoaderCircle className="mx-auto mt-4 size-5 animate-spin text-brand-600 motion-reduce:animate-none" aria-hidden />
+          </div>
+        </div>
+      )}
     </div>
     </div>
   );

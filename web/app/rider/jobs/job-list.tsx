@@ -107,7 +107,8 @@ export function JobList({ initial, pageSize, busy }: { initial: JobsPage; pageSi
         <>
           <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             {jobs.map((job) => (
-              <JobCard key={job.id} job={job} me={position} busy={busy} />
+              // A job that comes in while the list is open rises into it
+              <JobCard key={job.id} job={job} me={position} busy={busy} arrivals="rider-jobs" />
             ))}
           </ul>
           <p className="mt-4 text-center text-sm text-muted">

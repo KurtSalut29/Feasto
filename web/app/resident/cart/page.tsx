@@ -2,7 +2,7 @@ import { ChevronRight, Plus, ShoppingCart } from "lucide-react";
 import { DeliveryFeeLine } from "@/components/app/delivery-fee";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { QuantityControl } from "@/components/app/quantity-control";
@@ -104,7 +104,9 @@ async function ResidentCart() {
       <div className="md:grid md:grid-cols-[minmax(0,1fr)_340px] md:items-start md:gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
         {cart.groups.map((group) => (
-          <section key={group.store.id} aria-label={group.store.name} className="overflow-hidden rounded-2xl border border-line">
+          // Removing a dish (or a store's last one) shrinks it away and the rest move up (globals.css)
+          <ViewTransition key={group.store.id} exit="fx-leave" update="fx-move" default="none">
+          <section aria-label={group.store.name} className="overflow-hidden rounded-2xl border border-line">
             <Link
               href={`/resident/stores/${group.store.id}`}
               className="flex items-center gap-3 border-b border-line bg-canvas px-4 py-3 transition hover:bg-gray-100"
@@ -133,7 +135,8 @@ async function ResidentCart() {
             )}
             <ul className="divide-y divide-line px-4">
               {group.items.map((item) => (
-                <li key={item.menuItemId} className="flex gap-3 py-3">
+                <ViewTransition key={item.menuItemId} exit="fx-leave" update="fx-move" default="none">
+                <li className="flex gap-3 py-3">
                   <DishPhoto src={item.imageUrl} sizes="56px" className="size-14 shrink-0 rounded-xl" />
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 leading-snug font-medium text-ink">{item.name}</p>
@@ -146,6 +149,7 @@ async function ResidentCart() {
                     <p className="text-sm font-semibold text-ink tabular-nums">{formatPeso(item.lineTotal)}</p>
                   </div>
                 </li>
+                </ViewTransition>
               ))}
             </ul>
             <div className="flex justify-between border-t border-line px-4 py-3 text-sm">
@@ -158,10 +162,12 @@ async function ResidentCart() {
               </div>
             )}
           </section>
+          </ViewTransition>
         ))}
       </div>
 
       <div className="md:sticky md:top-24">
+      <ViewTransition update="fx-move" default="none">
       <section aria-label="Total" className="mt-5 rounded-2xl border border-line bg-white p-4 md:mt-0">
         <dl className="space-y-1.5 text-[15px]">
           <div className="flex justify-between gap-3">
@@ -186,6 +192,7 @@ async function ResidentCart() {
           {formatPeso(cart.itemsTotal)} only.
         </p>
       </section>
+      </ViewTransition>
       {/* Big screens: checkout right under the total */}
       <div className="mt-3 hidden md:block">
         {blocked ? (

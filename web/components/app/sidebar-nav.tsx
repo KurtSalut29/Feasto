@@ -3,6 +3,7 @@
 import { ChevronLeft, Ellipsis, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { tabTypes } from "./page-transition";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { activeHref, DASHBOARD_TABS, NAVIGATION, type NavItem } from "@/lib/navigation";
@@ -203,7 +204,7 @@ export function SidebarNav({
       {phone && (
         <>
           {/* Phones and tablets: a top bar like the resident and rider apps */}
-          <header className="sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
+          <header style={{ viewTransitionName: "app-header" }} className="sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
             <div className="flex h-14 items-center justify-between gap-3 pr-2 pl-4">
               <Brand role={role} />
               <NotificationBell allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
@@ -258,6 +259,7 @@ function ActiveTabs({ role, badges, onMore, moreOpen }: { role: DashboardRole; b
   const tabs = (DASHBOARD_TABS[role] ?? []).map((href) => items.find((i) => i.href === href)!).filter(Boolean);
   const current = activeHref(items, pathname);
   const onTab = tabs.some((t) => t.href === current);
+  const here = tabs.findIndex((t) => t.href === current);
   const tab = (active: boolean) =>
     `flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
       active ? "text-brand-700" : "text-muted hover:text-ink"
@@ -265,13 +267,13 @@ function ActiveTabs({ role, badges, onMore, moreOpen }: { role: DashboardRole; b
   const pill = (active: boolean) => `relative flex h-7 w-12 items-center justify-center rounded-full transition ${active ? "bg-brand-50" : ""}`;
 
   return (
-    <nav aria-label="Main" data-dash-tabbar className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+    <nav aria-label="Main" data-dash-tabbar style={{ viewTransitionName: "dash-tab-bar" }} className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="mx-auto grid h-16 max-w-xl grid-cols-5">
-        {tabs.map((item) => {
+        {tabs.map((item, index) => {
           const active = item.href === current && !moreOpen;
           return (
             <li key={item.href}>
-              <Link href={item.href} aria-current={active ? "page" : undefined} className={`group ${tab(active)}`}>
+              <Link href={item.href} transitionTypes={tabTypes(here, index)} aria-current={active ? "page" : undefined} className={`group ${tab(active)}`}>
                 <span className={pill(active)}>
                   <item.Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} aria-hidden />
                   {/* The live count (new orders, applications…), as a small badge on the icon */}
