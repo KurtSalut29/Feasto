@@ -52,7 +52,7 @@ function LiveOrder({ order }: { order: ResidentOrder }) {
           <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-ink">{order.vendor.name}</p>
-            <p className="text-[13px] text-muted">
+            <p className="text-[0.8125rem] text-muted">
               {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"} ·{" "}
               {order.scheduledFor ? `for ${clockOf(order.scheduledFor)}` : `placed ${timeAgo(order.createdAt).toLowerCase()}`}
             </p>
@@ -60,7 +60,7 @@ function LiveOrder({ order }: { order: ResidentOrder }) {
           <span className="text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
         </div>
 
-        <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
+        <p className="mt-3 flex items-center gap-2 text-[0.9375rem] font-semibold text-brand-700">
           <span className="relative flex size-2.5" aria-hidden>
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
             <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />
@@ -77,13 +77,13 @@ function LiveOrder({ order }: { order: ResidentOrder }) {
             </li>
           ))}
         </ol>
-        <div className="mt-1 flex justify-between text-[11px] text-muted" aria-hidden>
+        <div className="mt-1 flex justify-between text-[0.6875rem] text-muted" aria-hidden>
           <span>{steps[0]}</span>
           <span>{steps[steps.length - 1]}</span>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-brand-100 pt-3">
-          <p className="min-w-0 truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <p className="min-w-0 truncate text-[0.8125rem] text-muted">{itemsSummary(order.items)}</p>
           <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700">
             Track
             <ChevronRight className="size-4" aria-hidden />
@@ -107,21 +107,21 @@ function ScheduledOrder({ order }: { order: ResidentOrder }) {
           <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-ink">{order.vendor.name}</p>
-            <p className="text-[13px] text-muted">
+            <p className="text-[0.8125rem] text-muted">
               {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
             </p>
           </div>
           <span className="text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
         </div>
-        <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-sky-800">
+        <p className="mt-3 flex items-center gap-2 text-[0.9375rem] font-semibold text-sky-800">
           <CalendarClock className="size-[18px] shrink-0 text-sky-600" aria-hidden />
           {order.fulfillment === "DELIVERY" ? "Arrives" : "Ready"} {whenInSentence(at)}
         </p>
-        <p className="mt-0.5 text-[13px] text-muted">
+        <p className="mt-0.5 text-[0.8125rem] text-muted">
           {order.vendor.name} gets it at {clockOf(sendAtOf(at, order.fulfillment))}. You can cancel until then.
         </p>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-sky-100 pt-3">
-          <p className="min-w-0 truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <p className="min-w-0 truncate text-[0.8125rem] text-muted">{itemsSummary(order.items)}</p>
           <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-sky-800">
             Details
             <ChevronRight className="size-4" aria-hidden />
@@ -148,7 +148,7 @@ function PastOrder({ order }: { order: ResidentOrder }) {
             </p>
             <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">{formatPeso(totalOf(order))}</span>
           </div>
-          <p className="truncate text-[13px] text-muted">{itemsSummary(order.items)}</p>
+          <p className="truncate text-[0.8125rem] text-muted">{itemsSummary(order.items)}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             <Badge tone={STATUS_TONE[order.status]}>{statusLabel(order.status, order.fulfillment)}</Badge>
             <span>
@@ -162,14 +162,14 @@ function PastOrder({ order }: { order: ResidentOrder }) {
       <div className="relative z-10 mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
         {received &&
           (order.review ? (
-            <span className="inline-flex h-8 items-center gap-1.5 px-1 text-[13px] text-muted">
+            <span className="inline-flex h-8 items-center gap-1.5 px-1 text-[0.8125rem] text-muted">
               <Stars value={order.review.rating} size="size-3.5" />
               <span className="sr-only">You rated it {order.review.rating} of 5</span>
             </span>
           ) : (
             <Link
               href={`/resident/orders/${order.id}#rate`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand-50 px-3 text-[13px] font-semibold text-brand-700 transition hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-brand-500"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-brand-50 px-3 text-[0.8125rem] font-semibold text-brand-700 transition hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-brand-500"
             >
               <Star className="size-3.5" aria-hidden />
               Rate it
@@ -178,7 +178,7 @@ function PastOrder({ order }: { order: ResidentOrder }) {
         {hasReceipt(order) && (
           <Link
             href={`/resident/orders/${order.id}/receipt`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[0.8125rem] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
           >
             <ReceiptText className="size-3.5" aria-hidden />
             Receipt
@@ -246,7 +246,7 @@ async function ResidentOrders({ searchParams }: Pick<PageProps<"/resident/orders
       />
       {active.length > 0 && (
         <section className="mb-7" aria-labelledby="orders-active">
-          <h2 id="orders-active" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+          <h2 id="orders-active" className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
             In progress
           </h2>
           <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
@@ -258,7 +258,7 @@ async function ResidentOrders({ searchParams }: Pick<PageProps<"/resident/orders
       )}
       {scheduled.length > 0 && (
         <section className="mb-7" aria-labelledby="orders-scheduled">
-          <h2 id="orders-scheduled" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+          <h2 id="orders-scheduled" className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
             Scheduled
           </h2>
           <ul className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
@@ -271,7 +271,7 @@ async function ResidentOrders({ searchParams }: Pick<PageProps<"/resident/orders
       {past.length > 0 && (
         <section aria-labelledby="orders-past">
           <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h2 id="orders-past" className="text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            <h2 id="orders-past" className="text-sm font-semibold tracking-wider text-gray-500 uppercase">
               Past orders
             </h2>
             {toRate > 0 && (
@@ -283,7 +283,7 @@ async function ResidentOrders({ searchParams }: Pick<PageProps<"/resident/orders
           <div className="space-y-5">
             {[...days].map(([label, list]) => (
               <div key={label}>
-                <h3 className="mb-2 text-[13px] font-semibold text-ink">{label}</h3>
+                <h3 className="mb-2 text-[0.8125rem] font-semibold text-ink">{label}</h3>
                 <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                   {list.map((o) => (
                     <PastOrder key={o.id} order={o} />

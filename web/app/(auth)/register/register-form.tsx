@@ -484,7 +484,7 @@ function DetailsStep({
     <>
       <StepIndicator step={step} total={total} />
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">{title}</h1>
-      <p className="mt-1 text-balance text-center text-[15px] text-muted">{subtitle}</p>
+      <p className="mt-1 text-balance text-center text-[0.9375rem] text-muted">{subtitle}</p>
 
       <form onSubmit={onSubmit} noValidate className="mt-5 space-y-3">
         {error && <Alert tone="error">{error}</Alert>}

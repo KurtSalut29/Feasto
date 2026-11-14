@@ -96,6 +96,29 @@ meRouter.patch("/profile", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Display & accessibility ----------
+
+/** Text size, contrast, motion and button size: applied on every device the person logs in on */
+const displaySelect = { textSize: true, highContrast: true, reduceMotion: true, largeTargets: true } as const;
+
+const displaySchema = z.object({
+  textSize: z.enum(["NORMAL", "LARGE", "XLARGE"], "Choose a text size."),
+  highContrast: z.boolean(),
+  reduceMotion: z.boolean(),
+  largeTargets: z.boolean(),
+});
+
+meRouter.get("/display", async (req, res) => {
+  const display = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: displaySelect });
+  res.json({ display });
+});
+
+meRouter.put("/display", async (req, res) => {
+  const input = parseBody(displaySchema, req.body);
+  const display = await prisma.user.update({ where: { id: req.session!.userId }, data: input, select: displaySelect });
+  res.json({ display });
+});
+
 // ---------- Password ----------
 
 const passwordSchema = z

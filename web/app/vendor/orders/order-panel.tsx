@@ -82,7 +82,7 @@ export function OrderPanel({
 
       {/* The next step, where the eye lands first */}
       <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-3.5">
-        <p className="mb-2 text-[11px] font-semibold tracking-wider text-brand-700 uppercase">Next step</p>
+        <p className="mb-2 text-[0.6875rem] font-semibold tracking-wider text-brand-700 uppercase">Next step</p>
         {order.autoCancel && (
           <p className="mb-2.5 flex items-start gap-2 rounded-xl bg-white px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
             <TimerReset className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
@@ -139,7 +139,7 @@ export function OrderPanel({
               <span className="min-w-0 flex-1 font-medium text-ink">
                 {item.name}
                 {item.note && (
-                  <span className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[13px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                  <span className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.8125rem] font-semibold text-amber-900 ring-1 ring-amber-200">
                     <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                     <span className="min-w-0 break-words">{item.note}</span>
                   </span>
@@ -166,11 +166,11 @@ export function OrderPanel({
           </div>
           {cut && (
             <>
-              <div className="flex justify-between pt-1 text-[13px]">
+              <div className="flex justify-between pt-1 text-[0.8125rem]">
                 <dt className="text-muted">{cut.label}</dt>
                 <dd className="text-muted tabular-nums">{cut.commission ? `−${formatPeso(cut.commission)}` : formatPeso(0)}</dd>
               </div>
-              <div className="flex justify-between text-[13px] font-semibold text-ink">
+              <div className="flex justify-between text-[0.8125rem] font-semibold text-ink">
                 <dt>You receive for the food</dt>
                 <dd className="tabular-nums">{formatPeso(cut.youReceive)}</dd>
               </div>
@@ -190,7 +190,7 @@ export function OrderPanel({
 
       <section aria-label="Customer" className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5 rounded-2xl bg-canvas px-4 py-3 text-sm">
-          <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">Customer</p>
+          <p className="text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">Customer</p>
           <p className="font-semibold text-ink">{order.checkout.resident.name}</p>
           {order.checkout.resident.phone && (
             <a href={`tel:${order.checkout.resident.phone}`} className="flex w-fit items-center gap-2 text-brand-700 hover:underline">
@@ -201,7 +201,7 @@ export function OrderPanel({
           <OrderChat orderId={order.id} look="link" label="Order chat" />
         </div>
         <div className="space-y-1.5 rounded-2xl bg-canvas px-4 py-3 text-sm">
-          <p className="text-[11px] font-semibold tracking-wider text-muted uppercase">{delivery ? "Deliver to" : "Pickup"}</p>
+          <p className="text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">{delivery ? "Deliver to" : "Pickup"}</p>
           <p className="flex gap-2 text-ink">
             <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden />
             {order.checkout.deliveryAddress ?? "The customer collects it at your store."}

@@ -30,7 +30,7 @@ const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-PH", { timeZ
 
 const looks = {
   button:
-    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-[15px] font-semibold text-ink transition hover:bg-canvas motion-safe:active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
+    "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-[0.9375rem] font-semibold text-ink transition hover:bg-canvas motion-safe:active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
   pill: "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500",
   link: "inline-flex w-fit items-center gap-2 font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500",
 };
@@ -187,7 +187,7 @@ function ChatSheet({
             <MessageCircle className="size-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-[17px] font-semibold text-ink">Order chat</h2>
+            <h2 className="text-[1.0625rem] font-semibold text-ink">Order chat</h2>
             <p className="truncate text-sm text-muted">
               {others.map((m) => `${m.name} (${PART_LABEL[m.part].toLowerCase()})`).join(" · ")}
             </p>
@@ -222,17 +222,17 @@ function ChatSheet({
                 <div key={m.id} className={`flex flex-col ${m.mine ? "items-end" : "items-start"} ${sameAsBefore ? "-mt-2" : ""}`}>
                   {!m.mine && !sameAsBefore && (
                     <span className="mb-1 px-1 text-xs font-medium text-muted">
-                      {m.name} <span className="text-gray-400">· {PART_LABEL[m.part]}</span>
+                      {m.name} <span className="text-gray-500">· {PART_LABEL[m.part]}</span>
                     </span>
                   )}
                   <p
-                    className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] leading-snug whitespace-pre-wrap [overflow-wrap:anywhere] motion-safe:animate-[fade-in_0.2s_ease-out] ${
+                    className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[0.9375rem] leading-snug whitespace-pre-wrap [overflow-wrap:anywhere] motion-safe:animate-[fade-in_0.2s_ease-out] ${
                       m.mine ? "rounded-br-md bg-brand-600 text-white" : "rounded-bl-md bg-white text-ink ring-1 ring-line"
                     }`}
                   >
                     {m.body}
                   </p>
-                  <span className="mt-0.5 px-1 text-[11px] text-gray-400">{clock(m.createdAt)}</span>
+                  <span className="mt-0.5 px-1 text-[0.6875rem] text-gray-500">{clock(m.createdAt)}</span>
                 </div>
               );
             })
@@ -267,7 +267,7 @@ function ChatSheet({
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={onKey}
                 placeholder="Write a message"
-                className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-canvas px-4 py-2.5 text-[15px] text-ink outline-none [field-sizing:content] placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100"
+                className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-line bg-canvas px-4 py-2.5 text-[0.9375rem] text-ink outline-none [field-sizing:content] placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-100"
               />
               <button
                 type="submit"

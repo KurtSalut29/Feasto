@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/browser-api";
+import { lessMotion } from "@/lib/display";
 import { forgetPushForLogout } from "@/lib/push";
 import { toast } from "@/components/ui/toast";
 
@@ -21,7 +22,7 @@ export function LogoutButton({ variant = "icon" }: { variant?: "icon" | "row" })
         <button
           type="button"
           onClick={() => setConfirming(true)}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white text-[15px] font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-brand-500"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white text-[0.9375rem] font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-brand-500"
         >
           <LogOut className="size-5" aria-hidden />
           Log out
@@ -68,7 +69,7 @@ function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }
     await apiRequest("/auth/logout", { method: "POST" });
     toast.later({ tone: "success", title: "You're logged out", description: "See you again soon!" });
     setDone(true);
-    await new Promise((resolve) => setTimeout(resolve, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : GOODBYE_MS));
+    await new Promise((resolve) => setTimeout(resolve, lessMotion() ? 0 : GOODBYE_MS));
     // Full page load so no signed-in pages stay alive in the background after logout.
     // The app then shrinks away into the login screen (leave-app, globals.css).
     window.location.replace("/login");

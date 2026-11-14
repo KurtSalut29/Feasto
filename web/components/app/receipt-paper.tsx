@@ -13,7 +13,7 @@ export function ReceiptPaper({ label, children }: { label: string; children: Rea
     <article
       data-receipt
       aria-label={label}
-      className={`${receiptFont.className} mx-auto max-w-[340px] text-[13px] leading-snug text-[#222] [filter:drop-shadow(0_6px_14px_rgba(31,45,61,0.14))] print:[filter:none]`}
+      className={`${receiptFont.className} mx-auto max-w-[340px] text-[0.8125rem] leading-snug text-[#222] [filter:drop-shadow(0_6px_14px_rgba(31,45,61,0.14))] print:[filter:none]`}
     >
       <div aria-hidden className="h-2 bg-[url('/receipt-edge-top.svg')] bg-[length:12px_8px] bg-repeat-x" />
       <div className="bg-white px-5 pt-4 pb-5">{children}</div>

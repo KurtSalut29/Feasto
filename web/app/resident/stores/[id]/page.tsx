@@ -94,11 +94,11 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
             {STORE_TYPE_LABEL[store.storeType]}
           </span>
         </p>
-        {store.description && <p className="mx-auto mt-2.5 max-w-sm text-[15px] leading-relaxed text-pretty text-muted">{store.description}</p>}
+        {store.description && <p className="mx-auto mt-2.5 max-w-sm text-[0.9375rem] leading-relaxed text-pretty text-muted">{store.description}</p>}
       </div>
 
       <div>
-        <dl className="mt-4 grid auto-cols-fr grid-flow-col divide-x divide-line rounded-2xl border border-line py-3 text-center">
+        <ul aria-label="About this store" className="mt-4 grid auto-cols-fr grid-flow-col divide-x divide-line rounded-2xl border border-line py-3 text-center">
           <Fact
             jumpTo="reviews"
             label={store.rating !== null ? `${store.ratingCount} ${store.ratingCount === 1 ? "rating" : "ratings"}` : "No ratings yet"}
@@ -115,7 +115,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
           />
           {distance !== null && address && <Fact label={`from ${address.label}`} value={formatDistance(distance)} />}
           <Fact label={store.delivery ? `delivery to ${store.delivery.addressLabel}` : "delivery from"} value={formatPeso(store.deliveryFee)} />
-        </dl>
+        </ul>
 
         <div className="mt-3 flex gap-2">
           {store.canBook && (
@@ -162,18 +162,23 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
 }
 
 function Fact({ value, label, jumpTo }: { value: ReactNode; label: string; jumpTo?: string }) {
+  // The label comes first for screen readers ("46 ratings, 4.4"), the value shows on top
   const body = (
     <>
-      <dt className="mt-0.5 text-xs text-muted">{label}</dt>
-      <dd className="text-[15px] font-bold text-ink">{value}</dd>
+      <span className="mt-0.5 text-xs text-muted">{label}</span>
+      <span className="text-[0.9375rem] font-bold text-ink">{value}</span>
     </>
   );
-  return jumpTo ? (
-    <JumpLink to={jumpTo} className="flex flex-col-reverse px-2 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-brand-500">
-      {body}
-    </JumpLink>
-  ) : (
-    <div className="flex flex-col-reverse px-2">{body}</div>
+  return (
+    <li className="flex">
+      {jumpTo ? (
+        <JumpLink to={jumpTo} className="flex w-full flex-col-reverse px-2 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-brand-500">
+          {body}
+        </JumpLink>
+      ) : (
+        <div className="flex w-full flex-col-reverse px-2">{body}</div>
+      )}
+    </li>
   );
 }
 
@@ -270,7 +275,7 @@ function StoreInfo({
           <InfoRow Icon={Wallet} label="Pays with">
             <span className="flex flex-wrap items-center gap-1.5">
               {store.acceptsCash && (
-                <span className="inline-flex h-6 items-center gap-1 rounded-md bg-emerald-50 px-1.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                <span className="inline-flex h-6 items-center gap-1 rounded-md bg-emerald-50 px-1.5 text-[0.6875rem] font-semibold text-emerald-700 ring-1 ring-emerald-100">
                   <Banknote className="size-3.5" aria-hidden />
                   Cash
                 </span>

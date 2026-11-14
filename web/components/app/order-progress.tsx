@@ -64,8 +64,8 @@ export function OrderProgress({
               )}
             </div>
             <div className={`pb-5 ${last ? "pb-0" : ""}`}>
-              <p className={`text-[15px] ${done ? "font-semibold text-ink" : "text-muted"}`}>{step.label}</p>
-              {done && step.at && <p className="text-xs text-gray-400">{formatDateTime(step.at)}</p>}
+              <p className={`text-[0.9375rem] ${done ? "font-semibold text-ink" : "text-muted"}`}>{step.label}</p>
+              {done && step.at && <p className="text-xs text-gray-500">{formatDateTime(step.at)}</p>}
             </div>
           </li>
         );

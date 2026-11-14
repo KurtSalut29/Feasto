@@ -89,6 +89,13 @@ enum ActivityCategory {
   EARNINGS
 }
 
+/// How big the app's text is, for people who read better with larger letters
+enum TextSize {
+  NORMAL
+  LARGE
+  XLARGE
+}
+
 /// Where Feasto sends a store's or rider's money from online orders (through Xendit Payouts)
 enum PayoutChannel {
   GCASH
@@ -159,6 +166,11 @@ model User {
   disabledAt        DateTime?
   /// Sessions signed before this moment stop working, so a new password logs out other devices
   passwordChangedAt DateTime?
+  /// Display & accessibility, chosen by the person and applied on every device they log in on
+  textSize          TextSize  @default(NORMAL)
+  highContrast      Boolean   @default(false)
+  reduceMotion      Boolean   @default(false)
+  largeTargets      Boolean   @default(false)
   createdAt         DateTime  @default(now())
 
   vendor        Vendor? // set when role = VENDOR

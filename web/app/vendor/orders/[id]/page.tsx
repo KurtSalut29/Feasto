@@ -116,7 +116,7 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                     </p>
                     <p className="text-xs text-muted">{formatPeso(item.unitPrice)} each</p>
                     {item.note && (
-                      <p className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[13px] font-semibold text-amber-900 ring-1 ring-amber-200">
+                      <p className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.8125rem] font-semibold text-amber-900 ring-1 ring-amber-200">
                         <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                         <span className="min-w-0 break-words">{item.note}</span>
                       </p>

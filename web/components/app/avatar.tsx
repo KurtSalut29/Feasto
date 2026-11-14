@@ -17,14 +17,14 @@ function colorFor(name: string) {
   return COLORS[hash % COLORS.length];
 }
 
-const SIZES = { sm: "size-8 text-[11px]", md: "size-9 text-xs", lg: "size-11 text-sm" };
+const SIZES = { sm: "size-8 text-[0.6875rem]", md: "size-9 text-xs", lg: "size-11 text-sm" };
 
 /** A person's initials in a colored circle. */
 export function Avatar({ name, size = "md", muted }: { name: string; size?: keyof typeof SIZES; muted?: boolean }) {
   return (
     <span
       aria-hidden
-      className={`flex shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-black/5 ${SIZES[size]} ${muted ? "bg-gray-100 text-gray-400" : colorFor(name)}`}
+      className={`flex shrink-0 items-center justify-center rounded-full font-semibold ring-1 ring-black/5 ${SIZES[size]} ${muted ? "bg-gray-100 text-gray-500" : colorFor(name)}`}
     >
       {initials(name)}
     </span>

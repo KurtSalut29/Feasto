@@ -37,7 +37,7 @@ const LICENSE_STYLE = {
   ok: "text-muted",
   soon: "font-semibold text-amber-700",
   expired: "font-semibold text-red-700",
-  none: "text-gray-400",
+  none: "text-gray-500",
 };
 
 const FILTERS = [
@@ -83,14 +83,14 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
           </div>
         </div>
         <div className="relative w-full sm:w-64">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Name, plate or phone"
             aria-label="Search riders"
-            className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+            className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
           />
         </div>
       </header>
@@ -116,7 +116,7 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
         })}
       </div>
 
-      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_90px_36px] gap-4 border-b border-line bg-canvas/60 px-5 py-2 text-[11px] font-semibold tracking-wider text-gray-500 uppercase lg:grid">
+      <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_90px_36px] gap-4 border-b border-line bg-canvas/60 px-5 py-2 text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase lg:grid">
         <span>Rider</span>
         <span>Motorcycle</span>
         <span>License</span>
@@ -157,7 +157,7 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
                           </span>
                         )}
                         {rider.needsAttention && (
-                          <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-200">Check</span>
+                          <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-amber-800 ring-1 ring-amber-200">Check</span>
                         )}
                       </span>
                       <span className="block truncate text-xs text-muted">{rider.phone ?? "No phone"}</span>
@@ -173,7 +173,7 @@ export function Roster({ riders }: { riders: RosterRider[] }) {
                   </span>
                   <span className="hidden min-w-0 lg:block">
                     <span className="flex items-center gap-1.5 truncate text-sm text-ink">
-                      <Bike className="size-4 shrink-0 text-gray-400" aria-hidden />
+                      <Bike className="size-4 shrink-0 text-gray-500" aria-hidden />
                       <span className="truncate">{rider.vehicle}</span>
                     </span>
                     <span className="block truncate font-mono text-xs text-muted">{rider.plate ?? "No plate"}</span>

@@ -197,7 +197,7 @@ async function UsersList({ searchParams }: Pick<PageProps<"/admin/users">, "sear
                             </p>
                           </div>
                         ) : (
-                          <span className="text-gray-400">—</span>
+                          <span className="text-gray-500">—</span>
                         )}
                       </td>
                       <td className={`${TD} whitespace-nowrap text-muted`}>{formatDate(user.createdAt)}</td>

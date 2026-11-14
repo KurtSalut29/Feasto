@@ -121,7 +121,7 @@ export function LocationPicker({
           </span>
         )}
       </div>
-      <p className={`mt-1 text-[13px] ${error ? "text-red-600" : "text-muted"}`}>
+      <p className={`mt-1 text-[0.8125rem] ${error ? "text-red-600" : "text-muted"}`}>
         {error ?? message ?? (value ? "Pin set. Move the map to adjust it." : hint)}
       </p>
     </div>
@@ -148,7 +148,7 @@ function PlaceSearch({ near, onPick }: { near: LatLng; onPick: (place: Place) =>
 
   return (
     <div className="relative mb-2">
-      <Search className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-gray-400" aria-hidden />
+      <Search className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-gray-500" aria-hidden />
       <input
         type="search"
         value={query}
@@ -157,7 +157,7 @@ function PlaceSearch({ near, onPick }: { near: LatLng; onPick: (place: Place) =>
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Search a street or place"
         aria-label="Search a street or place"
-        className="h-11 w-full rounded-xl border border-line bg-white pr-4 pl-10 text-[15px] text-ink outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 sm:h-10"
+        className="h-11 w-full rounded-xl border border-line bg-white pr-4 pl-10 text-[0.9375rem] text-ink outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 sm:h-10"
       />
       {open && query.trim().length >= 3 && (
         <ul className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-line bg-white shadow-lg">

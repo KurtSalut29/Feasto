@@ -35,10 +35,9 @@ export function RiderCode({ code }: { code: string }) {
             Your store&apos;s code for riders
           </p>
           {/* One tile per character, easy to read out over the phone */}
-          <p
-            className="mt-2 flex flex-wrap gap-1.5"
-            aria-label={`Code ${code.split("").join(" ")}`}
-          >
+          <p className="mt-2 flex flex-wrap gap-1.5">
+            {/* Read out one character at a time; the tiles are for the eyes */}
+            <span className="sr-only">Code {code.split("").join(" ")}</span>
             {code.split("").map((char, i) =>
               char === "-" ? (
                 <span

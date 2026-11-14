@@ -55,7 +55,7 @@ export function SalesChart({
     <figure className="m-0 pt-2">
       <div className="relative flex gap-3" style={{ height }}>
         {/* Y axis */}
-        <div aria-hidden className="relative w-9 shrink-0 text-right text-[11px] text-gray-500 tabular-nums">
+        <div aria-hidden className="relative w-9 shrink-0 text-right text-[0.6875rem] text-gray-500 tabular-nums">
           {ticks.map((tick) => (
             <span key={tick} className="absolute right-0 -translate-y-1/2" style={{ bottom: `${(tick / top) * 100}%` }}>
               {compact(tick)}
@@ -114,7 +114,7 @@ export function SalesChart({
       </div>
 
       {/* X axis */}
-      <div aria-hidden className="mt-2 flex gap-3 text-[11px] text-gray-500">
+      <div aria-hidden className="mt-2 flex gap-3 text-[0.6875rem] text-gray-500">
         <div className="w-9 shrink-0" />
         <div className="flex flex-1">
           {days.map((day, i) => (

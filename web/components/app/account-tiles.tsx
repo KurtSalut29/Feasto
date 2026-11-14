@@ -32,7 +32,7 @@ export function Tile({ href, Icon, label, note, highlight }: { href: string; Ico
         {highlight && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-brand-600 ring-2 ring-white" />}
       </span>
       <span>
-        <span className="block text-[15px] font-semibold text-ink">{label}</span>
+        <span className="block text-[0.9375rem] font-semibold text-ink">{label}</span>
         <span className={`block text-xs ${highlight ? "font-semibold text-brand-700" : "text-muted"}`}>{note}</span>
       </span>
     </Link>

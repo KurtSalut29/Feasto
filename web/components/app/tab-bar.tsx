@@ -52,7 +52,7 @@ function Tabs({ role, pathname }: { role: MobileRole; pathname: string }) {
                 href={item.href}
                 transitionTypes={tabTypes(here, index)}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
+                className={`flex h-full flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
                   active ? "text-brand-700" : "text-muted hover:text-ink"
                 }`}
               >

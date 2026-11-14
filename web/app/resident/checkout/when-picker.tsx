@@ -85,7 +85,7 @@ export function WhenPicker({
                     >
                       <input type="radio" name="schedule-day" checked={on} onChange={() => pickDay(d)} className="sr-only" />
                       <span className={`text-sm font-semibold ${on ? "text-brand-700" : "text-ink"}`}>{d.label.split(",")[0]}</span>
-                      <span className="text-[11px] text-muted">
+                      <span className="text-[0.6875rem] text-muted">
                         {d.times[0].label}–{d.times.at(-1)!.label}
                       </span>
                     </label>

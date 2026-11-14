@@ -93,10 +93,10 @@ function Preview({ values }: { values: StoreSettings }) {
           </span>
         )}
         <div className="mt-3 border-t border-line pt-2.5">
-          <p className="mb-1.5 text-[11px] font-semibold tracking-wider text-muted uppercase">Pays with</p>
+          <p className="mb-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">Pays with</p>
           <p className="flex flex-wrap items-center gap-1.5">
             {values.acceptsCash && (
-              <span className="inline-flex h-6 items-center gap-1 rounded-md bg-emerald-50 px-1.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+              <span className="inline-flex h-6 items-center gap-1 rounded-md bg-emerald-50 px-1.5 text-[0.6875rem] font-semibold text-emerald-700 ring-1 ring-emerald-100">
                 <Banknote className="size-3.5" aria-hidden />
                 Cash
               </span>
@@ -130,7 +130,7 @@ function PaymentTile({ option, on, onToggle }: { option: PaymentOption; on: bool
         <span aria-hidden className={`relative flex aspect-[1.586] flex-col justify-between bg-gradient-to-br p-2.5 text-white ${option.face} ${on ? "" : "opacity-55 grayscale"}`}>
           <span className="block h-3.5 w-5 rounded-[3px] bg-gradient-to-br from-amber-200 via-amber-300 to-amber-500" />
           <span className="flex items-end justify-between gap-1">
-            <span className="font-mono text-[10px] tracking-wider text-white/85">{option.number?.slice(-4)}</span>
+            <span className="font-mono text-[0.625rem] tracking-wider text-white">{option.number?.slice(-4)}</span>
             {option.card && <PaymentLogo file={option.card} tint="#ffffff" className="h-5 w-9" />}
           </span>
         </span>
@@ -528,7 +528,7 @@ export function StoreForm({ initial, permit, account }: { initial: StoreSettings
         </div>
 
         <nav aria-label="On this page" className="hidden rounded-2xl border border-line bg-white p-2 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:block">
-          <p className="px-2.5 pt-1.5 pb-1 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">On this page</p>
+          <p className="px-2.5 pt-1.5 pb-1 text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase">On this page</p>
           <ul>
             {sections.map(({ id, label, Icon }) => (
               <li key={id}>

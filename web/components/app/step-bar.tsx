@@ -14,7 +14,7 @@ export function StepBar({ steps, done, tone = "brand" }: { steps: string[]; done
           </li>
         ))}
       </ol>
-      <div className={`mt-1 flex justify-between text-[11px] ${tone === "light" ? "text-white/80" : "text-muted"}`} aria-hidden>
+      <div className={`mt-1 flex justify-between text-[0.6875rem] ${tone === "light" ? "text-white" : "text-muted"}`} aria-hidden>
         {steps.map((step, i) => (
           <span key={step} className={i === done ? (tone === "light" ? "font-semibold text-white" : "font-semibold text-brand-700") : ""}>
             {step}

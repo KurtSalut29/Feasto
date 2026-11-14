@@ -66,8 +66,8 @@ function Dot({ up }: { up: boolean }) {
 function Metric({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <p className="text-[11px] font-medium tracking-wide text-gray-500 uppercase">{label}</p>
-      <p className="mt-0.5 text-[15px] font-semibold text-ink tabular-nums">{children}</p>
+      <p className="text-[0.6875rem] font-medium tracking-wide text-gray-500 uppercase">{label}</p>
+      <p className="mt-0.5 text-[0.9375rem] font-semibold text-ink tabular-nums">{children}</p>
     </div>
   );
 }
@@ -116,7 +116,7 @@ async function SystemMonitor() {
             <Dot up={i.online} />
             {i.instance}
             {i.instance === status.servedBy && (
-              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[11px] font-semibold text-brand-700">answered this check</span>
+              <span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-brand-700">answered this check</span>
             )}
           </p>
           <span className={`text-xs font-semibold ${i.online ? "text-emerald-700" : "text-red-700"}`}>{i.online ? "Online" : "Not responding"}</span>
@@ -176,11 +176,11 @@ async function SystemMonitor() {
         {/* How a request travels through Feasto */}
         <div className="mt-5 grid items-center gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr]">
           <FlowNode Icon={Network} name="Nginx" detail="Load balancer" up={apisUp > 0} />
-          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-400 md:rotate-0" aria-hidden />
+          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-500 md:rotate-0" aria-hidden />
           <FlowNode Icon={Server} name={`API × ${apis.length}`} detail={`${apisUp} of ${apis.length} online`} up={apisUp === apis.length} />
-          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-400 md:rotate-0" aria-hidden />
+          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-500 md:rotate-0" aria-hidden />
           <FlowNode Icon={Inbox} name="RabbitMQ" detail={`${status.rabbitmq.queues.length} queues`} up={status.rabbitmq.up} />
-          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-400 md:rotate-0" aria-hidden />
+          <ArrowRight className="mx-auto size-4 rotate-90 text-gray-500 md:rotate-0" aria-hidden />
           <FlowNode
             Icon={Workflow}
             name={`Workers × ${workers.length}`}
@@ -200,7 +200,7 @@ async function SystemMonitor() {
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card title="Message queues" description="RabbitMQ" Icon={Inbox} actions={<Dot up={status.rabbitmq.up} />}>
-          <div className="overflow-x-auto">
+          <div tabIndex={0} role="region" aria-label="Processes" className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
             <table className={TABLE}>
               <thead className={THEAD}>
                 <tr>
@@ -215,7 +215,7 @@ async function SystemMonitor() {
                   <tr key={q.name}>
                     <td className={TD}>
                       <p className="font-medium text-ink">{QUEUE_LABEL[q.name] ?? q.name}</p>
-                      <p className="font-mono text-xs text-gray-400">{q.name}</p>
+                      <p className="font-mono text-xs text-gray-500">{q.name}</p>
                     </td>
                     <td className={`${TD} text-right font-semibold tabular-nums ${q.waiting > 0 ? "text-amber-700" : "text-ink"}`}>{q.waiting}</td>
                     <td className={`${TD} text-right text-ink tabular-nums`}>{q.consumers}</td>

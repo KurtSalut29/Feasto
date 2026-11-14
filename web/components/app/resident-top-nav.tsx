@@ -31,13 +31,13 @@ export function ResidentTopNav({ end }: { end?: ReactNode }) {
 
         {/* Search goes to the store list, where the results show */}
         <form action="/resident/stores" role="search" className="relative ml-auto hidden min-w-0 flex-1 lg:block lg:max-w-xs">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" aria-hidden />
           <input
             type="search"
             name="q"
             placeholder="Search stores or dishes"
             aria-label="Search stores or dishes"
-            className="h-10 w-full rounded-full border border-line bg-canvas pr-4 pl-9 text-sm text-ink transition placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
+            className="h-10 w-full rounded-full border border-line bg-canvas pr-4 pl-9 text-sm text-ink transition placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
           />
         </form>
 

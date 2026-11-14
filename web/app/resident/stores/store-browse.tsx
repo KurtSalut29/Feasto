@@ -54,7 +54,7 @@ export function StoreSearch({ filters, autoFocus }: { filters: BrowseFilters; au
       {[...filterQuery({ ...filters, q: "" })].map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
+      <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-gray-500" aria-hidden />
       <input
         key={filters.q}
         type="search"
@@ -64,7 +64,7 @@ export function StoreSearch({ filters, autoFocus }: { filters: BrowseFilters; au
         maxLength={60}
         placeholder={words}
         aria-label={words}
-        className="h-12 w-full rounded-xl border border-line bg-canvas pr-12 pl-12 text-[15px] outline-none placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
+        className="h-12 w-full rounded-xl border border-line bg-canvas pr-12 pl-12 text-[0.9375rem] outline-none placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
       />
       {filters.q && (
         <Link
@@ -92,7 +92,7 @@ const filterChip = (on: boolean) =>
  */
 export function StoreFilters({ filters, sort, canMeasure }: { filters: BrowseFilters; sort?: keyof typeof SORT_LABEL; canMeasure: boolean }) {
   const chip = (on: boolean, change: Partial<BrowseFilters>, children: ReactNode) => (
-    <Link href={browseHref({ ...filters, ...change })} aria-pressed={on} replace scroll={false} className={filterChip(on)}>
+    <Link href={browseHref({ ...filters, ...change })} aria-current={on ? "true" : undefined} replace scroll={false} className={filterChip(on)}>
       {children}
     </Link>
   );

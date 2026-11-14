@@ -36,7 +36,7 @@ export function ItemNote({ menuItemId, name, note }: { menuItemId: string; name:
         type="button"
         onClick={() => setEditing(true)}
         aria-label={`Note for ${name}: ${note}. Edit note`}
-        className="mt-1.5 flex max-w-full items-start gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-left text-[13px] text-amber-900 ring-1 ring-amber-100 transition hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-brand-500"
+        className="mt-1.5 flex max-w-full items-start gap-1.5 rounded-lg bg-amber-50 px-2 py-1 text-left text-[0.8125rem] text-amber-900 ring-1 ring-amber-100 transition hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-brand-500"
       >
         <span className="min-w-0 break-words">“{note}”</span>
         <Pencil className="mt-0.5 size-3.5 shrink-0 text-amber-700" aria-hidden />
@@ -45,7 +45,7 @@ export function ItemNote({ menuItemId, name, note }: { menuItemId: string; name:
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="mt-1 inline-flex items-center gap-1 rounded-md text-[13px] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
+        className="mt-1 inline-flex items-center gap-1 rounded-md text-[0.8125rem] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
       >
         <MessageSquarePlus className="size-3.5" aria-hidden />
         Add note
@@ -67,13 +67,13 @@ export function ItemNote({ menuItemId, name, note }: { menuItemId: string; name:
         autoFocus
         placeholder="e.g. No onions, extra spicy"
         onKeyDown={(e) => e.key === "Escape" && (setEditing(false), setText(note ?? ""))}
-        className="h-9 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+        className="h-9 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
       />
       <div className="mt-1.5 flex items-center gap-2">
         <button
           type="submit"
           disabled={busy}
-          className="h-8 rounded-lg bg-brand-600 px-3 text-[13px] font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60"
+          className="h-8 rounded-lg bg-brand-600 px-3 text-[0.8125rem] font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60"
         >
           {busy ? "Saving…" : "Save note"}
         </button>
@@ -83,11 +83,11 @@ export function ItemNote({ menuItemId, name, note }: { menuItemId: string; name:
             setEditing(false);
             setText(note ?? "");
           }}
-          className="h-8 rounded-lg px-2 text-[13px] font-semibold text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+          className="h-8 rounded-lg px-2 text-[0.8125rem] font-semibold text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
         >
           Cancel
         </button>
-        <span className="ml-auto text-[11px] text-muted tabular-nums">
+        <span className="ml-auto text-[0.6875rem] text-muted tabular-nums">
           {text.length}/{MAX}
         </span>
       </div>

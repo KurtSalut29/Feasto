@@ -73,10 +73,10 @@ export function StatCard({
         >
           <Icon className="size-5" aria-hidden />
         </span>
-        {href && <ArrowUpRight className="size-4 text-gray-400 transition group-hover:text-brand-600" aria-hidden />}
+        {href && <ArrowUpRight className="size-4 text-gray-500 transition group-hover:text-brand-600" aria-hidden />}
       </div>
       <p className="mt-4 text-sm font-medium text-muted">{label}</p>
-      <p className="mt-1 text-[28px] leading-tight font-semibold tracking-tight text-ink tabular-nums">
+      <p className="mt-1 text-[1.75rem] leading-tight font-semibold tracking-tight text-ink tabular-nums">
         <TickingValue value={value} />
       </p>
       <div className="mt-2 min-h-5">

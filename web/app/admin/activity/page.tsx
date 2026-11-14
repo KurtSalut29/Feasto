@@ -91,7 +91,7 @@ async function Activity({ searchParams }: Pick<PageProps<"/admin/activity">, "se
               </li>
             ))}
           </ul>
-          <div className="hidden overflow-x-auto md:block">
+          <div tabIndex={0} role="region" aria-label="Activity log" className="hidden overflow-x-auto md:block focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
             <table className={`${TABLE} min-w-[820px]`}>
               <thead className={THEAD}>
                 <tr>

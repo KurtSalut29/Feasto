@@ -22,7 +22,7 @@ export function SwitchField({
     >
       <span>
         <span className="block text-sm font-medium text-ink">{label}</span>
-        <span className="block text-[13px] text-muted">{description}</span>
+        <span className="block text-[0.8125rem] text-muted">{description}</span>
       </span>
       <span className="relative inline-flex shrink-0">
         <input

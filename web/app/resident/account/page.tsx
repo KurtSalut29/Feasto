@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Heart, KeyRound, MapPin, ReceiptText, UserPen } from "lucide-react";
+import { Accessibility, Bell, CalendarDays, Heart, KeyRound, MapPin, ReceiptText, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NowCard, Tile } from "@/components/app/account-tiles";
@@ -85,9 +85,10 @@ async function ResidentAccount() {
         <RowGroup title="Settings">
           <Row Icon={UserPen} label="Edit profile" value="Name and phone" href="/resident/profile" />
           <Row Icon={KeyRound} label="Change password" href="/resident/password" />
+          <Row Icon={Accessibility} label="Display & accessibility" value="Text size, contrast, motion" href="/resident/display" />
         </RowGroup>
         <LogoutButton variant="row" />
-        <p className="pt-1 text-center text-xs text-gray-400">Feasto · Naval, Biliran</p>
+        <p className="pt-1 text-center text-xs text-gray-500">Feasto · Naval, Biliran</p>
       </div>
     </>
   );

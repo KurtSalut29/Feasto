@@ -107,14 +107,14 @@ export function TablesManager({
                         type="button"
                         onClick={() => setEditing(table)}
                         aria-label={`Edit ${table.label}`}
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+                        className="rounded-lg p-1.5 text-gray-500 hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
                       >
                         <Pencil className="size-3.5" aria-hidden />
                       </button>
                       <button
                         type="button"
                         aria-label={`Remove ${table.label}`}
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-brand-500"
+                        className="rounded-lg p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-brand-500"
                         onClick={async () => {
                           setError(undefined);
                           const result = await apiRequest(`/vendor/tables/${table.id}`, { method: "DELETE" });

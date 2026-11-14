@@ -167,7 +167,7 @@ function RiderDetails({ rider }: { rider: StoreRider }) {
     <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="space-y-2.5 text-sm">
         <p className="flex gap-2 text-ink">
-          <Phone className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+          <Phone className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
           {rider.user.phone ? (
             <a href={`tel:${rider.user.phone}`} className="text-brand-700 hover:underline">
               {rider.user.phone}
@@ -177,11 +177,11 @@ function RiderDetails({ rider }: { rider: StoreRider }) {
           )}
         </p>
         <p className="flex gap-2 break-all text-ink">
-          <Mail className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+          <Mail className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
           {rider.user.email}
         </p>
         <p className="flex gap-2 text-ink">
-          <Clock className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+          <Clock className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
           Joined {timeAgo(rider.createdAt)}
         </p>
         {rider.currentOrder?.forThisStore && (
@@ -241,24 +241,24 @@ function ApplicantCard({ rider }: { rider: StoreRider }) {
       <div className="grid flex-1 gap-4 px-5 py-4 text-sm sm:grid-cols-2">
         <div className="space-y-2.5">
           <p className="flex gap-2 text-ink">
-            <Bike className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+            <Bike className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
             {rider.vehicleModel ?? "Motorcycle"}
             {rider.plateNumber && ` · ${rider.plateNumber}`}
           </p>
           <p className="flex gap-2 text-ink">
-            <IdCard className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+            <IdCard className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
             {rider.licenseNumber ?? "No license number"}
           </p>
           <p className={`flex gap-2 ${license.tone === "expired" ? "font-semibold text-red-700" : "text-ink"}`}>
-            <CalendarClock className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+            <CalendarClock className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
             {license.text}
           </p>
           <p className="flex gap-2 text-ink">
-            <Phone className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+            <Phone className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
             {rider.user.phone ?? "No phone"}
           </p>
           <p className="flex gap-2 break-all text-ink">
-            <Mail className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+            <Mail className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
             {rider.user.email}
           </p>
         </div>

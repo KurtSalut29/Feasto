@@ -41,28 +41,28 @@ export function RiderHero({ firstName, online, totals, line }: { firstName: stri
       />
 
       <div className="relative pr-24">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-100 uppercase">
+        <p className="flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-[0.12em] text-brand-100 uppercase">
           <shift.Icon className="size-3.5" aria-hidden />
           {weekdayLabel()} · {shift.label}
         </p>
-        <h1 className="mt-1.5 text-[26px] leading-tight font-bold tracking-tight">Hi, {firstName}!</h1>
+        <h1 className="mt-1.5 text-[1.625rem] leading-tight font-bold tracking-tight">Hi, {firstName}!</h1>
         <p className="mt-1 text-sm text-white/90">{status}</p>
       </div>
 
       {totals && (
         <Link
           href="/rider/history"
-          aria-label={`Earned ${formatPeso(totals.today.earnings)} today from ${totals.today.count} ${totals.today.count === 1 ? "delivery" : "deliveries"}. See history`}
           className="relative mt-4 flex items-center rounded-2xl bg-white/15 py-2.5 pr-2 pl-3.5 ring-1 ring-white/30 transition hover:bg-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           <span className="min-w-0 flex-1">
-            <span className="block text-[11px] text-white/80">Earned today</span>
+            <span className="block text-[0.6875rem] text-white">Earned today</span>
             <span className="block text-xl leading-tight font-bold tabular-nums">{formatPeso(totals.today.earnings)}</span>
           </span>
           <span className="border-l border-white/25 px-3.5 text-center">
             <span className="block text-xl leading-tight font-bold tabular-nums">{totals.today.count}</span>
-            <span className="block text-[11px] text-white/80">{totals.today.count === 1 ? "delivery" : "deliveries"}</span>
+            <span className="block text-[0.6875rem] text-white">{totals.today.count === 1 ? "delivery" : "deliveries"}</span>
           </span>
+          <span className="sr-only">. See history</span>
           <ChevronRight className="size-5 shrink-0 text-white/90" aria-hidden />
         </Link>
       )}

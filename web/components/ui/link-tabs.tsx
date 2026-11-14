@@ -27,7 +27,7 @@ export function LinkTabs({ tabs, variant = "underline", label }: { tabs: LinkTab
               {text}
               {count !== undefined && (
                 <span
-                  className={`min-w-5 rounded-full px-1.5 text-center text-[11px] leading-5 font-semibold tabular-nums ${
+                  className={`min-w-5 rounded-full px-1.5 text-center text-[0.6875rem] leading-5 font-semibold tabular-nums ${
                     active ? "bg-brand-50 text-brand-700" : "bg-white/80 text-gray-500"
                   }`}
                 >

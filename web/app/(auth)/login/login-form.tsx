@@ -8,11 +8,12 @@ import { TextField } from "@/components/ui/text-field";
 import { AUTH_BUTTON } from "../auth-ui";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
+import { lessMotion } from "@/lib/display";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 
 /** How long "Welcome back, …!" shows before the app opens (none for people who asked for less motion) */
-const HELLO_MS = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
+const HELLO_MS = 900;
 
 export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
@@ -46,7 +47,7 @@ export function LoginForm() {
     setWelcome(first);
     toast.later({ tone: "success", title: `Welcome back, ${first}!`, description: "You're logged in." });
     // A moment to read the hello, then the app rises in over this page (enter-app, globals.css)
-    await new Promise((resolve) => setTimeout(resolve, HELLO_MS));
+    await new Promise((resolve) => setTimeout(resolve, lessMotion() ? 0 : HELLO_MS));
     window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 

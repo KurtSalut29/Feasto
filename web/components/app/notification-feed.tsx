@@ -95,7 +95,7 @@ export function NotificationFeed({ emptyText, emptyAction }: { emptyText: string
       <div className="space-y-5">
         {groupByDay(feed.notifications).map((group) => (
           <section key={group.label} aria-label={group.label}>
-            <h2 className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">{group.label}</h2>
+            <h2 className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">{group.label}</h2>
             <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
               {group.items.map((n) => (
                 <NotificationItem key={n.id} notification={n} />

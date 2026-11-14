@@ -93,11 +93,11 @@ export function BookingForm({ vendorId, storeName, maxPartySize }: { vendorId: s
                     active ? "border-brand-600 bg-brand-600 text-white shadow-[0_8px_18px_-10px_rgba(178,58,0,0.8)]" : "border-line text-ink hover:border-gray-300"
                   }`}
                 >
-                  <span className={`text-[11px] font-semibold uppercase ${active ? "text-white/85" : "text-muted"}`}>
+                  <span className={`text-[0.6875rem] font-semibold uppercase ${active ? "text-white" : "text-muted"}`}>
                     {i === 0 ? "Today" : onDay(d, { weekday: "short" })}
                   </span>
                   <span className="text-xl leading-tight font-bold">{onDay(d, { day: "numeric" })}</span>
-                  <span className={`text-[11px] ${active ? "text-white/85" : "text-muted"}`}>{onDay(d, { month: "short" })}</span>
+                  <span className={`text-[0.6875rem] ${active ? "text-white" : "text-muted"}`}>{onDay(d, { month: "short" })}</span>
                 </button>
               );
             })}
@@ -114,7 +114,7 @@ export function BookingForm({ vendorId, storeName, maxPartySize }: { vendorId: s
               onClick={() => pick(() => setPartySize(n))}
               aria-pressed={partySize === n}
               aria-label={people(n)}
-              className={`size-11 rounded-full border text-[15px] font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
+              className={`size-11 rounded-full border text-[0.9375rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
                 partySize === n ? "border-brand-600 bg-brand-600 text-white" : "border-line text-ink hover:border-gray-300"
               }`}
             >
@@ -165,7 +165,7 @@ export function BookingForm({ vendorId, storeName, maxPartySize }: { vendorId: s
               if (part.length === 0) return null;
               return (
                 <div key={label} role="group" aria-label={label}>
-                  <p className="mb-1.5 text-xs font-semibold tracking-wider text-gray-400 uppercase">{label}</p>
+                  <p className="mb-1.5 text-xs font-semibold tracking-wider text-gray-500 uppercase">{label}</p>
                   <div className="grid grid-cols-3 gap-2">
                     {part.map((slot) => {
                       const chosen = time === slot.time;
@@ -178,15 +178,15 @@ export function BookingForm({ vendorId, storeName, maxPartySize }: { vendorId: s
                           onClick={() => setTime(slot.time)}
                           aria-pressed={chosen}
                           aria-label={`${formatTime(slot.time)}${slot.available ? (few ? `, ${slot.tablesLeft} ${slot.tablesLeft === 1 ? "table" : "tables"} left` : "") : ", full"}`}
-                          className={`flex h-12 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 disabled:border-transparent disabled:bg-canvas disabled:text-gray-400 ${
+                          className={`flex h-12 flex-col items-center justify-center rounded-xl border text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 disabled:border-transparent disabled:bg-canvas disabled:text-gray-500 ${
                             chosen ? "border-brand-600 bg-brand-600 text-white" : "border-line text-ink hover:border-gray-300"
                           }`}
                         >
                           <span className={slot.available ? "" : "line-through"}>{formatTime(slot.time)}</span>
                           {!slot.available ? (
-                            <span className="text-[10px] font-medium">Full</span>
+                            <span className="text-[0.625rem] font-medium">Full</span>
                           ) : (
-                            few && <span className={`text-[10px] font-medium ${chosen ? "text-white/85" : "text-amber-700"}`}>{slot.tablesLeft} left</span>
+                            few && <span className={`text-[0.625rem] font-medium ${chosen ? "text-white" : "text-amber-700"}`}>{slot.tablesLeft} left</span>
                           )}
                         </button>
                       );

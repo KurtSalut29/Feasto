@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DEFAULT_CENTER, distanceKm, type LatLng } from "@/lib/geo";
 import { createMap, getRoute, mapHost, trimRoute, type MapEngine, type Route } from "./map-engine";
+import { lessMotion } from "@/lib/display";
 
 export type MapPin = {
   id: string;
@@ -240,7 +241,8 @@ export function FeastoMap({
 
   return (
     <div className={expanded ? "fixed inset-0 z-[60] bg-canvas" : `relative overflow-hidden bg-canvas ${className}`}>
-      <div ref={container} className="absolute inset-0" role="img" aria-label={label} />
+      {/* A region, not an image: the map has its own buttons inside (zoom, pins) */}
+      <div ref={container} className="absolute inset-0" role="region" aria-label={label} />
       {expandable && engine && (
         <button
           type="button"
@@ -273,7 +275,7 @@ type MarkerEntry = {
   frame?: number;
 };
 
-const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reducedMotion = () => lessMotion();
 
 /**
  * Moves a pin to its new spot smoothly instead of jumping. A moving rider sends a position
@@ -352,7 +354,7 @@ function PinBody({ pin }: { pin: MapPin }) {
     >
       {body}
       {pin.label && (
-        <span className="absolute top-full left-1/2 mt-1 max-w-32 -translate-x-1/2 truncate rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap text-ink shadow">
+        <span className="absolute top-full left-1/2 mt-1 max-w-32 -translate-x-1/2 truncate rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-semibold whitespace-nowrap text-ink shadow">
           {pin.label}
         </span>
       )}

@@ -72,7 +72,7 @@ export default function AdminApprovalsPage({ searchParams }: PageProps<"/admin/a
 function Detail({ Icon, label, children }: { Icon: LucideIcon; label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[20px_88px_minmax(0,1fr)] items-start gap-2 text-sm">
-      <Icon className="mt-0.5 size-4 text-gray-400" aria-hidden />
+      <Icon className="mt-0.5 size-4 text-gray-500" aria-hidden />
       <dt className="text-muted">{label}</dt>
       <dd className="min-w-0 break-words text-ink">{children}</dd>
     </div>

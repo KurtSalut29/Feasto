@@ -135,14 +135,14 @@ async function VendorReservations({
                   {dayNumber}
                 </span>
                 <span
-                  className={`mt-0.5 rounded-full px-2 text-[11px] font-semibold whitespace-nowrap ${
+                  className={`mt-0.5 rounded-full px-2 text-[0.6875rem] font-semibold whitespace-nowrap ${
                     count
                       ? active
                         ? "bg-white/15 text-white"
                         : "bg-brand-50 text-brand-700"
                       : active
                         ? "text-white/60"
-                        : "text-gray-400"
+                        : "text-gray-500"
                   }`}
                 >
                   {count ? (

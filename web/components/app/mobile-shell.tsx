@@ -7,6 +7,8 @@ import { ResidentTopNav } from "./resident-top-nav";
 import { SidebarNav } from "./sidebar-nav";
 import { SidebarUser } from "./dashboard-shell";
 import { TabBar } from "./tab-bar";
+import { SkipLink } from "./skip-link";
+import { DisplaySync } from "./display-settings";
 
 /**
  * Layout for residents and riders.
@@ -35,6 +37,8 @@ export function MobileShell({
   return (
     <LiveUpdates>
       <div className="min-h-dvh bg-canvas">
+        <SkipLink />
+        <DisplaySync />
         {resident ? (
           <ResidentTopNav end={topBarEnd} />
         ) : (
@@ -74,7 +78,9 @@ export function MobileShell({
 
           {/* Bottom padding keeps content clear of the tab bar when it shows (and the iPhone's home bar) */}
           <main
-            className={`flex-1 px-4 pt-5 pb-[calc(var(--tabbar-h)+3rem+env(safe-area-inset-bottom))] ${
+            id="main"
+            tabIndex={-1}
+            className={`flex-1 scroll-mt-20 px-4 outline-none pt-5 pb-[calc(var(--tabbar-h)+3rem+env(safe-area-inset-bottom))] ${
               resident ? "md:px-6 md:pt-7 md:pb-16" : "lg:mx-auto lg:w-full lg:max-w-6xl lg:px-10 lg:pt-6 lg:pb-12"
             }`}
           >
@@ -100,8 +106,8 @@ export function MobileShell({
 export function MobileHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-5 md:mb-6">
-      <h1 className="text-[22px] font-bold tracking-tight text-ink md:text-[28px]">{title}</h1>
-      {subtitle && <p className="mt-0.5 text-sm text-muted md:text-[15px]">{subtitle}</p>}
+      <h1 className="text-[1.375rem] font-bold tracking-tight text-ink md:text-[1.75rem]">{title}</h1>
+      {subtitle && <p className="mt-0.5 text-sm text-muted md:text-[0.9375rem]">{subtitle}</p>}
     </div>
   );
 }

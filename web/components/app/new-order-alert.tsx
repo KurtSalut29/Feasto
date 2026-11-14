@@ -4,14 +4,20 @@ import { useRef } from "react";
 import { useLiveEvent } from "./live-updates";
 
 /**
- * Plays a short two-tone chime when a new order arrives, so a busy store notices it.
- * Browsers only allow sound after the page has been clicked at least once.
+ * Plays a short two-tone chime when a new order arrives, so a busy store notices it, and buzzes
+ * the phone, for a store owner who can't hear it (deaf, or the sound is off). The toast shows it
+ * too, and screen readers read it out. Browsers only allow sound after the page has been clicked.
  */
 export function NewOrderAlert() {
   const audio = useRef<AudioContext | null>(null);
 
   useLiveEvent((event) => {
     if (event.type !== "notification" || !event.notification.title.startsWith("New order")) return;
+    try {
+      navigator.vibrate?.([220, 120, 220]);
+    } catch {
+      // Not every phone can vibrate
+    }
     try {
       audio.current ??= new AudioContext();
       const ctx = audio.current;

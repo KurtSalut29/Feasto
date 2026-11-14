@@ -69,7 +69,7 @@ function SavedTile({ store }: { store: StoreSummary }) {
       <div className="relative">
         <StoreCover imageUrl={store.imageUrl} Icon={STORE_TYPE_ICON[store.storeType]} className={`aspect-[4/3] ${open ? "" : "opacity-60 grayscale"}`} />
         <span
-          className={`absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-sm ${
+          className={`absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold shadow-sm ${
             open ? "bg-white/95 text-emerald-700" : "bg-white/95 text-gray-700"
           }`}
         >

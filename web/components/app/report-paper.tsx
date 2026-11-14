@@ -39,12 +39,12 @@ export function ReportPaper({
             </div>
             <div className="text-right">
               <p className="text-[8px] font-semibold tracking-[0.22em] text-brand-600 uppercase">Sales report</p>
-              <p className="mt-0.5 text-[9px] font-bold text-ink">{number}</p>
+              <p className="mt-0.5 text-[0.5625rem] font-bold text-ink">{number}</p>
             </div>
           </div>
           <div aria-hidden className="my-2.5 border-t border-dashed border-gray-300" />
-          <p className="truncate text-[15px] leading-tight font-bold text-ink">{title}</p>
-          <p className="text-[10px] text-muted">
+          <p className="truncate text-[0.9375rem] leading-tight font-bold text-ink">{title}</p>
+          <p className="text-[0.625rem] text-muted">
             Sales report · {formatRange(from, to)} · {days} {days === 1 ? "day" : "days"}
           </p>
           <div className="mt-2.5 grid grid-cols-2 gap-1.5">
@@ -54,7 +54,7 @@ export function ReportPaper({
             ].map(([label, value]) => (
               <div key={label} className="rounded-md bg-brand-50 px-2 py-1.5 ring-1 ring-brand-200/70">
                 <p className="text-[6.5px] font-bold tracking-wider text-brand-700 uppercase">{label}</p>
-                <p className="truncate text-[11px] font-bold text-ink tabular-nums">{value}</p>
+                <p className="truncate text-[0.6875rem] font-bold text-ink tabular-nums">{value}</p>
               </div>
             ))}
           </div>

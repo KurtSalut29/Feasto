@@ -163,7 +163,7 @@ export function PasswordForm({ onCancel, onDone, doneHref }: { onCancel?: () => 
         />
       </div>
 
-      <p className="flex gap-2.5 text-[13px] text-muted">
+      <p className="flex gap-2.5 text-[0.8125rem] text-muted">
         <MonitorSmartphone className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
         You stay logged in here. Other phones and computers signed in to this account will be logged out.
       </p>

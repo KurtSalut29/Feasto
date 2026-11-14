@@ -88,7 +88,7 @@ function Stop({
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className={`text-xs font-semibold tracking-wider uppercase ${done ? "text-emerald-700" : "text-gray-400"}`}>{label}</p>
+        <p className={`text-xs font-semibold tracking-wider uppercase ${done ? "text-emerald-700" : "text-gray-500"}`}>{label}</p>
         <p className="mt-0.5 font-semibold text-ink">{title}</p>
         <p className="text-sm text-muted">{address}</p>
         <div className="mt-2.5 flex gap-2">
@@ -109,7 +109,7 @@ function Stop({
 function Box({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-line p-4">
-      <h2 className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">{title}</h2>
+      <h2 className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">{title}</h2>
       {children}
     </section>
   );
@@ -160,7 +160,7 @@ async function RiderActive() {
         <div className="flex items-start gap-3">
           <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" eager />
           <div className="min-w-0 flex-1">
-            <h1 className="text-[22px] leading-tight font-bold tracking-tight text-ink">Order {orderCode(order.id)}</h1>
+            <h1 className="text-[1.375rem] leading-tight font-bold tracking-tight text-ink">Order {orderCode(order.id)}</h1>
             <p className="mt-0.5 truncate text-sm text-muted">
               {order.vendor.name} to {order.checkout.resident.name}
             </p>
@@ -175,7 +175,7 @@ async function RiderActive() {
             <span className="sr-only">You earn </span>+{formatPeso(riderEarns(order))}
           </span>
         </div>
-        <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
+        <p className="mt-3 flex items-center gap-2 text-[0.9375rem] font-semibold text-brand-700">
           <span className="relative flex size-2.5" aria-hidden>
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
             <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />
@@ -238,7 +238,7 @@ async function RiderActive() {
         </Box>
 
         <Box title={`The order · ${itemCount} ${itemCount === 1 ? "item" : "items"}`}>
-          <ul className="space-y-2 text-[15px] text-ink">
+          <ul className="space-y-2 text-[0.9375rem] text-ink">
             {order.items.map((item) => (
               <li key={item.id} className="flex gap-2">
                 <span className="w-7 shrink-0 font-semibold text-brand-700 tabular-nums">{item.quantity}×</span>
@@ -259,7 +259,7 @@ async function RiderActive() {
               <dt className="text-muted">Delivery fee</dt>
               <dd className="text-ink tabular-nums">{formatPeso(order.deliveryFee)}</dd>
             </div>
-            <div className="flex justify-between text-[15px] font-bold text-ink">
+            <div className="flex justify-between text-[0.9375rem] font-bold text-ink">
               <dt>Order total</dt>
               <dd className="tabular-nums">{formatPeso(total)}</dd>
             </div>

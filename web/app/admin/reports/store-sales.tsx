@@ -42,14 +42,14 @@ export function StoreSales({ rows, totalSales, workers }: { rows: StoreSalesRow[
     <div>
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3">
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" aria-hidden />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Store or dish"
             aria-label="Search stores"
-            className="h-9 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+            className="h-9 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
           />
         </div>
         {noSales > 0 && (
@@ -70,7 +70,7 @@ export function StoreSales({ rows, totalSales, workers }: { rows: StoreSalesRow[
           const share = totalSales ? (row.sales / totalSales) * 100 : 0;
           return (
             <li key={row.vendorId} className="flex gap-3 px-4 py-3.5">
-              <span className={`w-6 shrink-0 pt-0.5 text-sm font-bold tabular-nums ${n <= 3 ? "text-brand-600" : "text-gray-400"}`}>{n}</span>
+              <span className={`w-6 shrink-0 pt-0.5 text-sm font-bold tabular-nums ${n <= 3 ? "text-brand-600" : "text-gray-500"}`}>{n}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 truncate font-medium text-ink">{row.name}</p>
@@ -109,7 +109,7 @@ export function StoreSales({ rows, totalSales, workers }: { rows: StoreSalesRow[
               const n = rank.get(row.vendorId)!;
               return (
                 <tr key={row.vendorId} className={TR}>
-                  <td className={`${TD} font-bold tabular-nums ${n <= 3 ? "text-brand-600" : "text-gray-400"}`}>{n}</td>
+                  <td className={`${TD} font-bold tabular-nums ${n <= 3 ? "text-brand-600" : "text-gray-500"}`}>{n}</td>
                   <td className={TD}>
                     <p className="font-medium text-ink">{row.name}</p>
                     <p className="text-xs text-muted">{row.topDish ? `Best seller: ${row.topDish}` : "No orders in this period"}</p>

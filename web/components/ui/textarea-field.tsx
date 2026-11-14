@@ -15,7 +15,7 @@ export function TextareaField({ label, error, hint, className, ...props }: Props
         id={id}
         aria-invalid={error ? true : undefined}
         rows={3}
-        className={`w-full rounded-xl border bg-white px-4 py-2.5 text-[15px] text-ink outline-none transition placeholder:text-gray-400 focus:ring-4 ${
+        className={`w-full rounded-xl border bg-white px-4 py-2.5 text-[0.9375rem] text-ink outline-none transition placeholder:text-gray-500 focus:ring-4 ${
           error
             ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
             : "border-line hover:border-gray-300 focus:border-brand-500 focus:ring-brand-500/15"
@@ -23,9 +23,9 @@ export function TextareaField({ label, error, hint, className, ...props }: Props
         {...props}
       />
       {error ? (
-        <p className="mt-1 text-[13px] text-red-600">{error}</p>
+        <p className="mt-1 text-[0.8125rem] text-red-600">{error}</p>
       ) : (
-        hint && <p className="mt-1 text-[13px] text-muted">{hint}</p>
+        hint && <p className="mt-1 text-[0.8125rem] text-muted">{hint}</p>
       )}
     </div>
   );

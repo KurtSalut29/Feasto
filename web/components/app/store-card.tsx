@@ -46,7 +46,7 @@ export function StoreTile({ store, href }: { store: StoreSummary; href: string }
           <StoreCover imageUrl={store.imageUrl} Icon={STORE_TYPE_ICON[store.storeType]} className={`aspect-[4/3] ${store.isOpen ? "" : "opacity-60 grayscale"}`} />
         </MorphPhoto>
         {!store.isOpen && (
-          <span className="absolute top-2 left-2 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-gray-700 shadow-sm">Closed</span>
+          <span className="absolute top-2 left-2 rounded-full bg-white/95 px-2 py-0.5 text-[0.6875rem] font-semibold text-gray-700 shadow-sm">Closed</span>
         )}
       </div>
       <div className="p-2.5">
@@ -108,7 +108,7 @@ export function StoreCard({
             <span className="truncate">{store.address}</span>
           )}
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.8125rem]">
           <span className={`inline-flex items-center gap-1.5 font-medium ${open ? "text-emerald-700" : "text-gray-600"}`}>
             <span className={`size-1.5 rounded-full ${open ? "bg-emerald-500" : "bg-gray-400"}`} aria-hidden />
             {open ? (isOpenAllDay(store) ? "Open 24 hours" : `Open until ${formatTime(store.closesAt)}`) : label}
@@ -121,9 +121,9 @@ export function StoreCard({
           )}
         </div>
         {store.matchedDishes.length > 0 ? (
-          <p className="mt-1 truncate text-[13px] font-medium text-brand-700">Has {store.matchedDishes.join(", ")}</p>
+          <p className="mt-1 truncate text-[0.8125rem] font-medium text-brand-700">Has {store.matchedDishes.join(", ")}</p>
         ) : (
-          serves && <p className="mt-1 truncate text-[13px] text-gray-500">{serves}</p>
+          serves && <p className="mt-1 truncate text-[0.8125rem] text-gray-500">{serves}</p>
         )}
       </div>
       {/* Above the stretched link so tapping the heart doesn't open the store */}

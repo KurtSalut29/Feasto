@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { lessMotion } from "@/lib/display";
 
 type Parsed = { before: string; after: string; n: number; decimals: number; grouped: boolean };
 
@@ -43,7 +44,7 @@ export function TickingValue({ value }: { value: string | number }) {
     const to = parse(text);
     previous.current = text;
     if (!from || !to || from.before !== to.before || from.after !== to.after || from.n === to.n) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (lessMotion()) return;
     let frame = 0;
     const start = performance.now();
     const step = (now: number) => {

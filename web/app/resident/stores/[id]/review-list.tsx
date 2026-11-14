@@ -28,7 +28,7 @@ export function ReviewList({ reviews }: { reviews: StoreReview[] }) {
               <div className="mt-0.5">
                 <Stars value={review.rating} size="size-3.5" />
               </div>
-              {review.comment && <p className="mt-1.5 text-[15px] leading-relaxed text-ink">{review.comment}</p>}
+              {review.comment && <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-ink">{review.comment}</p>}
             </div>
           </li>
         ))}

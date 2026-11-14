@@ -12,8 +12,8 @@ type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 const inputClass =
-  "h-11 w-full rounded-xl sm:h-10 border bg-white px-4 text-[15px] text-ink outline-none transition " +
-  "placeholder:text-gray-400 focus:ring-4 disabled:bg-canvas disabled:text-muted";
+  "h-11 w-full rounded-xl sm:h-10 border bg-white px-4 text-[0.9375rem] text-ink outline-none transition " +
+  "placeholder:text-gray-500 focus:ring-4 disabled:bg-canvas disabled:text-muted";
 
 export function TextField({ label, error, hint, icon: Icon, className, type, ...inputProps }: TextFieldProps) {
   const id = useId();
@@ -30,7 +30,7 @@ export function TextField({ label, error, hint, icon: Icon, className, type, ...
         {Icon && (
           <Icon
             className={`pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 transition-colors ${
-              error ? "text-red-500" : "text-gray-400 group-focus-within/field:text-brand-600"
+              error ? "text-red-500" : "text-gray-500 group-focus-within/field:text-brand-600"
             }`}
             aria-hidden
           />
@@ -59,11 +59,11 @@ export function TextField({ label, error, hint, icon: Icon, className, type, ...
         )}
       </div>
       {error ? (
-        <p id={`${id}-error`} className="mt-1 text-[13px] text-red-600">
+        <p id={`${id}-error`} className="mt-1 text-[0.8125rem] text-red-600">
           {error}
         </p>
       ) : hint ? (
-        <div id={`${id}-hint`} className="mt-1 text-[13px] text-muted">
+        <div id={`${id}-hint`} className="mt-1 text-[0.8125rem] text-muted">
           {hint}
         </div>
       ) : null}

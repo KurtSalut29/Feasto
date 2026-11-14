@@ -73,7 +73,7 @@ async function Receipt({
     <div data-receipt-page className="pb-4">
       <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">
+          <h1 className="text-[1.375rem] font-bold tracking-tight text-ink">
             Receipt
           </h1>
           <p className="text-sm text-muted">
@@ -93,15 +93,15 @@ async function Receipt({
               height={36}
               className="mx-auto h-9 w-[122px] object-contain grayscale"
             />
-            <p className="mt-1 text-[11px] tracking-[0.2em] uppercase">
+            <p className="mt-1 text-[0.6875rem] tracking-[0.2em] uppercase">
               Order · Book · Enjoy
             </p>
-            <p className="mt-3 text-[15px] font-bold uppercase">
+            <p className="mt-3 text-[0.9375rem] font-bold uppercase">
               {order.vendor.name}
             </p>
-            <p className="text-[12px]">{order.vendor.address}</p>
+            <p className="text-[0.75rem]">{order.vendor.address}</p>
             {order.vendor.owner.phone && (
-              <p className="text-[12px]">Tel. {order.vendor.owner.phone}</p>
+              <p className="text-[0.75rem]">Tel. {order.vendor.owner.phone}</p>
             )}
           </header>
 
@@ -125,13 +125,13 @@ async function Receipt({
           </dl>
           {order.fulfillment === "DELIVERY" &&
             order.checkout.deliveryAddress && (
-              <p className="mt-1 text-[12px]">
+              <p className="mt-1 text-[0.75rem]">
                 Deliver to: {order.checkout.deliveryAddress}
               </p>
             )}
 
           <Rule />
-          <div className="flex justify-between text-[12px] font-bold">
+          <div className="flex justify-between text-[0.75rem] font-bold">
             <span>QTY ITEM</span>
             <span>AMOUNT</span>
           </div>
@@ -143,14 +143,14 @@ async function Receipt({
                   <span className="min-w-0">
                     <span className="inline-block w-7">{item.quantity}</span>
                     {item.name}
-                    {item.note && <span className="block pl-7 text-[12px] text-muted">Note: {item.note}</span>}
+                    {item.note && <span className="block pl-7 text-[0.75rem] text-muted">Note: {item.note}</span>}
                   </span>
                   <span className="shrink-0 tabular-nums">
                     {formatPeso(Number(item.unitPrice) * item.quantity)}
                   </span>
                 </div>
                 {item.quantity > 1 && (
-                  <p className="pl-7 text-[12px] text-[#555]">
+                  <p className="pl-7 text-[0.75rem] text-[#555]">
                     @ {formatPeso(Number(item.unitPrice))} each
                   </p>
                 )}
@@ -172,7 +172,7 @@ async function Receipt({
             )}
           </dl>
           <Rule double />
-          <div className="flex justify-between text-[17px] font-bold">
+          <div className="flex justify-between text-[1.0625rem] font-bold">
             <span>TOTAL</span>
             <span className="tabular-nums">{formatPeso(total)}</span>
           </div>
@@ -207,12 +207,12 @@ async function Receipt({
             )}
           </dl>
           {cash && order.fulfillment === "DELIVERY" && (
-            <p className="mt-1 text-[12px]">
+            <p className="mt-1 text-[0.75rem]">
               Paid in cash to the rider on delivery.
             </p>
           )}
           {otherStores && (
-            <p className="mt-1 text-[12px]">
+            <p className="mt-1 text-[0.75rem]">
               Part of one checkout with other stores. Checkout total:{" "}
               {formatPeso(checkoutTotal)}.
             </p>
@@ -229,10 +229,10 @@ async function Receipt({
             <p className="font-bold">
               THANK YOU, {user.name.split(" ")[0].toUpperCase()}!
             </p>
-            <p className="text-[12px]">
+            <p className="text-[0.75rem]">
               Enjoy your meal. Order again on Feasto.
             </p>
-            <p className="mt-3 text-[11px] text-[#555]">
+            <p className="mt-3 text-[0.6875rem] text-[#555]">
               This is your Feasto order receipt. It is not an official receipt
               (OR) for tax purposes.
               {!cash && " Online payments are simulated for this project."}

@@ -23,7 +23,6 @@ export function CategoryGrid({ categories }: { categories: StoreCategory[] }) {
           <li key={value}>
             <Link
               href={browseHref({ ...NO_FILTERS, type: value })}
-              aria-label={`${label}, ${stores}`}
               className="group block rounded-2xl p-1 outline-none transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-500"
             >
               <span className="relative block aspect-[4/3]">
@@ -37,7 +36,7 @@ export function CategoryGrid({ categories }: { categories: StoreCategory[] }) {
                   className="object-contain transition duration-300 group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none"
                 />
               </span>
-              <span className="mt-0.5 block text-center text-[13px] leading-tight font-semibold text-balance text-ink">{label}</span>
+              <span className="mt-0.5 block text-center text-[0.8125rem] leading-tight font-semibold text-balance text-ink">{label}</span>
               <span className="block text-center text-xs text-muted">{stores}</span>
             </Link>
           </li>

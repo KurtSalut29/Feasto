@@ -46,7 +46,7 @@ function Choice({
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
       <Icon className={`mt-0.5 size-5 shrink-0 ${checked ? "text-brand-600" : "text-muted"}`} aria-hidden />
       <span className="min-w-0">
-        <span className="block text-[15px] font-semibold text-ink">{title}</span>
+        <span className="block text-[0.9375rem] font-semibold text-ink">{title}</span>
         {text && <span className="block text-sm text-muted">{text}</span>}
       </span>
     </label>
@@ -57,7 +57,7 @@ function Choice({
 function Step({ n, title, action, children }: { n: number; title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section aria-labelledby={`step-${n}`}>
-      <div className="mb-2.5 flex items-center justify-between gap-3">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <h2 id={`step-${n}`} className="flex items-center gap-2 font-semibold text-ink">
           <span className="flex size-6 items-center justify-center rounded-full bg-ink text-xs font-bold text-white" aria-hidden>
             {n}
@@ -259,7 +259,7 @@ export function CheckoutForm({
               <li key={g.store.id} className="flex items-start gap-3 rounded-xl border border-line p-3.5">
                 <Store className="mt-0.5 size-5 shrink-0 text-brand-600" aria-hidden />
                 <span className="min-w-0">
-                  <span className="block text-[15px] font-semibold text-ink">{g.store.name}</span>
+                  <span className="block text-[0.9375rem] font-semibold text-ink">{g.store.name}</span>
                   <span className="block text-sm text-muted">{g.store.address}</span>
                 </span>
               </li>
@@ -327,7 +327,7 @@ export function CheckoutForm({
                     <DishPhoto src={item.imageUrl} sizes="40px" className="size-10 shrink-0 rounded-lg" />
                     <span className="min-w-0 flex-1 text-ink">
                       <span className="font-semibold tabular-nums">{item.quantity}×</span> {item.name}
-                      {item.note && <span className="mt-0.5 block text-[13px] text-amber-800">“{item.note}”</span>}
+                      {item.note && <span className="mt-0.5 block text-[0.8125rem] text-amber-800">“{item.note}”</span>}
                     </span>
                     <span className="shrink-0 text-ink tabular-nums">{formatPeso(item.lineTotal)}</span>
                   </li>
@@ -353,7 +353,7 @@ export function CheckoutForm({
 
     <div className="mt-7 space-y-4 lg:sticky lg:top-24 lg:mt-0">
       <section aria-label="Summary" className="rounded-2xl border border-line bg-white p-4">
-        <ul className="space-y-1.5 text-[15px]">
+        <ul className="space-y-1.5 text-[0.9375rem]">
           <li className="flex justify-between gap-3">
             <span className="text-muted">{fulfillment === "DELIVERY" ? "Arrives" : "Ready"}</span>
             <span className="text-right font-medium text-ink">{scheduledFor ? whenOf(scheduledFor) : later ? "Choose a time" : "As soon as possible"}</span>

@@ -24,8 +24,8 @@ export function SelectField({ label, placeholder, options, error, className, val
           value={value}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`h-11 w-full appearance-none rounded-xl border bg-white pr-11 pl-4 text-[15px] outline-none transition focus:ring-4 sm:h-10
-            ${value ? "text-ink" : "text-gray-400"}
+          className={`h-11 w-full appearance-none rounded-xl border bg-white pr-11 pl-4 text-[0.9375rem] outline-none transition focus:ring-4 sm:h-10
+            ${value ? "text-ink" : "text-gray-500"}
             ${
               error
                 ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
@@ -48,7 +48,7 @@ export function SelectField({ label, placeholder, options, error, className, val
         />
       </div>
       {error && (
-        <p id={`${id}-error`} className="mt-1 text-[13px] text-red-600">
+        <p id={`${id}-error`} className="mt-1 text-[0.8125rem] text-red-600">
           {error}
         </p>
       )}

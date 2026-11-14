@@ -1,4 +1,4 @@
-import { Bell, Bike, FileBadge, History, IdCard, KeyRound, Landmark, Package, Store, UserPen } from "lucide-react";
+import { Accessibility, Bell, Bike, FileBadge, History, IdCard, KeyRound, Landmark, Package, Store, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NowCard, Tile } from "@/components/app/account-tiles";
@@ -99,9 +99,10 @@ async function RiderAccount() {
           <Row Icon={UserPen} label="Edit profile" value="Name and phone" href="/rider/profile" />
           <Row Icon={Landmark} label="Where Feasto sends your pay" value="GCash, Maya or bank" href="/rider/history#payout" />
           <Row Icon={KeyRound} label="Change password" href="/rider/password" />
+          <Row Icon={Accessibility} label="Display & accessibility" value="Text size, contrast, motion" href="/rider/display" />
         </RowGroup>
         <LogoutButton variant="row" />
-        <p className="pt-1 text-center text-xs text-gray-400">Feasto for riders · Naval, Biliran</p>
+        <p className="pt-1 text-center text-xs text-gray-500">Feasto for riders · Naval, Biliran</p>
       </div>
     </>
   );

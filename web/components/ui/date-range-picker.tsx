@@ -74,19 +74,20 @@ export function DateRangeButton({
         disabled={disabled || busy}
         aria-busy={busy || undefined}
         aria-haspopup="dialog"
-        aria-label={`Report period: ${formatRange(value.from, value.to)}, ${days} ${days === 1 ? "day" : "days"}. Change`}
         className="group inline-flex h-11 max-w-full items-center gap-2.5 rounded-xl border border-line bg-white pr-3 pl-2 text-left transition hover:border-brand-200 hover:bg-brand-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60"
       >
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-brand-100">
           {busy ? <LoaderCircle className="size-[18px] animate-spin" aria-hidden /> : <CalendarRange className="size-[18px]" aria-hidden />}
         </span>
         <span className="min-w-0 leading-tight">
+          <span className="sr-only">Report period: </span>
           <span className="block truncate text-sm font-semibold text-ink">{formatRange(value.from, value.to)}</span>
           <span className="block truncate text-xs text-muted">
             {preset ? `${preset} · ` : ""}
             {days} {days === 1 ? "day" : "days"}
           </span>
         </span>
+        <span className="sr-only">. Change</span>
         <ChevronDown className="ml-1 size-4 shrink-0 text-muted transition group-hover:text-ink" aria-hidden />
       </button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Pick the report period" description="Tap the first day, then the last day. Up to a year." wide>
@@ -256,8 +257,8 @@ const minDate = (a: string, b: string) => (a < b ? a : b);
 function Stub({ label, value, active, placeholder }: { label: string; value: string; active: boolean; placeholder?: boolean }) {
   return (
     <div className={`min-w-0 flex-1 px-3.5 py-3 transition-colors sm:px-4 ${active ? "bg-white/70" : ""}`}>
-      <p className="text-[11px] font-semibold tracking-[0.18em] text-brand-700 uppercase">{label}</p>
-      <p className={`mt-0.5 text-[14px] leading-snug font-semibold sm:text-[15px] ${placeholder ? "text-brand-700/60" : "text-ink"}`}>{value}</p>
+      <p className="text-[0.6875rem] font-semibold tracking-[0.18em] text-brand-700 uppercase">{label}</p>
+      <p className={`mt-0.5 text-[0.875rem] leading-snug font-semibold sm:text-[0.9375rem] ${placeholder ? "text-brand-700/60" : "text-ink"}`}>{value}</p>
     </div>
   );
 }
@@ -290,8 +291,8 @@ function Month({
 
   return (
     <div className={className}>
-      <p className="flex h-9 items-center justify-center text-[15px] font-semibold text-ink">{monthTitle(ym)}</p>
-      <div className="mt-2 grid grid-cols-7 text-center text-[11px] font-semibold text-gray-400">
+      <p className="flex h-9 items-center justify-center text-[0.9375rem] font-semibold text-ink">{monthTitle(ym)}</p>
+      <div className="mt-2 grid grid-cols-7 text-center text-[0.6875rem] font-semibold text-gray-500">
         {WEEKDAYS.map((w) => (
           <span key={w} aria-hidden className="py-1">
             {w}

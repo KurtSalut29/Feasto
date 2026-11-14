@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import { CelebrationHost } from "@/components/app/celebrate";
 import { ServiceWorkerRegistration } from "@/components/app/install-app";
 import { Toaster } from "@/components/ui/toast";
+import { DISPLAY_INIT_SCRIPT } from "@/lib/display";
 import { ENTRANCE_SCRIPT } from "@/lib/page-entrance";
 import { SIDEBAR_INIT_SCRIPT } from "@/lib/sidebar";
 import "./globals.css";
@@ -34,6 +35,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${poppins.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
+        {/* Text size, contrast, motion and button size from Display & accessibility (lib/display.ts) */}
+        <script dangerouslySetInnerHTML={{ __html: DISPLAY_INIT_SCRIPT }} />
         {/* Names the log-in and log-out page changes for their animations (lib/page-entrance.ts) */}
         <script dangerouslySetInnerHTML={{ __html: ENTRANCE_SCRIPT }} />
       </head>

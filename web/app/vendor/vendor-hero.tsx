@@ -67,7 +67,7 @@ export function VendorHero({
           )}
         </span>
         <div className="min-w-0">
-          <h1 className="text-[26px] leading-tight font-bold tracking-tight md:text-[30px]">
+          <h1 className="text-[1.625rem] leading-tight font-bold tracking-tight md:text-[1.875rem]">
             {greeting()}, {firstName}
           </h1>
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-white/90">

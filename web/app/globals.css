@@ -660,6 +660,82 @@ dialog.fx-dialog:not([open])::backdrop {
   }
 }
 
+/* ---- Display & accessibility (Account → Display & accessibility; lib/display.ts) ---------------
+   Each one is a data attribute on <html>, set before the page first paints. */
+
+/* Text size: every size in the app is in rem, so the whole interface grows with it and reflows */
+html[data-text="large"] {
+  font-size: 112.5%;
+}
+html[data-text="xlarge"] {
+  font-size: 125%;
+}
+
+/* High contrast: darker greys and lines, the deeper Feasto orange, and a thicker focus ring.
+   Overriding the colour tokens changes every text, border and button that uses them. */
+html[data-contrast="more"] {
+  --color-muted: #2b3442;
+  --color-line: #8b95a5;
+  --color-gray-200: #c3c9d3;
+  --color-gray-300: #98a1af;
+  --color-gray-400: #5d6675;
+  --color-gray-500: #3d4655;
+  --color-gray-600: #2b3442;
+  --color-gray-700: #1f2937;
+  --color-brand-500: #c24100;
+  --color-brand-600: #a83800;
+  --color-brand-700: #8a2e00;
+  --color-emerald-700: #035e43;
+  --color-red-600: #b42318;
+  --color-amber-700: #8a4b05;
+}
+html[data-contrast="more"] :focus-visible {
+  outline-width: 3px !important;
+  outline-offset: 2px !important;
+  outline-color: var(--color-ink) !important;
+}
+html[data-contrast="more"] ::placeholder {
+  color: var(--color-gray-500);
+}
+/* Links in running text are underlined, so they don't rely on colour alone */
+html[data-contrast="more"] :is(p, dd) a:not([class*="rounded"]):not([class*="after:"]) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Reduce motion (Feasto's own switch, on top of the phone's): nothing moves or fades */
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduce"]::view-transition-group(*),
+html[data-motion="reduce"]::view-transition-old(*),
+html[data-motion="reduce"]::view-transition-new(*) {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
+/* Bigger buttons: everything you tap is at least 44px, easier with shaky hands or gloves */
+html[data-targets="large"] :is(button, [role="button"], select, input:not([type="checkbox"], [type="radio"], [type="range"]), summary) {
+  min-height: 2.75rem;
+}
+html[data-targets="large"] :is(button, [role="button"]) {
+  min-width: 2.75rem;
+}
+html[data-targets="large"] :is(input[type="checkbox"], input[type="radio"]) {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+html[data-targets="large"] nav a {
+  min-height: 2.75rem;
+}
+
 /* Printing a receipt prints only the paper slip, not the app around it. The slip's own
    header (logo, store name, address) is a <header> too, so it's left out of the hiding. */
 @media print {

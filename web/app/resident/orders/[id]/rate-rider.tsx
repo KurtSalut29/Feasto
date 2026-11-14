@@ -164,7 +164,7 @@ export function RateRider({
                 return (
                   <label
                     key={tag}
-                    className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold transition has-focus-visible:outline-2 has-focus-visible:outline-brand-500 ${
+                    className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-semibold transition has-focus-visible:outline-2 has-focus-visible:outline-brand-500 ${
                       on ? "border-emerald-600 bg-emerald-600 text-white" : "border-line bg-white text-ink hover:border-gray-300"
                     }`}
                   >
@@ -194,7 +194,7 @@ export function RateRider({
 
           <fieldset className="min-w-0">
             <legend className="text-sm font-medium text-ink">Add a tip for {name}</legend>
-            <p className="mb-2 text-[13px] text-muted">Optional. All of it goes to {name}.</p>
+            <p className="mb-2 text-[0.8125rem] text-muted">Optional. All of it goes to {name}.</p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {([0, ...TIP_AMOUNTS, "other"] as const).map((choice) => {
                 const on = tipChoice === choice;
@@ -213,7 +213,7 @@ export function RateRider({
             </div>
             {tipChoice === "other" && (
               <label className="mt-2 flex h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/15">
-                <span className="text-[15px] font-semibold text-muted">₱</span>
+                <span className="text-[0.9375rem] font-semibold text-muted">₱</span>
                 <span className="sr-only">Tip amount in pesos</span>
                 <input
                   type="number"
@@ -225,7 +225,7 @@ export function RateRider({
                   onChange={(e) => setOtherTip(e.target.value)}
                   placeholder={`1 to ${MAX_TIP}`}
                   autoFocus
-                  className="h-full w-full bg-transparent text-[15px] text-ink tabular-nums outline-none placeholder:text-gray-400"
+                  className="h-full w-full bg-transparent text-[0.9375rem] text-ink tabular-nums outline-none placeholder:text-gray-500"
                 />
               </label>
             )}
@@ -233,14 +233,14 @@ export function RateRider({
 
           {tipAmount > 0 &&
             (paidWith ? (
-              <p className="flex items-center gap-2 text-[13px] text-muted">
+              <p className="flex items-center gap-2 text-[0.8125rem] text-muted">
                 <Banknote className="size-4 shrink-0" aria-hidden />
                 Paid with {ONLINE_LABEL[paidWith]}, like your order.
               </p>
             ) : (
               <fieldset className="min-w-0">
                 <legend className="mb-2 text-sm font-medium text-ink">Pay the tip with</legend>
-                <p className="-mt-1 mb-2 text-[13px] text-muted">You paid this order in cash, so choose an e-wallet or card for the tip.</p>
+                <p className="-mt-1 mb-2 text-[0.8125rem] text-muted">You paid this order in cash, so choose an e-wallet or card for the tip.</p>
                 <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
                   {TIP_WAYS.map((option) => {
                     const on = way === option.value;

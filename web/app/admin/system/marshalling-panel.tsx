@@ -66,12 +66,12 @@ function pretty(step: Step) {
 
 function StepBadge({ step }: { step: Step["step"] }) {
   return step === "marshal" ? (
-    <span className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-semibold text-white">
+    <span className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[0.6875rem] font-semibold text-white">
       <ArrowUp className="size-3" aria-hidden />
       Marshal
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold text-ink ring-1 ring-line">
+    <span className="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[0.6875rem] font-semibold text-ink ring-1 ring-line">
       <ArrowDown className="size-3" aria-hidden />
       Unmarshal
     </span>
@@ -79,7 +79,7 @@ function StepBadge({ step }: { step: Step["step"] }) {
 }
 
 function TransportChip({ transport }: { transport: Transport }) {
-  return <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ring-1 ${TRANSPORT[transport].tone}`}>{TRANSPORT[transport].label}</span>;
+  return <span className={`rounded-md px-1.5 py-0.5 text-[0.6875rem] font-semibold ring-1 ${TRANSPORT[transport].tone}`}>{TRANSPORT[transport].label}</span>;
 }
 
 /**
@@ -169,7 +169,7 @@ export function MarshallingPanel() {
           { Icon: Braces, title: "Object", text: "In the receiver's memory" },
         ].map((part, i) =>
           "arrow" in part ? (
-            <p key={i} className="flex items-center justify-center gap-1 text-center text-[11px] font-semibold text-brand-700 md:flex-col md:gap-0">
+            <p key={i} className="flex items-center justify-center gap-1 text-center text-[0.6875rem] font-semibold text-brand-700 md:flex-col md:gap-0">
               <ArrowRight className="size-4 rotate-90 md:rotate-0" aria-hidden />
               {part.arrow}
               <span className="font-mono font-normal text-muted">{part.sub}</span>
@@ -282,11 +282,11 @@ function StepDetail({ step, trip }: { step: Step; trip: Step[] }) {
 
       {trip.length > 1 && (
         <section aria-label="The message's trip" className="rounded-2xl border border-brand-100 bg-brand-50/50 p-3.5">
-          <p className="mb-2 text-[11px] font-semibold tracking-wider text-brand-700 uppercase">The whole trip of this message</p>
+          <p className="mb-2 text-[0.6875rem] font-semibold tracking-wider text-brand-700 uppercase">The whole trip of this message</p>
           <ol className="space-y-1.5">
             {trip.map((t, i) => (
               <li key={t.id} className={`flex flex-wrap items-center gap-2 text-sm ${t.id === step.id ? "font-semibold" : ""}`}>
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold text-white">{i + 1}</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ink text-[0.6875rem] font-bold text-white">{i + 1}</span>
                 <StepBadge step={t.step} />
                 <TransportChip transport={t.transport} />
                 <span className="font-mono text-xs text-ink">{t.instance}</span>
@@ -299,31 +299,31 @@ function StepDetail({ step, trip }: { step: Step; trip: Step[] }) {
 
       <div className="grid gap-3 xl:grid-cols-2">
         <section aria-label="As an object">
-          <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted uppercase">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">
             <Braces className="size-3.5" aria-hidden />
             Object {step.step === "marshal" ? "before" : "after"}
           </p>
-          <pre className="max-h-72 overflow-auto rounded-xl bg-[#1f2d3d] p-3 font-mono text-xs leading-relaxed text-emerald-200">
+          <pre tabIndex={0} aria-label="Message as sent" className="max-h-72 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 rounded-xl bg-[#1f2d3d] p-3 font-mono text-xs leading-relaxed text-emerald-200">
             {object ?? "Too long to show in full; see the text on the right."}
           </pre>
         </section>
         <section aria-label="On the wire">
-          <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted uppercase">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">
             <FileJson className="size-3.5" aria-hidden />
             JSON text on the wire
           </p>
-          <pre className="max-h-40 overflow-auto rounded-xl bg-canvas p-3 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-ink ring-1 ring-line">
+          <pre tabIndex={0} aria-label="JSON text on the wire" className="max-h-40 overflow-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 rounded-xl bg-canvas p-3 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap text-ink ring-1 ring-line">
             {step.text}
             {step.truncated && <span className="text-muted"> … ({sizeText(step.bytes)} in all)</span>}
           </pre>
         </section>
       </div>
       <section aria-label="The bytes">
-        <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted uppercase">
+        <p className="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">
           <Binary className="size-3.5" aria-hidden />
           The first bytes, as they travel (hex: 7b is “{"{"}”, 22 is “&quot;”)
         </p>
-        <pre className="overflow-x-auto rounded-xl bg-canvas p-3 font-mono text-xs leading-relaxed text-ink ring-1 ring-line">{hexDump(step.text)}</pre>
+        <pre tabIndex={0} aria-label="Bytes" className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 rounded-xl bg-canvas p-3 font-mono text-xs leading-relaxed text-ink ring-1 ring-line">{hexDump(step.text)}</pre>
       </section>
     </div>
   );

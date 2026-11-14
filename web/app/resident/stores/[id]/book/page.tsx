@@ -33,8 +33,8 @@ async function Book({ params }: Pick<PageProps<"/resident/stores/[id]/book">, "p
       {/* Which store this is for, and what to know before booking */}
       <div className="mb-6 flex gap-3 rounded-2xl border border-line p-3">
         <StoreCover imageUrl={store.imageUrl} className="size-16 shrink-0 rounded-xl" eager />
-        <div className="min-w-0 flex-1 space-y-0.5 text-[13px] text-muted">
-          <p className="truncate text-[15px] font-semibold text-ink">{store.name}</p>
+        <div className="min-w-0 flex-1 space-y-0.5 text-[0.8125rem] text-muted">
+          <p className="truncate text-[0.9375rem] font-semibold text-ink">{store.name}</p>
           <p className="flex items-center gap-1.5">
             <MapPin className="size-3.5 shrink-0" aria-hidden />
             <span className="truncate">{store.address}</span>

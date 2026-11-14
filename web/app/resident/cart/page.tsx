@@ -65,9 +65,9 @@ async function ResidentCart() {
 
   return (
     <>
-      <div className="mb-5 flex items-start justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-ink">Your cart</h1>
+          <h1 className="text-[1.375rem] font-bold tracking-tight text-ink">Your cart</h1>
           <p className="mt-0.5 text-sm text-muted">
             {cart.itemCount} {cart.itemCount === 1 ? "item" : "items"}
             {stores > 1 ? ` from ${stores} stores` : ` from ${cart.groups[0].store.name}`}
@@ -169,12 +169,12 @@ async function ResidentCart() {
       <div className="md:sticky md:top-24">
       <ViewTransition update="fx-move" default="none">
       <section aria-label="Total" className="mt-5 rounded-2xl border border-line bg-white p-4 md:mt-0">
-        <dl className="space-y-1.5 text-[15px]">
-          <div className="flex justify-between gap-3">
+        <dl className="space-y-1.5 text-[0.9375rem]">
+          <div className="flex flex-wrap justify-between gap-x-3">
             <dt className="text-muted">Items ({cart.itemCount})</dt>
             <dd className="font-semibold text-ink tabular-nums">{formatPeso(cart.itemsTotal)}</dd>
           </div>
-          <div className="flex justify-between gap-3">
+          <div className="flex flex-wrap justify-between gap-x-3">
             <dt className="text-muted">
               {cart.delivery.addressId
                 ? `Delivery to ${cart.delivery.addressLabel}${stores > 1 ? ` (${stores} stores)` : ""}`
@@ -182,7 +182,7 @@ async function ResidentCart() {
             </dt>
             <dd className="text-ink tabular-nums">{formatPeso(delivery)}</dd>
           </div>
-          <div className="flex justify-between gap-3 border-t border-line pt-2.5 text-lg font-bold text-ink">
+          <div className="flex flex-wrap justify-between gap-x-3 border-t border-line pt-2.5 text-lg font-bold text-ink">
             <dt>Total with delivery</dt>
             <dd className="tabular-nums">{formatPeso(cart.itemsTotal + delivery)}</dd>
           </div>
@@ -220,7 +220,7 @@ async function ResidentCart() {
             className="flex h-16 items-center justify-between gap-3 rounded-2xl bg-brand-600 px-4 text-white shadow-[0_12px_28px_-10px_rgba(210,70,0,0.6)] transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
           >
             <span>
-              <span className="block text-[11px] leading-tight text-white/75">Total with delivery</span>
+              <span className="block text-[0.6875rem] leading-tight text-white">Total with delivery</span>
               <span className="block text-lg leading-tight font-bold tabular-nums">{formatPeso(cart.itemsTotal + delivery)}</span>
             </span>
             <span className="flex items-center gap-1 font-semibold">

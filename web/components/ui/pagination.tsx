@@ -47,7 +47,7 @@ export function Pagination({
         )}
         {pageList(page, last).map((n, i) =>
           n === "gap" ? (
-            <span key={`gap-${i}`} aria-hidden className="px-1 text-gray-400">
+            <span key={`gap-${i}`} aria-hidden className="px-1 text-gray-500">
               …
             </span>
           ) : (

@@ -53,14 +53,18 @@ export function ViewReportButton({ documentPath, exportPath, children, label = "
   return (
     <>
       {children ? (
-        <button type="button" onClick={() => setOpen(true)} aria-label={label} className="group/paper block w-full cursor-zoom-in rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500">
-          {children}
+        <button type="button" onClick={() => setOpen(true)} className="group/paper block w-full cursor-zoom-in rounded-xl text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500">
+          {/* The small page is a picture of the report: the button's name says what it does */}
+          <span className="sr-only">{label}</span>
+          <span aria-hidden className="block">
+            {children}
+          </span>
         </button>
       ) : (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-[15px] font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+          className="inline-flex h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-[0.9375rem] font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
         >
           <FileText className="size-5" aria-hidden />
           {label}
@@ -144,7 +148,7 @@ export function ReportSheet({ doc }: { doc: ReportDocument }) {
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <Image src="/Logo/feasto-logo.png" alt="Feasto" width={130} height={38} className="h-[38px] w-[130px] object-contain" />
-            <p className="mt-1 text-[9px] font-bold tracking-[0.28em] text-muted uppercase">Order · Book · Enjoy</p>
+            <p className="mt-1 text-[0.5625rem] font-bold tracking-[0.28em] text-muted uppercase">Order · Book · Enjoy</p>
           </div>
           <div className="sm:text-right">
             <p className="text-xs font-semibold tracking-[0.25em] text-brand-600 uppercase">{doc.kind}</p>
@@ -154,7 +158,7 @@ export function ReportSheet({ doc }: { doc: ReportDocument }) {
         </header>
         <div aria-hidden className="my-5 border-t-2 border-dashed border-gray-300" />
 
-        <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">{doc.title}</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-ink sm:text-[1.75rem]">{doc.title}</h2>
         <p className="mt-0.5 text-sm text-muted">
           {doc.kind} · {doc.period} · {doc.days} {doc.days === 1 ? "day" : "days"}
         </p>
@@ -162,7 +166,7 @@ export function ReportSheet({ doc }: { doc: ReportDocument }) {
         <dl className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-2">
           {doc.details.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-[10px] font-bold tracking-[0.14em] text-muted uppercase">{label}</dt>
+              <dt className="text-[0.625rem] font-bold tracking-[0.14em] text-muted uppercase">{label}</dt>
               <dd className="text-sm text-ink">{value}</dd>
             </div>
           ))}
@@ -171,9 +175,9 @@ export function ReportSheet({ doc }: { doc: ReportDocument }) {
         <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {doc.summary.map((tile) => (
             <div key={tile.label} className="rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-3">
-              <p className="text-[10px] font-bold tracking-[0.12em] text-brand-700 uppercase">{tile.label}</p>
+              <p className="text-[0.625rem] font-bold tracking-[0.12em] text-brand-700 uppercase">{tile.label}</p>
               <p className="mt-1 truncate text-lg font-bold text-ink tabular-nums sm:text-xl">{cellText(tile.value, tile.kind)}</p>
-              {tile.note && <p className="truncate text-[11px] text-muted">{tile.note}</p>}
+              {tile.note && <p className="truncate text-[0.6875rem] text-muted">{tile.note}</p>}
             </div>
           ))}
         </div>
@@ -191,17 +195,17 @@ export function ReportSheet({ doc }: { doc: ReportDocument }) {
         ))}
 
         <div className="mt-8">
-          <p className="text-[10px] font-bold tracking-[0.14em] text-muted uppercase">Notes</p>
+          <p className="text-[0.625rem] font-bold tracking-[0.14em] text-muted uppercase">Notes</p>
           <ul className="mt-1.5 space-y-1 text-xs text-muted">
             {doc.notes.map((note) => (
               <li key={note}>• {note}</li>
             ))}
           </ul>
         </div>
-        <p aria-hidden className="mt-6 border-y-2 border-dashed border-gray-300 py-1.5 text-center text-[10px] font-bold tracking-[0.4em] text-muted">
+        <p aria-hidden className="mt-6 border-y-2 border-dashed border-gray-300 py-1.5 text-center text-[0.625rem] font-bold tracking-[0.4em] text-muted">
           END OF REPORT
         </p>
-        <footer className="mt-6 flex flex-wrap justify-between gap-2 border-t border-line pt-3 text-[11px] text-muted">
+        <footer className="mt-6 flex flex-wrap justify-between gap-2 border-t border-line pt-3 text-[0.6875rem] text-muted">
           <span>
             <span className="font-bold text-brand-600">Feasto</span> · Order · Book · Enjoy · Naval, Biliran
           </span>
@@ -239,7 +243,7 @@ function Chart({ data, kind }: { data: { label: string; value: number }[]; kind:
           </div>
         ))}
       </div>
-      <div className="mt-1 flex gap-[2px] text-[9px] text-muted">
+      <div className="mt-1 flex gap-[2px] text-[0.5625rem] text-muted">
         {data.map((d, i) => (
           <span key={i} className="flex-1 text-center whitespace-nowrap">
             {i % every === 0 ? d.label : ""}
@@ -254,7 +258,7 @@ function SheetTable({ table }: { table: ReportTable }) {
   const align = (kind: CellKind) => (kind === "text" ? "text-left" : "text-right");
   return (
     <div className="mt-3 overflow-x-auto">
-      <table className="w-full min-w-[480px] border-separate border-spacing-0 text-[13px]">
+      <table className="w-full min-w-[480px] border-separate border-spacing-0 text-[0.8125rem]">
         <thead>
           <tr>
             {table.columns.map((c, i) => (
@@ -262,7 +266,7 @@ function SheetTable({ table }: { table: ReportTable }) {
                 key={c.label + i}
                 scope="col"
                 style={{ width: `${((c.width ?? 1) / table.columns.reduce((n, col) => n + (col.width ?? 1), 0)) * 100}%` }}
-                className={`bg-ink px-3 py-2 text-[10px] font-bold tracking-[0.1em] text-white uppercase first:rounded-l-md last:rounded-r-md ${align(c.kind)}`}
+                className={`bg-ink px-3 py-2 text-[0.625rem] font-bold tracking-[0.1em] text-white uppercase first:rounded-l-md last:rounded-r-md ${align(c.kind)}`}
               >
                 {c.label}
               </th>

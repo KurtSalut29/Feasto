@@ -10,6 +10,8 @@ import { LiveUpdates } from "./live-updates";
 import { LogoutButton } from "./logout-button";
 import { NotificationBell } from "./notification-bell";
 import { SidebarNav } from "./sidebar-nav";
+import { SkipLink } from "./skip-link";
+import { DisplaySync } from "./display-settings";
 
 type DashboardRole = "VENDOR" | "ADMIN";
 
@@ -31,6 +33,8 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
   return (
     <LiveUpdates>
       <div className="min-h-dvh bg-canvas">
+        <SkipLink />
+        <DisplaySync />
         <SidebarNav
           role={role}
           context={
@@ -53,7 +57,7 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
           )}
         />
         {/* Phones: room at the bottom for the tabs. Big screens: room on the left for the sidebar. */}
-        <main className="min-w-0 px-4 pt-5 pb-[calc(var(--tabbar-h)+2rem+env(safe-area-inset-bottom))] sm:px-6 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
+        <main id="main" tabIndex={-1} className="min-w-0 scroll-mt-20 px-4 outline-none pt-5 pb-[calc(var(--tabbar-h)+2rem+env(safe-area-inset-bottom))] sm:px-6 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
           <div className="mx-auto max-w-6xl">
             {/* Big screens: today's date on the left, the bell on the right, above every page.
                 On small screens the bell sits in the sidebar's top bar instead. */}
@@ -78,7 +82,7 @@ async function TodayLine() {
   const { Icon, label } = MEAL_LABEL[meal];
   return (
     <p className="flex items-center gap-2 text-sm text-muted">
-      <CalendarDays className="size-4 text-gray-400" aria-hidden />
+      <CalendarDays className="size-4 text-gray-500" aria-hidden />
       <span className="font-semibold text-ink">{todayLabel()}</span>
       <span aria-hidden className="text-gray-300">
         ·
@@ -196,7 +200,7 @@ async function NavCount({ role, href, meaning }: { role: DashboardRole; href: st
   const count = (await waitingCounts(role))[href] ?? 0;
   if (count === 0) return null;
   return (
-    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[11px] font-semibold text-white group-aria-[current=page]:bg-white group-aria-[current=page]:text-brand-700 lg:collapsed:absolute lg:collapsed:top-2 lg:collapsed:right-3 lg:collapsed:ml-0 lg:collapsed:size-2.5 lg:collapsed:min-w-0 lg:collapsed:p-0 lg:collapsed:ring-2 lg:collapsed:ring-white lg:collapsed:group-aria-[current=page]:ring-brand-600">
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[0.6875rem] font-semibold text-white group-aria-[current=page]:bg-white group-aria-[current=page]:text-brand-700 lg:collapsed:absolute lg:collapsed:top-2 lg:collapsed:right-3 lg:collapsed:ml-0 lg:collapsed:size-2.5 lg:collapsed:min-w-0 lg:collapsed:p-0 lg:collapsed:ring-2 lg:collapsed:ring-white lg:collapsed:group-aria-[current=page]:ring-brand-600">
       <span className="lg:collapsed:sr-only">{count > 99 ? "99+" : count}</span>
       <span className="sr-only"> {meaning}</span>
     </span>
@@ -220,8 +224,8 @@ export function PageHeader({
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <p className="mb-1 text-xs font-semibold tracking-wider text-brand-700 uppercase">{eyebrow}</p>}
-        <h1 className="text-[26px] leading-tight font-bold tracking-tight text-ink">{title}</h1>
-        {description && <p className="mt-1 text-[15px] text-muted">{description}</p>}
+        <h1 className="text-[1.625rem] leading-tight font-bold tracking-tight text-ink">{title}</h1>
+        {description && <p className="mt-1 text-[0.9375rem] text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
     </div>

@@ -80,7 +80,7 @@ export function PaymentPicker({
                 <ChevronDown className="size-5" />
               </span>
               <span className="text-sm leading-tight font-semibold">More</span>
-              <span className="text-[11px] leading-tight text-muted">{OPTIONS.length - FIRST.size} other ways</span>
+              <span className="text-[0.6875rem] leading-tight text-muted">{OPTIONS.length - FIRST.size} other ways</span>
             </button>
           </div>
         )}
@@ -126,7 +126,7 @@ function Tile({ option, on, onChange, refusedBy }: { option: Option; on: boolean
         {option.tile ? <Logo file={option.tile} tint={option.brand} className="h-6 w-12" /> : <Banknote className="size-6" style={{ color: option.brand }} />}
       </span>
       <span className="text-sm leading-tight font-semibold text-ink">{option.name}</span>
-      {refusedBy && <span className="-mt-1 line-clamp-1 text-[11px] leading-tight text-muted">Not at {refusedBy}</span>}
+      {refusedBy && <span className="-mt-1 line-clamp-1 text-[0.6875rem] leading-tight text-muted">Not at {refusedBy}</span>}
       {on && (
         <span className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-brand-600 text-white" aria-hidden>
           <Check className="size-3" strokeWidth={3} />
@@ -176,7 +176,7 @@ function PayCard({
             {isCash ? (
               <p className="text-2xl font-bold tracking-tight">Cash</p>
             ) : isCard ? (
-              <p className="text-sm font-semibold tracking-widest text-white/85 uppercase">Debit / Credit</p>
+              <p className="text-sm font-semibold tracking-widest text-white uppercase">Debit / Credit</p>
             ) : option.card?.named ? (
               <Logo file={option.card} tint="#ffffff" className="h-8 w-28" />
             ) : (
@@ -193,7 +193,7 @@ function PayCard({
               // The chip
               <span className="block h-7 w-10 rounded-md bg-gradient-to-br from-amber-200 via-amber-300 to-amber-500 shadow-inner" aria-hidden />
             ) : (
-              <p className="flex h-7 items-end text-[10px] tracking-widest text-white/70 uppercase">
+              <p className="flex h-7 items-end text-[0.625rem] tracking-widest text-white uppercase">
                 {isCash
                   ? split
                     ? delivery
@@ -212,14 +212,14 @@ function PayCard({
 
           <div className="flex h-10 items-end justify-between gap-3 text-xs">
             <div className="min-w-0">
-              <p className="text-[10px] tracking-widest text-white/60 uppercase">{isCash ? "Paid by" : isCard ? "Card holder" : "Account name"}</p>
+              <p className="text-[0.625rem] tracking-widest text-white uppercase">{isCash ? "Paid by" : isCard ? "Card holder" : "Account name"}</p>
               <p className="truncate font-semibold tracking-wide">{name}</p>
             </div>
             {isCard && option.card ? (
               <Logo file={option.card} tint="#ffffff" className="h-8 w-14 shrink-0" />
             ) : (
               <div className="shrink-0 text-right">
-                <p className="text-[10px] tracking-widest text-white/60 uppercase">Amount</p>
+                <p className="text-[0.625rem] tracking-widest text-white uppercase">Amount</p>
                 <p className="font-semibold tabular-nums">{formatPeso(total)}</p>
               </div>
             )}

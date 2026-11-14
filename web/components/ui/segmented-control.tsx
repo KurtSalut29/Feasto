@@ -60,7 +60,7 @@ export function SegmentedControl<T extends string>({
           </label>
         ))}
       </div>
-      {error && <p className="mt-1 text-[13px] text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-[0.8125rem] text-red-600">{error}</p>}
     </fieldset>
   );
 }

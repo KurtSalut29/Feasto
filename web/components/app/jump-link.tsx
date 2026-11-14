@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { lessMotion } from "@/lib/display";
 
 /**
  * A link to a part of the same page ("Hours & map", the reviews) that scrolls there without adding
@@ -15,7 +16,7 @@ export function JumpLink({ to, className, children }: { to: string; className?: 
         const target = document.getElementById(to);
         if (!target) return;
         event.preventDefault();
-        const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const smooth = !lessMotion();
         target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
         // Keyboard and screen reader users continue from the section they jumped to
         target.focus({ preventScroll: true });

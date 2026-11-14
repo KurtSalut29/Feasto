@@ -102,7 +102,7 @@ function CurrentDelivery({ order }: { order: RiderDelivery }) {
           <p className="truncate text-sm text-muted">To {order.checkout.deliveryAddress}</p>
         </div>
       </div>
-      <p className="mt-3 flex items-center gap-2 text-[15px] font-semibold text-brand-700">
+      <p className="mt-3 flex items-center gap-2 text-[0.9375rem] font-semibold text-brand-700">
         <span className="relative flex size-2.5" aria-hidden>
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />
           <span className="relative inline-flex size-2.5 rounded-full bg-brand-600" />

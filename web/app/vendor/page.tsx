@@ -352,7 +352,7 @@ async function VendorOverview() {
             <ol className="divide-y divide-line">
               {stats.bestSellers.map((dish, i) => (
                 <li key={dish.name} className="flex items-center gap-3 px-5 py-3">
-                  <span className={`w-4 text-sm font-bold tabular-nums ${i === 0 ? "text-brand-600" : "text-gray-400"}`}>{i + 1}</span>
+                  <span className={`w-4 text-sm font-bold tabular-nums ${i === 0 ? "text-brand-600" : "text-gray-500"}`}>{i + 1}</span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-sm font-medium text-ink">{dish.name}</span>
@@ -407,7 +407,7 @@ function Figure({
         </span>
         {href && <ArrowRight className="size-4 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-brand-600" aria-hidden />}
       </span>
-      <span className="mt-3 flex items-center gap-2 text-[26px] leading-tight font-bold tracking-tight text-ink tabular-nums">
+      <span className="mt-3 flex items-center gap-2 text-[1.625rem] leading-tight font-bold tracking-tight text-ink tabular-nums">
         {value}
         {alert && (
           <span className="relative flex size-2.5" aria-hidden>

@@ -117,7 +117,7 @@ export function StoreMenu({
 
       {items.length >= SEARCH_FROM_MENU_SIZE && (
         <div role="search" className="relative mt-3">
-          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-gray-400" aria-hidden />
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-gray-500" aria-hidden />
           <input
             type="search"
             value={query}
@@ -125,7 +125,7 @@ export function StoreMenu({
             maxLength={40}
             placeholder={`Search ${storeName}'s menu`}
             aria-label="Search the menu"
-            className="h-11 w-full rounded-xl border border-line bg-canvas pr-11 pl-11 text-[15px] outline-none placeholder:text-gray-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
+            className="h-11 w-full rounded-xl border border-line bg-canvas pr-11 pl-11 text-[0.9375rem] outline-none placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/15 [&::-webkit-search-cancel-button]:hidden"
           />
           {query && (
             <button
@@ -229,12 +229,12 @@ export function StoreMenu({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block leading-tight font-semibold">View cart</span>
-              <span className="block truncate text-xs text-white/80">
+              <span className="block truncate text-xs text-white">
                 {count} {count === 1 ? "item" : "items"} · {otherStores ? `+ ${otherStores} other ${otherStores === 1 ? "store" : "stores"}` : storeName}
               </span>
             </span>
             <span className="text-right">
-              <span className="block text-[11px] leading-tight text-white/75">Subtotal</span>
+              <span className="block text-[0.6875rem] leading-tight text-white">Subtotal</span>
               <span className="block font-bold tabular-nums">{formatPeso(subtotal)}</span>
             </span>
             <ChevronRight className="size-5 shrink-0 text-white/80" aria-hidden />
@@ -304,7 +304,7 @@ function DishCard({ item, showSection, ...add }: AddProps & { item: MenuItem; sh
         <QuickAdd item={item} {...add} className="absolute right-2 bottom-2" />
       </div>
       {showSection && <p className="mt-2 text-xs font-medium text-muted">{item.category}</p>}
-      <h4 className={`${showSection ? "mt-0.5" : "mt-2"} line-clamp-2 text-[15px] leading-snug font-semibold ${soldOut ? "text-muted" : "text-ink"}`}>{item.name}</h4>
+      <h4 className={`${showSection ? "mt-0.5" : "mt-2"} line-clamp-2 text-[0.9375rem] leading-snug font-semibold ${soldOut ? "text-muted" : "text-ink"}`}>{item.name}</h4>
       {item.description && <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{item.description}</p>}
       <p className="mt-auto pt-1.5 font-bold text-ink">{formatPeso(item.price)}</p>
       <StockNote item={item} quantity={quantity} />
@@ -481,7 +481,7 @@ function DishSheet({
                 item.stock !== null && item.stock <= 5 && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">Only {item.stock} left</span>
               )}
             </div>
-            <p className="mt-4 text-[15px] leading-relaxed text-ink">{item.description ?? "No description from the store yet."}</p>
+            <p className="mt-4 text-[0.9375rem] leading-relaxed text-ink">{item.description ?? "No description from the store yet."}</p>
             <p className="mt-4 flex items-center gap-2 text-sm text-muted">
               <ShoppingBag className="size-4 shrink-0" aria-hidden />
               From {storeName}
@@ -529,7 +529,7 @@ function DishSheet({
                 type="button"
                 onClick={save}
                 disabled={busy}
-                className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-[0.9375rem] font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                   count === 0 ? "border border-red-200 bg-white text-red-700 hover:bg-red-50" : count === inCart ? "border border-line bg-white text-ink hover:bg-canvas" : "bg-brand-600 text-white hover:bg-brand-700"
                 }`}
               >

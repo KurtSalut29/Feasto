@@ -189,7 +189,7 @@ const SHARE_STEP: Record<IosBrowser, string> = {
 function IosSteps({ browser, onClose }: { browser: IosBrowser | null; onClose: () => void }) {
   return (
     <Dialog open={browser !== null} onClose={onClose} title="Add Feasto to your home screen" description="It takes three taps.">
-      <ol className="space-y-3 text-[15px] text-ink">
+      <ol className="space-y-3 text-[0.9375rem] text-ink">
         <li className="flex items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-brand-600">
             <Share className="size-[18px]" aria-hidden />

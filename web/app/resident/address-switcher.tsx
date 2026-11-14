@@ -71,7 +71,7 @@ export function AddressSwitcher({ addresses }: { addresses: Address[] }) {
         <MapPin className="size-4 shrink-0" aria-hidden />
         <span className="min-w-0 flex-1 truncate">
           <span className="font-semibold">{current.label}</span>
-          <span className="text-white/85"> · {current.details}</span>
+          <span className="text-white"> · {current.details}</span>
         </span>
         <ChevronDown className="size-4 shrink-0" aria-hidden />
       </button>

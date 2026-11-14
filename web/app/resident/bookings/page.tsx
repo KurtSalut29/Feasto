@@ -76,7 +76,7 @@ function calendarHref(booking: ResidentBooking) {
 
 
 const chip =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3 text-[0.8125rem] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
 
 /** The next reservation, as a ticket: the store, the moment, the party, and what to do before going. */
 function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBooked: boolean }) {
@@ -101,7 +101,7 @@ function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBo
         )}
         <div className="absolute inset-x-4 bottom-3 flex items-end justify-between gap-3 text-white">
           <div className="min-w-0">
-            <p className="text-xs font-semibold tracking-wider text-white/80 uppercase">{countdown(booking.startsAt)}</p>
+            <p className="text-xs font-semibold tracking-wider text-white uppercase">{countdown(booking.startsAt)}</p>
             <Link href={`/resident/stores/${store.id}`} className="block truncate text-lg font-bold hover:underline">
               {store.name}
             </Link>
@@ -164,8 +164,8 @@ function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBo
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="px-2 py-3">
-      <p className="text-[11px] font-semibold tracking-wider text-gray-400 uppercase">{label}</p>
-      <p className="mt-0.5 text-[15px] font-bold text-ink">{value}</p>
+      <p className="text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase">{label}</p>
+      <p className="mt-0.5 text-[0.9375rem] font-bold text-ink">{value}</p>
     </div>
   );
 }
@@ -182,7 +182,7 @@ function BookingCard({ booking, upcoming }: { booking: ResidentBooking; upcoming
       >
         <span className="text-xs font-semibold tracking-wider uppercase">{manila(booking.startsAt, { month: "short" })}</span>
         <span className="text-2xl leading-none font-bold">{manila(booking.startsAt, { day: "numeric" })}</span>
-        <span className="mt-0.5 text-[11px]">{manila(booking.startsAt, { weekday: "short" })}</span>
+        <span className="mt-0.5 text-[0.6875rem]">{manila(booking.startsAt, { weekday: "short" })}</span>
       </div>
       <div className="min-w-0 flex-1 p-3">
         <div className="flex items-start justify-between gap-2">
@@ -203,7 +203,7 @@ function BookingCard({ booking, upcoming }: { booking: ResidentBooking; upcoming
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           {upcoming ? (
             <>
-              <a href={calendarHref(booking)} download={`feasto-booking-${orderCode(booking.id).slice(1)}.ics`} className="text-[13px] font-semibold text-brand-700 hover:underline">
+              <a href={calendarHref(booking)} download={`feasto-booking-${orderCode(booking.id).slice(1)}.ics`} className="text-[0.8125rem] font-semibold text-brand-700 hover:underline">
                 Add to calendar
               </a>
               <span className="ml-auto">
@@ -213,7 +213,7 @@ function BookingCard({ booking, upcoming }: { booking: ResidentBooking; upcoming
           ) : (
             <Link
               href={`/resident/stores/${store.id}/book`}
-              className="inline-flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline"
+              className="inline-flex items-center gap-1 text-[0.8125rem] font-semibold text-brand-700 hover:underline"
             >
               <RotateCcw className="size-3.5" aria-hidden />
               Book again
@@ -259,7 +259,7 @@ async function ResidentBookings({ searchParams }: Pick<PageProps<"/resident/book
       ) : (
         <>
           <section className="mb-7" aria-labelledby="bookings-next">
-            <h2 id="bookings-next" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+            <h2 id="bookings-next" className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
               {next ? "Next up" : "Upcoming"}
             </h2>
             {next ? (
@@ -275,7 +275,7 @@ async function ResidentBookings({ searchParams }: Pick<PageProps<"/resident/book
           </section>
           {later.length > 0 && (
             <section className="mb-7" aria-labelledby="bookings-later">
-              <h2 id="bookings-later" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+              <h2 id="bookings-later" className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
                 Later
               </h2>
               <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
@@ -287,7 +287,7 @@ async function ResidentBookings({ searchParams }: Pick<PageProps<"/resident/book
           )}
           {past.length > 0 && (
             <section aria-labelledby="bookings-past">
-              <h2 id="bookings-past" className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">
+              <h2 id="bookings-past" className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">
                 Past and cancelled
               </h2>
               <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">

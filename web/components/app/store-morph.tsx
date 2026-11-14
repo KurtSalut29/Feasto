@@ -10,7 +10,7 @@ const Tapped = createContext(false);
  * the logo will be: the store page loads after the tap, and a photo can only grow into something
  * that's on screen. Forgotten after a few seconds, or once the store page has loaded.
  */
-let lastTap: { storeId: string; imageUrl: string | null; at: number } | null = null;
+let lastTap: { storeId: string; imageUrl: string | null } | null = null;
 const TAP_LASTS_MS = 5000;
 
 /**
@@ -26,7 +26,11 @@ export function MorphCard({ storeId, imageUrl, className, children }: { storeId:
       <article
         className={className}
         onClickCapture={() => {
-          lastTap = { storeId, imageUrl, at: Date.now() };
+          const tap = { storeId, imageUrl };
+          lastTap = tap;
+          setTimeout(() => {
+            if (lastTap === tap) lastTap = null;
+          }, TAP_LASTS_MS);
           setTapped(true);
         }}
       >
@@ -57,7 +61,7 @@ export function MorphPhoto({ storeId, always, children }: { storeId: string; alw
  * otherwise the usual skeleton.
  */
 export function StoreLoading({ fallback }: { fallback: ReactNode }) {
-  const tap = lastTap && Date.now() - lastTap.at < TAP_LASTS_MS ? lastTap : null;
+  const tap = lastTap;
   if (!tap) return fallback;
   return (
     <div aria-busy="true">

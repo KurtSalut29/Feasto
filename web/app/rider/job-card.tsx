@@ -32,7 +32,7 @@ export function JobCard({ job, me, busy, arrivals }: { job: RiderJob; me: LatLng
           <p className="text-xs font-medium text-muted">You earn</p>
           <p className="text-xl leading-tight font-bold text-ink">{formatPeso(riderEarns(job))}</p>
           {Number(job.riderCut) > 0 && (
-            <p className="text-[11px] text-muted tabular-nums">
+            <p className="text-[0.6875rem] text-muted tabular-nums">
               {formatPeso(job.deliveryFee)} fee − {formatPeso(job.riderCut!)} Feasto · tips all yours
             </p>
           )}

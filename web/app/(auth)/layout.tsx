@@ -78,6 +78,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             </Link>
             <div className="mt-3">{children}</div>
           </main>
+          <footer className="mt-3 text-center text-sm">
+            <Link href="/accessibility" className="rounded font-medium text-muted underline underline-offset-4 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500">
+              Accessibility
+            </Link>
+          </footer>
         </div>
       </div>
     </div>

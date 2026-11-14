@@ -116,7 +116,7 @@ function PrintedReceipt({ order, onClose }: { order: MomentOrder; onClose: () =>
 
         {/* The printer */}
         <div className="relative z-10 mx-auto mt-6 flex h-9 w-[300px] max-w-full items-center justify-between rounded-2xl bg-[#26364a] px-4 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)]">
-          <span className="text-[11px] font-bold tracking-[0.25em] text-white/60">FEASTO</span>
+          <span className="text-[0.6875rem] font-bold tracking-[0.25em] text-white/60">FEASTO</span>
           <span aria-hidden className="fx-led size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
           <span aria-hidden className="absolute inset-x-6 -bottom-[3px] h-[6px] rounded-full bg-[#0d151f]" />
         </div>
@@ -128,7 +128,7 @@ function PrintedReceipt({ order, onClose }: { order: MomentOrder; onClose: () =>
               <ReceiptPaper label={`Receipt for order ${order.code}`}>
                 <div className="text-center">
                   <Image src="/Logo/feasto-mascot.png" alt="" width={44} height={44} unoptimized className="mx-auto mb-1 size-11 grayscale contrast-125" />
-                  <p className="text-[15px] font-bold tracking-[0.2em]">FEASTO</p>
+                  <p className="text-[0.9375rem] font-bold tracking-[0.2em]">FEASTO</p>
                   <p className="font-bold">{order.storeName}</p>
                   <p>
                     Order {order.code} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
@@ -153,7 +153,7 @@ function PrintedReceipt({ order, onClose }: { order: MomentOrder; onClose: () =>
                   </>
                 )}
                 <Rule double />
-                <dl className="text-[15px] font-bold">
+                <dl className="text-[0.9375rem] font-bold">
                   <Line label="TOTAL" value={formatPeso(order.total)} />
                 </dl>
                 <dl className="mt-1">
@@ -167,8 +167,8 @@ function PrintedReceipt({ order, onClose }: { order: MomentOrder; onClose: () =>
                   aria-hidden
                   className="fx-stamp pointer-events-none absolute top-6 right-3 rounded-lg border-[3px] border-emerald-600 px-3 py-1 text-center font-bold text-emerald-600 opacity-90 mix-blend-multiply"
                 >
-                  <p className="text-[26px] leading-none tracking-[0.15em]">PAID</p>
-                  <p className="text-[10px] leading-tight tracking-[0.2em]">{order.paymentMethod === "COD" ? "CASH" : order.paymentLabel.toUpperCase()}</p>
+                  <p className="text-[1.625rem] leading-none tracking-[0.15em]">PAID</p>
+                  <p className="text-[0.625rem] leading-tight tracking-[0.2em]">{order.paymentMethod === "COD" ? "CASH" : order.paymentLabel.toUpperCase()}</p>
                 </div>
               </ReceiptPaper>
             </div>

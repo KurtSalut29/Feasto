@@ -80,7 +80,7 @@ function dueWords(date: string) {
 function PhoneLink({ contact }: { contact: Contact }) {
   return (
     <span className="inline-flex items-center gap-1.5 text-muted">
-      <Phone className="size-3.5 text-gray-400" aria-hidden />
+      <Phone className="size-3.5 text-gray-500" aria-hidden />
       {contact.name}
       {contact.phone && (
         <>

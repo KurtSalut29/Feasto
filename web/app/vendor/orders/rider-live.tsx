@@ -83,7 +83,7 @@ export function RiderLive({
           </a>
         )}
       </div>
-      <p className={`flex items-center gap-2 text-[13px] font-semibold ${live ? "text-brand-700" : "text-muted"}`} aria-live="polite">
+      <p className={`flex items-center gap-2 text-[0.8125rem] font-semibold ${live ? "text-brand-700" : "text-muted"}`} aria-live="polite">
         {live && (
           <span className="relative flex size-2 shrink-0" aria-hidden>
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-500 opacity-60 motion-reduce:animate-none" />

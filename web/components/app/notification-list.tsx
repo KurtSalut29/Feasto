@@ -67,8 +67,8 @@ export function NotificationItem({ notification: n, onOpen }: { notification: Ap
       </span>
       <span className="min-w-0 flex-1">
         <span className={`block text-sm leading-snug text-ink ${unread ? "font-semibold" : "font-medium"}`}>{n.title}</span>
-        <span className="mt-0.5 block text-[13px] leading-snug text-muted">{n.body}</span>
-        <span className="mt-1 block text-xs text-gray-400">{timeAgo(n.createdAt)}</span>
+        <span className="mt-0.5 block text-[0.8125rem] leading-snug text-muted">{n.body}</span>
+        <span className="mt-1 block text-xs text-gray-500">{timeAgo(n.createdAt)}</span>
       </span>
       {unread && (
         <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-brand-600">

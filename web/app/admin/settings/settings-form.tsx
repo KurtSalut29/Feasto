@@ -95,7 +95,8 @@ function EarningsExample({ commission, pickup, riderFee, deliveryFee }: { commis
     { what: "Pickup order", food, fee: 0, commission: cut(food, pickup), riderCut: 0 },
   ];
   return (
-    <div className="overflow-x-auto rounded-xl border border-line">
+    // Focusable so it can be scrolled sideways with the keyboard on a small screen
+    <div tabIndex={0} role="region" aria-label="Example order" className="overflow-x-auto rounded-xl border border-line focus-visible:outline-2 focus-visible:outline-brand-500">
       <table className="w-full min-w-[460px] text-sm">
         <thead className="bg-canvas text-left text-xs font-semibold tracking-wide text-muted uppercase">
           <tr>

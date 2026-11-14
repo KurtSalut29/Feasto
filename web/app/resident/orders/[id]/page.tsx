@@ -43,7 +43,7 @@ export default function OrderPage({ params }: PageProps<"/resident/orders/[id]">
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-line p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">{title}</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">{title}</h2>
       {children}
     </section>
   );
@@ -69,7 +69,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
       <div className="mb-4 flex items-start gap-3">
         <StoreCover imageUrl={order.vendor.imageUrl} className="size-14 shrink-0 rounded-2xl" eager />
         <div className="min-w-0 flex-1">
-          <h1 className="text-[22px] leading-tight font-bold tracking-tight text-ink">{order.vendor.name}</h1>
+          <h1 className="text-[1.375rem] leading-tight font-bold tracking-tight text-ink">{order.vendor.name}</h1>
           <p className="text-sm text-muted">
             Order {orderCode(order.id)} · {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
           </p>
@@ -164,7 +164,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               <CalendarClock className="size-5 text-sky-600" aria-hidden />
               Scheduled {order.fulfillment === "DELIVERY" ? "delivery" : "pickup"}
             </p>
-            <p className="mt-1 text-[22px] leading-tight font-bold tracking-tight text-ink">{whenOf(order.scheduledFor!)}</p>
+            <p className="mt-1 text-[1.375rem] leading-tight font-bold tracking-tight text-ink">{whenOf(order.scheduledFor!)}</p>
             <ol className="mt-3 space-y-2 text-sm">
               <li className="flex gap-2.5">
                 <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-500" />
@@ -179,7 +179,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
                 </span>
               </li>
             </ol>
-            <p className="mt-3 text-[13px] text-muted">
+            <p className="mt-3 text-[0.8125rem] text-muted">
               You can cancel any time before the store gets it.{" "}
               {order.checkout.paymentMethod === "COD" ? "You pay when you receive it." : "Your online payment is refunded if you cancel."}
             </p>
@@ -248,7 +248,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
                 <p className="flex items-center gap-1.5 font-semibold text-ink">
                   <span className="truncate">{order.rider.name}</span>
                   {riderRating !== null && (
-                    <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px]">
+                    <span className="inline-flex shrink-0 items-center gap-0.5 text-[0.8125rem]">
                       <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
                       {riderRating.toFixed(1)}
                       <span className="sr-only"> out of 5 from residents</span>
@@ -271,18 +271,18 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         )}
 
         <Section title="Your order">
-          <ul className="space-y-2 text-[15px]">
+          <ul className="space-y-2 text-[0.9375rem]">
             {order.items.map((item) => (
               <li key={item.id} className="flex justify-between gap-3">
                 <span className="min-w-0 text-ink">
                   {item.quantity}× {item.name}
-                  {item.note && <span className="block text-[13px] text-amber-800">“{item.note}”</span>}
+                  {item.note && <span className="block text-[0.8125rem] text-amber-800">“{item.note}”</span>}
                 </span>
                 <span className="text-muted">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
               </li>
             ))}
           </ul>
-          <div className="mt-3 space-y-1 border-t border-line pt-3 text-[15px]">
+          <div className="mt-3 space-y-1 border-t border-line pt-3 text-[0.9375rem]">
             <div className="flex justify-between">
               <span className="text-muted">Delivery fee{order.deliveryKm ? ` (${Number(order.deliveryKm).toFixed(1)} km)` : ""}</span>
               <span className="text-ink">{Number(order.deliveryFee) ? formatPeso(order.deliveryFee) : "Free"}</span>
@@ -296,7 +296,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             </p>
             {/* Paid on its own after the delivery, so it isn't part of the order's total */}
             {tip > 0 && (
-              <p className="flex items-center justify-between gap-3 pt-1 text-[15px]">
+              <p className="flex items-center justify-between gap-3 pt-1 text-[0.9375rem]">
                 <span className="flex items-center gap-1.5 text-muted">
                   <HandCoins className="size-4 text-emerald-600" aria-hidden />
                   Tip for {order.rider?.name.split(" ")[0] ?? "your rider"}
@@ -309,7 +309,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         </Section>
 
         <Section title={order.fulfillment === "DELIVERY" ? "Delivery details" : "Pickup details"}>
-          <div className="space-y-2 text-[15px]">
+          <div className="space-y-2 text-[0.9375rem]">
             {order.fulfillment === "DELIVERY" ? (
               <p className="flex gap-2 text-ink">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />

@@ -28,8 +28,8 @@ export function AdminHero({ firstName, summary, attention }: { firstName: string
       />
 
       <div className="relative p-5 pr-24 sm:pr-32 md:p-7 md:pr-48">
-        <p className="text-[11px] font-semibold tracking-[0.12em] text-brand-100 uppercase">Admin console</p>
-        <h1 className="mt-1 text-[26px] leading-tight font-bold tracking-tight md:text-[30px]">
+        <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-brand-100 uppercase">Admin console</p>
+        <h1 className="mt-1 text-[1.625rem] leading-tight font-bold tracking-tight md:text-[1.875rem]">
           {greeting()}, {firstName}
         </h1>
         <p className="mt-1 text-sm text-white/90">{summary}</p>

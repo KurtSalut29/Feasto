@@ -132,13 +132,13 @@ export function ReorderButton({ orderId, compact }: { orderId: string; /** A sma
           type="button"
           onClick={reorder}
           disabled={busy}
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[13px] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-60"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[0.8125rem] font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-60"
         >
           <RotateCcw className={`size-3.5 ${busy ? "animate-spin" : ""}`} aria-hidden />
           Order again
         </button>
         {message && (
-          <p role="status" className="basis-full text-[13px] text-muted">
+          <p role="status" className="basis-full text-[0.8125rem] text-muted">
             {message}{" "}
             {message.startsWith("Added") && (
               <Link href="/resident/cart" className="font-semibold text-brand-700 hover:underline">

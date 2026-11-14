@@ -66,7 +66,7 @@ function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (p
 
   return (
     <section className="rounded-2xl border border-line p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Proof of delivery</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Proof of delivery</p>
       <p className="mt-1 text-sm text-muted">Hand the order over, then take a photo of it. The customer and the store will see it.</p>
 
       <button
@@ -83,7 +83,7 @@ function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (p
         ) : (
           <span className="flex h-full flex-col items-center justify-center gap-2">
             <Camera className="size-8" aria-hidden />
-            <span className="text-[15px] font-semibold">Take a photo</span>
+            <span className="text-[0.9375rem] font-semibold">Take a photo</span>
           </span>
         )}
         {uploading && (

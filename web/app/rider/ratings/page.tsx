@@ -76,7 +76,7 @@ async function RiderRatings() {
       <section aria-label="Your rating" className="mb-5 rounded-3xl border border-line p-4">
         <div className="flex items-center gap-5">
           <div className="text-center">
-            <p className="text-[40px] leading-none font-bold tracking-tight text-ink tabular-nums">{data.average!.toFixed(1)}</p>
+            <p className="text-[2.5rem] leading-none font-bold tracking-tight text-ink tabular-nums">{data.average!.toFixed(1)}</p>
             <div className="mt-1.5">
               <Stars value={Math.round(data.average!)} size="size-3.5" />
             </div>
@@ -117,7 +117,7 @@ async function RiderRatings() {
         </section>
       )}
 
-      <h2 className="mb-2 text-sm font-semibold tracking-wider text-gray-400 uppercase">Latest ratings</h2>
+      <h2 className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">Latest ratings</h2>
       <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
         {data.ratings.map((r) => (
           <li key={r.id} className="flex gap-3 px-4 py-3">
@@ -138,7 +138,7 @@ async function RiderRatings() {
                   {r.tags.map((t) => (
                     <li
                       key={t}
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ISSUES.has(t) ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}
+                      className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-medium ${ISSUES.has(t) ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-800"}`}
                     >
                       {t}
                     </li>

@@ -169,7 +169,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
               <ol className="divide-y divide-line">
                 {report.dishes.slice(0, 10).map((dish, i) => (
                   <li key={dish.name} className="flex items-center gap-3 px-5 py-3">
-                    <span className={`w-6 shrink-0 text-sm font-bold tabular-nums ${i < 3 ? "text-brand-600" : "text-gray-400"}`}>{i + 1}</span>
+                    <span className={`w-6 shrink-0 text-sm font-bold tabular-nums ${i < 3 ? "text-brand-600" : "text-gray-500"}`}>{i + 1}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-3">
                         <p className="truncate font-medium text-ink">{dish.name}</p>

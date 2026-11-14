@@ -74,7 +74,7 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
     <>
       <div>
         <div className="min-w-0">
-          <h1 className="text-[22px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] text-ink">{pageTitle(filters)}</h1>
+          <h1 className="text-[1.375rem] leading-tight font-bold tracking-tight [overflow-wrap:anywhere] text-ink">{pageTitle(filters)}</h1>
           {total > 0 && (
             <p className="mt-0.5 text-sm text-muted">
               {storeCount(total)}
@@ -99,6 +99,10 @@ async function StoreList({ searchParams }: Pick<PageProps<"/resident/stores">, "
         <NoStores filters={filters} totalAnyType={totalAnyType} />
       ) : (
         <>
+          {/* Screen readers jump between stores by heading: each store's name is a level 3 under this */}
+          <h2 className="sr-only">
+            {total} {total === 1 ? "store" : "stores"}
+          </h2>
           <div className="mt-1 divide-y divide-line md:mt-3 md:grid md:grid-cols-3 md:gap-4 md:divide-y-0 lg:grid-cols-4">
             {stores.map((store) => (
               <StoreCard key={store.id} store={store} href={`/resident/stores/${store.id}`} showType={!filters.type} />

@@ -31,7 +31,7 @@ function StockLabel({ item }: { item: MenuItem }) {
   if (item.stock === 0) return <Badge tone="danger">Sold out</Badge>;
   if (lowStock(item)) return <Badge tone="warning">{item.stock} left</Badge>;
   if (item.stock !== null) return <span className="text-sm text-muted tabular-nums">{item.stock} in stock</span>;
-  return <span className="text-sm text-gray-400">Unlimited</span>;
+  return <span className="text-sm text-gray-500">Unlimited</span>;
 }
 
 /** On/off switch for whether residents can see and order a dish, with its state in words. */
@@ -127,14 +127,14 @@ export function MenuManager({ items }: { items: MenuItem[] }) {
       <div className="mb-5 rounded-2xl border border-line bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:flex sm:items-center sm:gap-3">
         <div className="flex gap-2 sm:contents">
           <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" aria-hidden />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search dishes"
               aria-label="Search dishes"
-              className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+              className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
             />
           </div>
           <Button onClick={() => setEditing({})} className="h-10 shrink-0 px-3.5 sm:order-last sm:px-5">
@@ -158,7 +158,7 @@ export function MenuManager({ items }: { items: MenuItem[] }) {
               }`}
             >
               {c ?? "All sections"}
-              <span className={`ml-1.5 text-xs ${section === c ? "text-white/70" : "text-gray-400"}`}>
+              <span className={`ml-1.5 text-xs ${section === c ? "text-white/70" : "text-gray-500"}`}>
                 {c ? items.filter((i) => i.category === c).length : items.length}
               </span>
             </button>
@@ -217,7 +217,7 @@ export function MenuManager({ items }: { items: MenuItem[] }) {
                     </button>
                   }
                 >
-                  <div className="hidden grid-cols-[minmax(0,1fr)_96px_110px_130px_186px] gap-4 border-b border-line bg-canvas/60 px-5 py-2 text-[11px] font-semibold tracking-wider text-gray-500 uppercase md:grid">
+                  <div className="hidden grid-cols-[minmax(0,1fr)_96px_110px_130px_186px] gap-4 border-b border-line bg-canvas/60 px-5 py-2 text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase md:grid">
                     <span>Dish</span>
                     <span className="text-right">Price</span>
                     <span>Stock</span>

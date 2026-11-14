@@ -70,9 +70,9 @@ function waited(iso: string, now: number) {
 function Contact({ Icon, role, person }: { Icon: LucideIcon; role: string; person: Person }) {
   return (
     <li className="flex items-start gap-3 rounded-2xl bg-canvas px-4 py-3 text-sm">
-      <Icon className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden />
+      <Icon className="mt-0.5 size-4 shrink-0 text-gray-500" aria-hidden />
       <span className="min-w-0">
-        <span className="block text-[11px] font-semibold tracking-wider text-muted uppercase">{role}</span>
+        <span className="block text-[0.6875rem] font-semibold tracking-wider text-muted uppercase">{role}</span>
         <span className="block truncate font-semibold text-ink">{person.name}</span>
         {person.phone ? (
           <a href={`tel:${person.phone}`} className="inline-flex items-center gap-1 font-medium text-brand-700 hover:underline">
@@ -144,7 +144,7 @@ async function Stuck({ searchParams }: Pick<PageProps<"/admin/stuck">, "searchPa
         </header>
 
         <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
-          <p className="text-[11px] font-semibold tracking-wider text-brand-700 uppercase">What to do</p>
+          <p className="text-[0.6875rem] font-semibold tracking-wider text-brand-700 uppercase">What to do</p>
           <p className="mt-1 text-sm text-ink">{why.advice}</p>
           <div className="mt-3">
             <StuckActions orderId={order.id} code={order.code} reason={order.reason} riderName={order.rider?.name ?? null} />

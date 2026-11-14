@@ -16,14 +16,14 @@ export function PasswordPage({ email, backHref }: { email: string; backHref: str
       <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:gap-6">
         <section aria-label="New password" className="overflow-hidden rounded-3xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           {/* Who this is for, so nobody changes the wrong account on a shared phone */}
-          <div className="relative flex items-center gap-3.5 overflow-hidden bg-gradient-to-br from-brand-500 to-brand-700 px-5 py-4 text-white">
+          <div className="relative flex items-center gap-3.5 overflow-hidden bg-gradient-to-br from-brand-600 to-brand-700 px-5 py-4 text-white">
             <KeyRound aria-hidden className="pointer-events-none absolute -right-3 -bottom-5 size-24 rotate-[-20deg] text-white/10" />
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
               <LockKeyhole className="size-5" aria-hidden />
             </span>
             <div className="min-w-0">
               <p className="font-semibold">Keep your account safe</p>
-              <p className="text-sm [overflow-wrap:anywhere] text-white/80">Signed in as {email}</p>
+              <p className="text-sm [overflow-wrap:anywhere] text-white">Signed in as {email}</p>
             </div>
           </div>
           <div className="p-5">

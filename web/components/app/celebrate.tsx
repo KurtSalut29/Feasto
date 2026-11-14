@@ -118,7 +118,7 @@ export function CelebrationHost() {
       <div key={shown.id} className="fx-stage relative flex w-full max-w-[320px] flex-col items-center text-center">
         {/* The speech bubble */}
         <div className="fx-bubble relative mb-3 rounded-[22px] bg-white px-5 py-3 shadow-[0_18px_40px_-16px_rgba(31,45,61,0.55)]">
-          <p className="text-[22px] leading-tight font-bold tracking-tight text-ink">{shown.title}</p>
+          <p className="text-[1.375rem] leading-tight font-bold tracking-tight text-ink">{shown.title}</p>
           <span aria-hidden className="absolute -bottom-2 left-1/2 size-4 -translate-x-1/2 rotate-45 rounded-[3px] bg-white" />
         </div>
 
@@ -145,7 +145,7 @@ export function CelebrationHost() {
           />
         </div>
 
-        {shown.message && <p className="fx-rise relative mt-3 text-[15px] leading-snug font-medium text-white [--fx-delay:0.55s]">{shown.message}</p>}
+        {shown.message && <p className="fx-rise relative mt-3 text-[0.9375rem] leading-snug font-medium text-white [--fx-delay:0.55s]">{shown.message}</p>}
         <button
           ref={okRef}
           type="button"

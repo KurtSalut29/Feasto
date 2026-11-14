@@ -36,11 +36,11 @@ export function HomeHero({ firstName, addresses }: { firstName: string; addresse
       />
 
       <div className="relative pr-24 md:pr-56">
-        <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-100 uppercase">
+        <p className="flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-[0.12em] text-brand-100 uppercase">
           <meal.Icon className="size-3.5" aria-hidden />
           {weekdayLabel()} · {meal.label}
         </p>
-        <h1 className="mt-1.5 text-[26px] leading-tight font-bold tracking-tight md:text-4xl">Hi, {firstName}!</h1>
+        <h1 className="mt-1.5 text-[1.625rem] leading-tight font-bold tracking-tight md:text-4xl">Hi, {firstName}!</h1>
         <p className="mt-1 text-sm text-white/90 md:text-base">{meal.line}</p>
       </div>
 

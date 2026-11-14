@@ -78,7 +78,7 @@ export function PayoutsCard({ who, data }: { who: "store" | "rider"; data: Payou
               </p>
               <p className="truncate text-xs text-muted">{account.name}</p>
             </div>
-            <Button variant="secondary" className="h-8! shrink-0 gap-1.5! px-2.5! text-[13px]!" aria-label="Change where Feasto sends your money" onClick={() => setEditing(true)}>
+            <Button variant="secondary" className="h-8! shrink-0 gap-1.5! px-2.5! text-[0.8125rem]!" aria-label="Change where Feasto sends your money" onClick={() => setEditing(true)}>
               <Pencil className="size-3.5" aria-hidden />
               Change
             </Button>
@@ -172,7 +172,7 @@ export function PayoutRow({ payout: p, retryPath, retryBody = {}, showWho = fals
           {p.account && <span>{p.account}</span>}
           <span>{formatDate(p.sentAt ?? p.createdAt)}</span>
         </div>
-        {p.reference && <p className="mt-1 truncate font-mono text-[11px] text-gray-400">Xendit ref {p.reference}</p>}
+        {p.reference && <p className="mt-1 truncate font-mono text-[0.6875rem] text-gray-500">Xendit ref {p.reference}</p>}
         {p.status === "FAILED" && p.failure && <p className="mt-1 text-xs text-red-700">{p.failure}</p>}
         {p.status === "FAILED" && retryPath && (
           <Button variant="secondary" loading={busy} className="mt-2 h-8! px-3! text-xs!" onClick={retry}>

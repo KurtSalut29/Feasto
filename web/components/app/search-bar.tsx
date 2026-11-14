@@ -13,14 +13,14 @@ export function SearchBar({ action, hidden = {}, value, placeholder }: { action:
         <input key={name} type="hidden" name={name} value={v} />
       ))}
       <div className="relative min-w-0 flex-1 sm:max-w-md">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" aria-hidden />
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-500" aria-hidden />
         <input
           type="search"
           name="q"
           defaultValue={value}
           placeholder={placeholder}
           aria-label="Search"
-          className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+          className="h-10 w-full rounded-xl border border-line bg-white pr-3 pl-9 text-sm outline-none placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
         />
       </div>
       <button

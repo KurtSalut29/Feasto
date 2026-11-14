@@ -125,8 +125,8 @@ async function RiderHistory() {
       <section aria-label="Earnings" className="relative mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_14px_30px_-16px_rgba(178,58,0,0.8)]">
         <span aria-hidden className="absolute -top-14 -right-12 size-44 rounded-full bg-brand-500/60" />
         <div className="relative">
-          <p className="text-xs text-white/80">Earned today</p>
-          <p className="text-[32px] leading-tight font-bold tracking-tight tabular-nums">{formatPeso(totals.today.earnings)}</p>
+          <p className="text-xs text-white">Earned today</p>
+          <p className="text-[2rem] leading-tight font-bold tracking-tight tabular-nums">{formatPeso(totals.today.earnings)}</p>
           <p className="text-sm text-white/90">
             {plural(totals.today.count)}
             {totals.today.tips > 0 && ` · ${formatPeso(totals.today.tips)} in tips`}
@@ -134,11 +134,11 @@ async function RiderHistory() {
         </div>
         <dl className="relative mt-4 grid grid-cols-2 divide-x divide-white/25 rounded-2xl bg-white/15 py-2.5 ring-1 ring-white/25">
           <div className="flex flex-col-reverse px-3.5">
-            <dt className="text-[11px] text-white/80">Last 7 days · {plural(weekCount)}</dt>
+            <dt className="text-[0.6875rem] text-white">Last 7 days · {plural(weekCount)}</dt>
             <dd className="text-lg leading-tight font-bold tabular-nums">{formatPeso(weekEarned)}</dd>
           </div>
           <div className="flex flex-col-reverse px-3.5">
-            <dt className="text-[11px] text-white/80">All time · {plural(totals.allTime.count)}</dt>
+            <dt className="text-[0.6875rem] text-white">All time · {plural(totals.allTime.count)}</dt>
             <dd className="text-lg leading-tight font-bold tabular-nums">{formatPeso(totals.allTime.earnings)}</dd>
           </div>
         </dl>
@@ -155,11 +155,11 @@ async function RiderHistory() {
           <span className="block font-semibold text-ink">
             {rating.average !== null ? `${rating.average.toFixed(1)} from ${rating.count} ${rating.count === 1 ? "rating" : "ratings"}` : "No ratings yet"}
           </span>
-          <span className="block truncate text-[13px] text-muted">
+          <span className="block truncate text-[0.8125rem] text-muted">
             {totals.allTime.tips > 0 ? `${formatPeso(totals.allTime.tips)} in tips so far · See what residents said` : "See what residents say about your deliveries"}
           </span>
         </span>
-        <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />
+        <ChevronRight className="size-5 shrink-0 text-gray-500" aria-hidden />
       </Link>
 
       <BalanceCard earnings={earnings} feastoShare={totals.allTime.feastoShare ?? 0} />
@@ -179,7 +179,7 @@ async function RiderHistory() {
         {byDay(deliveries, today).map((group) => (
           <section key={group.label} aria-label={group.label}>
             <div className="mb-2 flex items-baseline justify-between gap-3">
-              <h2 className="text-sm font-semibold tracking-wider text-gray-400 uppercase">{group.label}</h2>
+              <h2 className="text-sm font-semibold tracking-wider text-gray-500 uppercase">{group.label}</h2>
               <p className="text-xs text-muted">
                 {plural(group.items.length)} · <span className="font-semibold text-emerald-700">{formatPeso(sum(group.items))}</span>
               </p>
@@ -190,7 +190,7 @@ async function RiderHistory() {
                   <StoreCover imageUrl={d.vendor.imageUrl} className="size-11 shrink-0 rounded-xl" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink">{d.vendor.name}</p>
-                    <p className="truncate text-[13px] text-muted">
+                    <p className="truncate text-[0.8125rem] text-muted">
                       {formatClock(d.finishedAt)} · {orderCode(d.id)}
                     </p>
                     {d.subtotal !== undefined && (
@@ -203,13 +203,13 @@ async function RiderHistory() {
                   <div className="shrink-0 text-right">
                     <p className="font-semibold text-emerald-700 tabular-nums">+{formatPeso(pay(d))}</p>
                     {Number(d.riderCut) > 0 && (
-                      <p className="text-[11px] text-muted tabular-nums">
+                      <p className="text-[0.6875rem] text-muted tabular-nums">
                         {formatPeso(d.deliveryFee)} − {formatPeso(d.riderCut!)} Feasto
                       </p>
                     )}
-                    {Number(d.tip) > 0 && <p className="text-[11px] font-medium text-emerald-700 tabular-nums">+ {formatPeso(d.tip)} tip</p>}
+                    {Number(d.tip) > 0 && <p className="text-[0.6875rem] font-medium text-emerald-700 tabular-nums">+ {formatPeso(d.tip)} tip</p>}
                     {d.riderRating && (
-                      <p className="mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold text-ink">
+                      <p className="mt-0.5 inline-flex items-center gap-0.5 text-[0.6875rem] font-semibold text-ink">
                         <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden />
                         {d.riderRating.rating}
                         <span className="sr-only"> stars from the resident</span>
@@ -237,7 +237,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
           <HandCoins className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] text-muted">From cash deliveries, you owe Feasto</p>
+          <p className="text-[0.8125rem] text-muted">From cash deliveries, you owe Feasto</p>
           <p className={`text-lg leading-tight font-bold tabular-nums ${balance.owed > 0 ? "text-amber-800" : "text-ink"}`}>
             {balance.owed > 0 ? formatPeso(balance.owed) : "Nothing"}
           </p>
@@ -248,7 +248,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
           <PayFeastoButton owed={balance.owed} orders={balance.orders} who="rider" className="w-full" />
         </div>
       )}
-      <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[13px]">
+      <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[0.8125rem]">
         <div>
           <dt className="font-semibold text-ink">Paid online</dt>
           <dd className="text-muted">Your part of the fee is sent to your GCash, Maya or bank as soon as you deliver. See it below.</dd>
@@ -261,8 +261,8 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
               ` ${balance.orders} cash ${balance.orders === 1 ? "delivery" : "deliveries"} ${balance.lastSettledAt ? `since you last paid, ${formatDate(balance.lastSettledAt)}` : "so far"}.`}
           </dd>
         </div>
-        <p className="text-xs text-muted">Feasto&apos;s share of all your deliveries so far: {formatPeso(feastoShare)}.</p>
       </dl>
+      <p className="bg-canvas/40 px-4 pb-3 text-xs text-muted">Feasto&apos;s share of all your deliveries so far: {formatPeso(feastoShare)}.</p>
     </section>
   );
 }

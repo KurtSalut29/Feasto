@@ -116,13 +116,14 @@ export function RushHoursEditor({
                       key={label}
                       type="button"
                       aria-pressed={on}
-                      aria-label={DAY_NAMES[day]}
                       onClick={() => toggleDay(i, day)}
                       className={`h-8 min-w-11 rounded-lg px-2 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-brand-500 ${
                         on ? "bg-ink text-white" : "border border-line bg-white text-muted hover:text-ink"
                       }`}
                     >
                       {label}
+                      {/* "Sun" reads as "Sunday" */}
+                      {DAY_NAMES[day].startsWith(label) && <span className="sr-only">{DAY_NAMES[day].slice(label.length)}</span>}
                     </button>
                   );
                 })}

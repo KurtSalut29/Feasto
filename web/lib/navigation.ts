@@ -1,4 +1,5 @@
 import {
+  Accessibility,
   BarChart3,
   Bike,
   CalendarDays,
@@ -36,14 +37,14 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/resident/map", label: "Map", Icon: MapIcon },
     { href: "/resident/orders", label: "Orders", Icon: ReceiptText },
     { href: "/resident/bookings", label: "Bookings", Icon: CalendarDays },
-    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications"] },
+    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications", "/resident/display"] },
   ],
   RIDER: [
     { href: "/rider", label: "Home", Icon: House },
     { href: "/rider/map", label: "Map", Icon: MapIcon },
     { href: "/rider/active", label: "Active", Icon: Bike },
     { href: "/rider/history", label: "History", Icon: History },
-    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password", "/rider/notifications"] },
+    { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password", "/rider/notifications", "/rider/display"] },
   ],
   VENDOR: [
     { href: "/vendor", label: "Overview", short: "Home", Icon: LayoutDashboard, group: "Today" },
@@ -53,6 +54,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/vendor/riders", label: "Riders", Icon: Bike, group: "Your store" },
     { href: "/vendor/reports", label: "Reports", Icon: BarChart3, group: "Your store" },
     { href: "/vendor/store", label: "Store settings", short: "Store", Icon: Store, group: "Your store" },
+    { href: "/vendor/display", label: "Display & accessibility", short: "Display", Icon: Accessibility, group: "You" },
   ],
   ADMIN: [
     { href: "/admin", label: "Overview", short: "Home", Icon: LayoutDashboard, group: "Manage" },
@@ -66,6 +68,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/admin/activity", label: "Activity log", Icon: ScrollText, group: "Insights" },
     { href: "/admin/system", label: "System", Icon: Server, group: "Insights" },
     { href: "/admin/settings", label: "Settings", Icon: Settings, group: "Insights" },
+    { href: "/admin/display", label: "Display & accessibility", short: "Display", Icon: Accessibility, group: "You" },
   ],
 };
 

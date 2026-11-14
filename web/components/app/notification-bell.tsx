@@ -92,7 +92,7 @@ export function NotificationBell({ variant = "icon", allHref }: { variant?: "ico
         <Bell className="size-[22px]" aria-hidden />
         {data.unread > 0 && (
           <span
-            className={`absolute flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] leading-4 font-bold text-white ${
+            className={`absolute flex min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[0.625rem] leading-4 font-bold text-white ${
               variant === "floating" ? "-top-0.5 -right-0.5 ring-2 ring-white" : "top-1.5 right-1.5"
             }`}
           >
@@ -117,13 +117,13 @@ export function NotificationBell({ variant = "icon", allHref }: { variant?: "ico
             <div className="flex flex-col items-center px-6 py-8 text-center">
               <BellOff className="size-6 text-gray-300" aria-hidden />
               <p className="mt-2 text-sm font-medium text-ink">You&apos;re all caught up</p>
-              <p className="mt-0.5 text-[13px] text-muted">Order updates and booking news show up here.</p>
+              <p className="mt-0.5 text-[0.8125rem] text-muted">Order updates and booking news show up here.</p>
             </div>
           ) : (
             <div className="max-h-[26rem] overflow-y-auto">
               {groupByDay(shown).map((group) => (
                 <section key={group.label}>
-                  <h3 className="bg-canvas/70 px-4 py-1.5 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">{group.label}</h3>
+                  <h3 className="bg-canvas/70 px-4 py-1.5 text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase">{group.label}</h3>
                   <ul className="divide-y divide-line">
                     {group.items.map((n) => (
                       <NotificationItem key={n.id} notification={n} onOpen={close} />

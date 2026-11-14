@@ -178,12 +178,12 @@ function ToastCard({ toast: t }: { toast: ToastItem }) {
           </span>
           <div className="min-w-0 flex-1 pt-0.5">
             <p className="text-sm leading-snug font-semibold text-white">{t.title}</p>
-            {t.description && <p className="mt-0.5 text-[13px] leading-snug text-white/70">{t.description}</p>}
+            {t.description && <p className="mt-0.5 text-[0.8125rem] leading-snug text-white/70">{t.description}</p>}
             {t.action && (
               <Link
                 href={t.action.href}
                 onClick={() => dismiss(t.id)}
-                className="mt-2 inline-flex h-7 items-center rounded-full bg-white/10 px-3 text-[13px] font-semibold text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-brand-500"
+                className="mt-2 inline-flex h-7 items-center rounded-full bg-white/10 px-3 text-[0.8125rem] font-semibold text-white transition hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-brand-500"
               >
                 {t.action.label}
               </Link>

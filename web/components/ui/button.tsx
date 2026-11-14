@@ -12,7 +12,7 @@ const variants = {
   secondary: "border border-line bg-white text-ink hover:bg-canvas",
 };
 
-const base = `inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold transition
+const base = `inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-[0.9375rem] font-semibold transition
   motion-safe:active:scale-[0.97] motion-safe:disabled:active:scale-100
   focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500`;
 

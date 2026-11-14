@@ -118,7 +118,7 @@ function Links({
       {groupItems(NAVIGATION[role].filter((item) => !only || only(item))).map((group, index) => (
         <div key={group.label}>
           {group.label && (
-            <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-[0.12em] whitespace-nowrap text-gray-400 uppercase lg:collapsed:sr-only">
+            <p className="mb-1.5 px-3 text-[0.6875rem] font-semibold tracking-[0.12em] whitespace-nowrap text-gray-500 uppercase lg:collapsed:sr-only">
               {group.label}
             </p>
           )}
@@ -189,7 +189,7 @@ export function SidebarNav({
   return (
     <>
       {/* Big screens */}
-      <aside className="fixed inset-y-4 left-4 z-30 hidden w-64 flex-col rounded-3xl border border-line/80 bg-white shadow-[0_16px_48px_-20px_rgba(31,45,61,0.28)] transition-[width] duration-300 ease-out lg:flex lg:collapsed:w-[76px]">
+      <aside aria-label="Main menu" className="fixed inset-y-4 left-4 z-30 hidden w-64 flex-col rounded-3xl border border-line/80 bg-white shadow-[0_16px_48px_-20px_rgba(31,45,61,0.28)] transition-[width] duration-300 ease-out lg:flex lg:collapsed:w-[76px]">
         <CollapseToggle />
         <div className="flex h-[76px] shrink-0 items-center px-6 lg:collapsed:justify-center lg:collapsed:px-0">
           <Brand role={role} />
@@ -261,7 +261,7 @@ function ActiveTabs({ role, badges, onMore, moreOpen }: { role: DashboardRole; b
   const onTab = tabs.some((t) => t.href === current);
   const here = tabs.findIndex((t) => t.href === current);
   const tab = (active: boolean) =>
-    `flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
+    `flex h-full w-full flex-col items-center justify-center gap-0.5 text-[0.6875rem] font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 ${
       active ? "text-brand-700" : "text-muted hover:text-ink"
     }`;
   const pill = (active: boolean) => `relative flex h-7 w-12 items-center justify-center rounded-full transition ${active ? "bg-brand-50" : ""}`;
@@ -278,7 +278,7 @@ function ActiveTabs({ role, badges, onMore, moreOpen }: { role: DashboardRole; b
                   <item.Icon className="size-5" strokeWidth={active ? 2.25 : 1.75} aria-hidden />
                   {/* The live count (new orders, applications…), as a small badge on the icon */}
                   {badges[item.href] && (
-                    <span className="absolute -top-1.5 left-[30px] [&>span]:ml-0 [&>span]:h-[18px] [&>span]:min-w-[18px] [&>span]:px-1 [&>span]:text-[10px] [&>span]:ring-2 [&>span]:ring-white">
+                    <span className="absolute -top-1.5 left-[30px] [&>span]:ml-0 [&>span]:h-[18px] [&>span]:min-w-[18px] [&>span]:px-1 [&>span]:text-[0.625rem] [&>span]:ring-2 [&>span]:ring-white">
                       {badges[item.href]}
                     </span>
                   )}

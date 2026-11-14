@@ -16,30 +16,33 @@ export function ProfileCard({ user, stats }: { user: User; stats?: { label: stri
         </span>
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold">{user.name}</p>
-          <p className="truncate text-sm text-white/80">{user.email}</p>
-          {user.phone && <p className="text-sm text-white/80">{user.phone}</p>}
+          <p className="truncate text-sm text-white">{user.email}</p>
+          {user.phone && <p className="text-sm text-white">{user.phone}</p>}
         </div>
       </div>
       {stats && stats.length > 0 && (
-        <dl className="relative mt-4 grid divide-x divide-white/15 rounded-2xl bg-white/10" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+        <ul aria-label="Your numbers" className="relative mt-4 grid divide-x divide-white/15 rounded-2xl bg-white/10" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
           {stats.map((stat) => {
+            // The label first for screen readers ("Orders 45"), the number shows on top
             const body = (
               <>
-                <dd className="text-lg font-bold">{stat.value}</dd>
-                <dt className="text-xs text-white/80">{stat.label}</dt>
+                <span className="text-xs text-white">{stat.label}</span>
+                <span className="text-lg font-bold">{stat.value}</span>
               </>
             );
-            return stat.href ? (
-              <Link key={stat.label} href={stat.href} className="flex flex-col-reverse items-center rounded-2xl px-2 py-2.5 transition hover:bg-white/10">
-                {body}
-              </Link>
-            ) : (
-              <div key={stat.label} className="flex flex-col-reverse items-center px-2 py-2.5">
-                {body}
-              </div>
+            return (
+              <li key={stat.label} className="flex">
+                {stat.href ? (
+                  <Link href={stat.href} className="flex w-full flex-col-reverse items-center rounded-2xl px-2 py-2.5 transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white">
+                    {body}
+                  </Link>
+                ) : (
+                  <div className="flex w-full flex-col-reverse items-center px-2 py-2.5">{body}</div>
+                )}
+              </li>
             );
           })}
-        </dl>
+        </ul>
       )}
     </div>
   );
@@ -49,7 +52,7 @@ export function ProfileCard({ user, stats }: { user: User; stats?: { label: stri
 export function RowGroup({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <div>
-      {title && <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-gray-400">{title}</p>}
+      {title && <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-gray-500">{title}</p>}
       <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">{children}</ul>
     </div>
   );
@@ -74,9 +77,9 @@ export function Row({
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted">
         <Icon className="size-[18px]" aria-hidden />
       </span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">{label}</span>
+      <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium text-ink">{label}</span>
       {value && <span className="shrink-0 text-sm text-muted">{value}</span>}
-      {(href || onClick) && <ChevronRight className="size-5 shrink-0 text-gray-400" aria-hidden />}
+      {(href || onClick) && <ChevronRight className="size-5 shrink-0 text-gray-500" aria-hidden />}
     </>
   );
   return (

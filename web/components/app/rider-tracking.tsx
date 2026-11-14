@@ -55,11 +55,11 @@ export function RiderTracking({
           {rider ? <span className="text-sm font-bold">{initials(rider.name)}</span> : <Bike className="size-5" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">Your rider</p>
+          <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Your rider</p>
           <p className="flex items-center gap-1.5 font-semibold text-ink">
             <span className="truncate">{rider ? rider.name : "Not assigned yet"}</span>
             {rider?.rating != null && (
-              <span className="inline-flex shrink-0 items-center gap-0.5 text-[13px] font-semibold">
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-[0.8125rem] font-semibold">
                 <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
                 {rider.rating.toFixed(1)}
                 <span className="sr-only"> out of 5 from residents</span>

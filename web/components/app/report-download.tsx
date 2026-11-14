@@ -72,7 +72,7 @@ export function ReportDownload({ path, disabled, wide, secondary }: { path: stri
         disabled={disabled || busy !== null}
         aria-haspopup="menu"
         aria-expanded={open}
-        className={`inline-flex h-11 items-center gap-2 rounded-xl ${wide ? "w-full justify-center" : ""} px-4 text-[15px] font-semibold transition ${secondary ? "border border-line bg-white text-ink hover:bg-canvas" : "bg-brand-600 text-white hover:bg-brand-700"} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-70`}
+        className={`inline-flex h-11 items-center gap-2 rounded-xl ${wide ? "w-full justify-center" : ""} px-4 text-[0.9375rem] font-semibold transition ${secondary ? "border border-line bg-white text-ink hover:bg-canvas" : "bg-brand-600 text-white hover:bg-brand-700"} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-70`}
       >
         {busy ? <LoaderCircle className="size-5 animate-spin" aria-hidden /> : <Download className="size-5" aria-hidden />}
         {busy ? `Making ${FORMATS.find((f) => f.format === busy)!.label}…` : "Download"}
@@ -84,7 +84,7 @@ export function ReportDownload({ path, disabled, wide, secondary }: { path: stri
           aria-label="Download as"
           className={`absolute right-0 z-30 mt-2 origin-top-right ${wide ? "left-0" : "w-72"} rounded-2xl border border-line bg-white p-1.5 shadow-[0_18px_40px_-12px_rgba(31,45,61,0.35)] motion-safe:animate-[sheet-up_0.18s_ease-out] max-sm:fixed max-sm:inset-x-3 max-sm:top-auto max-sm:right-3 max-sm:bottom-[calc(var(--tabbar-h)+0.75rem+env(safe-area-inset-bottom))] max-sm:w-auto`}
         >
-          <p className="px-3 pt-2 pb-1.5 text-[11px] font-semibold tracking-[0.14em] text-muted uppercase">Feasto report as</p>
+          <p className="px-3 pt-2 pb-1.5 text-[0.6875rem] font-semibold tracking-[0.14em] text-muted uppercase">Feasto report as</p>
           {FORMATS.map(({ format, label, note, Icon, tint }) => (
             <button
               key={format}

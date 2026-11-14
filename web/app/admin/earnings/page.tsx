@@ -124,7 +124,7 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
             {data.stores.length === 0 ? (
               <p className="px-5 py-6 text-sm text-muted">No finished orders in this period.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div tabIndex={0} role="region" aria-label="Commission by store" className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
                 <table className={TABLE}>
                   <thead className={THEAD}>
                     <tr>
@@ -156,7 +156,7 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
             {data.riders.length === 0 ? (
               <p className="px-5 py-6 text-sm text-muted">No deliveries in this period.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div tabIndex={0} role="region" aria-label="Feasto share by rider" className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
                 <table className={TABLE}>
                   <thead className={THEAD}>
                     <tr>
@@ -176,7 +176,7 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
                         <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(r.riderShare)}</td>
                         <td className={`${TD} text-right text-muted tabular-nums`}>
                           {formatPeso(r.fees - r.riderShare + r.tips)}
-                          {r.tips > 0 && <span className="block text-[11px]">incl. {formatPeso(r.tips)} tips</span>}
+                          {r.tips > 0 && <span className="block text-[0.6875rem]">incl. {formatPeso(r.tips)} tips</span>}
                         </td>
                       </tr>
                     ))}
@@ -286,7 +286,7 @@ function BalanceList({ title, kind, list }: { title: string; kind: "store" | "ri
   const rest = list.slice(FIRST);
   return (
     <section aria-label={title}>
-      <h3 className="bg-canvas/60 px-5 py-2 text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
+      <h3 className="bg-canvas/60 px-5 py-2 text-[0.6875rem] font-semibold tracking-wider text-gray-500 uppercase">
         {title} · {list.length}
       </h3>
       {list.length === 0 ? (
