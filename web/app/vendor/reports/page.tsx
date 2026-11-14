@@ -14,7 +14,7 @@ import { formatDate, formatPeso, formatRange } from "@/lib/format";
 import { periodFromParams, previousPeriod } from "@/lib/report-period";
 import { serverApi } from "@/lib/server-api";
 import type { PayoutsData, SalesDay } from "@/lib/types";
-import { PayFeastoButton } from "@/components/app/pay-feasto";
+import { FeastoPaymentReturn, PayFeastoButton } from "@/components/app/pay-feasto";
 import { PayoutsCard } from "@/components/app/payouts-card";
 import { ONLINE_LABEL } from "@/lib/order-status";
 import { PeriodPicker } from "./period-picker";
@@ -55,6 +55,8 @@ type StoreEarnings = {
   freeUntil: string | null;
   balance: { owed: number; orders: number; lastSettledAt: string | null };
   settlements: { id: string; amount: string; orders: number; method: string | null; createdAt: string }[];
+  /** "xendit": paying Feasto opens Xendit's payment page */
+  payments?: "simulated" | "xendit";
 };
 
 export default function VendorReportsPage({ searchParams }: PageProps<"/vendor/reports">) {
@@ -105,6 +107,8 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
 
   return (
     <>
+      {/* Back from Xendit's payment page after paying Feasto */}
+      <FeastoPaymentReturn who="store" />
       <PageHeader
         eyebrow="Your store"
         title="Reports"
@@ -260,7 +264,7 @@ function CommissionCard({ earnings, totals }: { earnings: StoreEarnings; totals:
           </dd>
           {balance.owed > 0 && (
             <dd className="mt-3">
-              <PayFeastoButton owed={balance.owed} orders={balance.orders} who="store" className="w-full" />
+              <PayFeastoButton owed={balance.owed} orders={balance.orders} who="store" real={earnings.payments === "xendit"} className="w-full" />
             </dd>
           )}
         </div>

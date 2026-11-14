@@ -149,6 +149,7 @@ async function removeSamples() {
   const orderIds = orders.map((o) => o.id);
   const licenses = await prisma.riderProfile.findMany({ where: { userId: { in: ids }, licenseFile: { not: null } }, select: { licenseFile: true } });
   await prisma.$transaction([
+    prisma.feastoPayment.deleteMany({ where: { riderId: { in: ids } } }),
     prisma.settlement.deleteMany({ where: { OR: [{ note: SAMPLE_SETTLEMENT }, { riderId: { in: ids } }] } }),
     // A real order a sample rider was offered or carried keeps existing, just without that rider
     prisma.order.updateMany({ where: { riderId: { in: ids }, id: { notIn: orderIds } }, data: { riderId: null } }),

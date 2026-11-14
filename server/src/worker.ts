@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { runDueDispatches } from "./lib/dispatch.js";
 import { prisma } from "./lib/db.js";
 import { broadcastOrder, orderCode } from "./lib/orders.js";
+import { checkWaitingFeastoPayments } from "./lib/feastoPayments.js";
 import { checkWaitingPayments, confirmPaid, failPayment } from "./lib/paymentFlow.js";
 import { checkPayouts, sendPayout } from "./lib/payouts.js";
 import { ONLINE_LABEL } from "./lib/payments.js";
@@ -260,6 +261,7 @@ const paymentsTimer = setInterval(async () => {
     // One worker at a time asks Xendit, so six workers don't send six times the calls
     if ((await redis.set("lock:payments-check", config.instanceId, "EX", 25, "NX")) === "OK") {
       await checkWaitingPayments(log);
+      await checkWaitingFeastoPayments(log);
       await checkPayouts(log);
     }
   } catch (error) {

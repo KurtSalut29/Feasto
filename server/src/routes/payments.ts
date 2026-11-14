@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { config } from "../config.js";
 import { prisma } from "../lib/db.js";
+import { EXTERNAL_PREFIX, syncFeastoPayment } from "../lib/feastoPayments.js";
 import { syncPayment } from "../lib/paymentFlow.js";
 import { syncPayout } from "../lib/payouts.js";
 import { isFromXendit } from "../lib/xendit.js";
@@ -36,6 +37,16 @@ paymentsRouter.post("/xendit", async (req, res) => {
   const event = invoiceEvent.safeParse(req.body);
   if (!event.success) {
     res.status(400).json({ error: "Not an invoice event." });
+    return;
+  }
+  // A store or rider paying Feasto its share of their cash orders
+  const external = event.data.external_id;
+  const feastoPayment = await prisma.feastoPayment.findFirst({
+    where: { OR: [{ invoiceId: event.data.id }, ...(external?.startsWith(EXTERNAL_PREFIX) ? [{ id: external.slice(EXTERNAL_PREFIX.length) }] : [])] },
+    select: { id: true },
+  });
+  if (feastoPayment) {
+    res.json({ ok: true, status: await syncFeastoPayment(feastoPayment.id) });
     return;
   }
   const checkout = await prisma.checkout.findFirst({ where: { OR: [{ paymentRef: event.data.id }, ...(event.data.external_id ? [{ id: event.data.external_id }] : [])] }, select: { id: true } });

@@ -101,7 +101,7 @@ export async function startOnlinePayment(checkoutId: string, origin: string) {
   const fees = checkout.orders.reduce((n, o) => n + Number(o.deliveryFee), 0);
   try {
     const invoice = await createInvoice({
-      checkoutId,
+      externalId: checkoutId,
       amount: Number(checkout.total),
       description: `Feasto order from ${stores.join(", ")}`,
       method: checkout.onlineMethod,

@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
-import { PayFeastoButton } from "@/components/app/pay-feasto";
+import { FeastoPaymentReturn, PayFeastoButton } from "@/components/app/pay-feasto";
 import { PayoutsCard } from "@/components/app/payouts-card";
 import { SalesChart } from "@/components/app/sales-chart";
 import { StoreCover } from "@/components/app/store-card";
@@ -44,6 +44,8 @@ type RiderEarnings = {
   rate: number;
   balance: { owed: number; orders: number; lastSettledAt: string | null };
   settlements: { id: string; amount: string; method: string | null; createdAt: string }[];
+  /** "xendit": paying Feasto opens Xendit's payment page */
+  payments?: "simulated" | "xendit";
 };
 
 /** The server sends a rider's latest deliveries, up to this many */
@@ -104,12 +106,17 @@ async function RiderHistory() {
     return (
       <>
         <MobileHeading title="History" subtitle="Your completed deliveries and earnings." />
+        <FeastoPaymentReturn who="rider" />
         <EmptyState
           Icon={History}
           title="No deliveries yet"
           text="Each delivery you finish is listed here, with what you earned."
           action={<ButtonLink href="/rider">See jobs</ButtonLink>}
         />
+        {/* Set up where the pay goes before the first delivery (Account links here, #payout) */}
+        <div className="mt-5">
+          <PayoutsCard who="rider" data={payouts} />
+        </div>
       </>
     );
   }
@@ -121,6 +128,8 @@ async function RiderHistory() {
   return (
     <>
       <MobileHeading title="History" subtitle="Your completed deliveries and earnings." />
+      {/* Back from Xendit's payment page after paying Feasto */}
+      <FeastoPaymentReturn who="rider" />
 
       <section aria-label="Earnings" className="relative mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-700 p-4 text-white shadow-[0_14px_30px_-16px_rgba(178,58,0,0.8)]">
         <span aria-hidden className="absolute -top-14 -right-12 size-44 rounded-full bg-brand-500/60" />
@@ -245,7 +254,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
       </div>
       {balance.owed > 0 && (
         <div className="px-4 pb-3">
-          <PayFeastoButton owed={balance.owed} orders={balance.orders} who="rider" className="w-full" />
+          <PayFeastoButton owed={balance.owed} orders={balance.orders} who="rider" real={earnings.payments === "xendit"} className="w-full" />
         </div>
       )}
       <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[0.8125rem]">

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Prisma, type OnlinePayment } from "../generated/prisma/client.js";
+import { config } from "../config.js";
 import { logActivity, notifyAdmin } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
+import { closeOpenPayments, paymentResult, startFeastoPayment, type Party } from "../lib/feastoPayments.js";
 import { EARNED, riderBalance, riderBalances, storeBalance, storeBalances, type Balance } from "../lib/earnings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { notify } from "../lib/liveUpdates.js";
@@ -10,6 +12,7 @@ import { ONLINE_LABEL, ONLINE_PAYMENTS } from "../lib/payments.js";
 import { datesBetween, manilaRange, periodSchema } from "../lib/reportDates.js";
 import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { originOf } from "./checkout.js";
 import { myVendorId } from "./vendor.js";
 
 const peso = (n: number) => `₱${Math.abs(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,11 +29,10 @@ const settlementSelect = {
 
 // ---------- Paying what's owed from cash orders ----------
 
-type Party = { vendorId: string; riderId?: undefined } | { riderId: string; vendorId?: undefined };
-
 /**
- * Records that a store or rider paid Feasto its share of their cash orders: either in the app with
- * an e-wallet or card (simulated), or in person to the admin, who marks it received. One at a
+ * Records that a store or rider paid Feasto its share of their cash orders: in person to the admin,
+ * who marks it received, or in the app when payments are simulated (no Xendit key). With Xendit,
+ * paying in the app goes through lib/feastoPayments.ts and is recorded once Xendit confirms it. One at a
  * time per store or rider, and only for the amount the person saw, so a double click or an order
  * finishing in between can never record the wrong amount or the same money twice.
  */
@@ -173,6 +175,8 @@ const settleSchema = z
 adminEarningsRouter.post("/earnings/settle", async (req, res) => {
   const { vendorId, riderId, expected } = parseBody(settleSchema, req.body);
   const party: Party = vendorId ? { vendorId } : { riderId: riderId! };
+  // A payment page they still have open is closed first, so the same money can't come in twice
+  if (config.payments === "xendit") await closeOpenPayments(party);
   const settlement = await recordPayment(party, expected, { userId: req.session!.userId, name: req.session!.name }, null);
   res.status(201).json({ settlement });
 });
@@ -193,15 +197,30 @@ vendorEarningsRouter.get("/earnings", async (req, res) => {
     recent({ vendorId }),
   ]);
   const free = vendor.commissionFreeUntil && vendor.commissionFreeUntil > new Date() ? vendor.commissionFreeUntil : null;
-  res.json({ rates: { delivery: settings.commissionPercent, pickup: settings.pickupCommissionPercent }, freeUntil: free, balance, settlements });
+  res.json({ rates: { delivery: settings.commissionPercent, pickup: settings.pickupCommissionPercent }, freeUntil: free, balance, settlements, payments: config.payments });
 });
 
-/** The store pays what it owes Feasto from cash orders, with an e-wallet or card (simulated). */
+/**
+ * The store pays what it owes Feasto from cash orders, with an e-wallet or card. With Xendit this
+ * answers with the payment page to open; it's recorded once Xendit confirms the money arrived.
+ */
 vendorEarningsRouter.post("/earnings/pay", async (req, res) => {
   const { method, expected } = parseBody(paySchema, req.body);
   const vendorId = await myVendorId(req.session!.userId);
-  const settlement = await recordPayment({ vendorId }, expected, { userId: req.session!.userId, name: req.session!.name }, method);
+  const by = { userId: req.session!.userId, name: req.session!.name };
+  if (config.payments === "xendit") {
+    const page = await startFeastoPayment({ vendorId }, expected, by, method, `${originOf(req)}/vendor/reports`);
+    res.status(201).json({ paymentUrl: page.url, paymentId: page.id });
+    return;
+  }
+  const settlement = await recordPayment({ vendorId }, expected, by, method);
   res.status(201).json({ settlement, method: ONLINE_LABEL[method] });
+});
+
+/** How a payment to Feasto went, for the page Xendit sends the store back to */
+vendorEarningsRouter.get("/earnings/payments/:id", async (req, res) => {
+  const vendorId = await myVendorId(req.session!.userId);
+  res.json(await paymentResult({ vendorId }, String(req.params.id)));
 });
 
 export const riderEarningsRouter = Router();
@@ -210,13 +229,23 @@ riderEarningsRouter.use(requireAuth, requireRole("RIDER"));
 riderEarningsRouter.get("/earnings", async (req, res) => {
   const riderId = req.session!.userId;
   const [settings, balance, settlements] = await Promise.all([getSettings(), riderBalance(riderId), recent({ riderId })]);
-  res.json({ rate: settings.riderFeePercent, balance, settlements });
+  res.json({ rate: settings.riderFeePercent, balance, settlements, payments: config.payments });
 });
 
-/** The rider pays what they owe Feasto from cash deliveries, with an e-wallet or card (simulated). */
+/** The rider pays what they owe Feasto from cash deliveries, with an e-wallet or card (like the store's) */
 riderEarningsRouter.post("/earnings/pay", async (req, res) => {
   const { method, expected } = parseBody(paySchema, req.body);
   const riderId = req.session!.userId;
-  const settlement = await recordPayment({ riderId }, expected, { userId: riderId, name: req.session!.name }, method);
+  const by = { userId: riderId, name: req.session!.name };
+  if (config.payments === "xendit") {
+    const page = await startFeastoPayment({ riderId }, expected, by, method, `${originOf(req)}/rider/history`);
+    res.status(201).json({ paymentUrl: page.url, paymentId: page.id });
+    return;
+  }
+  const settlement = await recordPayment({ riderId }, expected, by, method);
   res.status(201).json({ settlement, method: ONLINE_LABEL[method] });
+});
+
+riderEarningsRouter.get("/earnings/payments/:id", async (req, res) => {
+  res.json(await paymentResult({ riderId: req.session!.userId }, String(req.params.id)));
 });

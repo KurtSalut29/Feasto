@@ -71,15 +71,17 @@ export type Invoice = {
   payment_channel?: string;
 };
 
-/** How long the resident has to pay before the invoice expires and the order is cancelled */
+/** How long the payer has to pay before the invoice expires (and a resident's order is cancelled) */
 export const PAY_WITHIN_MINUTES = 15;
 
 /**
- * A payment page for one checkout. The resident already chose how to pay in Feasto, so the page
- * opens on that method only. If Xendit can't offer it, it falls back to every method.
+ * A payment page into Feasto's own Xendit account: for a resident's checkout, or a store or rider
+ * paying Feasto its share of their cash orders. The payer already chose how to pay in Feasto, so
+ * the page opens on that method only. If Xendit can't offer it, it falls back to every method.
  */
 export async function createInvoice(input: {
-  checkoutId: string;
+  /** The checkout's id, or "feasto-pay-<id>" for a store or rider paying Feasto */
+  externalId: string;
   amount: number;
   description: string;
   method: OnlinePayment | null;
@@ -88,7 +90,7 @@ export async function createInvoice(input: {
   items: { name: string; quantity: number; price: number }[];
 }) {
   const body = {
-    external_id: input.checkoutId,
+    external_id: input.externalId,
     amount: input.amount,
     currency: "PHP",
     description: input.description,

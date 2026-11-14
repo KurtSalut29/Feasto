@@ -178,6 +178,7 @@ model User {
   checkouts     Checkout[]
   deliveries    Order[]        @relation("RiderDeliveries")
   settlements   Settlement[]   @relation("RiderSettlements")
+  feastoPayments FeastoPayment[] @relation("RiderFeastoPayments")
   payouts       Payout[]       @relation("RiderPayouts")
   jobOffers     JobOffer[]
   bookings      Booking[]
@@ -257,6 +258,7 @@ model Vendor {
 
   menuItems   MenuItem[]
   settlements Settlement[]
+  feastoPayments FeastoPayment[]
   payouts     Payout[]
   orders    Order[]
   tables    DiningTable[]
@@ -510,7 +512,7 @@ model Settlement {
   amount        Decimal  @db.Decimal(12, 2)
   /// Finished cash orders this settlement covered
   orders        Int
-  /// How they paid: the e-wallet or card when the store or rider paid in the app (simulated);
+  /// How they paid: the e-wallet or card when the store or rider paid in the app;
   /// empty when they handed the money to the admin, who marked it received
   method        OnlinePayment?
   settledById   String?
@@ -518,9 +520,46 @@ model Settlement {
   settledByName String
   note          String?
   createdAt     DateTime @default(now())
+  /// The Xendit payment it came from, when they paid in the app
+  payment       FeastoPayment?
 
   @@index([vendorId, createdAt])
   @@index([riderId, createdAt])
+}
+
+/// A store or rider paying Feasto its share of their cash orders in the app, on Xendit's payment
+/// page. The money can only go to Feasto's own Xendit account: nobody types where it goes. It
+/// becomes a Settlement only once Xendit confirms it was paid, never because a button was pressed.
+model FeastoPayment {
+  id           String        @id @default(cuid())
+  /// Exactly one of these: the store, or the rider (their user id)
+  vendorId     String?
+  vendor       Vendor?       @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  riderId      String?
+  rider        User?         @relation("RiderFeastoPayments", fields: [riderId], references: [id], onDelete: Restrict)
+  /// What they owed when they started, and the cash orders it covers
+  amount       Decimal       @db.Decimal(12, 2)
+  orders       Int
+  /// The way they chose in Feasto; once paid, what they really paid with on Xendit's page
+  method       OnlinePayment
+  status       PaymentStatus @default(PENDING)
+  /// Xendit's invoice (its payment page)
+  invoiceId    String?       @unique
+  invoiceUrl   String?
+  paidChannel  String?
+  /// Why it didn't go through, in plain words
+  failure      String?
+  settlementId String?       @unique
+  settlement   Settlement?   @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  paidById     String
+  /// Copied, so the line stays true after a rename
+  paidByName   String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([vendorId, status])
+  @@index([riderId, status])
+  @@index([status, createdAt])
 }
 
 /// Money Feasto sends out after an online order is delivered or collected: the store's food

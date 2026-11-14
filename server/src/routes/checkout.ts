@@ -48,7 +48,7 @@ const checkoutSchema = z
 const checkoutSummary = { id: true, paymentStatus: true, paymentUrl: true, orders: { select: { id: true } } } as const;
 
 /** Where the resident's browser opened Feasto, so the payment page can send them back to it */
-function originOf(req: Request) {
+export function originOf(req: Request) {
   const origin = req.get("origin");
   if (origin && /^https?:\/\/[\w.:-]+$/.test(origin)) return origin;
   return `${req.protocol}://${req.get("host")}`;
