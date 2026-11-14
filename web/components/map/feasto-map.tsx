@@ -2,12 +2,12 @@
 
 import "mapbox-gl/dist/mapbox-gl.css";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { House, MapPinOff, Maximize2, Store, X } from "lucide-react";
+import { House, MapPinOff, Maximize2, Minimize2, Store } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DEFAULT_CENTER, distanceKm, type LatLng } from "@/lib/geo";
-import { createMap, getRoute, mapHost, trimRoute, type MapEngine, type Route } from "./map-engine";
+import { createMap, foldCredits, getRoute, mapHost, trimRoute, type MapEngine, type Route } from "./map-engine";
 import { lessMotion } from "@/lib/display";
 
 export type MapPin = {
@@ -64,6 +64,8 @@ export function FeastoMap({
   onView?: (view: MapView) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  /** The map's frame: lifted onto the browser's top layer while full screen */
+  const frameRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
   const [failed, setFailed] = useState(false);
   const markers = useRef(new Map<string, MarkerEntry>());
@@ -224,35 +226,70 @@ export function FeastoMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, focusKey]);
 
-  // Full screen: the map has a new size, so redraw it and frame its pins again. Esc closes it.
+  // Full screen: the frame goes onto the browser's top layer (a manual popover), above everything
+  // else on the page whatever it sits in: the sidebar, the top bar, a card that's animating. The
+  // map stays the same one, so it keeps its pins and route. Esc closes it.
   useEffect(() => {
-    if (!engine) return;
-    engine.map.resize();
-    if (latest.current.autoFrame && latest.current.pins.length) frame(engine, latest.current.pins.map((p) => p.at));
-    if (!expanded) return;
+    const box = frameRef.current;
+    if (!expanded || !box) return;
+    const lifted = typeof box.showPopover === "function";
+    if (lifted) {
+      box.setAttribute("popover", "manual");
+      box.showPopover();
+    }
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && setExpanded(false);
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
     return () => {
+      if (lifted) {
+        if (box.matches(":popover-open")) box.hidePopover();
+        box.removeAttribute("popover");
+      }
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
+  }, [expanded]);
+
+  // A new size either way: redraw the map, frame its pins again and fold the credits back up
+  useEffect(() => {
+    if (!engine) return;
+    engine.map.resize();
+    if (latest.current.autoFrame && latest.current.pins.length) frame(engine, latest.current.pins.map((p) => p.at));
+    if (container.current) foldCredits(container.current);
   }, [engine, expanded]);
 
   return (
-    <div className={expanded ? "fixed inset-0 z-[60] bg-canvas" : `relative overflow-hidden bg-canvas ${className}`}>
+    <div
+      ref={frameRef}
+      className={
+        expanded
+          ? "fixed inset-0 z-[60] m-0 h-dvh max-h-none w-dvw max-w-none overflow-hidden border-0 bg-canvas p-0"
+          : `relative overflow-hidden bg-canvas ${className}`
+      }
+    >
       {/* A region, not an image: the map has its own buttons inside (zoom, pins) */}
       <div ref={container} className="absolute inset-0" role="region" aria-label={label} />
+      {/* Opens full screen; there, the same corner says how to get back */}
       {expandable && engine && (
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
-          aria-label={expanded ? "Close the full-screen map" : "Open the map full screen"}
-          className={`absolute z-10 flex items-center justify-center rounded-full bg-white text-ink shadow-md ring-1 ring-black/5 transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 ${
-            expanded ? "top-[calc(0.75rem+env(safe-area-inset-top))] left-3 size-11" : "top-2 right-2 size-9"
+          aria-label={expanded ? undefined : "Open the map full screen"}
+          title={expanded ? "Exit full screen (Esc)" : "Full screen"}
+          className={`absolute z-10 flex items-center justify-center gap-2 rounded-full bg-white text-ink shadow-md ring-1 ring-black/5 transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 ${
+            expanded
+              ? "top-[calc(0.75rem+env(safe-area-inset-top))] right-3 h-11 pr-4 pl-3.5 text-sm font-semibold shadow-lg"
+              : "top-2 right-2 size-9"
           }`}
         >
-          {expanded ? <X className="size-5" aria-hidden /> : <Maximize2 className="size-4" aria-hidden />}
+          {expanded ? (
+            <>
+              <Minimize2 className="size-[18px]" aria-hidden />
+              Exit full screen
+            </>
+          ) : (
+            <Maximize2 className="size-4" aria-hidden />
+          )}
         </button>
       )}
       {!engine && !failed && <div aria-hidden className="absolute inset-0 animate-pulse bg-gray-200/70" />}

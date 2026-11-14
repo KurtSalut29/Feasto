@@ -105,21 +105,36 @@ export function stepsBack(isMain: (path: string) => boolean, skip: (path: string
   return index - target;
 }
 
-/** The top bar's back arrow on every page below the main tabs. */
-export function BackButton({ fallback, isMain, skip }: { fallback: string; isMain: (path: string) => boolean; skip?: (path: string) => boolean }) {
+/** Back: the top bar's arrow on phones ("icon"), or a labelled button above the page on big screens ("pill"). */
+export function BackButton({
+  fallback,
+  isMain,
+  skip,
+  variant = "icon",
+}: {
+  fallback: string;
+  isMain: (path: string) => boolean;
+  skip?: (path: string) => boolean;
+  variant?: "icon" | "pill";
+}) {
   const router = useRouter();
   return (
     <button
       type="button"
-      aria-label="Back"
+      aria-label={variant === "icon" ? "Back" : undefined}
       onClick={() => {
         const steps = stepsBack(isMain, skip);
         if (steps) history.go(-steps);
         else router.push(fallback);
       }}
-      className="-ml-2 flex size-10 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+      className={
+        variant === "icon"
+          ? "-ml-2 flex size-10 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+          : "group inline-flex h-10 items-center gap-1.5 rounded-full border border-line bg-white pr-4 pl-3 text-sm font-semibold text-ink shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-colors hover:border-gray-300 hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+      }
     >
-      <ArrowLeft className="size-[22px]" aria-hidden />
+      <ArrowLeft className={variant === "icon" ? "size-[22px]" : "size-[18px] transition-transform duration-300 group-hover:-translate-x-0.5"} aria-hidden />
+      {variant === "pill" && "Back"}
     </button>
   );
 }

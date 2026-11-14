@@ -169,6 +169,9 @@ const ORDER_TABS = {
   done: ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"],
 } as const satisfies Record<string, OrderStatus[]>;
 
+/** Finished orders shown per page in the store's order history */
+const HISTORY_PAGE_SIZE = 20;
+
 /** What the store sees of an order: the dishes (with photos), the rider and the customer */
 const vendorOrderInclude = {
   items: { select: { id: true, name: true, quantity: true, unitPrice: true, note: true, menuItem: { select: { imageUrl: true } } } },
@@ -215,13 +218,17 @@ vendorRouter.get("/orders/:id", async (req, res) => {
 vendorRouter.get("/orders", async (req, res) => {
   const tab = z.enum(["active", "new", "scheduled", "preparing", "ready", "done"]).catch("new").parse(req.query.tab);
   const vendorId = await myVendorId(req.session!.userId);
+  // History grows forever, so it comes a page at a time (newest first); the queues stay whole
+  const history = tab === "done";
+  const page = history ? z.coerce.number().int().min(1).max(10_000).catch(1).parse(req.query.page ?? 1) : 1;
 
   const [orders, counts] = await Promise.all([
     prisma.order.findMany({
       where: { vendorId, status: { in: [...ORDER_TABS[tab]] } },
       // Waiting orders in the order they reached the store; scheduled ones by their time
-      orderBy: tab === "done" ? { createdAt: "desc" } : tab === "scheduled" ? { scheduledFor: "asc" } : { placedAt: "asc" },
-      take: 100,
+      orderBy: history ? [{ createdAt: "desc" }, { id: "desc" }] : tab === "scheduled" ? { scheduledFor: "asc" } : { placedAt: "asc" },
+      skip: history ? (page - 1) * HISTORY_PAGE_SIZE : 0,
+      take: history ? HISTORY_PAGE_SIZE : 100,
       include: vendorOrderInclude,
     }),
     prisma.order.groupBy({ by: ["status"], where: { vendorId, status: { not: "AWAITING_PAYMENT" } }, _count: true }),
@@ -235,6 +242,7 @@ vendorRouter.get("/orders", async (req, res) => {
     tab,
     orders: (await withRiderLocations(orders)).map((o) => ({ ...o, autoCancel: autoCancelAt(o, autoCancelMinutes) })),
     counts: { new: count(ORDER_TABS.new), scheduled: count(ORDER_TABS.scheduled), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
+    ...(history && { page, pageSize: HISTORY_PAGE_SIZE, total: count(ORDER_TABS.done) }),
   });
 });
 

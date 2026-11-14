@@ -1,4 +1,4 @@
-import { ArrowLeft, Banknote, Bike, CalendarClock, Camera, ClipboardList, CreditCard, MapPin, MessageSquareText, Phone, Printer, User, UtensilsCrossed } from "lucide-react";
+import { Banknote, Bike, CalendarClock, Camera, ClipboardList, CreditCard, MapPin, MessageSquareText, Phone, Printer, User, UtensilsCrossed } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -70,9 +70,10 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
         }
         actions={
           <>
+            {/* The Orders list itself (Back, above the page, returns to wherever you came from) */}
             <ButtonLink href={back} variant="secondary">
-              <ArrowLeft className="size-[18px]" aria-hidden />
-              Orders
+              <ClipboardList className="size-[18px]" aria-hidden />
+              All orders
             </ButtonLink>
             <ButtonLink href={`/vendor/orders/${order.id}/slip`}>
               <Printer className="size-[18px]" aria-hidden />

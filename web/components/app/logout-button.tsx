@@ -6,6 +6,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/browser-api";
 import { lessMotion } from "@/lib/display";
+import { rememberCircleAt } from "@/lib/page-entrance";
 import { forgetPushForLogout } from "@/lib/push";
 import { toast } from "@/components/ui/toast";
 
@@ -44,11 +45,13 @@ export function LogoutButton({ variant = "icon" }: { variant?: "icon" | "row" })
 }
 
 /** How long the goodbye shows before the app closes */
-const GOODBYE_MS = 800;
+const GOODBYE_MS = 900;
 
 /** Pop-up with the Feasto logo asking "Log out of Feasto?". */
 function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
+  /** The goodbye check mark: the app closes in a circle towards it */
+  const checkRef = useRef<HTMLSpanElement>(null);
   const [pending, setPending] = useState(false);
   /** Logged out: a goodbye shows for a moment before the app closes */
   const [done, setDone] = useState(false);
@@ -71,7 +74,8 @@ function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }
     setDone(true);
     await new Promise((resolve) => setTimeout(resolve, lessMotion() ? 0 : GOODBYE_MS));
     // Full page load so no signed-in pages stay alive in the background after logout.
-    // The app then shrinks away into the login screen (leave-app, globals.css).
+    // The app then closes in a circle towards the check mark, showing the login screen (leave-app, globals.css).
+    rememberCircleAt(checkRef.current);
     window.location.replace("/login");
   }
 
@@ -93,7 +97,7 @@ function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }
     >
       {open && done && (
         <div role="status" className="px-6 pt-8 pb-7 text-center">
-          <span className="fx-pop-in mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
+          <span ref={checkRef} className="fx-pop-in mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100">
             <CircleCheck className="fx-draw size-7" aria-hidden />
           </span>
           <h2 className="mt-5 text-xl font-semibold text-ink">You&apos;re logged out</h2>

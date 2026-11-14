@@ -112,9 +112,13 @@ export function CelebrationHost() {
       role="status"
       aria-live="polite"
       onClick={() => close(shown.id)}
+      // Named, so it stays on top while the page changes under it (globals.css): without a name the
+      // next page, its header and tab bar would flash over the chef for a moment
+      style={{ viewTransitionName: "celebration" }}
       className={`fixed inset-0 z-[110] flex items-center justify-center px-6 ${shown.leaving ? "fx-leaving" : ""}`}
     >
-      <div aria-hidden className="fx-backdrop absolute inset-0 bg-ink/45 backdrop-blur-[3px]" />
+      {/* A plain dim, no blur: a page change can't blur what's under a named layer, so a blur would flicker off and on */}
+      <div aria-hidden className="fx-backdrop absolute inset-0 bg-ink/55" />
       <div key={shown.id} className="fx-stage relative flex w-full max-w-[320px] flex-col items-center text-center">
         {/* The speech bubble */}
         <div className="fx-bubble relative mb-3 rounded-[22px] bg-white px-5 py-3 shadow-[0_18px_40px_-16px_rgba(31,45,61,0.55)]">

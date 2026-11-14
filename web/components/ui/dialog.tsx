@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 /** How long closing plays (dialog.fx-dialog in globals.css): the content stays until it's gone */
-const CLOSING_MS = 300;
+const CLOSING_MS = 440;
 
 /**
  * A pop-up built on the browser's <dialog>, which handles focus and the Esc key. Centered on bigger

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, RefreshCw, UserMinus } from "lucide-react";
+import { Check, Copy, RefreshCw, Share2, UserMinus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,27 @@ import { toast } from "@/components/ui/toast";
 export function RiderCode({ code }: { code: string }) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [invited, setInvited] = useState(false);
+
+  /**
+   * Sends the rider everything they need from wherever they are: where to sign up, and the code.
+   * Phones open the share sheet (Messenger, SMS…); computers copy the message to paste in a chat.
+   */
+  async function share() {
+    const text = `Ride for my store on Feasto! Sign up at ${window.location.origin}/register, choose Rider, and enter our store code ${code}.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Join my store on Feasto", text });
+      } catch {
+        // Closed the share sheet: nothing to do
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    setInvited(true);
+    toast.success("Invite copied", "Paste it in a chat or text to your rider.");
+    setTimeout(() => setInvited(false), 2000);
+  }
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -80,6 +101,10 @@ export function RiderCode({ code }: { code: string }) {
             )}
             {copied ? "Copied" : "Copy"}
           </Button>
+          <Button variant="secondary" className="h-9 px-4 text-sm" onClick={share}>
+            {invited ? <Check className="size-4" aria-hidden /> : <Share2 className="size-4" aria-hidden />}
+            {invited ? "Invite copied" : "Send invite"}
+          </Button>
           <Button
             variant="secondary"
             className="h-9 px-4 text-sm"
@@ -93,7 +118,7 @@ export function RiderCode({ code }: { code: string }) {
       {/* How a rider joins, in order */}
       <ol className="grid border-t border-line bg-canvas/50 sm:grid-cols-3 sm:divide-x sm:divide-line">
         {[
-          ["Share the code", "Send it to your rider by text or chat."],
+          ["Send the invite", "By text or chat. The rider can be anywhere, no need to meet."],
           [
             "They sign up as a rider",
             "With their license and motorcycle, entering this code.",

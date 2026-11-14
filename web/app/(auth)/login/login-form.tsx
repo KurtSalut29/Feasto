@@ -9,11 +9,12 @@ import { AUTH_BUTTON } from "../auth-ui";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import { lessMotion } from "@/lib/display";
+import { rememberCircleAt } from "@/lib/page-entrance";
 import { ROLE_HOME } from "@/lib/roles";
 import type { User } from "@/lib/types";
 
 /** How long "Welcome back, …!" shows before the app opens (none for people who asked for less motion) */
-const HELLO_MS = 900;
+const HELLO_MS = 1000;
 
 export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
@@ -24,7 +25,8 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     setSubmitting(true);
     setError(undefined);
     setFieldErrors({});
@@ -46,8 +48,9 @@ export function LoginForm() {
     const first = result.data.user.name.split(" ")[0];
     setWelcome(first);
     toast.later({ tone: "success", title: `Welcome back, ${first}!`, description: "You're logged in." });
-    // A moment to read the hello, then the app rises in over this page (enter-app, globals.css)
+    // A moment to read the hello, then the app opens in a circle from the button (enter-app, globals.css)
     await new Promise((resolve) => setTimeout(resolve, lessMotion() ? 0 : HELLO_MS));
+    rememberCircleAt(formElement.querySelector("[data-auth-action]"));
     window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 
@@ -77,7 +80,7 @@ export function LoginForm() {
         error={fieldErrors.password?.[0]}
       />
 
-      <div className="pt-1">
+      <div className="pt-1" data-auth-action>
         {welcome ? (
           <Button type="button" disabled className={`w-full disabled:opacity-100 ${AUTH_BUTTON}`}>
             <CircleCheck className="fx-pop-in fx-draw size-5" aria-hidden />

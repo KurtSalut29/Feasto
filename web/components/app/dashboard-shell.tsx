@@ -9,6 +9,7 @@ import { ChangePasswordButton } from "./change-password-dialog";
 import { LiveUpdates } from "./live-updates";
 import { LogoutButton } from "./logout-button";
 import { NotificationBell } from "./notification-bell";
+import { PageBack } from "./page-back";
 import { SidebarNav } from "./sidebar-nav";
 import { SkipLink } from "./skip-link";
 import { DisplaySync } from "./display-settings";
@@ -62,9 +63,12 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
             {/* Big screens: today's date on the left, the bell on the right, above every page.
                 On small screens the bell sits in the sidebar's top bar instead. */}
             <div data-print-hide className="relative z-20 mb-5 hidden h-11 items-center justify-between gap-4 lg:flex">
-              <Suspense fallback={<span />}>
-                <TodayLine />
-              </Suspense>
+              <span className="flex min-w-0 items-center gap-4">
+                <PageBack role={role} variant="pill" className="shrink-0" />
+                <Suspense fallback={<span />}>
+                  <TodayLine />
+                </Suspense>
+              </span>
               <NotificationBell variant="floating" allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             </div>
             {children}

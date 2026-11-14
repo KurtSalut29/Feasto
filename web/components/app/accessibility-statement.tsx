@@ -20,9 +20,10 @@ const FEATURES: { Icon: typeof Type; title: string; text: string }[] = [
  * what's still not perfect. Shown on the public /accessibility page (h2 sections) and in a pop-up
  * on Display & accessibility (h3 sections, under the pop-up's own title).
  */
-export function AccessibilityStatement({ inPopup = false }: { inPopup?: boolean }) {
+export function AccessibilityStatement({ inPopup = false, signedOut = false }: { inPopup?: boolean; /** Opened from the login or sign-up page, before there are settings to point at */ signedOut?: boolean }) {
   const strong = "text-ink";
   const Section = inPopup ? PopupSection : PageSection;
+  const onSettings = inPopup && !signedOut;
 
   return (
     <>
@@ -33,8 +34,8 @@ export function AccessibilityStatement({ inPopup = false }: { inPopup?: boolean 
         </p>
       </Section>
 
-      <Section title={inPopup ? "What helps" : "Make Feasto easier for you"}>
-        {inPopup ? (
+      <Section title={onSettings ? "What helps" : "Make Feasto easier for you"}>
+        {onSettings ? (
           <p>The settings on this page, plus what Feasto does for everyone:</p>
         ) : (
           <p>

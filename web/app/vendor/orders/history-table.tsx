@@ -3,17 +3,40 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Pagination } from "@/components/ui/pagination";
 import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
 import { formatDateTime, formatPeso } from "@/lib/format";
 import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import type { VendorOrder } from "@/lib/types";
 import { DishThumb } from "./order-parts";
 
-/** Finished orders, newest first: delivered, collected, declined and cancelled. */
-export function HistoryTable({ orders }: { orders: VendorOrder[] }) {
+const pageHref = (n: number) => (n > 1 ? `/vendor/orders?tab=done&page=${n}` : "/vendor/orders?tab=done");
+
+/** Finished orders, newest first: delivered, collected, declined and cancelled, a page at a time. */
+export function HistoryTable({
+  orders,
+  pages,
+  outOfRange,
+}: {
+  orders: VendorOrder[];
+  pages: { page: number; pageSize: number; total: number };
+  /** A page number past the last page (an old link): offer the first page instead */
+  outOfRange?: boolean;
+}) {
   return (
     <Card>
-      {orders.length === 0 ? (
+      {outOfRange ? (
+        <EmptyState
+          Icon={ClipboardList}
+          title="This page is empty"
+          text="There are fewer finished orders now than when this link was made."
+          action={
+            <Link href={pageHref(1)} className="font-semibold text-brand-700 hover:underline">
+              Go to the newest orders
+            </Link>
+          }
+        />
+      ) : orders.length === 0 ? (
         <EmptyState Icon={ClipboardList} title="No finished orders yet" text="Orders move here once they're delivered, collected, declined or cancelled." />
       ) : (
         <>
@@ -107,6 +130,7 @@ export function HistoryTable({ orders }: { orders: VendorOrder[] }) {
             </tbody>
           </table>
         </div>
+        <Pagination page={pages.page} pageSize={pages.pageSize} total={pages.total} noun="orders" href={pageHref} />
         </>
       )}
     </Card>

@@ -13,7 +13,7 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { addTransitionType, startTransition, useState, ViewTransition, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { DocumentPicker, uploadDocument } from "@/components/app/document-upload";
 import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
@@ -25,6 +25,7 @@ import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import type { LatLng } from "@/lib/geo";
+import { rememberCircleAt } from "@/lib/page-entrance";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { Role, StoreType, User } from "@/lib/types";
@@ -34,11 +35,14 @@ import { AUTH_BUTTON } from "../auth-ui";
 type SignupRole = Exclude<Role, "ADMIN">;
 type Step = "account" | "store" | "location" | "permit" | "personal" | "license";
 
-const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon }[] = [
-  { value: "RESIDENT", label: "Resident", Icon: ShoppingBag },
-  { value: "RIDER", label: "Rider", Icon: Bike },
-  { value: "VENDOR", label: "Vendor", Icon: Store },
+const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon; about: string }[] = [
+  { value: "RESIDENT", label: "Resident", Icon: ShoppingBag, about: "Order food from stores around Naval" },
+  { value: "RIDER", label: "Rider", Icon: Bike, about: "Deliver orders, earn per trip" },
+  { value: "VENDOR", label: "Vendor", Icon: Store, about: "Sell your food on Feasto" },
 ];
+
+/** A step forward slides the card's content one way, Back the other (CSS in globals.css) */
+const SWAP = { "auth-forward": "auth-forward", "auth-back": "auth-back", default: "auth-fade" };
 
 /** The steps of each role's sign-up, short enough that each fits on one screen. */
 const STEPS: Record<SignupRole, Step[]> = {
@@ -90,16 +94,29 @@ function StepIndicator({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** The three account types as tiles. Built from radio buttons so it works with the keyboard. */
+/**
+ * The three account types on one orange track. The chosen one sits on an orange pill that slides
+ * over when another is picked, and a line under it says what that account is for. Built from
+ * radio buttons, so it works with the keyboard (arrow keys move between them).
+ */
 function RolePicker({ value, onChange }: { value: SignupRole; onChange: (role: SignupRole) => void }) {
+  const chosen = Math.max(0, roleOptions.findIndex((o) => o.value === value));
+  const current = roleOptions[chosen];
+  const steps = STEPS[value].length;
   return (
     <fieldset>
       <legend className="sr-only">Account type</legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="relative grid grid-cols-3 rounded-2xl bg-[#fff4ec] p-1.5 ring-1 ring-brand-100 ring-inset">
+        {/* The orange pill under the chosen type: slides from one to the next */}
+        <span
+          aria-hidden
+          className="fx-role-pill pointer-events-none absolute inset-y-1.5 left-1.5 w-[calc((100%-0.75rem)/3)] rounded-xl bg-gradient-to-b from-brand-500 to-brand-600 shadow-[0_10px_20px_-10px_rgba(210,70,0,0.9),inset_0_1px_0_rgba(255,255,255,0.25)]"
+          style={{ transform: `translateX(${chosen * 100}%)` }}
+        />
         {roleOptions.map(({ value: option, label, Icon }) => (
           <label
             key={option}
-            className="group flex h-12 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-line bg-white text-sm font-medium text-muted transition hover:border-gray-300 hover:text-ink has-checked:border-brand-500 has-checked:bg-brand-50/70 has-checked:font-semibold has-checked:text-brand-700 has-checked:ring-4 has-checked:ring-brand-500/10 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500 sm:gap-2"
+            className="group relative flex h-[62px] cursor-pointer flex-col items-center justify-center gap-1 rounded-xl text-[0.8125rem] font-semibold text-muted transition-colors duration-300 hover:text-ink has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-500"
           >
             <input
               type="radio"
@@ -109,13 +126,17 @@ function RolePicker({ value, onChange }: { value: SignupRole; onChange: (role: S
               onChange={() => onChange(option)}
               className="sr-only"
             />
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-canvas transition group-has-checked:bg-brand-600 group-has-checked:text-white sm:size-7">
-              <Icon className="size-4" aria-hidden />
-            </span>
+            {/* The chosen type's icon gives a little hop when it's picked */}
+            <Icon key={value === option ? "on" : "off"} className={`size-5 ${value === option ? "fx-role-hop" : "text-brand-600/80"}`} aria-hidden />
             {label}
           </label>
         ))}
       </div>
+      {/* What this account is for, and how many steps its sign-up takes */}
+      <p key={value} aria-live="polite" className="fx-role-about mt-2.5 text-center text-sm text-muted">
+        {current.about}
+        {steps > 1 && <span className="font-semibold text-brand-700"> · {steps} quick steps</span>}
+      </p>
     </fieldset>
   );
 }
@@ -147,6 +168,14 @@ export function RegisterForm() {
   const steps = STEPS[role];
   const stepIndex = steps.indexOf(step);
   const isLastStep = stepIndex === steps.length - 1;
+
+  /** Moves to another step: the card's content slides that way while the card changes size */
+  function goTo(next: Step, direction: "auth-forward" | "auth-back") {
+    startTransition(() => {
+      addTransitionType(direction);
+      setStep(next);
+    });
+  }
 
   // Editing a field clears its error message
   function clearError(name: string) {
@@ -206,13 +235,14 @@ export function RegisterForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setError(undefined);
 
     const errors = checkStep();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (!isLastStep) {
-      setStep(steps[stepIndex + 1]);
+      goTo(steps[stepIndex + 1], "auth-forward");
       return;
     }
 
@@ -242,6 +272,8 @@ export function RegisterForm() {
     // A full page load (not router.replace) after signing in: Next.js keeps visited pages
     // alive in the background, so this clears the old form, its loading state and the
     // typed password, and makes the next visit to /login or /register check the new session.
+    // The app opens in a circle from the Create account button (enter-app, globals.css).
+    rememberCircleAt(formElement.querySelector('button[type="submit"]'));
     window.location.replace(ROLE_HOME[result.data.user.role]);
   }
 
@@ -270,6 +302,8 @@ export function RegisterForm() {
 
   if (step !== "account") {
     return (
+      <ViewTransition key={step} enter={SWAP} exit={SWAP} default="none">
+      <div>
       <DetailsStep
         step={stepIndex + 1}
         total={steps.length}
@@ -280,7 +314,7 @@ export function RegisterForm() {
         onBack={() => {
           setError(undefined);
           setFieldErrors({});
-          setStep(steps[stepIndex - 1]);
+          goTo(steps[stepIndex - 1], "auth-back");
         }}
         onSubmit={handleSubmit}
       >
@@ -371,12 +405,14 @@ export function RegisterForm() {
           </>
         )}
       </DetailsStep>
+      </div>
+      </ViewTransition>
     );
   }
 
   return (
-    <>
-      {steps.length > 1 && <StepIndicator step={1} total={steps.length} />}
+    <ViewTransition key="account" enter={SWAP} exit={SWAP} default="none">
+    <div>
       <h1 className="text-center text-2xl font-bold tracking-tight text-ink">Create your account</h1>
 
       <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-3">
@@ -442,18 +478,22 @@ export function RegisterForm() {
 
         <div className="pt-1">
           <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
-            {role === "VENDOR"
-              ? "Continue to store details"
-              : role === "RIDER"
-                ? "Continue to rider details"
-                : submitting
-                  ? "Creating account…"
-                  : "Create account"}
+            {/* Fades in afresh when the account type changes */}
+            <span key={role} className="fx-role-about">
+              {role === "VENDOR"
+                ? "Continue to store details"
+                : role === "RIDER"
+                  ? "Continue to rider details"
+                  : submitting
+                    ? "Creating account…"
+                    : "Create account"}
+            </span>
             {steps.length > 1 && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
           </Button>
         </div>
       </form>
-    </>
+    </div>
+    </ViewTransition>
   );
 }
 

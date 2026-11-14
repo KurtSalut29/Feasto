@@ -125,7 +125,9 @@ export function Toaster() {
     <section
       aria-label="Notifications"
       aria-live="polite"
-      // Top centre on every screen, just under the top bar, where the eye already is
+      // Top centre on every screen, just under the top bar, where the eye already is. Named, so a
+      // toast stays above the page while it changes (globals.css)
+      style={{ viewTransitionName: "toasts" }}
       className="pointer-events-none fixed inset-x-3 top-[calc(env(safe-area-inset-top)+4.25rem)] z-[100] mx-auto flex max-w-[440px] flex-col items-stretch gap-2 [--toast-from:-16px] print:hidden"
     >
       {list.map((t) => (

@@ -4,15 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
-import { isDeadEnd, isTabPage, parentPage } from "@/lib/navigation";
 import { ROLE_HOME } from "@/lib/roles";
-import { BackButton, useCountPages } from "./back-button";
+import { useCountPages } from "./back-button";
+import { PageBack } from "./page-back";
 
 type MobileRole = "RESIDENT" | "RIDER";
 
 /**
- * Left side of the phone top bar: the logo on the main tabs, and a back arrow before it on
- * every other page (a store, the cart, an order), where the bottom tabs are hidden.
+ * Left side of the phone top bar: the logo on Home, and a back arrow before it on every other
+ * page (the other tabs, a store, the cart, an order).
  */
 export function HeaderStart({ role }: { role: MobileRole }) {
   return (
@@ -25,10 +25,10 @@ export function HeaderStart({ role }: { role: MobileRole }) {
 function WithBack({ role }: { role: MobileRole }) {
   const pathname = usePathname();
   useCountPages();
-  if (isTabPage(role, pathname)) return <Logo role={role} />;
+  if (pathname === ROLE_HOME[role]) return <Logo role={role} />;
   return (
     <div className="flex items-center gap-1">
-      <BackButton fallback={parentPage(role, pathname)} isMain={(path) => isTabPage(role, path)} skip={(target) => isDeadEnd(pathname, target)} />
+      <PageBack role={role} variant="icon" />
       <Logo role={role} />
     </div>
   );

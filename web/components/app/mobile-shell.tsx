@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { HeaderStart } from "./header-start";
+import { PageBack } from "./page-back";
 import { InstallBanner } from "./install-app";
 import { LiveUpdates } from "./live-updates";
 import { NotificationBell } from "./notification-bell";
@@ -86,11 +87,15 @@ export function MobileShell({
           >
             {/* Rider, big screens: the bell and the online switch above every page */}
             {!resident && (
-              <div className="relative z-20 mb-5 hidden h-11 items-center justify-end gap-2 lg:flex">
-                {topBarEnd}
-                <NotificationBell variant="floating" allHref={allHref} />
+              <div className="relative z-20 mb-5 hidden h-11 items-center gap-2 lg:flex">
+                <PageBack role="RIDER" variant="pill" className="mr-auto" />
+                <span className="ml-auto flex items-center gap-2">
+                  {topBarEnd}
+                  <NotificationBell variant="floating" allHref={allHref} />
+                </span>
               </div>
             )}
+            {resident && <PageBack role="RESIDENT" variant="pill" className="mb-5 hidden md:block" />}
             <InstallBanner />
             {children}
           </main>

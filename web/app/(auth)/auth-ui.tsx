@@ -11,6 +11,8 @@ export function AuthSwitch({ question, href, action }: { question: string; href:
       {question}{" "}
       <Link
         href={href}
+        // Sign-up is "forward" from login: the card's content slides that way (app/(auth)/template.tsx)
+        transitionTypes={[href === "/register" ? "auth-forward" : "auth-back"]}
         className="rounded font-semibold text-brand-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
       >
         {action}

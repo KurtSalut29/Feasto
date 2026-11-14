@@ -3,6 +3,7 @@
 import { ChevronLeft, Ellipsis, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { PageBack } from "./page-back";
 import { tabTypes } from "./page-transition";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
@@ -206,7 +207,10 @@ export function SidebarNav({
           {/* Phones and tablets: a top bar like the resident and rider apps */}
           <header style={{ viewTransitionName: "app-header" }} className="sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
             <div className="flex h-14 items-center justify-between gap-3 pr-2 pl-4">
-              <Brand role={role} />
+              <span className="flex items-center gap-1">
+                <PageBack role={role} variant="icon" />
+                <Brand role={role} />
+              </span>
               <NotificationBell allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             </div>
           </header>

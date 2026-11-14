@@ -102,11 +102,19 @@ export async function createMap(options: Options): Promise<MapEngine> {
     }
   }
   engine ??= await createFree(options);
-  // The map credits are required, but on a phone-sized map they start folded into an (i) button
-  for (const name of ["maplibregl-compact-show", "mapboxgl-compact-show"]) {
-    options.container.querySelector(`.${name}`)?.classList.remove(name);
-  }
+  foldCredits(options.container);
   return engine;
+}
+
+/**
+ * The map credits are required, but they stay folded into an (i) button until tapped. The map
+ * unfolds them by itself when it changes size (opening full screen), so this runs again then.
+ */
+export function foldCredits(container: HTMLElement) {
+  for (const name of ["maplibregl-compact-show", "mapboxgl-compact-show"]) {
+    container.querySelector(`.${name}`)?.classList.remove(name);
+  }
+  container.querySelector(".mapboxgl-ctrl-attrib[open], .maplibregl-ctrl-attrib[open]")?.removeAttribute("open");
 }
 
 export type Route = {

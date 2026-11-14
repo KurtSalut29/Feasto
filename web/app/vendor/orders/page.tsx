@@ -51,11 +51,18 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
   );
 
   if (history) {
-    const data = await serverApi<OrdersResponse>("/vendor/orders?tab=done");
+    const page = Math.max(1, Math.floor(Number(params.page)) || 1);
+    // page/pageSize/total come from the API; an older API without paging sends one long list
+    const data = await serverApi<OrdersResponse & { page?: number; pageSize?: number; total?: number }>(`/vendor/orders?tab=done&page=${page}`);
+    const pages = { page: data.page ?? 1, pageSize: data.pageSize ?? Math.max(data.orders.length, 1), total: data.total ?? data.orders.length };
     return (
       <>
-        <PageHeader eyebrow="Today" title="Orders" description="Delivered, collected, declined and cancelled orders." actions={views(data.counts)} />
-        <HistoryTable orders={data.orders} />
+        <PageHeader eyebrow="Today" title="Orders" description="Delivered, collected, declined and cancelled orders, newest first." actions={views(data.counts)} />
+        <HistoryTable
+          orders={data.orders}
+          pages={pages}
+          outOfRange={data.orders.length === 0 && pages.total > 0}
+        />
       </>
     );
   }
