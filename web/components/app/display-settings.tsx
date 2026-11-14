@@ -1,8 +1,9 @@
 "use client";
 
-import { Accessibility, Check, ChevronRight, Contrast, Hand, Pause, Type } from "lucide-react";
+import { Accessibility, Check, ChevronRight, Contrast, Hand, Map as MapIcon, Pause, Type } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityStatement } from "@/components/app/accessibility-statement";
+import { MAP_STYLES } from "@/components/map/map-style-button";
 import { Dialog } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/browser-api";
@@ -108,6 +109,29 @@ export function DisplaySettings({ initial }: { initial: DisplayPrefs }) {
           checked={prefs.largeTargets}
           onChange={(v) => change({ largeTargets: v })}
         />
+
+        <Section Icon={MapIcon} title="Map style" text="How every map in Feasto looks. You can also change it with the layers button on any map.">
+          <fieldset>
+            <legend className="sr-only">Map style</legend>
+            <div className="grid grid-cols-3 gap-2">
+              {MAP_STYLES.map((option) => {
+                const on = prefs.mapStyle === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center transition-colors has-focus-visible:outline-2 has-focus-visible:outline-brand-500 ${
+                      on ? "border-brand-600 bg-brand-50 ring-1 ring-brand-600" : "border-line bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <input type="radio" name="map-style" className="sr-only" checked={on} onChange={() => change({ mapStyle: option.value })} />
+                    <span aria-hidden className={`h-10 w-full max-w-16 rounded-lg ring-1 ring-black/10 ${option.swatch}`} />
+                    <span className="text-sm font-medium text-ink">{option.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+        </Section>
       </div>
 
       <div className="space-y-4 xl:sticky xl:top-24">

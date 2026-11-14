@@ -6,6 +6,8 @@ import { useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
 import { FeastoMap, type MapPin as Pin, type MapView } from "@/components/map/feasto-map";
 import { FullMapFrame, MapButton } from "@/components/map/full-map";
+import { MAPBOX_TOKEN } from "@/components/map/map-engine";
+import { MapStyleButton } from "@/components/map/map-style-button";
 import { setDemoPosition, useGeolocation } from "@/components/map/use-my-location";
 import { formatPeso } from "@/lib/format";
 import { DEFAULT_CENTER, distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
@@ -62,6 +64,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         start={{ center: DEFAULT_CENTER, zoom: 15 }}
         focus={focus}
         expandable={false}
+        styleButton={false}
         className="h-full"
         label={`Map of ${total} open delivery jobs in view`}
         onView={setView}
@@ -132,13 +135,14 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
             </button>
           )}
         </div>
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex flex-col gap-2">
           <MapButton
             label="Show where I am"
             Icon={LocateFixed}
             active={Boolean(me)}
             onClick={() => (me ? setFocus({ ...me }) : undefined)}
           />
+          {MAPBOX_TOKEN && <MapStyleButton inline side="right" />}
         </div>
       </div>
       {error === "blocked" && (

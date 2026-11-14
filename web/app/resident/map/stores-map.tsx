@@ -8,6 +8,8 @@ import { OpenBadge, StoreCover } from "@/components/app/store-card";
 import { useApiData } from "@/components/app/use-api-data";
 import { FeastoMap, type MapPin, type MapView } from "@/components/map/feasto-map";
 import { FullMapFrame, MapButton, useLocateMe } from "@/components/map/full-map";
+import { MAPBOX_TOKEN } from "@/components/map/map-engine";
+import { MapStyleButton } from "@/components/map/map-style-button";
 import { ButtonLink } from "@/components/ui/button";
 import { DEFAULT_CENTER, distanceKm, formatDistance, pinOf, type LatLng } from "@/lib/geo";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
@@ -60,6 +62,7 @@ export function StoresMap({ home, homeLabel }: { home: LatLng | null; homeLabel:
         start={{ center: DEFAULT_CENTER, zoom: 15 }}
         focus={focus}
         expandable={false}
+        styleButton={false}
         className="h-full"
         label={`Map of ${pinned.length} stores in view`}
         onView={setView}
@@ -92,6 +95,7 @@ export function StoresMap({ home, homeLabel }: { home: LatLng | null; homeLabel:
             }}
           />
           {home && <MapButton label={`Show ${homeLabel ?? "my address"}`} Icon={House} onClick={() => setFocus({ ...home })} />}
+          {MAPBOX_TOKEN && <MapStyleButton inline side="right" />}
         </div>
       </div>
       {error && <p className="absolute inset-x-3 top-16 rounded-xl md:right-auto md:max-w-sm bg-white px-3 py-2 text-sm text-red-600 shadow-md">{error}</p>}

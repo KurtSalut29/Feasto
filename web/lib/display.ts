@@ -1,14 +1,19 @@
 /**
- * Display & accessibility: text size, contrast, motion and button size. Saved with the account
+ * Display & accessibility: text size, contrast, motion, button size and map style. Saved with the account
  * (so they follow the person to any phone) and kept on this device too, so the very first paint
  * of every page already has them: DISPLAY_INIT_SCRIPT runs in <head> before anything shows.
  * The look of each setting is in globals.css, keyed by data attributes on <html>.
  */
 
 export type TextSize = "NORMAL" | "LARGE" | "XLARGE";
-export type DisplayPrefs = { textSize: TextSize; highContrast: boolean; reduceMotion: boolean; largeTargets: boolean };
+/** How maps look: the usual map, satellite photos with streets and places, or dark for night */
+export type MapStyle = "DEFAULT" | "SATELLITE" | "NIGHT";
+export type DisplayPrefs = { textSize: TextSize; highContrast: boolean; reduceMotion: boolean; largeTargets: boolean; mapStyle: MapStyle };
 
-export const DEFAULT_DISPLAY: DisplayPrefs = { textSize: "NORMAL", highContrast: false, reduceMotion: false, largeTargets: false };
+export const DEFAULT_DISPLAY: DisplayPrefs = { textSize: "NORMAL", highContrast: false, reduceMotion: false, largeTargets: false, mapStyle: "DEFAULT" };
+
+/** Sent to every map on the page when the map style changes (from a map, the settings, or another phone) */
+export const MAP_STYLE_EVENT = "feasto:map-style";
 
 export const DISPLAY_STORAGE_KEY = "feasto-display";
 
@@ -24,6 +29,7 @@ function attributes(p: DisplayPrefs): Record<string, string | null> {
 
 /** Shows the preferences right away and remembers them on this device. */
 export function applyDisplay(p: DisplayPrefs) {
+  const before = storedDisplay()?.mapStyle ?? "DEFAULT";
   const root = document.documentElement;
   for (const [name, value] of Object.entries(attributes(p))) {
     if (value) root.setAttribute(name, value);
@@ -34,6 +40,16 @@ export function applyDisplay(p: DisplayPrefs) {
   } catch {
     // Private browsing: still applied for this visit
   }
+  sessionMapStyle = p.mapStyle;
+  if (p.mapStyle !== before) window.dispatchEvent(new CustomEvent<MapStyle>(MAP_STYLE_EVENT, { detail: p.mapStyle }));
+}
+
+/** Kept for this visit too, for browsers that can't store anything */
+let sessionMapStyle: MapStyle | null = null;
+
+/** The map style to draw maps with */
+export function currentMapStyle(): MapStyle {
+  return sessionMapStyle ?? storedDisplay()?.mapStyle ?? "DEFAULT";
 }
 
 export function storedDisplay(): DisplayPrefs | null {

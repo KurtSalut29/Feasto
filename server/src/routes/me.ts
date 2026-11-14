@@ -98,15 +98,19 @@ meRouter.patch("/profile", async (req, res) => {
 
 // ---------- Display & accessibility ----------
 
-/** Text size, contrast, motion and button size: applied on every device the person logs in on */
-const displaySelect = { textSize: true, highContrast: true, reduceMotion: true, largeTargets: true } as const;
+/** Text size, contrast, motion, button size and map style: applied on every device the person logs in on */
+const displaySelect = { textSize: true, highContrast: true, reduceMotion: true, largeTargets: true, mapStyle: true } as const;
 
-const displaySchema = z.object({
-  textSize: z.enum(["NORMAL", "LARGE", "XLARGE"], "Choose a text size."),
-  highContrast: z.boolean(),
-  reduceMotion: z.boolean(),
-  largeTargets: z.boolean(),
-});
+/** Only what's sent changes, so a map can save its style without knowing the other settings */
+const displaySchema = z
+  .object({
+    textSize: z.enum(["NORMAL", "LARGE", "XLARGE"], "Choose a text size."),
+    highContrast: z.boolean(),
+    reduceMotion: z.boolean(),
+    largeTargets: z.boolean(),
+    mapStyle: z.enum(["DEFAULT", "SATELLITE", "NIGHT"], "Choose a map style."),
+  })
+  .partial();
 
 meRouter.get("/display", async (req, res) => {
   const display = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: displaySelect });

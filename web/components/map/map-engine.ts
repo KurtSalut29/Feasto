@@ -1,6 +1,7 @@
 "use client";
 
 import type { Map as MapInstance, Marker } from "maplibre-gl";
+import { currentMapStyle, lessMotion, MAP_STYLE_EVENT, type MapStyle } from "@/lib/display";
 import { distanceKm, estimateMinutes, nearestOnPath, pathKm, type LatLng } from "@/lib/geo";
 
 /**
@@ -22,6 +23,120 @@ export type MapEngine = {
   provider: "mapbox" | "free";
 };
 
+const SATELLITE = "feasto-satellite";
+/** How long one look takes to melt into the next (slow enough to see what changed) */
+const STYLE_FADE_MS = 900;
+/** Longest wait for the satellite photos before fading anyway (a slow connection) */
+const STYLE_WAIT_MS = 1800;
+
+/**
+ * Changes how the map looks without reloading it, so its pins and route stay. Mapbox only: the
+ * free map has one look. Satellite puts Mapbox's aerial photos under the streets and place names
+ * (the "bottom" slot of Mapbox Standard), so people still see where the roads and landmarks are.
+ * Night uses the Standard style's own dark lighting.
+ *
+ * With `animate`, the change is a crossfade: a still picture of the map as it was covers it, the
+ * new look loads underneath, and once it's ready the picture fades away. Pins stay on top all along.
+ */
+export function setMapStyle(engine: MapEngine, style: MapStyle, animate = false) {
+  if (engine.provider !== "mapbox") return;
+  const map = engine.map as unknown as MapboxLike;
+  if (!animate || lessMotion()) return applyStyle(map, style);
+  crossfade(map, () => applyStyle(map, style), style === "SATELLITE");
+}
+
+function applyStyle(map: MapboxLike, style: MapStyle) {
+  const satellite = style === "SATELLITE";
+  map.setConfigProperty("basemap", "lightPreset", style === "NIGHT" ? "night" : "day");
+  // 3D buildings and trees would hide the roofs in the photos
+  map.setConfigProperty("basemap", "show3dObjects", !satellite);
+  if (satellite && !map.getLayer(SATELLITE)) {
+    // Added the first time it's chosen, so nobody loads photos they never look at. Static Tiles
+    // of Mapbox's satellite style (sharper tiles on sharp screens).
+    const sharp = window.devicePixelRatio > 1 ? "@2x" : "";
+    if (!map.getSource(SATELLITE)) {
+      map.addSource(SATELLITE, {
+        type: "raster",
+        tiles: [`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/512/{z}/{x}/{y}${sharp}?access_token=${MAPBOX_TOKEN}`],
+        tileSize: 512,
+        maxzoom: 19,
+        attribution: "© Mapbox © Maxar",
+      });
+    }
+    map.addLayer({ id: SATELLITE, type: "raster", source: SATELLITE, slot: "bottom" });
+  }
+  if (map.getLayer(SATELLITE)) map.setLayoutProperty(SATELLITE, "visibility", satellite ? "visible" : "none");
+}
+
+/**
+ * Covers the map with a still of how it looks now, runs `change`, then fades the still away: as
+ * soon as the new look is drawn, or for satellite, once its photos have arrived.
+ */
+function crossfade(map: MapboxLike, change: () => void, photos: boolean) {
+  const canvas = map.getCanvas();
+  map.getCanvasContainer().querySelector("[data-map-still]")?.remove(); // a change still playing
+  map.once("render", () => {
+    // Copied right after a frame is drawn, while the picture is still there to copy
+    const still = document.createElement("canvas");
+    still.width = canvas.width;
+    still.height = canvas.height;
+    still.dataset.mapStill = "";
+    still.setAttribute("aria-hidden", "true");
+    Object.assign(still.style, {
+      position: "absolute",
+      left: "0",
+      top: "0",
+      width: canvas.style.width || `${canvas.clientWidth}px`,
+      height: canvas.style.height || `${canvas.clientHeight}px`,
+      pointerEvents: "none",
+      transition: `opacity ${STYLE_FADE_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`,
+    });
+    still.getContext("2d")?.drawImage(canvas, 0, 0);
+    canvas.after(still); // above the map, below the pins
+    change();
+    let shown = false;
+    const reveal = () => {
+      if (shown) return;
+      shown = true;
+      clearTimeout(timer);
+      map.off("movestart", reveal);
+      map.off("sourcedata", photosIn);
+      requestAnimationFrame(() => (still.style.opacity = "0"));
+      setTimeout(() => still.remove(), STYLE_FADE_MS + 50);
+    };
+    const photosIn = () => {
+      if (!map.isSourceLoaded(SATELLITE)) return;
+      map.off("sourcedata", photosIn);
+      map.once("render", reveal); // drawn with the photos
+    };
+    if (photos) {
+      map.on("sourcedata", photosIn);
+      map.once("render", photosIn); // photos already there (chosen before, same view)
+    }
+    else map.once("render", reveal); // the new light is drawn in the next frame
+    map.on("movestart", reveal); // the person moves the map: the still would lag behind
+    const timer = setTimeout(reveal, STYLE_WAIT_MS);
+  });
+  map.triggerRepaint();
+}
+
+/** The few Mapbox-only calls setMapStyle makes */
+type MapboxLike = {
+  setConfigProperty: (importId: string, name: string, value: unknown) => void;
+  getLayer: (id: string) => unknown;
+  getSource: (id: string) => unknown;
+  addSource: (id: string, source: object) => void;
+  addLayer: (layer: object) => void;
+  setLayoutProperty: (layer: string, name: string, value: unknown) => void;
+  getCanvas: () => HTMLCanvasElement;
+  getCanvasContainer: () => HTMLElement;
+  once: (type: string, listener: () => void) => void;
+  on: (type: string, listener: () => void) => void;
+  off: (type: string, listener: () => void) => void;
+  triggerRepaint: () => void;
+  isSourceLoaded: (id: string) => boolean;
+};
+
 type Options = { container: HTMLElement; center: LatLng; zoom: number; interactive?: boolean };
 
 async function createMapbox({ container, center, zoom, interactive = true }: Options): Promise<MapEngine> {
@@ -31,8 +146,7 @@ async function createMapbox({ container, center, zoom, interactive = true }: Opt
     accessToken: MAPBOX_TOKEN,
     style: "mapbox://styles/mapbox/standard",
     // Landmarks (schools, churches, the market, the port) help people find their way
-    config: { basemap: { lightPreset: "day", showPointOfInterestLabels: true, showTransitLabels: true } },
-    center: [center.lng, center.lat],
+    config: { basemap: { lightPreset: "day", showPointOfInterestLabels: true, showTransitLabels: true } },    center: [center.lng, center.lat],
     zoom,
     interactive,
     attributionControl: false,
@@ -40,12 +154,22 @@ async function createMapbox({ container, center, zoom, interactive = true }: Opt
   });
   map.addControl(new lib.AttributionControl({ compact: true }));
   await loaded(map as unknown as MapInstance);
-  return {
+  const engine: MapEngine = {
     // Mapbox's Map has the same shape as MapLibre's for the calls Feasto makes
     map: map as unknown as MapInstance,
     marker: (element) => new lib.Marker({ element }) as unknown as Marker,
     provider: "mapbox",
   };
+  // The person's map style (Display & accessibility, or a map's own button), and every change to it
+  setMapStyle(engine, currentMapStyle());
+  const follow = (event: Event) => setMapStyle(engine, (event as CustomEvent<MapStyle>).detail, true);
+  window.addEventListener(MAP_STYLE_EVENT, follow);
+  const remove = map.remove.bind(map);
+  map.remove = () => {
+    window.removeEventListener(MAP_STYLE_EVENT, follow);
+    remove();
+  };
+  return engine;
 }
 
 async function createFree({ container, center, zoom, interactive = true }: Options): Promise<MapEngine> {

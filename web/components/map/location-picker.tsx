@@ -6,6 +6,7 @@ import { LoaderCircle, LocateFixed, MapPin, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DEFAULT_CENTER, type LatLng } from "@/lib/geo";
 import { createMap, mapHost, MAPBOX_TOKEN, searchPlaces, type MapEngine, type Place } from "./map-engine";
+import { MapStyleButton } from "./map-style-button";
 
 /**
  * Choose a spot by moving the map under a fixed pin, like ride-hailing apps.
@@ -35,6 +36,8 @@ export function LocationPicker({
   const container = useRef<HTMLDivElement>(null);
   const engine = useRef<MapEngine | null>(null);
   const [ready, setReady] = useState(false);
+  /** Mapbox can change its look; the free backup map can't */
+  const [styled, setStyled] = useState(false);
   const [failed, setFailed] = useState(false);
   const [locating, setLocating] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -57,6 +60,7 @@ export function LocationPicker({
           const center = made.map.getCenter();
           onChangeRef.current({ lat: center.lat, lng: center.lng });
         });
+        setStyled(made.provider === "mapbox");
         setReady(true);
       })
       .catch(() => !cancelled && setFailed(true));
@@ -109,6 +113,8 @@ export function LocationPicker({
       {MAPBOX_TOKEN && ready && <PlaceSearch near={value ?? near ?? DEFAULT_CENTER} onPick={(place) => goTo(place.at)} />}
       <div className={`relative h-56 overflow-hidden rounded-xl border bg-canvas ${error ? "border-red-400" : "border-line"}`}>
         <div ref={container} className="absolute inset-0" role="application" aria-label={`${label}: drag the map to move the pin`} />
+        {/* Satellite helps find the exact roof or gate */}
+        {ready && styled && <MapStyleButton side="right" className="top-2 right-2" />}
         {!ready && !failed && <div aria-hidden className="absolute inset-0 animate-pulse bg-gray-200/70" />}
         {failed ? (
           <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted">

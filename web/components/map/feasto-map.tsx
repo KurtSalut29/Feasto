@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { DEFAULT_CENTER, distanceKm, type LatLng } from "@/lib/geo";
 import { createMap, foldCredits, getRoute, mapHost, trimRoute, type MapEngine, type Route } from "./map-engine";
 import { lessMotion } from "@/lib/display";
+import { MapStyleButton } from "./map-style-button";
 
 export type MapPin = {
   id: string;
@@ -43,6 +44,7 @@ export function FeastoMap({
   start,
   focus,
   expandable = true,
+  styleButton = true,
   onView,
 }: {
   pins: MapPin[];
@@ -60,6 +62,8 @@ export function FeastoMap({
   /** Moves the map to this spot whenever it changes, e.g. the pin someone picked */
   focus?: LatLng | null;
   expandable?: boolean;
+  /** The map style button in the corner; off where the page puts it with its own map buttons */
+  styleButton?: boolean;
   /** Called with the part of the map on screen once it loads and after every pan or zoom */
   onView?: (view: MapView) => void;
 }) {
@@ -291,6 +295,10 @@ export function FeastoMap({
             <Maximize2 className="size-4" aria-hidden />
           )}
         </button>
+      )}
+      {/* Default, satellite or night (Mapbox only; the free backup map has one look) */}
+      {engine?.provider === "mapbox" && interactive && styleButton && (
+        <MapStyleButton big={expanded} className={expanded ? "top-[calc(0.75rem+env(safe-area-inset-top))] left-3" : "top-2 left-2"} />
       )}
       {!engine && !failed && <div aria-hidden className="absolute inset-0 animate-pulse bg-gray-200/70" />}
       {failed && (

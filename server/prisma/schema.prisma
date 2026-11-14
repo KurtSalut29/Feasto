@@ -90,6 +90,12 @@ enum ActivityCategory {
 }
 
 /// How big the app's text is, for people who read better with larger letters
+enum MapStyle {
+  DEFAULT
+  SATELLITE
+  NIGHT
+}
+
 enum TextSize {
   NORMAL
   LARGE
@@ -171,6 +177,8 @@ model User {
   highContrast      Boolean   @default(false)
   reduceMotion      Boolean   @default(false)
   largeTargets      Boolean   @default(false)
+  /// How maps look: the usual map, satellite photos, or dark for night rides
+  mapStyle          MapStyle  @default(DEFAULT)
   createdAt         DateTime  @default(now())
 
   vendor        Vendor? // set when role = VENDOR
