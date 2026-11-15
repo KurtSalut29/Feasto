@@ -1,7 +1,8 @@
 # The laptop as the server for a class test on one WiFi (see DEPLOY.md). Start it with
 #   .\infra\lan\start.ps1        and stop it with   .\infra\lan\stop.ps1
 # Adds the web app and Caddy (HTTPS on the laptop's WiFi address), makes login cookies
-# HTTPS-only, and closes the database, Redis and RabbitMQ to the WiFi. Nginx stays on 8080 so
+# HTTPS-only, and closes the database, Redis and RabbitMQ to the WiFi (the database stays open
+# to this laptop only, for pgAdmin). Nginx stays on 8080 so
 # `npm run dev` keeps working.
 
 x-prod-env: &prod-env
@@ -9,7 +10,10 @@ x-prod-env: &prod-env
 
 services:
   postgres:
-    ports: !reset []
+    # Only this laptop can reach the database (pgAdmin: localhost, port 5433), never the WiFi.
+    # 5433, not 5432, so it never clashes with a PostgreSQL installed on Windows itself.
+    ports: !override
+      - "127.0.0.1:5433:5432"
   redis:
     ports: !reset []
   rabbitmq:
