@@ -374,9 +374,19 @@ function frame({ map }: MapEngine, points: LatLng[]) {
 function PinBody({ pin }: { pin: MapPin }) {
   const body =
     pin.kind === "rider" ? (
-      <span className="relative flex size-11 items-center justify-center">
-        <span aria-hidden className="absolute inset-0 animate-ping rounded-full bg-brand-500/30" />
-        <Image src="/icons/icon-192.png" alt="" width={44} height={44} unoptimized className="relative size-11 rounded-full border-[3px] border-brand-600 bg-white shadow-lg" />
+      // The rider standing on the map, wheels on the spot: a soft shadow on the ground under him and a
+      // flat ring spreading out from it (lying on the ground, so it reads as 3D) to show he's live
+      <span className="relative block size-16">
+        <span aria-hidden className="absolute top-1/2 left-1/2 h-6 w-16 -translate-x-1/2 -translate-y-1/2 animate-ping rounded-[50%] border-2 border-brand-500/70 bg-brand-500/15 [animation-duration:1.8s] motion-reduce:hidden" />
+        <span aria-hidden className="absolute top-1/2 left-1/2 h-3.5 w-12 -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-black/35 blur-[3px]" />
+        <Image
+          src="/icons/rider-pin.webp"
+          alt=""
+          width={64}
+          height={70}
+          unoptimized
+          className="absolute bottom-1/2 left-1/2 w-16 max-w-none -translate-x-1/2 translate-y-1 drop-shadow-[0_5px_5px_rgba(0,0,0,0.3)]"
+        />
       </span>
     ) : pin.kind === "me" ? (
       <span className="block size-[18px] rounded-full border-[3px] border-white bg-sky-500 shadow-[0_0_0_7px_rgba(14,165,233,0.25)]" />
