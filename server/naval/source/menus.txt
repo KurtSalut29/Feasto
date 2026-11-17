@@ -267,33 +267,57 @@ Fruit Soda & Desserts|Ichigo (Strawberry) Soda|130|Fruit soda.
 Fruit Soda & Desserts|Special Halo-Halo|180|Halo-halo with all the toppings.
 Fruit Soda & Desserts|Mango Shake|180|Fresh mango shake.
 ## juanita
-Coffee|Biscoff Latte|180|A best seller.
-Coffee|Spanish Latte|155|Espresso with sweetened milk.
-Coffee|Sea Salt Latte|155|A best seller.
-Coffee|Buttercream Latte|180|Latte with buttercream.
-Coffee|Americano|110|Classic black coffee.
-Coffee|Caramel Macchiato|155|Espresso, milk and caramel.
+Coffee Based|Biscoff Latte|180|A best seller.
+Coffee Based|Buttercream Latte|180|Latte with buttercream.
+Coffee Based|Spanish Latte|155|Espresso with sweetened milk.
+Coffee Based|Sea Salt Latte|155|A best seller.
+Coffee Based|Cinnamon Cream|170|Coffee with cinnamon cream.
 Oat Series|Sea Salt Oat Latte|185|A best seller, with oat milk.
+Oat Series|Spanish Oat|185|Spanish latte with oat milk.
+Oat Series|Hazelnut Oat|180|Hazelnut latte with oat milk.
+Oat Series|Matcha Oat Latte|185|Matcha with oat milk.
+Oat Series|Sea Salt Matcha Oat|190|Matcha with oat milk and sea salt cream.
 Oat Series|Biscoff Oat Latte|210|A best seller, with oat milk.
 Matcha Bar|Matcha Latte|155|A best seller.
-Matcha Bar|Strawberry Matcha|160|A best seller.
 Matcha Bar|Sea Salt Matcha|160|Matcha with sea salt cream.
+Matcha Bar|Matcha Espresso|180|Matcha with a shot of espresso.
+Matcha Bar|Blueberry Matcha|160|Matcha with blueberry.
+Matcha Bar|Strawberry Matcha|160|A best seller.
 Milk Based|Strawberry Latte|150|Strawberry milk.
+Milk Based|Blueberry Latte|150|Blueberry milk.
+Milk Based|Choco Berry|150|Chocolate and strawberry milk.
 Milk Based|Ice Chocolate|150|Iced chocolate milk.
+Milk Based|Biscoff|180|Biscoff milk, no coffee.
+Classics|Americano|110|Classic black coffee.
+Classics|Latte|140|Espresso with steamed milk.
+Classics|Cappuccino|140|Espresso with milk foam.
+Classics|Caramel Macchiato|155|Espresso, milk and caramel.
+Classics|Mocha|155|Espresso with chocolate and milk.
+Classics|White Mocha|160|Espresso with white chocolate and milk.
+Special Drinks|Vienna Coffee|190|Coffee topped with whipped cream.
+Special Drinks|Cinnamon Toast|170|Latte with cinnamon toast flavor.
 Special Drinks|Pistachio Latte|220|Latte with pistachio.
 Rice Bowls|Spam Musubi Rice|180|Spam and rice, musubi-style.
 Rice Bowls|Karaage Don|220|Japanese fried chicken on rice.
 Rice Bowls|Honey Garlic Chicken|220|Chicken in honey garlic glaze on rice.
 Rice Bowls|Yangnyeom Chicken|220|Korean sweet-spicy chicken on rice.
+Rice Bowls|Soy Garlic Chicken|230|Chicken in soy garlic glaze on rice.
 Rice Bowls|Chicken ala King|230|Chicken in cream sauce on rice.
 Wings (6 pcs)|Honey Garlic Wings|260|Six chicken wings.
+Wings (6 pcs)|Yangnyeom Wings|270|Six chicken wings in Korean sweet-spicy sauce.
+Wings (6 pcs)|Soy Honey Garlic Wings|270|Six chicken wings in soy honey garlic glaze.
 Wings (6 pcs)|Salted Egg Wings|300|Six chicken wings in salted egg sauce.
 Pasta|Carbonara|200|Creamy carbonara.
 Pasta|Chicken Alfredo|210|Creamy alfredo with chicken.
+Pasta|Pesto Chicken|210|Pesto pasta with chicken.
+Pasta|Bolognese|210|Pasta in tomato and meat sauce.
+Pasta|Truffle Carbonara|220|Carbonara with truffle.
 Pasta|Truffle Pesto Carbonara|250|Carbonara with truffle and pesto.
 Others|Korean Ramen|150|Spicy Korean ramen.
+Others|Regular Fries|110|Plain fries.
 Others|Cheese Fries|120|Fries with cheese.
 Others|Garlic Bread|30|Toasted garlic bread.
+Others|Kimchi Rice|60|Fried rice with kimchi.
 ## jusa
 Sulit Combo Meals|J-1 Burger, Fries and Smoothie|245|1 burger, 1 fries and 1 smoothie.
 Sulit Combo Meals|J-2 Carbonara, Toasted Bread and Smoothie|195|1 carbonara, 1 toasted bread and 1 smoothie.
@@ -318,6 +342,27 @@ Solo Snacks|Fries (Regular)|85|Cheese, BBQ or sour cream.
 Solo Snacks|Empanada|25|Pork or chicken, each.
 Solo Snacks|Shanghai Lumpia (3 pcs)|50|Crispy spring rolls.
 ## cupstop
+Milktea|Taro Milktea (16 oz)|65|Classic taro-flavored milk tea. ₱75 for 22 oz.
+Milktea|Matcha Tea Milktea (16 oz)|65|Classic matcha-flavored milk tea. ₱75 for 22 oz.
+Milktea|Wintermelon Milktea (16 oz)|65|Classic wintermelon-flavored milk tea. ₱75 for 22 oz.
+Milktea|Chocolate Milktea (16 oz)|65|Classic chocolate-flavored milk tea. ₱75 for 22 oz.
+Milktea|Caramel Milktea (16 oz)|65|Classic caramel-flavored milk tea. ₱75 for 22 oz.
+Premium Frappe|Biscoff Frappe (16 oz)|145|Blended ice drink with Biscoff flavor and biscuit topping. ₱165 for 22 oz.
+Premium Frappe|Dark Choco w/ Oreo (16 oz)|145|Blended dark chocolate frappe topped with Oreo cookies. ₱165 for 22 oz.
+Premium Frappe|Oreo Dreams (16 oz)|145|Creamy blended cookies and cream frappe with Oreo. ₱165 for 22 oz.
+Matcha Creations|Matcha|110|Classic iced matcha drink with milk.
+Matcha Creations|Matcha Dream|125|Layered matcha drink with a creamy taro/ube base.
+Matcha Creations|Matcha Berry|140|Iced matcha layered with strawberry/berry puree.
+Matcha Creations|Green Matcha|140|Pure green matcha specialty drink.
+Matcha Creations|Matcha Chocolate|150|Iced matcha layered with rich chocolate.
+Premium Milktea|Cookies & Cream (16 oz)|110|Premium milk tea blended with crushed Oreo cookies. ₱120 for 22 oz.
+Premium Milktea|Dark Chocolate (16 oz)|110|Rich dark chocolate premium milk tea. ₱120 for 22 oz.
+Premium Milktea|Red Velvet Chocolate (16 oz)|110|Red velvet and chocolate premium milk tea. ₱120 for 22 oz.
+Premium Milktea|Winter Choco (16 oz)|110|Wintermelon and chocolate premium milk tea. ₱120 for 22 oz.
+Non-Caffeine|Chocolate (16 oz)|70|Sweet iced chocolate drink, caffeine-free. ₱90 for 22 oz.
+Non-Caffeine|Mango Matcha (16 oz)|70|Mango and matcha layered fruit drink. ₱90 for 22 oz.
+Non-Caffeine|Strawberry (16 oz)|65|Sweet strawberry milk drink, caffeine-free. ₱85 for 22 oz.
+Non-Caffeine|Blueberry (16 oz)|65|Sweet blueberry milk drink, caffeine-free. ₱85 for 22 oz.
 Foods|Hungarian Rice Meal|80|Hungarian sausage with rice.
 Foods|Fried Chicken Rice Meal|80|Fried chicken with rice.
 Foods|Chicken Pastil|55|Shredded chicken on rice, Mindanao-style.

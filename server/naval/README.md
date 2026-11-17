@@ -1,7 +1,7 @@
 # Naval stores
 
 The real food stores of Naval, Biliran that Feasto is set up with for testing and deployment,
-instead of the made-up demo stores. **39 stores, 611 dishes.**
+instead of the made-up demo stores. **39 stores, 656 dishes.**
 
 ## Load them
 
@@ -64,11 +64,11 @@ Every store can log in with its e-mail below and the `STORE_PASSWORD` from `.env
 | Lub Dub Café | Café | `lub-dub@feasto.com` | 34 |  |
 | Forever Café & Lounge | Café | `forever@feasto.com` | 28 |  |
 | Backyard Brews Café | Café | `backyard-brews@feasto.com` | 37 |  |
-| Juanita's Café | Café | `juanitas@feasto.com` | 27 |  |
+| Juanita's Café | Café | `juanitas@feasto.com` | 51 |  |
 | La Maison Café | Café | `la-maison@feasto.com` | 20 | hours not published |
 | JUSA's Tropical Smoothie Café | Café | `jusas@feasto.com` | 22 | hours not published |
 | Max Café | Café | `max-cafe@feasto.com` | 13 | address and pin to confirm, hours not published |
-| Cup Stop | Milk tea & drinks | `cup-stop@feasto.com` | 9 |  |
+| Cup Stop | Milk tea & drinks | `cup-stop@feasto.com` | 30 |  |
 | Sebu Cha Milk Tea Station | Milk tea & drinks | `sebu-cha@feasto.com` | 13 | hours not published |
 | Lushan Tea | Milk tea & drinks | `lushan@feasto.com` | 16 | address and pin to confirm, hours not published |
 | Street Bites Snack Bar | Snacks & street food | `street-bites@feasto.com` | 10 | address and pin to confirm, hours not published |
@@ -78,6 +78,12 @@ Every store can log in with its e-mail below and the `STORE_PASSWORD` from `.env
 
 - `web/public/Feasto_Categories`: the .docx files with names, descriptions, addresses, hours and menu
   tables, the logos (used as cover photos) and the dish photos.
+- `web/public/Kuwang` ("kuwang": what was missing): dish photos added later for Big Bu, Cusina De
+  Salas, Khloe, Weluisa, La Maison, Juanita's and Cup Stop, plus Juanita's full menu boards and Cup
+  Stop's drinks. Which photo goes with which dish is in `source/kuwang_photos.py`. To add them to a
+  running Feasto without starting over (only fills in missing photos and adds missing dishes):
+  `python server/naval/source/apply_kuwang.py --live`. Cup Stop's add-ons (pearls, nata, cream
+  cheese…) are left out: Feasto has no add-ons yet.
 - `source/menus.txt`: menus typed out by hand from the menu-board photos (D'Adaone, Mareola, Jollibee,
   McDonald's, Mang Inasal, the cafés, the milk tea and snack stores). Prices are what the photos showed;
   stores change them often, so each store should check its own menu.

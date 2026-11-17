@@ -264,7 +264,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         </div>
       </Card>
 
-      <div className="grid items-start gap-5 xl:grid-cols-2">
+      <div className="grid items-start gap-5 xl:grid-cols-2 xl:items-stretch">
 
       <Card title="Finding a rider" Icon={Bike} description="How long a job waits before it reaches more riders.">
         <div className="space-y-4 p-5">
@@ -315,22 +315,22 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         </div>
       </Card>
 
+      {/* Across both columns on wide screens, the field beside its note, so no hole is left under the cards above */}
       <Card
         title="Sign-up limit"
         Icon={ShieldCheck}
         description="Stops a script from making hundreds of fake accounts, without stopping a class that signs up together."
+        className="xl:col-span-2"
       >
-        <div className="space-y-4 p-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
-              label="New accounts per network, every 10 minutes"
-              min="5"
-              icon={UserPlus}
-              hint="5 to 1000. Everyone on the same WiFi or pocket WiFi shares one network, so leave room for a whole class."
-              {...field("signupsPerNetwork")}
-            />
-          </div>
-          <p className="text-sm text-muted">
+        <div className="grid gap-4 p-5 sm:grid-cols-2 xl:items-start">
+          <TextField
+            label="New accounts per network, every 10 minutes"
+            min="5"
+            icon={UserPlus}
+            hint="5 to 1000. Everyone on the same WiFi or pocket WiFi shares one network, so leave room for a whole class."
+            {...field("signupsPerNetwork")}
+          />
+          <p className="text-sm text-muted sm:col-span-2 xl:col-span-1 xl:pt-7">
             Feasto can only tell networks apart through the tunnel and on a cloud server. On the classroom laptop every phone looks the same to it, so
             there only the overall cap applies: 300 new accounts in 10 minutes across all of Feasto. Only accounts actually made are counted.
           </p>

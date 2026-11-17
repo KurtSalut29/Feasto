@@ -186,6 +186,32 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
             )}
             {data.riders.length > SHOWN && <p className="border-t border-line bg-canvas/40 px-5 py-3 text-sm text-muted">Top {SHOWN} of {data.riders.length} riders.</p>}
           </Card>
+
+          <Card title="Recent payments" Icon={History}>
+            {data.settlements.length === 0 ? (
+              <p className="px-5 py-6 text-sm text-muted">Payments from stores and riders show here.</p>
+            ) : (
+              // Two columns on wide screens, so the list doesn't run long and thin
+              <ul className="-mb-px grid sm:grid-cols-2 [&>li]:border-b [&>li]:border-line sm:[&>li:nth-child(odd)]:border-r">
+                {data.settlements.map((s) => {
+                  return (
+                    <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-ink">{s.vendor?.name ?? s.rider?.name}</p>
+                        <p className="text-xs text-muted">
+                          {formatDateTime(s.createdAt)} · {s.orders} {s.orders === 1 ? "order" : "orders"}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-right text-xs text-muted">
+                        <span className="block text-sm font-semibold text-ink tabular-nums">{formatPeso(s.amount)}</span>
+                        {s.method ? `paid with ${ONLINE_LABEL[s.method as keyof typeof ONLINE_LABEL]}` : "in person"}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
         </div>
 
         <aside className="space-y-6">
@@ -233,31 +259,6 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
               </ul>
             </Card>
           )}
-
-          <Card title="Recent payments" Icon={History}>
-            {data.settlements.length === 0 ? (
-              <p className="px-5 py-6 text-sm text-muted">Payments from stores and riders show here.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {data.settlements.map((s) => {
-                  return (
-                    <li key={s.id} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-ink">{s.vendor?.name ?? s.rider?.name}</p>
-                        <p className="text-xs text-muted">
-                          {formatDateTime(s.createdAt)} · {s.orders} {s.orders === 1 ? "order" : "orders"}
-                        </p>
-                      </div>
-                      <p className="shrink-0 text-right text-xs text-muted">
-                        <span className="block text-sm font-semibold text-ink tabular-nums">{formatPeso(s.amount)}</span>
-                        {s.method ? `paid with ${ONLINE_LABEL[s.method as keyof typeof ONLINE_LABEL]}` : "in person"}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
         </aside>
       </div>
     </>

@@ -718,56 +718,56 @@
   "closesAt": "19:30",
   "latitude": 11.563987,
   "longitude": 124.400609,
-  "cover": null,
+  "cover": "big-bu-cover.jpg",
   "menu": [
    {
     "name": "Pinakbet",
     "category": "Vegetables",
     "price": 25.0,
     "description": "Mixed local vegetables sautéed with shrimp paste and bits of pork.",
-    "photo": null
+    "photo": "big-bu-01.jpg"
    },
    {
     "name": "Ginisang Sayote",
     "category": "Vegetables",
     "price": 20.0,
     "description": "Sautéed chayote strips cooked with garlic, onions, and ground pork.",
-    "photo": null
+    "photo": "big-bu-02.jpg"
    },
    {
     "name": "Tortang Talong",
     "category": "Vegetables",
     "price": 25.0,
     "description": "Pan-fried eggplant omelet seasoned with salt and pepper.",
-    "photo": null
+    "photo": "big-bu-03.jpg"
    },
    {
     "name": "Pork Afritada",
     "category": "Main Course",
     "price": 50.0,
     "description": "Tender pork chunks simmered in tomato sauce with potatoes, carrots, and bell peppers.",
-    "photo": null
+    "photo": "big-bu-04.jpg"
    },
    {
     "name": "Bicol Express",
     "category": "Main Course",
     "price": 50.0,
     "description": "Spicy pork stew cooked in rich coconut milk with chili peppers and shrimp paste.",
-    "photo": null
+    "photo": "big-bu-05.jpg"
    },
    {
     "name": "Chicken Adobo",
     "category": "Main Course",
     "price": 45.0,
     "description": "Classic chicken pieces braised in soy sauce, vinegar, garlic, and peppercorns.",
-    "photo": null
+    "photo": "big-bu-06.jpg"
    },
    {
     "name": "Ginataang Isda",
     "category": "Seafood",
     "price": 45.0,
     "description": "Fresh local fish simmered in creamy coconut milk with ginger, garlic, and pechay.",
-    "photo": null
+    "photo": "big-bu-07.jpg"
    }
   ]
  },
@@ -945,105 +945,105 @@
     "category": "Noodles",
     "price": 120.0,
     "description": "Thick egg noodles with meat and vegetables",
-    "photo": null
+    "photo": "cusina-de-salas-01.jpg"
    },
    {
     "name": "Bulalo",
     "category": "Soup",
     "price": 280.0,
     "description": "Beef shank soup with vegetables",
-    "photo": null
+    "photo": "cusina-de-salas-02.jpg"
    },
    {
     "name": "Chicken Inasal",
     "category": "Main Course",
     "price": 150.0,
     "description": "Grilled marinated chicken with rice",
-    "photo": null
+    "photo": "cusina-de-salas-03.jpg"
    },
    {
     "name": "Pancit Canton",
     "category": "Noodles",
     "price": 130.0,
     "description": "Stir-fried noodles with vegetables and meat",
-    "photo": null
+    "photo": "cusina-de-salas-04.jpg"
    },
    {
     "name": "Chicken Liver",
     "category": "Main Course",
     "price": 110.0,
     "description": "Sautéed chicken liver with onions",
-    "photo": null
+    "photo": "cusina-de-salas-05.jpg"
    },
    {
     "name": "Pork Adobo",
     "category": "Main Course",
     "price": 130.0,
     "description": "Pork simmered in soy sauce and vinegar",
-    "photo": null
+    "photo": "cusina-de-salas-06.jpg"
    },
    {
     "name": "Pork Sisig",
     "category": "Main Course",
     "price": 180.0,
     "description": "Sizzling seasoned chopped pork",
-    "photo": null
+    "photo": "cusina-de-salas-07.jpg"
    },
    {
     "name": "Fried Chicken",
     "category": "Main Course",
     "price": 140.0,
     "description": "Crispy fried chicken with rice",
-    "photo": null
+    "photo": "cusina-de-salas-08.jpg"
    },
    {
     "name": "Chopsuey",
     "category": "Vegetables",
     "price": 120.0,
     "description": "Mixed vegetables in savory sauce",
-    "photo": null
+    "photo": "cusina-de-salas-09.jpg"
    },
    {
     "name": "Garlic Rice",
     "category": "Rice",
     "price": 35.0,
     "description": "Fried rice with garlic",
-    "photo": null
+    "photo": "cusina-de-salas-10.jpg"
    },
    {
     "name": "Plain Rice",
     "category": "Rice",
     "price": 20.0,
     "description": "Steamed white rice",
-    "photo": null
+    "photo": "cusina-de-salas-11.jpg"
    },
    {
     "name": "Iced Tea",
     "category": "Beverages",
     "price": 45.0,
     "description": "Refreshing iced tea",
-    "photo": null
+    "photo": "cusina-de-salas-12.jpg"
    },
    {
     "name": "Mango Shake",
     "category": "Beverages",
     "price": 85.0,
     "description": "Fresh mango blended with ice",
-    "photo": null
+    "photo": "cusina-de-salas-13.jpg"
    },
    {
     "name": "Soft Drinks",
     "category": "Beverages",
     "price": 35.0,
     "description": "Bottled carbonated drinks",
-    "photo": null
+    "photo": "cusina-de-salas-14.jpg"
    },
    {
     "name": "Bottled Water",
     "category": "Beverages",
     "price": 20.0,
     "description": "Purified drinking water",
-    "photo": null
+    "photo": "cusina-de-salas-15.jpg"
    }
   ]
  },
@@ -1720,105 +1720,105 @@
     "category": "Main Course",
     "price": 95.0,
     "description": "Chicken cooked in soy sauce and vinegar",
-    "photo": null
+    "photo": "khloe-01.jpg"
    },
    {
     "name": "Pork Menudo",
     "category": "Main Course",
     "price": 100.0,
     "description": "Pork stew with potatoes and carrots",
-    "photo": null
+    "photo": "khloe-02.jpg"
    },
    {
     "name": "Beef Caldereta",
     "category": "Main Course",
     "price": 140.0,
     "description": "Beef stew with tomato sauce",
-    "photo": null
+    "photo": "khloe-03.jpg"
    },
    {
     "name": "Fried Chicken Meal",
     "category": "Rice Meals",
     "price": 120.0,
     "description": "Fried chicken served with rice",
-    "photo": null
+    "photo": "khloe-04.jpg"
    },
    {
     "name": "Pork Sisig Meal",
     "category": "Rice Meals",
     "price": 130.0,
     "description": "Seasoned pork sisig with rice",
-    "photo": null
+    "photo": "khloe-05.jpg"
    },
    {
     "name": "Pancit Canton",
     "category": "Noodles",
     "price": 95.0,
     "description": "Stir-fried noodles with vegetables",
-    "photo": null
+    "photo": "khloe-06.jpg"
    },
    {
     "name": "Spaghetti",
     "category": "Pasta",
     "price": 75.0,
     "description": "Filipino-style sweet spaghetti",
-    "photo": null
+    "photo": "khloe-07.jpg"
    },
    {
     "name": "Burger",
     "category": "Snacks",
     "price": 65.0,
     "description": "Beef burger with vegetables and dressing",
-    "photo": null
+    "photo": "khloe-08.jpg"
    },
    {
     "name": "French Fries",
     "category": "Snacks",
     "price": 60.0,
     "description": "Crispy potato fries",
-    "photo": null
+    "photo": "khloe-09.jpg"
    },
    {
     "name": "Halo-Halo",
     "category": "Desserts",
     "price": 85.0,
     "description": "Shaved ice with sweet toppings",
-    "photo": null
+    "photo": "khloe-10.jpg"
    },
    {
     "name": "Chocolate Cake",
     "category": "Desserts",
     "price": 90.0,
     "description": "Slice of chocolate cake",
-    "photo": null
+    "photo": "khloe-11.jpg"
    },
    {
     "name": "Hot Coffee",
     "category": "Beverages",
     "price": 50.0,
     "description": "Freshly brewed coffee",
-    "photo": null
+    "photo": "khloe-12.jpg"
    },
    {
     "name": "Iced Coffee",
     "category": "Beverages",
     "price": 75.0,
     "description": "Chilled coffee with milk",
-    "photo": null
+    "photo": "khloe-13.jpg"
    },
    {
     "name": "Milk Tea",
     "category": "Beverages",
     "price": 85.0,
     "description": "Milk-based tea with pearls",
-    "photo": null
+    "photo": "khloe-14.jpg"
    },
    {
     "name": "Fruit Shake",
     "category": "Beverages",
     "price": 80.0,
     "description": "Blended seasonal fruits",
-    "photo": null
+    "photo": "khloe-15.jpg"
    }
   ]
  },
@@ -2747,126 +2747,126 @@
     "category": "Main Course",
     "price": 280.0,
     "description": "Whole roasted chicken",
-    "photo": null
+    "photo": "weluisa-01.jpg"
    },
    {
     "name": "Liempo",
     "category": "Main Course",
     "price": 180.0,
     "description": "Grilled pork belly",
-    "photo": null
+    "photo": "weluisa-02.jpg"
    },
    {
     "name": "Pork Adobo",
     "category": "Main Course",
     "price": 95.0,
     "description": "Pork cooked in soy sauce and vinegar",
-    "photo": null
+    "photo": "weluisa-03.jpg"
    },
    {
     "name": "Chicken Curry",
     "category": "Main Course",
     "price": 110.0,
     "description": "Chicken in creamy curry sauce",
-    "photo": null
+    "photo": "weluisa-04.jpg"
    },
    {
     "name": "Pork Menudo",
     "category": "Main Course",
     "price": 100.0,
     "description": "Pork stew with vegetables",
-    "photo": null
+    "photo": "weluisa-05.jpg"
    },
    {
     "name": "Pancit Bam-i",
     "category": "Noodles",
     "price": 130.0,
     "description": "Mixed noodles with meat and vegetables",
-    "photo": null
+    "photo": "weluisa-06.jpg"
    },
    {
     "name": "Pancit Canton",
     "category": "Noodles",
     "price": 110.0,
     "description": "Stir-fried egg noodles",
-    "photo": null
+    "photo": "weluisa-07.jpg"
    },
    {
     "name": "Suman Balintawak",
     "category": "Native Delicacies",
     "price": 35.0,
     "description": "Traditional sticky rice delicacy",
-    "photo": null
+    "photo": "weluisa-08.jpg"
    },
    {
     "name": "Custard Cake",
     "category": "Desserts",
     "price": 25.0,
     "description": "Soft cake with custard flavor",
-    "photo": null
+    "photo": "weluisa-09.jpg"
    },
    {
     "name": "Cupcakes",
     "category": "Desserts",
     "price": 15.0,
     "description": "Small individually baked cakes",
-    "photo": null
+    "photo": "weluisa-10.jpg"
    },
    {
     "name": "Crema de Fruita",
     "category": "Desserts",
     "price": 95.0,
     "description": "Layered cake with fruit and cream",
-    "photo": null
+    "photo": "weluisa-11.jpg"
    },
    {
     "name": "Yema Cake",
     "category": "Desserts",
     "price": 90.0,
     "description": "Cake with sweet yema topping",
-    "photo": null
+    "photo": "weluisa-12.jpg"
    },
    {
     "name": "Deep Dark Chocolate Cake",
     "category": "Desserts",
     "price": 110.0,
     "description": "Rich chocolate cake",
-    "photo": null
+    "photo": "weluisa-13.jpg"
    },
    {
     "name": "Black Forest Cake",
     "category": "Desserts",
     "price": 120.0,
     "description": "Chocolate cake with cream and cherries",
-    "photo": null
+    "photo": "weluisa-14.jpg"
    },
    {
     "name": "Plain Rice",
     "category": "Rice",
     "price": 20.0,
     "description": "Steamed white rice",
-    "photo": null
+    "photo": "weluisa-15.jpg"
    },
    {
     "name": "Iced Tea",
     "category": "Beverages",
     "price": 40.0,
     "description": "Chilled sweetened tea",
-    "photo": null
+    "photo": "weluisa-16.jpg"
    },
    {
     "name": "Soft Drinks",
     "category": "Beverages",
     "price": 35.0,
     "description": "Carbonated beverages",
-    "photo": null
+    "photo": "weluisa-17.jpg"
    },
    {
     "name": "Bottled Water",
     "category": "Beverages",
     "price": 20.0,
     "description": "Purified drinking water",
-    "photo": null
+    "photo": "weluisa-18.jpg"
    }
   ]
  },
@@ -3770,102 +3770,214 @@
   "cover": "juanitas-cover.jpg",
   "menu": [
    {
-    "category": "Coffee",
+    "category": "Coffee Based",
     "name": "Biscoff Latte",
     "price": 180.0,
     "description": "A best seller.",
-    "photo": null
+    "photo": "juanitas-01.jpg"
    },
    {
-    "category": "Coffee",
-    "name": "Spanish Latte",
-    "price": 155.0,
-    "description": "Espresso with sweetened milk.",
-    "photo": null
-   },
-   {
-    "category": "Coffee",
-    "name": "Sea Salt Latte",
-    "price": 155.0,
-    "description": "A best seller.",
-    "photo": null
-   },
-   {
-    "category": "Coffee",
+    "category": "Coffee Based",
     "name": "Buttercream Latte",
     "price": 180.0,
     "description": "Latte with buttercream.",
-    "photo": null
+    "photo": "juanitas-02.jpg"
    },
    {
-    "category": "Coffee",
-    "name": "Americano",
-    "price": 110.0,
-    "description": "Classic black coffee.",
-    "photo": null
-   },
-   {
-    "category": "Coffee",
-    "name": "Caramel Macchiato",
+    "category": "Coffee Based",
+    "name": "Spanish Latte",
     "price": 155.0,
-    "description": "Espresso, milk and caramel.",
-    "photo": null
+    "description": "Espresso with sweetened milk.",
+    "photo": "juanitas-03.jpg"
+   },
+   {
+    "category": "Coffee Based",
+    "name": "Sea Salt Latte",
+    "price": 155.0,
+    "description": "A best seller.",
+    "photo": "juanitas-04.jpg"
+   },
+   {
+    "category": "Coffee Based",
+    "name": "Cinnamon Cream",
+    "price": 170.0,
+    "description": "Coffee with cinnamon cream.",
+    "photo": "juanitas-05.jpg"
    },
    {
     "category": "Oat Series",
     "name": "Sea Salt Oat Latte",
     "price": 185.0,
     "description": "A best seller, with oat milk.",
-    "photo": null
+    "photo": "juanitas-06.jpg"
+   },
+   {
+    "category": "Oat Series",
+    "name": "Spanish Oat",
+    "price": 185.0,
+    "description": "Spanish latte with oat milk.",
+    "photo": "juanitas-07.jpg"
+   },
+   {
+    "category": "Oat Series",
+    "name": "Hazelnut Oat",
+    "price": 180.0,
+    "description": "Hazelnut latte with oat milk.",
+    "photo": "juanitas-08.jpg"
+   },
+   {
+    "category": "Oat Series",
+    "name": "Matcha Oat Latte",
+    "price": 185.0,
+    "description": "Matcha with oat milk.",
+    "photo": "juanitas-09.jpg"
+   },
+   {
+    "category": "Oat Series",
+    "name": "Sea Salt Matcha Oat",
+    "price": 190.0,
+    "description": "Matcha with oat milk and sea salt cream.",
+    "photo": "juanitas-10.jpg"
    },
    {
     "category": "Oat Series",
     "name": "Biscoff Oat Latte",
     "price": 210.0,
     "description": "A best seller, with oat milk.",
-    "photo": null
+    "photo": "juanitas-11.jpg"
    },
    {
     "category": "Matcha Bar",
     "name": "Matcha Latte",
     "price": 155.0,
     "description": "A best seller.",
-    "photo": null
-   },
-   {
-    "category": "Matcha Bar",
-    "name": "Strawberry Matcha",
-    "price": 160.0,
-    "description": "A best seller.",
-    "photo": null
+    "photo": "juanitas-12.jpg"
    },
    {
     "category": "Matcha Bar",
     "name": "Sea Salt Matcha",
     "price": 160.0,
     "description": "Matcha with sea salt cream.",
-    "photo": null
+    "photo": "juanitas-13.jpg"
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Matcha Espresso",
+    "price": 180.0,
+    "description": "Matcha with a shot of espresso.",
+    "photo": "juanitas-14.jpg"
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Blueberry Matcha",
+    "price": 160.0,
+    "description": "Matcha with blueberry.",
+    "photo": "juanitas-15.jpg"
+   },
+   {
+    "category": "Matcha Bar",
+    "name": "Strawberry Matcha",
+    "price": 160.0,
+    "description": "A best seller.",
+    "photo": "juanitas-16.jpg"
    },
    {
     "category": "Milk Based",
     "name": "Strawberry Latte",
     "price": 150.0,
     "description": "Strawberry milk.",
-    "photo": null
+    "photo": "juanitas-17.jpg"
+   },
+   {
+    "category": "Milk Based",
+    "name": "Blueberry Latte",
+    "price": 150.0,
+    "description": "Blueberry milk.",
+    "photo": "juanitas-18.jpg"
+   },
+   {
+    "category": "Milk Based",
+    "name": "Choco Berry",
+    "price": 150.0,
+    "description": "Chocolate and strawberry milk.",
+    "photo": "juanitas-19.jpg"
    },
    {
     "category": "Milk Based",
     "name": "Ice Chocolate",
     "price": 150.0,
     "description": "Iced chocolate milk.",
-    "photo": null
+    "photo": "juanitas-20.jpg"
+   },
+   {
+    "category": "Milk Based",
+    "name": "Biscoff",
+    "price": 180.0,
+    "description": "Biscoff milk, no coffee.",
+    "photo": "juanitas-21.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "Americano",
+    "price": 110.0,
+    "description": "Classic black coffee.",
+    "photo": "juanitas-22.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "Latte",
+    "price": 140.0,
+    "description": "Espresso with steamed milk.",
+    "photo": "juanitas-23.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "Cappuccino",
+    "price": 140.0,
+    "description": "Espresso with milk foam.",
+    "photo": "juanitas-24.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "Caramel Macchiato",
+    "price": 155.0,
+    "description": "Espresso, milk and caramel.",
+    "photo": "juanitas-25.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "Mocha",
+    "price": 155.0,
+    "description": "Espresso with chocolate and milk.",
+    "photo": "juanitas-26.jpg"
+   },
+   {
+    "category": "Classics",
+    "name": "White Mocha",
+    "price": 160.0,
+    "description": "Espresso with white chocolate and milk.",
+    "photo": "juanitas-27.jpg"
+   },
+   {
+    "category": "Special Drinks",
+    "name": "Vienna Coffee",
+    "price": 190.0,
+    "description": "Coffee topped with whipped cream.",
+    "photo": "juanitas-28.jpg"
+   },
+   {
+    "category": "Special Drinks",
+    "name": "Cinnamon Toast",
+    "price": 170.0,
+    "description": "Latte with cinnamon toast flavor.",
+    "photo": "juanitas-29.jpg"
    },
    {
     "category": "Special Drinks",
     "name": "Pistachio Latte",
     "price": 220.0,
     "description": "Latte with pistachio.",
-    "photo": null
+    "photo": "juanitas-30.jpg"
    },
    {
     "category": "Rice Bowls",
@@ -3897,6 +4009,13 @@
    },
    {
     "category": "Rice Bowls",
+    "name": "Soy Garlic Chicken",
+    "price": 230.0,
+    "description": "Chicken in soy garlic glaze on rice.",
+    "photo": "juanitas-35.jpg"
+   },
+   {
+    "category": "Rice Bowls",
     "name": "Chicken ala King",
     "price": 230.0,
     "description": "Chicken in cream sauce on rice.",
@@ -3911,10 +4030,24 @@
    },
    {
     "category": "Wings (6 pcs)",
+    "name": "Yangnyeom Wings",
+    "price": 270.0,
+    "description": "Six chicken wings in Korean sweet-spicy sauce.",
+    "photo": null
+   },
+   {
+    "category": "Wings (6 pcs)",
+    "name": "Soy Honey Garlic Wings",
+    "price": 270.0,
+    "description": "Six chicken wings in soy honey garlic glaze.",
+    "photo": null
+   },
+   {
+    "category": "Wings (6 pcs)",
     "name": "Salted Egg Wings",
     "price": 300.0,
     "description": "Six chicken wings in salted egg sauce.",
-    "photo": null
+    "photo": "juanitas-40.jpg"
    },
    {
     "category": "Pasta",
@@ -3928,7 +4061,28 @@
     "name": "Chicken Alfredo",
     "price": 210.0,
     "description": "Creamy alfredo with chicken.",
-    "photo": null
+    "photo": "juanitas-42.jpg"
+   },
+   {
+    "category": "Pasta",
+    "name": "Pesto Chicken",
+    "price": 210.0,
+    "description": "Pesto pasta with chicken.",
+    "photo": "juanitas-43.jpg"
+   },
+   {
+    "category": "Pasta",
+    "name": "Bolognese",
+    "price": 210.0,
+    "description": "Pasta in tomato and meat sauce.",
+    "photo": "juanitas-44.jpg"
+   },
+   {
+    "category": "Pasta",
+    "name": "Truffle Carbonara",
+    "price": 220.0,
+    "description": "Carbonara with truffle.",
+    "photo": "juanitas-45.jpg"
    },
    {
     "category": "Pasta",
@@ -3942,21 +4096,35 @@
     "name": "Korean Ramen",
     "price": 150.0,
     "description": "Spicy Korean ramen.",
-    "photo": null
+    "photo": "juanitas-47.jpg"
+   },
+   {
+    "category": "Others",
+    "name": "Regular Fries",
+    "price": 110.0,
+    "description": "Plain fries.",
+    "photo": "juanitas-48.jpg"
    },
    {
     "category": "Others",
     "name": "Cheese Fries",
     "price": 120.0,
     "description": "Fries with cheese.",
-    "photo": null
+    "photo": "juanitas-49.jpg"
    },
    {
     "category": "Others",
     "name": "Garlic Bread",
     "price": 30.0,
     "description": "Toasted garlic bread.",
-    "photo": null
+    "photo": "juanitas-50.jpg"
+   },
+   {
+    "category": "Others",
+    "name": "Kimchi Rice",
+    "price": 60.0,
+    "description": "Fried rice with kimchi.",
+    "photo": "juanitas-51.jpg"
    }
   ]
  },
@@ -3978,140 +4146,140 @@
     "category": "Hot Coffee",
     "price": 90.0,
     "description": "Espresso diluted with hot water",
-    "photo": null
+    "photo": "la-maison-01.jpg"
    },
    {
     "name": "Café Latte",
     "category": "Hot Coffee",
     "price": 110.0,
     "description": "Espresso with steamed milk",
-    "photo": null
+    "photo": "la-maison-02.jpg"
    },
    {
     "name": "Cappuccino",
     "category": "Hot Coffee",
     "price": 110.0,
     "description": "Espresso with steamed milk foam",
-    "photo": null
+    "photo": "la-maison-03.jpg"
    },
    {
     "name": "Caramel Macchiato",
     "category": "Coffee",
     "price": 135.0,
     "description": "Espresso with milk and caramel",
-    "photo": null
+    "photo": "la-maison-04.jpg"
    },
    {
     "name": "Spanish Latte",
     "category": "Coffee",
     "price": 130.0,
     "description": "Espresso with sweetened milk",
-    "photo": null
+    "photo": "la-maison-05.jpg"
    },
    {
     "name": "Iced Mocha",
     "category": "Iced Coffee",
     "price": 135.0,
     "description": "Espresso with chocolate and milk",
-    "photo": null
+    "photo": "la-maison-06.jpg"
    },
    {
     "name": "Matcha Latte",
     "category": "Non-Coffee",
     "price": 140.0,
     "description": "Matcha green tea with milk",
-    "photo": null
+    "photo": "la-maison-07.jpg"
    },
    {
     "name": "Hot Chocolate",
     "category": "Non-Coffee",
     "price": 100.0,
     "description": "Rich hot chocolate beverage",
-    "photo": null
+    "photo": "la-maison-08.jpg"
    },
    {
     "name": "Chicken Alfredo Pasta",
     "category": "Pasta",
     "price": 180.0,
     "description": "Pasta with creamy Alfredo sauce and chicken",
-    "photo": null
+    "photo": "la-maison-09.jpg"
    },
    {
     "name": "Carbonara",
     "category": "Pasta",
     "price": 170.0,
     "description": "Creamy pasta with bacon",
-    "photo": null
+    "photo": "la-maison-10.jpg"
    },
    {
     "name": "Spaghetti Bolognese",
     "category": "Pasta",
     "price": 160.0,
     "description": "Pasta with tomato and meat sauce",
-    "photo": null
+    "photo": "la-maison-11.jpg"
    },
    {
     "name": "Clubhouse Sandwich",
     "category": "Sandwiches",
     "price": 150.0,
     "description": "Layered sandwich with chicken and vegetables",
-    "photo": null
+    "photo": "la-maison-12.jpg"
    },
    {
     "name": "Chicken Sandwich",
     "category": "Sandwiches",
     "price": 120.0,
     "description": "Grilled chicken with lettuce and dressing",
-    "photo": null
+    "photo": "la-maison-13.jpg"
    },
    {
     "name": "Chicken Wings",
     "category": "Appetizers",
     "price": 190.0,
     "description": "Seasoned chicken wings with dipping sauce",
-    "photo": null
+    "photo": "la-maison-14.jpg"
    },
    {
     "name": "French Fries",
     "category": "Appetizers",
     "price": 85.0,
     "description": "Crispy golden potato fries",
-    "photo": null
+    "photo": "la-maison-15.jpg"
    },
    {
     "name": "Chocolate Cake",
     "category": "Desserts",
     "price": 120.0,
     "description": "Rich chocolate cake slice",
-    "photo": null
+    "photo": "la-maison-16.jpg"
    },
    {
     "name": "Blueberry Cheesecake",
     "category": "Desserts",
     "price": 145.0,
     "description": "Creamy cheesecake with blueberry topping",
-    "photo": null
+    "photo": "la-maison-17.jpg"
    },
    {
     "name": "Brownies",
     "category": "Desserts",
     "price": 75.0,
     "description": "Chocolate brownies",
-    "photo": null
+    "photo": "la-maison-18.jpg"
    },
    {
     "name": "Mango Shake",
     "category": "Beverages",
     "price": 110.0,
     "description": "Blended mango with milk and ice",
-    "photo": null
+    "photo": "la-maison-19.jpg"
    },
    {
     "name": "Strawberry Smoothie",
     "category": "Beverages",
     "price": 120.0,
     "description": "Blended strawberry drink",
-    "photo": null
+    "photo": "la-maison-20.jpg"
    }
   ],
   "hoursGuessed": true
@@ -4407,6 +4575,153 @@
   "longitude": 124.398484,
   "cover": "cup-stop-cover.jpg",
   "menu": [
+   {
+    "category": "Milktea",
+    "name": "Taro Milktea (16 oz)",
+    "price": 65.0,
+    "description": "Classic taro-flavored milk tea. ₱75 for 22 oz.",
+    "photo": "cup-stop-01.jpg"
+   },
+   {
+    "category": "Milktea",
+    "name": "Matcha Tea Milktea (16 oz)",
+    "price": 65.0,
+    "description": "Classic matcha-flavored milk tea. ₱75 for 22 oz.",
+    "photo": "cup-stop-02.jpg"
+   },
+   {
+    "category": "Milktea",
+    "name": "Wintermelon Milktea (16 oz)",
+    "price": 65.0,
+    "description": "Classic wintermelon-flavored milk tea. ₱75 for 22 oz.",
+    "photo": "cup-stop-03.jpg"
+   },
+   {
+    "category": "Milktea",
+    "name": "Chocolate Milktea (16 oz)",
+    "price": 65.0,
+    "description": "Classic chocolate-flavored milk tea. ₱75 for 22 oz.",
+    "photo": "cup-stop-04.jpg"
+   },
+   {
+    "category": "Milktea",
+    "name": "Caramel Milktea (16 oz)",
+    "price": 65.0,
+    "description": "Classic caramel-flavored milk tea. ₱75 for 22 oz.",
+    "photo": "cup-stop-05.jpg"
+   },
+   {
+    "category": "Premium Frappe",
+    "name": "Biscoff Frappe (16 oz)",
+    "price": 145.0,
+    "description": "Blended ice drink with Biscoff flavor and biscuit topping. ₱165 for 22 oz.",
+    "photo": "cup-stop-06.jpg"
+   },
+   {
+    "category": "Premium Frappe",
+    "name": "Dark Choco w/ Oreo (16 oz)",
+    "price": 145.0,
+    "description": "Blended dark chocolate frappe topped with Oreo cookies. ₱165 for 22 oz.",
+    "photo": "cup-stop-07.jpg"
+   },
+   {
+    "category": "Premium Frappe",
+    "name": "Oreo Dreams (16 oz)",
+    "price": 145.0,
+    "description": "Creamy blended cookies and cream frappe with Oreo. ₱165 for 22 oz.",
+    "photo": "cup-stop-08.jpg"
+   },
+   {
+    "category": "Matcha Creations",
+    "name": "Matcha",
+    "price": 110.0,
+    "description": "Classic iced matcha drink with milk.",
+    "photo": "cup-stop-09.jpg"
+   },
+   {
+    "category": "Matcha Creations",
+    "name": "Matcha Dream",
+    "price": 125.0,
+    "description": "Layered matcha drink with a creamy taro/ube base.",
+    "photo": "cup-stop-10.jpg"
+   },
+   {
+    "category": "Matcha Creations",
+    "name": "Matcha Berry",
+    "price": 140.0,
+    "description": "Iced matcha layered with strawberry/berry puree.",
+    "photo": "cup-stop-11.jpg"
+   },
+   {
+    "category": "Matcha Creations",
+    "name": "Green Matcha",
+    "price": 140.0,
+    "description": "Pure green matcha specialty drink.",
+    "photo": "cup-stop-12.jpg"
+   },
+   {
+    "category": "Matcha Creations",
+    "name": "Matcha Chocolate",
+    "price": 150.0,
+    "description": "Iced matcha layered with rich chocolate.",
+    "photo": "cup-stop-13.jpg"
+   },
+   {
+    "category": "Premium Milktea",
+    "name": "Cookies & Cream (16 oz)",
+    "price": 110.0,
+    "description": "Premium milk tea blended with crushed Oreo cookies. ₱120 for 22 oz.",
+    "photo": "cup-stop-14.jpg"
+   },
+   {
+    "category": "Premium Milktea",
+    "name": "Dark Chocolate (16 oz)",
+    "price": 110.0,
+    "description": "Rich dark chocolate premium milk tea. ₱120 for 22 oz.",
+    "photo": "cup-stop-15.jpg"
+   },
+   {
+    "category": "Premium Milktea",
+    "name": "Red Velvet Chocolate (16 oz)",
+    "price": 110.0,
+    "description": "Red velvet and chocolate premium milk tea. ₱120 for 22 oz.",
+    "photo": "cup-stop-16.jpg"
+   },
+   {
+    "category": "Premium Milktea",
+    "name": "Winter Choco (16 oz)",
+    "price": 110.0,
+    "description": "Wintermelon and chocolate premium milk tea. ₱120 for 22 oz.",
+    "photo": "cup-stop-17.jpg"
+   },
+   {
+    "category": "Non-Caffeine",
+    "name": "Chocolate (16 oz)",
+    "price": 70.0,
+    "description": "Sweet iced chocolate drink, caffeine-free. ₱90 for 22 oz.",
+    "photo": "cup-stop-18.jpg"
+   },
+   {
+    "category": "Non-Caffeine",
+    "name": "Mango Matcha (16 oz)",
+    "price": 70.0,
+    "description": "Mango and matcha layered fruit drink. ₱90 for 22 oz.",
+    "photo": "cup-stop-19.jpg"
+   },
+   {
+    "category": "Non-Caffeine",
+    "name": "Strawberry (16 oz)",
+    "price": 65.0,
+    "description": "Sweet strawberry milk drink, caffeine-free. ₱85 for 22 oz.",
+    "photo": "cup-stop-20.jpg"
+   },
+   {
+    "category": "Non-Caffeine",
+    "name": "Blueberry (16 oz)",
+    "price": 65.0,
+    "description": "Sweet blueberry milk drink, caffeine-free. ₱85 for 22 oz.",
+    "photo": "cup-stop-21.jpg"
+   },
    {
     "category": "Foods",
     "name": "Hungarian Rice Meal",

@@ -11,6 +11,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from present import present, save as save_presented
+from kuwang_photos import BIG_BU_COVER, kuwang_photo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
@@ -150,7 +151,7 @@ S = [
     ("antonios", "Antonio's Travelers Eatery", "CARINDERIA", "A convenient dining spot for travelers and locals with budget-friendly breakfast specials, classic Filipino stews and vegetable dishes.", "P. Inocentes St, Padre Inocentes Garcia, Naval, Biliran", "07:00", "20:00", [11.5608, 124.3925], "Carinderia/Antonio_s Travelers Eatery/pork adobo.jpg", with_prices("antonios", from_table(CARINDERIA[3])), {}),
     ("marb-marb", "Marb Marb Eatery", "CARINDERIA", "A well-known neighborhood eatery along P.I. Garcia Street with hearty Filipino homestyle cooking, fresh fish specials and budget meals.", "P.I. Garcia St, Naval, Biliran", "06:00", "19:30", [11.5594, 124.3951], "Carinderia/Marb Marb Eatery/fried chicken.jpg", with_prices("marb-marb", from_table(CARINDERIA[5])), {}),
     ("kunis", "Kunis Eatery", "CARINDERIA", "A friendly roadside eatery serving fresh home-style ulam, soup dishes and affordable vegetable options for student and worker budgets.", "P.I. Garcia St, Naval, Biliran", "06:30", "19:00", [11.5590, 124.3944], "Carinderia/Kunis Eatery/a375f42f6dc752b176c92997a7fa1a8d.jpg", with_prices("kunis", from_table(CARINDERIA[7])), {}),
-    ("big-bu", "Big Bu Meals And Snacks", "CARINDERIA", "A casual neighborhood carinderia along Caibiran Cross-Country Road offering affordable Filipino lutong-bahay viands, fresh vegetable dishes and budget meals.", "Caibiran Cross-Country Road, Naval, Biliran", "06:30", "19:30", plus("HC72+H6X"), None, from_table(CARINDERIA[8]), {}),
+    ("big-bu", "Big Bu Meals And Snacks", "CARINDERIA", "A casual neighborhood carinderia along Caibiran Cross-Country Road offering affordable Filipino lutong-bahay viands, fresh vegetable dishes and budget meals.", "Caibiran Cross-Country Road, Naval, Biliran", "06:30", "19:30", plus("HC72+H6X"), BIG_BU_COVER, from_table(CARINDERIA[8]), {}),
     # ----- Home kitchens -----
     ("paul-beth", "Paul & Beth Eatery", "HOME_KITCHEN", "A cozy family-operated eatery offering homemade Filipino dishes, fresh seafood, savory soups and affordable rice meals.", "Caneja St, Naval, Biliran", "06:00", "17:00", [11.5617, 124.3947], "Home kitchen/Paul & Beth Eatery/adobo.jpg", from_table(HOME[1]), {}),
     ("marelous", "Marelous Eatery", "HOME_KITCHEN", "A popular eatery in Naval known for generous meal portions, flavorful meat stews, fried fish and tasty vegetable viands.", "Vicentillo St, Naval, Biliran", "06:00", "19:00", [11.5636, 124.3972], "Home kitchen/Marelous Eatery/fried chicken.jpg", from_table(HOME[3]), {}),
@@ -196,7 +197,7 @@ for slug, name, kind, desc, address, opens, closes, pin, cover, menu, extra in S
     dishes = []
     for i, d in enumerate(menu):
         assert d["price"] is not None and d["price"] > 0, (slug, d)
-        src = d.pop("photoSrc", None) or (os.path.join(folder, pics[d["name"]]) if d["name"] in pics else None)
+        src = d.pop("photoSrc", None) or (os.path.join(folder, pics[d["name"]]) if d["name"] in pics else None) or kuwang_photo(slug, d["name"])
         d["photo"] = photo(src, f"{slug}-{i + 1:02d}") if src else None
         dishes.append(d)
     stores.append({

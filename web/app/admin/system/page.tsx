@@ -198,7 +198,7 @@ async function SystemMonitor() {
         <ul className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">{workers.map(instanceCard)}</ul>
       </Card>
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:items-stretch">
         <Card title="Message queues" description="RabbitMQ" Icon={Inbox} actions={<Dot up={status.rabbitmq.up} />}>
           <div tabIndex={0} role="region" aria-label="Processes" className="overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500">
             <table className={TABLE}>
@@ -227,8 +227,9 @@ async function SystemMonitor() {
           </div>
         </Card>
 
+        {/* As tall as the queues beside it: the three rows share the height */}
         <Card title="Data services" Icon={Database}>
-          <ul className="divide-y divide-line">
+          <ul className="flex flex-1 flex-col divide-y divide-line">
             {[
               {
                 Icon: Database,
@@ -252,7 +253,7 @@ async function SystemMonitor() {
                 stats: [`${status.outboxWaiting} waiting to be sent`],
               },
             ].map(({ Icon, name, role, up, stats }) => (
-              <li key={name} className="flex items-start gap-3 px-5 py-4">
+              <li key={name} className="flex flex-1 items-center gap-3 px-5 py-4">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100">
                   <Icon className="size-[18px]" aria-hidden />
                 </span>

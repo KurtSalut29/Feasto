@@ -194,6 +194,8 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
               <p className="border-t border-line bg-canvas/40 px-5 py-3 text-sm text-muted">The Excel download lists all {report.dishes.length} dishes and every order.</p>
             )}
           </Card>
+
+          <CommissionCard earnings={earnings} totals={totals} />
         </div>
 
         <aside className="space-y-6">
@@ -212,8 +214,6 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
               </ViewReportButton>
             </div>
           </Card>
-
-          <CommissionCard earnings={earnings} totals={totals} />
 
           <PayoutsCard who="store" data={payouts} />
 

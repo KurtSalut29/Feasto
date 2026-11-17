@@ -29,7 +29,7 @@ DISH_SIZE = (1200, 900)
 SAFE_RADIUS = 0.42
 
 # Stores whose picture is a food photo, not a logo
-PHOTOS = {"jam-jay", "antonios", "marb-marb", "kunis", "paul-beth", "marelous", "talyer-belly", "lub-dub"}
+PHOTOS = {"jam-jay", "antonios", "marb-marb", "kunis", "big-bu", "paul-beth", "marelous", "talyer-belly", "lub-dub"}
 # Cut first: the useful part of a picture that came with a frame or a bar (left, top, right, bottom)
 CROPS = {
     "cusina-de-salas": (255, 232, 755, 735),  # the round logo, without the empty frame around it
