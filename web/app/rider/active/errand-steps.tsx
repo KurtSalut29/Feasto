@@ -41,10 +41,18 @@ export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "
   async function bought() {
     setBusy(true);
     setError(undefined);
-    const result = await apiRequest(`/rider/errands/${id}/bought`, { method: "POST", body: { receiptPhotoUrl: photo, receiptTotal: Number(total) } });
+    const result = await apiRequest<{ fee: number; collect: number; feeChanged: boolean }>(`/rider/errands/${id}/bought`, {
+      method: "POST",
+      body: { receiptPhotoUrl: photo, receiptTotal: Number(total) },
+    });
     setBusy(false);
     if (!result.ok) return setError(result.fieldErrors?.receiptTotal?.[0] ?? result.fieldErrors?.receiptPhotoUrl?.[0] ?? result.error);
-    toast.success("Receipt sent", `Now bring it to the customer and collect ${formatPeso(Number(total) + fee)}.`);
+    toast.success(
+      "Receipt sent",
+      result.data.feeChanged
+        ? `The shop wasn't where the customer pinned it, so your fee is now ${formatPeso(result.data.fee)}. Collect ${formatPeso(result.data.collect)}.`
+        : `Now bring it to the customer and collect ${formatPeso(result.data.collect)}.`,
+    );
     router.refresh();
   }
 

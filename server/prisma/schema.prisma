@@ -823,6 +823,13 @@ model Errand {
   shopAddress      String
   shopLat          Float
   shopLng          Float
+  /// The listed Pabili place it's from (pinned by the admin); null when the resident pinned the shop themselves
+  placeId          String?
+  place            PabiliPlace? @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  /// The fee first quoted, kept when the rider's GPS at the shop showed the resident's pin was off and the fee was corrected
+  quotedFee        Decimal?     @db.Decimal(10, 2)
+  /// How far the resident's pin was from where the rider actually bought (km), when it was corrected
+  shopMovedKm      Float?
   /// What to buy: [{ name, quantity, note }]
   items            Json
   notes            String?
@@ -846,4 +853,29 @@ model Errand {
   @@index([status, createdAt])
   @@index([riderId, status])
   @@index([residentId, createdAt])
+}
+
+enum PabiliPlaceKind {
+  MARKET
+  PHARMACY
+  GROCERY
+  HARDWARE
+  SARI_SARI
+  OTHER
+}
+
+/// A shop that isn't on Feasto but residents often ask a Pabili from; the admin pins it once, so the fee and directions are right
+model PabiliPlace {
+  id        String          @id @default(cuid())
+  name      String
+  kind      PabiliPlaceKind
+  address   String
+  latitude  Float
+  longitude Float
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  errands   Errand[]
+
+  @@index([isActive, name])
 }

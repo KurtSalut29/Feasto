@@ -35,7 +35,7 @@ async function Pabili() {
 
   return (
     <>
-      <MobileHeading title="Pabili" subtitle="A rider buys it for you at any shop, even one that isn't on Feasto, and brings it." />
+      <MobileHeading title="Pabili" subtitle="A rider buys it for you at a shop that isn't on Feasto, like the market or a drugstore, and brings it." />
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-6">
         <PabiliForm addresses={addresses} budgetMax={budgetMax} waitMinutes={waitMinutes} />
 

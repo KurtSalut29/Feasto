@@ -16,6 +16,8 @@ import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { formatPeso } from "@/lib/format";
 import type { LatLng } from "@/lib/geo";
 import type { Address } from "@/lib/types";
+import type { PabiliPlace } from "./errand";
+import { ShopPicker } from "./shop-picker";
 
 type Item = { key: number; name: string; quantity: number; note: string };
 
@@ -37,7 +39,7 @@ function Section({ n, title, children }: { n: number; title: string; children: R
 }
 
 /**
- * Asking for a Pabili in one go: the shop and its pin, everything to buy as a list, the most the
+ * Asking for a Pabili in one go: the shop (from the list, or named and pinned), everything to buy as a list, the most the
  * rider may spend, where to bring it, and (if they like) which rider. Easier than sending a rider
  * one message per item: the rider gets the whole list, the fee is known before sending, and the
  * receipt photo shows exactly what was spent.
@@ -46,7 +48,9 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const router = useRouter();
   const [shopName, setShopName] = useState("");
   const [shopAddress, setShopAddress] = useState("");
-  const [shop, setShop] = useState<LatLng | null>(null);
+  const [place, setPlace] = useState<PabiliPlace | null>(null);
+  const [custom, setCustom] = useState(false);
+  const [pin, setPin] = useState<LatLng | null>(null);
   const [items, setItems] = useState<Item[]>([blankItem()]);
   const [notes, setNotes] = useState("");
   const [budget, setBudget] = useState("");
@@ -57,6 +61,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const home = addresses.find((a) => a.id === addressId);
+  const shop = place ? { lat: place.latitude, lng: place.longitude } : custom ? pin : null;
   const near = home?.latitude != null && home.longitude != null ? { lat: home.latitude, lng: home.longitude } : null;
   const { data: quote } = useApiData<{ fee: number; km: number | null }>(shop && addressId ? `/errands/quote?lat=${shop.lat}&lng=${shop.lng}&addressId=${addressId}` : null);
   const spend = Number(budget) || 0;
@@ -68,9 +73,10 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     setError(undefined);
     const filled = items.filter((i) => i.name.trim());
     const problems: FieldErrors = {
-      ...(shopName.trim().length < 2 && { shopName: ["Enter the shop's name."] }),
-      ...(shopAddress.trim().length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
-      ...(!shop && { shopLat: ["Move the map so the pin sits on the shop."] }),
+      ...(!place && !custom && { placeId: ["Choose the shop, or tap “My shop isn't on the list”."] }),
+      ...(custom && shopName.trim().length < 2 && { shopName: ["Enter the shop's name."] }),
+      ...(custom && shopAddress.trim().length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
+      ...(custom && !pin && { shopLat: ["Move the map so the pin sits on the shop."] }),
       ...(filled.length === 0 && { items: ["Add at least one thing to buy."] }),
       ...((spend < 20 || spend > budgetMax) && { budget: [`Enter ₱20 to ₱${budgetMax.toLocaleString("en-PH")}.`] }),
       ...(!addressId && { addressId: ["Choose where to deliver it."] }),
@@ -82,10 +88,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     const result = await apiRequest<{ errand: { id: string } }>("/errands", {
       method: "POST",
       body: {
-        shopName,
-        shopAddress,
-        shopLat: shop!.lat,
-        shopLng: shop!.lng,
+        ...(place ? { placeId: place.id } : { shopName, shopAddress, shopLat: pin!.lat, shopLng: pin!.lng }),
         items: filled.map((i) => ({ name: i.name, quantity: i.quantity, note: i.note || undefined })),
         notes: notes || undefined,
         budget: spend,
@@ -126,18 +129,37 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     >
       <Section n={1} title="Where to buy">
         <div className="space-y-3">
-          <TextField label="Shop name" name="shopName" icon={Store} value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Aling Rosa's Sari-sari Store" required error={err("shopName")} />
-          <TextField
-            label="Where it is"
-            name="shopAddress"
-            icon={MapPin}
-            value={shopAddress}
-            onChange={(e) => setShopAddress(e.target.value)}
-            placeholder="Street, barangay or a landmark"
-            required
-            error={err("shopAddress")}
+          <ShopPicker
+            addressId={addressId}
+            value={place}
+            custom={custom}
+            onPick={(p) => {
+              setPlace(p);
+              setFieldErrors(({ placeId: _, ...rest }) => rest);
+            }}
+            onCustom={() => setCustom(true)}
+            onReset={() => {
+              setPlace(null);
+              setCustom(false);
+            }}
+            error={err("placeId")}
           />
-          <LocationPicker value={shop} onChange={setShop} near={near} label="The shop on the map" hint="Move the map so the pin sits on the shop. It sets the delivery fee and the rider's directions." required error={err("shopLat") ?? err("shopLng")} />
+          {custom && (
+            <>
+              <TextField label="Shop name" name="shopName" icon={Store} value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Aling Rosa's Sari-sari Store" required error={err("shopName")} />
+              <TextField
+                label="Where it is"
+                name="shopAddress"
+                icon={MapPin}
+                value={shopAddress}
+                onChange={(e) => setShopAddress(e.target.value)}
+                placeholder="Street, barangay or a landmark"
+                required
+                error={err("shopAddress")}
+              />
+              <LocationPicker value={pin} onChange={setPin} near={near} label="The shop on the map" hint="Move the map so the pin sits on the shop. It sets the delivery fee and the rider's directions." required error={err("shopLat") ?? err("shopLng")} />
+            </>
+          )}
         </div>
       </Section>
 
@@ -258,7 +280,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Delivery fee</dt>
-            <dd className="font-semibold text-ink tabular-nums">{quote ? formatPeso(quote.fee) : shop ? "…" : "Set the shop's pin"}</dd>
+            <dd className="font-semibold text-ink tabular-nums">{quote ? formatPeso(quote.fee) : shop ? "…" : "Choose the shop"}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-1 text-[0.9375rem] font-bold text-ink">
             <dt>Cash to have ready, at most</dt>

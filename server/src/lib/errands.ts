@@ -14,6 +14,10 @@ export const PABILI_BUDGET_MAX = 1000;
 export const PABILI_BUDGET_MIN = 20;
 /** A Pabili nobody takes in this long is cancelled, and the resident is told */
 export const ERRAND_WAIT_MINUTES = 15;
+/** How far a shop the resident pinned themselves may be from where it's delivered */
+export const PABILI_MAX_KM = 5;
+/** If the rider buys farther than this from the resident's pin, the shop moves there and the fee is worked out again */
+export const SHOP_PIN_TOLERANCE_KM = 0.5;
 /** How many free riders near the shop hear about a new Pabili */
 const NEARBY_RIDERS = 10;
 
