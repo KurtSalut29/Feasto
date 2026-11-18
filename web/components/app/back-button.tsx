@@ -11,7 +11,9 @@ import { useEffect } from "react";
  * trail of the pages (paths) behind each history entry, and Back goes to the page before the
  * first time you reached this one since the last main tab, by moving that many steps back in
  * the browser's history (so the page comes back as you left it). With no such page (a link opened from a message, or after
- * a reload), Back opens the page above this one instead.
+ * a reload), Back opens the page above this one instead, in place of this one: pushing it would
+ * leave this page behind it, and the page above's own Back would bring you right back here, round
+ * and round (Pabili detail → Pabili → Pabili detail → …).
  */
 type Trail = { paths: string[]; index: number };
 
@@ -125,7 +127,7 @@ export function BackButton({
       onClick={() => {
         const steps = stepsBack(isMain, skip);
         if (steps) history.go(-steps);
-        else router.push(fallback);
+        else router.replace(fallback);
       }}
       className={
         variant === "icon"
