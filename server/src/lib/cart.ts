@@ -84,7 +84,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
           permitPausedAt: true,
           acceptsCash: true,
           onlinePayments: true,
-          owner: { select: { disabledAt: true } },
+          owner: { select: { disabledAt: true, suspendedUntil: true } },
         },
       },
     },
@@ -114,7 +114,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
         store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, latitude: item.vendor.latitude, longitude: item.vendor.longitude, opensAt: item.vendor.opensAt, closesAt: item.vendor.closesAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
         items: [],
         subtotal: 0,
-        problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt || item.vendor.permitPausedAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
+        problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt || item.vendor.owner.suspendedUntil || item.vendor.permitPausedAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
         delivery: null,
         pin: { latitude: item.vendor.latitude, longitude: item.vendor.longitude },
       };

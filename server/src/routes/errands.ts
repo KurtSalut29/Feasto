@@ -15,6 +15,7 @@ import { averageOf, shortName } from "../lib/riderRatings.js";
 import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
+import { refuseIfSuspended } from "../lib/userReports.js";
 
 const peso = (n: unknown) => Math.round(Number(n) * 100) / 100;
 const locationKey = (id: string) => `rider-location:${id}`;
@@ -100,6 +101,7 @@ errandsRouter.get("/on-feasto", async (req, res) => {
 errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of Pabili just now."), async (req, res) => {
   const input = parseBody(errandSchema, req.body);
   const userId = req.session!.userId;
+  await refuseIfSuspended(userId, "pabili");
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });
   if (open >= 2) throw new HttpError(409, "You already have two Pabili on the way. Wait for one to arrive first.");
   const address = await addressOf(userId, input.addressId);
@@ -298,6 +300,7 @@ riderErrandsRouter.post("/errands/:id/accept", async (req, res) => {
   if (profile.vendorId) throw new HttpError(403, "Store riders deliver only for their store.");
   if (!profile.isOnline) throw new HttpError(400, "Go online to take a Pabili.");
   if (hasExpired(profile.licenseExpiresAt)) throw new HttpError(403, "Your driver's license has expired. Upload your renewed license to take jobs.");
+  await refuseIfSuspended(userId, "jobs");
 
   // The same per-rider lock as delivery jobs: two quick taps can't make the rider busy twice
   const lock = `lock:rider:${userId}`;

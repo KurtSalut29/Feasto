@@ -15,6 +15,7 @@ import { orderCode, riderEarns } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { PaymentMethod, PayoutsData, SalesDay } from "@/lib/types";
 import type { Totals } from "../rider-hero";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "History" };
 
@@ -217,6 +218,15 @@ async function RiderHistory() {
                       </p>
                     )}
                     {Number(d.tip) > 0 && <p className="text-[0.6875rem] font-medium text-emerald-700 tabular-nums">+ {formatPeso(d.tip)} tip</p>}
+                    <ReportProblem
+                      compact
+                      className="-mr-2"
+                      target={{ orderId: d.id }}
+                      people={[
+                        { role: "VENDOR", name: d.vendor.name },
+                        { role: "RESIDENT", name: "The customer" },
+                      ]}
+                    />
                     {d.riderRating && (
                       <p className="mt-0.5 inline-flex items-center gap-0.5 text-[0.6875rem] font-semibold text-ink">
                         <Star className="size-3 fill-amber-400 text-amber-400" aria-hidden />

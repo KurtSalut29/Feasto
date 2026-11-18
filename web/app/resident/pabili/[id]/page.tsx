@@ -12,6 +12,7 @@ import { pinOf } from "@/lib/geo";
 import { serverApi } from "@/lib/server-api";
 import { ERRAND_STATUS, type Errand } from "../errand";
 import { ErrandActions } from "./errand-actions";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Pabili" };
 
@@ -157,6 +158,11 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
                 <Image src={errand.deliveryPhotoUrl} alt="Photo of the delivered items" fill unoptimized className="object-cover" />
               </div>
             </section>
+          )}
+          {errand.rider && (
+            <div className="flex justify-center">
+              <ReportProblem target={{ errandId: errand.id }} people={[{ role: "RIDER", name: errand.rider.name }]} />
+            </div>
           )}
         </div>
       </div>

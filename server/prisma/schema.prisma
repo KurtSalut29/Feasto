@@ -172,6 +172,9 @@ model User {
   role              Role      @default(RESIDENT)
   /// Set by an admin to block the account; the user is logged out everywhere at once
   disabledAt        DateTime?
+  /// Suspended by the admin after a report: can sign in, but can't order, take jobs or get orders until then.
+  /// Feasto lifts it by itself when the time is up (an "until the admin lifts it" suspension is year 2999).
+  suspendedUntil    DateTime?
   /// Sessions signed before this moment stop working, so a new password logs out other devices
   passwordChangedAt DateTime?
   /// Display & accessibility, chosen by the person and applied on every device they log in on
@@ -196,6 +199,9 @@ model User {
   errands       Errand[]       @relation("ResidentErrands")
   errandRuns    Errand[]       @relation("RiderErrands")
   errandAsks    Errand[]       @relation("PreferredErrandRider")
+  /// Reports this person sent, and reports about them
+  reportsMade    Report[]           @relation("ReportsMade")
+  reportsAgainst Report[]           @relation("ReportsAgainst")
   settlements   Settlement[]   @relation("RiderSettlements")
   feastoPayments FeastoPayment[] @relation("RiderFeastoPayments")
   payouts       Payout[]       @relation("RiderPayouts")
@@ -515,6 +521,8 @@ model Order {
   payouts   Payout[]
   chatReads OrderChatRead[]
 
+  reports Report[]
+
   @@index([vendorId, status])
   @@index([riderId])
   @@index([checkoutId])
@@ -721,6 +729,8 @@ model Booking {
   activeSlotKey String?       @unique
   createdAt     DateTime      @default(now())
 
+  reports Report[]
+
   @@index([tableId, startsAt])
 }
 
@@ -847,8 +857,66 @@ model Errand {
   boughtAt         DateTime?
   finishedAt       DateTime?
 
+  reports Report[]
+
   @@index([status, createdAt])
   @@index([riderId, status])
   @@index([residentId, createdAt])
 }
 
+/// Why someone reported a person they dealt with on an order, a Pabili or a booking
+enum ReportReason {
+  PRANK_ORDER
+  NO_SHOW
+  RUDE
+  UNSAFE_DRIVING
+  WRONG_ITEMS
+  OFF_APP_PAYMENT
+  OTHER
+}
+
+/// Where a report is: waiting for the admin, or what the admin did
+enum ReportStatus {
+  OPEN
+  DISMISSED
+  WARNED
+  SUSPENDED
+}
+
+/// A report about someone, always from an order, Pabili or booking both of them were part of
+model Report {
+  id             String       @id @default(cuid())
+  reporterId     String
+  reporter       User         @relation("ReportsMade", fields: [reporterId], references: [id])
+  reporterRole   Role
+  reportedId     String
+  reported       User         @relation("ReportsAgainst", fields: [reportedId], references: [id])
+  /// What the reported person was in it: the store (VENDOR), the rider, or the customer
+  reportedRole   Role
+  orderId        String?
+  order          Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  errandId       String?
+  errand         Errand?      @relation(fields: [errandId], references: [id], onDelete: SetNull)
+  bookingId      String?
+  booking        Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  reason         ReportReason
+  details        String
+  photoUrl       String?
+  status         ReportStatus @default(OPEN)
+  /// The admin's words: the warning the reported person reads, or why it was dismissed
+  adminNote      String?
+  /// For a suspension: until when
+  suspendedUntil DateTime?
+  resolvedAt     DateTime?
+  resolvedByName String?
+  /// When the reported person read the warning (it shows once, after they sign in)
+  warningSeenAt  DateTime?
+  createdAt      DateTime     @default(now())
+
+  /// One report per person, per person reported, per order / Pabili / booking
+  @@unique([reporterId, reportedId, orderId])
+  @@unique([reporterId, reportedId, errandId])
+  @@unique([reporterId, reportedId, bookingId])
+  @@index([status, createdAt])
+  @@index([reportedId, createdAt])
+}

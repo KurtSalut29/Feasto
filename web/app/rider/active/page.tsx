@@ -19,6 +19,7 @@ import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
 import { TripDirections, TripDirectionsButton } from "./trip-directions";
 import { ErrandActive, type RiderErrand } from "./errand-active";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Active delivery" };
 
@@ -289,6 +290,15 @@ async function RiderActive() {
             </p>
           )}
         </Box>
+        <div className="flex justify-center">
+          <ReportProblem
+            target={{ orderId: order.id }}
+            people={[
+              { role: "VENDOR", name: order.vendor.name },
+              { role: "RESIDENT", name: order.checkout.resident.name },
+            ]}
+          />
+        </div>
       </div>
       </TripDirections>
     </>

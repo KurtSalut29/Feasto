@@ -19,6 +19,7 @@ import type { VendorOrderDetail } from "@/lib/types";
 import { OrderActions } from "../order-actions";
 import { commissionLine, DishThumb, paymentLine } from "../order-parts";
 import { RiderLive } from "../rider-live";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -210,6 +211,13 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                   <MessageSquareText className="mt-0.5 size-4 shrink-0" aria-hidden />
                   {order.checkout.notes}
                 </p>
+              )}
+              {order.status !== "AWAITING_PAYMENT" && (
+                <ReportProblem
+                  className="-ml-3"
+                  target={{ orderId: order.id }}
+                  people={[{ role: "RESIDENT", name: order.checkout.resident.name }, ...(order.rider ? [{ role: "RIDER" as const, name: order.rider.name }] : [])]}
+                />
               )}
             </div>
           </Card>

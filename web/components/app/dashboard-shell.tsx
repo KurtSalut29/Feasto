@@ -13,6 +13,7 @@ import { PageBack } from "./page-back";
 import { SidebarNav } from "./sidebar-nav";
 import { SkipLink } from "./skip-link";
 import { DisplaySync } from "./display-settings";
+import { AccountNotice } from "./account-notice";
 
 type DashboardRole = "VENDOR" | "ADMIN";
 
@@ -23,6 +24,7 @@ const COUNTED_LINKS: Record<DashboardRole, { href: string; meaning: string }[]> 
     { href: "/admin/approvals", meaning: "waiting for review" },
     { href: "/admin/documents", meaning: "documents to check" },
     { href: "/admin/stuck", meaning: "stuck orders" },
+    { href: "/admin/user-reports", meaning: "reports to check" },
   ],
 };
 
@@ -71,6 +73,7 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
               </span>
               <NotificationBell variant="floating" allHref={role === "VENDOR" ? "/vendor/notifications" : "/admin/notifications"} />
             </div>
+            {role === "VENDOR" && <AccountNotice role="VENDOR" />}
             {children}
           </div>
         </main>
@@ -190,11 +193,12 @@ export async function SidebarUser() {
 const waitingCounts = cache(async (role: DashboardRole): Promise<Record<string, number>> => {
   try {
     if (role === "VENDOR") return { "/vendor/orders": (await serverApi<{ pending: number }>("/vendor/overview")).pending };
-    const stats = await serverApi<{ pendingStores: number; pendingRiders: number; renewals: number; expiredDocuments: number; stuckOrders: number }>("/admin/overview");
+    const stats = await serverApi<{ pendingStores: number; pendingRiders: number; renewals: number; expiredDocuments: number; stuckOrders: number; openReports: number }>("/admin/overview");
     return {
       "/admin/approvals": stats.pendingStores + stats.pendingRiders,
       "/admin/documents": stats.renewals + stats.expiredDocuments,
       "/admin/stuck": stats.stuckOrders,
+      "/admin/user-reports": stats.openReports,
     };
   } catch {
     return {}; // a missing count shouldn't break the whole dashboard

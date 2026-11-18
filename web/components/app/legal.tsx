@@ -94,9 +94,15 @@ export function TermsOfService({ inPopup = false }: { inPopup?: boolean }) {
             "harass, threaten or insult anyone in chats, ratings or reviews;",
             "post ratings or reviews that aren't honest, or for orders you weren't part of;",
             "use someone else's account, documents or identity;",
-            "try to break, overload or get around Feasto's security, or copy its data with automated tools.",
+            "try to break, overload or get around Feasto's security, or copy its data with automated tools;",
+            "send reports that aren't true.",
           ]}
         />
+        <p>
+          If someone on your order, Pabili or booking does any of this, use &ldquo;Report a problem&rdquo; on it. Feasto&apos;s admin checks every report against the order and its chat, and may
+          dismiss it, warn the person, or suspend their account for a while. While suspended, a customer can&apos;t order, a rider can&apos;t take jobs, and a store doesn&apos;t get new orders;
+          what&apos;s already started can be finished. The person reported never sees who sent it.
+        </p>
       </Section>
 
       <Section title="9. What Feasto is responsible for">

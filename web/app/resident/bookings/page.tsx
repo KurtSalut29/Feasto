@@ -15,6 +15,7 @@ import type { BookingStatus, ResidentBooking } from "@/lib/types";
 import { DirectionsButton } from "@/components/map/directions-button";
 import { pinOf } from "@/lib/geo";
 import { CancelBookingButton } from "./cancel-booking-button";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Bookings" };
 
@@ -153,8 +154,9 @@ function NextBooking({ booking, justBooked }: { booking: ResidentBooking; justBo
             <span className={`${chip} text-muted`}>No map pin yet</span>
           )}
         </div>
-        <div className="flex justify-center">
+        <div className="flex flex-wrap justify-center gap-2">
           <CancelBookingButton bookingId={booking.id} storeName={store.name} when={`${formatDay(booking.startsAt)}, ${formatClock(booking.startsAt)}`} />
+          <ReportProblem target={{ bookingId: booking.id }} people={[{ role: "VENDOR", name: store.name }]} />
         </div>
       </div>
     </article>
@@ -219,6 +221,7 @@ function BookingCard({ booking, upcoming }: { booking: ResidentBooking; upcoming
               Book again
             </Link>
           )}
+          {!upcoming && <ReportProblem compact className="ml-auto" target={{ bookingId: booking.id }} people={[{ role: "VENDOR", name: store.name }]} />}
         </div>
       </div>
     </li>

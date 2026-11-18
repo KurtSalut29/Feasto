@@ -31,6 +31,7 @@ const storeFields = {
   closesAt: true,
   isTemporarilyClosed: true,
   permitPausedAt: true,
+  owner: { select: { suspendedUntil: true } },
   acceptsReservations: true,
   ratingSum: true,
   ratingCount: true,
@@ -38,12 +39,19 @@ const storeFields = {
 
 /**
  * Average stars rounded to one decimal, or null before the first rating. A store paused for its
- * expired permit shows to residents as not taking orders (the reason is between it and Feasto).
+ * expired permit, or whose owner is suspended after a report, shows to residents as not taking
+ * orders (the reason is between it and Feasto).
  */
-function withRating<T extends { ratingSum: number; ratingCount: number; isTemporarilyClosed: boolean; permitPausedAt: Date | null }>({ ratingSum, ratingCount, permitPausedAt, ...store }: T) {
+function withRating<T extends { ratingSum: number; ratingCount: number; isTemporarilyClosed: boolean; permitPausedAt: Date | null; owner: { suspendedUntil: Date | null } }>({
+  ratingSum,
+  ratingCount,
+  permitPausedAt,
+  owner,
+  ...store
+}: T) {
   return {
     ...store,
-    isTemporarilyClosed: store.isTemporarilyClosed || permitPausedAt !== null,
+    isTemporarilyClosed: store.isTemporarilyClosed || permitPausedAt !== null || owner.suspendedUntil !== null,
     rating: ratingCount ? Math.round((ratingSum / ratingCount) * 10) / 10 : null,
     ratingCount,
   };
@@ -268,9 +276,9 @@ storesRouter.get("/:id", async (req, res) => {
       isFavorite: saved !== null,
       // First name and last initial only, e.g. "Juan D."
       reviews: reviews.map(({ resident, ...review }) => ({ ...review, author: shortName(resident.name) })),
-      isOpen: !store.permitPausedAt && isStoreOpen(store),
+      isOpen: !store.permitPausedAt && !store.owner.suspendedUntil && isStoreOpen(store),
       // Bookings need at least one table set up (and no pause for an expired permit)
-      canBook: store.acceptsReservations && tables.length > 0 && !store.permitPausedAt,
+      canBook: store.acceptsReservations && tables.length > 0 && !store.permitPausedAt && !store.owner.suspendedUntil,
       maxPartySize: Math.max(0, ...tables.map((t) => t.seats)),
     },
   });

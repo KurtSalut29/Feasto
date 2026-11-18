@@ -8,6 +8,7 @@ import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { manilaTime } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { myVendorId } from "./vendor.js";
+import { refuseIfSuspended } from "../lib/userReports.js";
 
 /**
  * Table bookings use fixed one-hour slots. A booking holds `activeSlotKey` =
@@ -98,6 +99,7 @@ const bookSchema = z.object({
 
 bookingsRouter.post("/", requireRole("RESIDENT"), async (req, res) => {
   const input = parseBody(bookSchema, req.body);
+  await refuseIfSuspended(req.session!.userId, "book");
   checkDate(input.date);
   const store = await bookableStore(input.vendorId);
   if (!hourlySlots(store.opensAt, store.closesAt).includes(input.time)) throw new HttpError(400, "The store isn't open at that time.");

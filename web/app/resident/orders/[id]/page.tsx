@@ -24,6 +24,7 @@ import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
 import { RateRider } from "./rate-rider";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -340,6 +341,14 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         )}
         {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT" || order.status === "SCHEDULED") && <CancelOrderButton orderId={order.id} />}
         {(received || dropped) && <ReorderButton orderId={order.id} />}
+        {order.status !== "AWAITING_PAYMENT" && (
+          <div className="flex justify-center">
+            <ReportProblem
+              target={{ orderId: order.id }}
+              people={[{ role: "VENDOR", name: order.vendor.name }, ...(order.rider ? [{ role: "RIDER" as const, name: order.rider.name }] : [])]}
+            />
+          </div>
+        )}
       </div>
     </>
   );

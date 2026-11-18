@@ -23,6 +23,7 @@ import { serverApi } from "@/lib/server-api";
 import type { BookingStatus, DiningTable, VendorBooking } from "@/lib/types";
 import { BookingActions } from "./booking-actions";
 import { TablesManager } from "./tables-manager";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Reservations" };
 
@@ -265,6 +266,7 @@ async function VendorReservations({
                     {b.status === "CONFIRMED" && (
                       <BookingActions bookingId={b.id} started={b.started} />
                     )}
+                    <ReportProblem compact target={{ bookingId: b.id }} people={[{ role: "RESIDENT", name: b.resident.name }]} />
                   </div>
                 </li>
               ))}

@@ -16,6 +16,7 @@ import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { shareErrandLocation } from "./errands.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
+import { refuseIfSuspended } from "../lib/userReports.js";
 
 export const riderRouter = Router();
 riderRouter.use(requireAuth, requireRole("RIDER"));
@@ -45,7 +46,10 @@ function refuseExpiredLicense(profile: { licenseExpiresAt: Date | null }) {
 riderRouter.patch("/availability", async (req, res) => {
   const { isOnline } = parseBody(z.object({ isOnline: z.boolean() }), req.body);
   const profile = await approvedRider(req.session!.userId);
-  if (isOnline) refuseExpiredLicense(profile);
+  if (isOnline) {
+    refuseExpiredLicense(profile);
+    await refuseIfSuspended(req.session!.userId, "jobs");
+  }
   await prisma.riderProfile.update({ where: { id: profile.id }, data: { isOnline } });
   if (!isOnline) await forgetRiderPosition(req.session!.userId);
   res.json({ isOnline });
@@ -149,6 +153,7 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
   const profile = await approvedRider(userId);
   if (!profile.isOnline) throw new HttpError(400, "Go online to accept jobs.");
   refuseExpiredLicense(profile);
+  await refuseIfSuspended(userId, "jobs");
 
   // A short Redis lock per rider: two quick taps on two different jobs can't both pass
   // the "one delivery at a time" check below. SET NX is atomic across all API copies.

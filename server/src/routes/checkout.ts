@@ -17,6 +17,7 @@ import { perAccount } from "../lib/rateLimit.js";
 import { announceScheduled, scheduleProblem } from "../lib/schedule.js";
 import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { refuseIfSuspended } from "../lib/userReports.js";
 
 export const checkoutRouter = Router();
 checkoutRouter.use(requireAuth, requireRole("RESIDENT"));
@@ -63,6 +64,7 @@ const pendingPage = (c: { paymentStatus: string; paymentUrl: string | null }) =>
 checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of orders just now."), async (req, res) => {
   const input = parseBody(checkoutSchema, req.body);
   const userId = req.session!.userId;
+  await refuseIfSuspended(userId, "order");
 
   // Same key again (double-click, network retry): return the checkout we already made
   const existing = await prisma.checkout.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { ...checkoutSummary, residentId: true } });

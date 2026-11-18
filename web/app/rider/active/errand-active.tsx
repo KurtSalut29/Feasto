@@ -7,6 +7,7 @@ import { mapsSearch } from "../../resident/pabili/errand";
 import { ErrandSteps } from "./errand-steps";
 import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
+import { ReportProblem } from "@/components/app/report-problem";
 
 export type RiderErrand = {
   id: string;
@@ -121,6 +122,9 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
             )}
           </Stop>
         </section>
+        <div className="flex justify-center">
+          <ReportProblem target={{ errandId: errand.id }} people={[{ role: "RESIDENT", name: errand.resident.name }]} />
+        </div>
       </div>
     </>
   );

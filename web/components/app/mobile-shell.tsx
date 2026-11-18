@@ -10,6 +10,7 @@ import { SidebarUser } from "./dashboard-shell";
 import { TabBar } from "./tab-bar";
 import { SkipLink } from "./skip-link";
 import { DisplaySync } from "./display-settings";
+import { AccountNotice } from "./account-notice";
 
 /**
  * Layout for residents and riders.
@@ -97,6 +98,7 @@ export function MobileShell({
             )}
             {resident && <PageBack role="RESIDENT" variant="pill" className="mb-5 hidden md:block" />}
             <InstallBanner />
+            <AccountNotice role={role} />
             {children}
           </main>
 
