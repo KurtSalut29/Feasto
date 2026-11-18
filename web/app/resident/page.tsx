@@ -58,7 +58,7 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
           <section className="mt-6 md:mt-8" aria-label="Categories">
             <SectionHeading title="Categories" seeAll={{ href: browseHref(NO_FILTERS), label: `All ${sections.total} stores` }} />
             <CategoryGrid categories={sections.categories} />
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:max-w-xl">
+            <div className="mt-4 grid grid-cols-3 gap-2.5 sm:gap-3 md:max-w-xl">
               <Shortcut href={browseHref({ ...NO_FILTERS, bookable: true })} Icon={CalendarDays} label="Book a table" />
               <Shortcut href="/resident/saved" Icon={Heart} label="Saved stores" />
               {/* Pabili: a rider buys from a shop that isn't on Feasto */}
@@ -107,9 +107,9 @@ function Shortcut({ href, Icon, label }: { href: string; Icon: LucideIcon; label
   return (
     <Link
       href={href}
-      className="flex h-11 items-center justify-center gap-2 rounded-xl border border-line text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+      className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-xl border border-line px-1.5 py-2.5 text-center text-[0.8125rem] leading-tight font-semibold text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500 sm:flex-row sm:gap-2 sm:py-2 sm:text-sm"
     >
-      <Icon className="size-4 text-brand-600" aria-hidden />
+      <Icon className="size-5 shrink-0 text-brand-600 sm:size-4" aria-hidden />
       {label}
     </Link>
   );

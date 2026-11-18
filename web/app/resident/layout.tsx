@@ -32,6 +32,7 @@ function CartLink({ count }: { count: number }) {
   return (
     <Link
       href="/resident/cart"
+      data-cart-target
       aria-label={count ? `Cart, ${count} items` : "Cart"}
       className="relative flex size-10 items-center justify-center rounded-full text-ink transition hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
     >

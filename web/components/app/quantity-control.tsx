@@ -23,6 +23,12 @@ export function QuantityControl({
 }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(initial);
+  // The cart can change on another page: follow the server's number when it changes
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setQuantity(initial);
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 

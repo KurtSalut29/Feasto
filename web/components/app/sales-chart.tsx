@@ -57,7 +57,7 @@ export function SalesChart({
         {/* Y axis */}
         <div aria-hidden className="relative w-9 shrink-0 text-right text-[0.6875rem] text-gray-500 tabular-nums">
           {ticks.map((tick) => (
-            <span key={tick} className="absolute right-0 -translate-y-1/2" style={{ bottom: `${(tick / top) * 100}%` }}>
+            <span key={tick} className="absolute right-0 translate-y-1/2" style={{ bottom: `${(tick / top) * 100}%` }}>
               {compact(tick)}
             </span>
           ))}

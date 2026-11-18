@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
 import type { MenuItem } from "@/lib/types";
 import { TickNumber } from "@/components/ui/tick-number";
+import { flyToCart, visible } from "@/components/app/fly-to-cart";
 
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 const isSoldOut = (item: MenuItem) => !item.isAvailable || item.stock === 0;
@@ -44,8 +45,18 @@ export function StoreMenu({
 }) {
   const router = useRouter();
   const [quantities, setQuantities] = useState(initial);
+  // The cart can change on another page (removed in the cart, ordered, emptied): when the server's
+  // numbers change, show those. Coming back to this page keeps its old state otherwise.
+  const fromServer = JSON.stringify(initial);
+  const [seen, setSeen] = useState(fromServer);
+  if (seen !== fromServer) {
+    setSeen(fromServer);
+    setQuantities(initial);
+  }
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string>();
+  /** Read out by screen readers, since adding has no message on screen */
+  const [said, setSaid] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const menuTop = useRef<HTMLDivElement>(null);
@@ -86,6 +97,11 @@ export function StoreMenu({
 
   async function setQuantity(item: MenuItem, next: number) {
     const previous = quantities[item.id] ?? 0;
+    // More in the cart: the dish flies from its photo (or the button just pressed) into the cart icon
+    if (next > previous) {
+      const photos = [...document.querySelectorAll(`[data-dish-photo-open="${item.id}"]`), ...document.querySelectorAll(`[data-dish-photo="${item.id}"]`)];
+      flyToCart(photos.find(visible) ?? document.activeElement, item.imageUrl);
+    }
     setQuantities((q) => ({ ...q, [item.id]: next }));
     setBusy(item.id);
     setMessage(undefined);
@@ -96,8 +112,9 @@ export function StoreMenu({
       setMessage(result.error);
       return false;
     }
-    if (previous === 0 && next > 0) toast.success(`${item.name} added to your cart`, undefined, { action: { label: "View cart", href: "/resident/cart" }, duration: 3000 });
-    else if (next === 0) toast.info(`${item.name} removed from your cart`, undefined, { duration: 3000 });
+    // Adding shows itself (the dish flies into the cart, and the cart bar rises); only a removal gets a message
+    if (next > previous) setSaid(`${item.name} added. ${next} in your cart.`);
+    if (next === 0) toast.info(`${item.name} removed from your cart`, undefined, { duration: 3000 });
     router.refresh(); // the cart badge in the top bar
     return true;
   }
@@ -110,6 +127,9 @@ export function StoreMenu({
   // One box around the menu, so its tabs stop sticking where the menu ends
   return (
     <div>
+      <p className="sr-only" aria-live="polite">
+        {said}
+      </p>
       <div ref={menuTop} className="mt-8 flex scroll-mt-20 items-baseline justify-between gap-3">
         <h2 className="text-xl font-bold text-ink">Menu</h2>
         <p className="text-sm text-muted">{dishes(items.length)}</p>
@@ -298,7 +318,7 @@ function DishCard({ item, showSection, ...add }: AddProps & { item: MenuItem; sh
   const quantity = add.quantities[item.id] ?? 0;
   return (
     <li className="relative flex flex-col">
-      <div className="relative">
+      <div className="relative" data-dish-photo={item.id}>
         <DishPhoto src={item.imageUrl} dim={soldOut} sizes="(max-width: 440px) 50vw, 200px" className="aspect-[4/3] rounded-2xl" />
         <InCartBadge quantity={quantity} />
         <QuickAdd item={item} {...add} className="absolute right-2 bottom-2" />
@@ -450,7 +470,7 @@ function DishSheet({
     >
       <div className="flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl md:rounded-3xl md:starting:translate-y-6 md:starting:opacity-0 bg-white transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none">
         <div className="overflow-y-auto">
-          <div className="relative">
+          <div className="relative" data-dish-photo-open={item.id}>
             <DishPhoto src={item.imageUrl} dim={soldOut} eager sizes="440px" className="aspect-[4/3]" />
             <button
               type="button"

@@ -1,4 +1,4 @@
-import { Banknote, Clock, ReceiptText, ShoppingBasket } from "lucide-react";
+import { Banknote, Bike, Clock, ReceiptText, ShoppingBasket } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -43,6 +43,8 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
   const status = ERRAND_STATUS[errand.status];
   /** Once the rider buys, the fee is final; before, it's a range */
   const feeSet = errand.status === "BOUGHT" || errand.status === "DELIVERED";
+  /** Something for the first column: the live map, or the rider and the photos once it's done */
+  const wide = live || Boolean(errand.rider || errand.receiptPhotoUrl || errand.deliveryPhotoUrl);
 
   return (
     <>
@@ -61,7 +63,9 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
         )}
       </div>
 
-      <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
+      {/* Two columns on a wide screen: the map and photos, then the list and what to pay. With nothing for the first (a cancelled Pabili), the list and what to pay sit side by side. */}
+      <div className={wide ? "space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0" : ""}>
+        {wide && (
         <div className="space-y-4">
           {live && (
             <RiderTracking
@@ -84,9 +88,43 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
             </p>
           )}
           <ErrandActions id={errand.id} status={errand.status} budget={Number(errand.budget)} budgetMax={budgetMax} />
+          {!live && errand.rider && (
+            <section aria-label="Your rider" className="flex items-center gap-3 rounded-2xl border border-line p-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+                <Bike className="size-5" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">{errand.status === "DELIVERED" ? "Bought and delivered by" : "Your rider"}</p>
+                <p className="truncate font-semibold text-ink">{errand.rider.name}</p>
+                {errand.rider.vehicle && <p className="truncate text-sm text-muted">{errand.rider.vehicle}</p>}
+              </div>
+            </section>
+          )}
+          {errand.receiptPhotoUrl && (
+            <section aria-labelledby="pabili-receipt" className="rounded-2xl border border-line p-4">
+              <h2 id="pabili-receipt" className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                <ReceiptText className="size-4 text-brand-600" aria-hidden />
+                The receipt
+              </h2>
+              <a href={errand.receiptPhotoUrl} target="_blank" rel="noreferrer" className="relative block aspect-[3/4] max-h-96 overflow-hidden rounded-xl bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500">
+                <Image src={errand.receiptPhotoUrl} alt={`Receipt from ${errand.shopName}, ${formatPeso(errand.receiptTotal ?? 0)}`} fill unoptimized className="object-contain" />
+              </a>
+            </section>
+          )}
+          {errand.deliveryPhotoUrl && (
+            <section aria-labelledby="pabili-proof" className="rounded-2xl border border-line p-4">
+              <h2 id="pabili-proof" className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                Proof of delivery
+              </h2>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-canvas">
+                <Image src={errand.deliveryPhotoUrl} alt="Photo of the delivered items" fill unoptimized className="object-cover" />
+              </div>
+            </section>
+          )}
         </div>
+        )}
 
-        <div className="space-y-4">
+        <div className={wide ? "space-y-4" : "space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0"}>
           <section aria-labelledby="pabili-list" className="rounded-2xl border border-line p-4">
             <h2 id="pabili-list" className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
               <ShoppingBasket className="size-4 text-brand-600" aria-hidden />
@@ -138,27 +176,6 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
             )}
           </section>
 
-          {errand.receiptPhotoUrl && (
-            <section aria-labelledby="pabili-receipt" className="rounded-2xl border border-line p-4">
-              <h2 id="pabili-receipt" className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                <ReceiptText className="size-4 text-brand-600" aria-hidden />
-                The receipt
-              </h2>
-              <a href={errand.receiptPhotoUrl} target="_blank" rel="noreferrer" className="relative block aspect-[3/4] max-h-96 overflow-hidden rounded-xl bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500">
-                <Image src={errand.receiptPhotoUrl} alt={`Receipt from ${errand.shopName}, ${formatPeso(errand.receiptTotal ?? 0)}`} fill unoptimized className="object-contain" />
-              </a>
-            </section>
-          )}
-          {errand.deliveryPhotoUrl && (
-            <section aria-labelledby="pabili-proof" className="rounded-2xl border border-line p-4">
-              <h2 id="pabili-proof" className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                Proof of delivery
-              </h2>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-canvas">
-                <Image src={errand.deliveryPhotoUrl} alt="Photo of the delivered items" fill unoptimized className="object-cover" />
-              </div>
-            </section>
-          )}
           {errand.rider && (
             <div className="flex justify-center">
               <ReportProblem target={{ errandId: errand.id }} people={[{ role: "RIDER", name: errand.rider.name }]} />
