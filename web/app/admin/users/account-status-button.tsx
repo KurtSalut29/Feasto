@@ -58,7 +58,7 @@ export function AccountStatusButton({ userId, name, disabled }: { userId: string
         description="They're logged out on every device right away and can't log in until you enable the account again. A vendor's store is hidden from residents."
       >
         {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-wrap justify-end gap-3">
           <Button variant="secondary" onClick={() => setConfirming(false)}>
             Keep active
           </Button>

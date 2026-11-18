@@ -81,6 +81,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
           opensAt: true,
           closesAt: true,
           isTemporarilyClosed: true,
+          permitPausedAt: true,
           acceptsCash: true,
           onlinePayments: true,
           owner: { select: { disabledAt: true } },
@@ -94,7 +95,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
   if (gone.length) await redis.hdel(key(userId), ...gone.map((g) => g.menuItemId));
 
   const groups = new Map<string, {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
+    store: { id: string; name: string; imageUrl: string | null; address: string; latitude: number | null; longitude: number | null; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null; note: string | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -110,10 +111,10 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
     let group = groups.get(item.vendorId);
     if (!group) {
       group = {
-        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, opensAt: item.vendor.opensAt, closesAt: item.vendor.closesAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
+        store: { id: item.vendor.id, name: item.vendor.name, imageUrl: item.vendor.imageUrl, address: item.vendor.address, latitude: item.vendor.latitude, longitude: item.vendor.longitude, opensAt: item.vendor.opensAt, closesAt: item.vendor.closesAt, isOpen: open, acceptsCash: item.vendor.acceptsCash, onlinePayments: item.vendor.onlinePayments },
         items: [],
         subtotal: 0,
-        problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
+        problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt || item.vendor.permitPausedAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
         delivery: null,
         pin: { latitude: item.vendor.latitude, longitude: item.vendor.longitude },
       };

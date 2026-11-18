@@ -19,7 +19,8 @@ const LINKS = ITEMS.filter((item) => item.href !== "/resident/account");
  */
 export function ResidentTopNav({ end }: { end?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-30 hidden border-b border-line bg-white/90 backdrop-blur-md md:block">
+    // A container: with larger text the tab names give way to their icons before anything is pushed off the edge
+    <header className="@container sticky top-0 z-30 hidden border-b border-line bg-white/90 backdrop-blur-md md:block">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-6 lg:gap-6">
         <Link href="/resident" className="shrink-0 rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500">
           <Image src="/Logo/feasto-logo.png" alt="Feasto" width={108} height={32} className="h-8 w-[108px] object-contain" priority />
@@ -80,7 +81,7 @@ function Links({ current }: { current: string | null }) {
                 }`}
               >
                 <item.Icon className="size-[18px]" strokeWidth={active ? 2.25 : 1.75} aria-hidden />
-                {item.label}
+                <span className="sr-only @[46rem]:not-sr-only">{item.label}</span>
               </Link>
             </li>
           );

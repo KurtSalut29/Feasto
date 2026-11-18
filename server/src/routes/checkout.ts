@@ -6,6 +6,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import { invalidateStore } from "../lib/redisCache.js";
 import { ONLINE_PAYMENTS, storeRefusing } from "../lib/payments.js";
 import { buildCart, clearCart } from "../lib/cart.js";
+import { chosenRider } from "../lib/errands.js";
 import { prisma } from "../lib/db.js";
 import { feastoShare } from "../lib/earnings.js";
 import { HttpError, parseBody } from "../lib/http.js";
@@ -40,6 +41,8 @@ const checkoutSchema = z
     expectedDeliveryFee: z.number().optional(),
     /** Ordered for later: when to deliver it (or have it ready). Left out for as soon as possible. */
     scheduledFor: z.iso.datetime({ offset: true }).optional(),
+    /** A rider the resident chose: the delivery reaches them alone first (one store, delivery only) */
+    preferredRiderId: z.string().min(1).optional(),
     /** Demo switch: make the simulated online payment fail to show the saga undoing the order */
     simulatePaymentFailure: z.boolean().optional(),
   })
@@ -85,6 +88,21 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   // Each store chooses the ways to pay it takes; one payment covers the whole cart, so every store must take it
   const refusing = storeRefusing(cart.groups.map((g) => g.store), input.paymentMethod === "COD" ? "COD" : (input.onlineMethod ?? "ONLINE"));
   if (refusing) throw new HttpError(409, `${refusing.name} doesn't take ${input.paymentMethod === "COD" ? "cash" : "this way to pay"}. Choose another way to pay.`);
+
+  // The rider the resident asked for. For later, they only need to be a free rider now; whether
+  // they're online is checked when the job goes out (otherwise it goes to the nearest riders).
+  let preferredRiderId: string | null = null;
+  if (input.preferredRiderId) {
+    if (input.fulfillment !== "DELIVERY") throw new HttpError(400, "A rider can only be chosen for a delivery.");
+    if (cart.groups.length !== 1) throw new HttpError(400, "A rider can be chosen when the order is from one store. Remove the choice, or order from each store separately.");
+    if (scheduledFor) {
+      const rider = await prisma.riderProfile.findFirst({ where: { userId: input.preferredRiderId, vendorId: null, status: "APPROVED" }, select: { userId: true } });
+      if (!rider) throw new HttpError(409, "That rider can't take deliveries now. Choose another rider.");
+      preferredRiderId = rider.userId;
+    } else {
+      preferredRiderId = (await chosenRider(input.preferredRiderId)).id;
+    }
+  }
 
   let deliveryAddress: string | null = null;
   let deliveryPin: { deliveryLat: number | null; deliveryLng: number | null } = { deliveryLat: null, deliveryLng: null };
@@ -148,6 +166,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
               // Online orders wait for the payment first; scheduled ones then wait for their time
               status: input.paymentMethod === "ONLINE" ? "AWAITING_PAYMENT" : scheduledFor ? "SCHEDULED" : "PLACED",
               scheduledFor,
+              preferredRiderId,
               subtotal: group.subtotal,
               deliveryFee: feeOf(group),
               deliveryKm: delivery ? (group.delivery?.km ?? null) : null,

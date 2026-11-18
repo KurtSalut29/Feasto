@@ -25,6 +25,8 @@ export function RiderTracking({
   homeAddress,
   rider,
   pickedUp,
+  askedFor,
+  pabili = false,
 }: {
   orderId: string;
   initial: Point | null;
@@ -34,6 +36,10 @@ export function RiderTracking({
   homeAddress: string | null;
   rider: Rider | null;
   pickedUp: boolean;
+  /** The rider the resident asked for, while it waits for them to accept */
+  askedFor?: string | null;
+  /** A Pabili: the rider buys the items at a shop instead of picking up food */
+  pabili?: boolean;
 }) {
   const [point, setPoint] = useState<Point | null>(initial);
 
@@ -43,10 +49,16 @@ export function RiderTracking({
 
   const first = rider?.name.split(" ")[0];
   const doing = !rider
-    ? `Finding a rider near ${storeName}…`
+    ? askedFor
+      ? `Waiting for ${askedFor.split(" ")[0]}, the rider you asked for. If they can't take it, the nearest rider will.`
+      : `Finding a rider near ${storeName}…`
     : pickedUp
-      ? `${first} picked up your food and is on the way to you.`
-      : `${first} is heading to ${storeName} to pick up your food.`;
+      ? pabili
+        ? `${first} bought your items and is on the way to you.`
+        : `${first} picked up your food and is on the way to you.`
+      : pabili
+        ? `${first} is heading to ${storeName} to buy your items.`
+        : `${first} is heading to ${storeName} to pick up your food.`;
 
   return (
     <section aria-label="Your rider" className="overflow-hidden rounded-2xl border border-line">

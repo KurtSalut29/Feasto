@@ -122,6 +122,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               order.rider && { name: order.rider.name, phone: order.rider.phone, vehicle, rating: riderRating }
             }
             pickedUp={order.status === "PICKED_UP"}
+            askedFor={order.preferredRider?.name}
           />
         )}
         {/* What happens if nobody takes it, so the resident isn't left wondering */}

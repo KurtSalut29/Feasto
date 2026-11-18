@@ -60,7 +60,7 @@ export function MobileShell({
           className={`relative mx-auto flex min-h-dvh max-w-[440px] flex-col bg-white sm:border-x sm:border-line sm:shadow-[0_0_40px_rgba(16,24,40,0.06)] ${
             resident
               ? "md:min-h-0 md:max-w-6xl md:border-0 md:bg-transparent md:shadow-none"
-              : "md:max-w-2xl lg:max-w-none lg:border-0 lg:bg-transparent lg:pl-[312px] lg:shadow-none lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]"
+              : "md:max-w-2xl lg:max-w-none lg:border-0 lg:bg-transparent lg:pl-[19.5rem] lg:shadow-none lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[8.25rem]"
           }`}
         >
           {/* The app's top bar: phones (and tablets, for the rider) */}

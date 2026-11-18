@@ -36,12 +36,19 @@ export function LocationSharer({ orderId, heading, store, home }: { orderId: str
 
   const sharing = heading === "store" ? "Sharing your live location while you head to the store" : "Sharing your live location with the customer";
 
-  // Each new GPS position is sent, at most every few seconds
+  // Each new GPS position is sent, at most every few seconds. One that comes too soon is sent
+  // when the wait is over, so the customer always ends up with where the rider really is.
   useEffect(() => {
     if (mode !== "gps" || !gps.position) return;
-    if (Date.now() - lastSent.current < SEND_EVERY_MS) return;
-    lastSent.current = Date.now();
-    void apiRequest("/rider/location", { method: "POST", body: { orderId, ...gps.position } }).then((result) => setSent(result.ok ? sharing : result.error));
+    const at = gps.position;
+    const send = () => {
+      lastSent.current = Date.now();
+      void apiRequest("/rider/location", { method: "POST", body: { orderId, ...at } }).then((result) => setSent(result.ok ? sharing : result.error));
+    };
+    const wait = SEND_EVERY_MS - (Date.now() - lastSent.current);
+    if (wait <= 0) return send();
+    const timer = setTimeout(send, wait);
+    return () => clearTimeout(timer);
   }, [mode, gps.position, orderId, sharing]);
 
   // The demo ride: along the roads to the store before pickup, then on to the customer.
@@ -82,7 +89,9 @@ export function LocationSharer({ orderId, heading, store, home }: { orderId: str
               !result.ok
                 ? result.error
                 : done === 1
-                  ? `Demo ride: arrived at ${to}`
+                  ? heading === "store"
+                    ? "Demo ride: at the store. Once they mark it ready, tap “I picked up the order” and the ride goes on to the customer."
+                    : "Demo ride: at the customer. Hand it over and take the delivery photo."
                   : `Demo ride to ${to}: ${formatDistance(km * (1 - done))} to go`,
             ),
           );

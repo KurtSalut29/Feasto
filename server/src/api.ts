@@ -8,6 +8,7 @@ import { countRequest, startHeartbeat } from "./lib/heartbeat.js";
 import { errorHandler } from "./lib/http.js";
 import { redis } from "./lib/redis.js";
 import { closeSubscriber, liveConnectionCount } from "./lib/liveUpdateStreams.js";
+import { announceDataChanges } from "./lib/dataChanged.js";
 import { adminRouter } from "./routes/admin.js";
 import { authRouter } from "./routes/auth.js";
 import { bookingsRouter, vendorBookingsRouter } from "./routes/bookings.js";
@@ -24,6 +25,7 @@ import { adminEarningsRouter, riderEarningsRouter, vendorEarningsRouter } from "
 import { paymentsRouter } from "./routes/payments.js";
 import { adminPayoutsRouter, riderPayoutsRouter, vendorPayoutsRouter } from "./routes/payouts.js";
 import { documentsRouter } from "./routes/documents.js";
+import { availableRidersRouter, errandsRouter, riderErrandsRouter } from "./routes/errands.js";
 import { vendorRidersRouter } from "./routes/vendorRiders.js";
 import { vendorRouter } from "./routes/vendor.js";
 
@@ -44,6 +46,8 @@ app.use((req, _res, next) => {
   next();
 });
 app.use(cookieParser());
+// When a store or the admin saves a change, every open page reloads its data by itself
+app.use(announceDataChanges);
 
 // Every response says which API copy answered it, so load balancing is visible.
 app.use((_req, res, next) => {
@@ -80,6 +84,9 @@ app.use("/api/vendor", vendorPayoutsRouter);
 app.use("/api/vendor", vendorBookingsRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/rider", riderRouter);
+app.use("/api/rider", riderErrandsRouter);
+app.use("/api/errands", errandsRouter);
+app.use("/api/riders", availableRidersRouter);
 app.use("/api/rider", riderEarningsRouter);
 app.use("/api/rider", riderPayoutsRouter);
 app.use("/api/stores", storesRouter);

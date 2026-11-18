@@ -1,4 +1,4 @@
-import { ArrowRight, Bike } from "lucide-react";
+import { ArrowRight, Bike, ChevronRight, ShoppingBasket } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -15,6 +15,7 @@ import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
 import { JobsPreview } from "./jobs-preview";
+import { PabiliRequests } from "./pabili-requests";
 import { RiderHero, type Totals } from "./rider-hero";
 import { PushCard } from "@/components/app/push-card";
 
@@ -58,9 +59,10 @@ async function RiderHome() {
     );
   }
 
-  const [jobs, { order: active }, { totals }] = await Promise.all([
+  const [jobs, { order: active }, { errand }, { totals }] = await Promise.all([
     serverApi<JobsPage>(`/rider/jobs?limit=${PREVIEW_SIZE}`),
     serverApi<{ order: RiderDelivery | null }>("/rider/active"),
+    serverApi<{ errand: { id: string; shopName: string; status: "ACCEPTED" | "BOUGHT" } | null }>("/rider/errands/active"),
     serverApi<{ totals: Totals }>("/rider/history"),
   ]);
 
@@ -72,8 +74,12 @@ async function RiderHome() {
       <ExpiryNotice date={profile?.licenseExpiresAt} documentName="driver's license" href="/rider/license" blocked="You can't go online until your renewed license is approved. Tap to send it." />
 
       {active && <CurrentDelivery order={active} />}
+      {errand && <CurrentPabili errand={errand} />}
 
-      <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active)} storeName={profile?.vendor?.name ?? null} />
+      {/* Free riders can also run a Pabili: buying at a shop that isn't on Feasto */}
+      {!profile?.vendor && <PabiliRequests busy={Boolean(active || errand)} />}
+
+      <JobsPreview initial={jobs} limit={PREVIEW_SIZE} busy={Boolean(active || errand)} storeName={profile?.vendor?.name ?? null} />
     </>
   );
 }
@@ -116,6 +122,25 @@ function CurrentDelivery({ order }: { order: RiderDelivery }) {
         Continue delivery
         <ArrowRight className="size-4" aria-hidden />
       </p>
+    </Link>
+  );
+}
+
+/** The Pabili the rider is running, above everything else on Home */
+function CurrentPabili({ errand }: { errand: { id: string; shopName: string; status: "ACCEPTED" | "BOUGHT" } }) {
+  return (
+    <Link
+      href="/rider/active"
+      className="mb-6 flex items-center gap-3 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4 transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+    >
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white">
+        <ShoppingBasket className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-xs font-semibold tracking-wider text-brand-700 uppercase">Your Pabili</span>
+        <span className="block truncate font-semibold text-ink">{errand.status === "ACCEPTED" ? `Buying at ${errand.shopName}` : "Bought: bring it to the customer"}</span>
+      </span>
+      <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />
     </Link>
   );
 }

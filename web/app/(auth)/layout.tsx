@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { AccessibilityButton } from "./accessibility-button";
+import { LegalLinks } from "./legal-links";
 import { AuthReady } from "./auth-ready";
 
 /** The chef mascot waving residents in, from the Login and sign up design */
@@ -104,8 +105,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             {/* The page's own lines rise in one after another the first time (fx-auth-lines) */}
             <div className="fx-auth-lines mt-3">{children}</div>
           </main>
-          <footer className="fx-auth-item mt-3 text-center text-sm" style={{ viewTransitionName: "auth-foot", ...after(1.1) }}>
+          <footer className="fx-auth-item mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-sm" style={{ viewTransitionName: "auth-foot", ...after(1.1) }}>
             <AccessibilityButton />
+            <LegalLinks />
           </footer>
         </div>
       </div>

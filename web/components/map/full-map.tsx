@@ -14,7 +14,7 @@ export function FullMapFrame({ children, role = "RESIDENT" }: { children: ReactN
   const big =
     role === "RESIDENT"
       ? "md:top-[calc(4rem+1px)] md:bottom-0 md:max-w-none"
-      : "md:max-w-2xl lg:inset-x-auto lg:top-[5.25rem] lg:right-10 lg:bottom-6 lg:left-[312px] lg:mx-0 lg:max-w-none lg:rounded-3xl lg:ring-1 lg:ring-line lg:collapsed:left-[132px]";
+      : "md:max-w-2xl lg:inset-x-auto lg:top-[5.25rem] lg:right-10 lg:bottom-6 lg:left-[19.5rem] lg:mx-0 lg:max-w-none lg:rounded-3xl lg:ring-1 lg:ring-line lg:collapsed:left-[8.25rem]";
   return (
     <div className={`fixed inset-x-0 top-[calc(3.5rem+1px+env(safe-area-inset-top))] bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-[440px] overflow-hidden ${big}`}>
       {children}

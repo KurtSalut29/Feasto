@@ -12,6 +12,7 @@ import { refundInvoice, XenditError } from "./lib/xendit.js";
 import { relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
+import { runErrandTimers } from "./lib/errands.js";
 import { autoCancelStaleOrders } from "./lib/autoCancel.js";
 import { clockWords, sendDueScheduledOrders } from "./lib/schedule.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/rabbitmq.js";
@@ -228,6 +229,8 @@ const dispatchTimer = setInterval(async () => {
   dispatching = true;
   try {
     await runDueDispatches(log);
+    // Pabili: the asked rider's moment running out, and requests nobody took
+    await runErrandTimers(log);
   } catch (error) {
     console.error(`[${config.instanceId}] job dispatch failed`, error);
   } finally {

@@ -51,15 +51,16 @@ export function Dialog({
         // Clicking the dimmed backdrop closes it
         if (e.target === ref.current) onClose();
       }}
-      className={`fx-dialog m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-ink/40 ${
+      // A dialog opened from a table cell would inherit its no-wrap, alignment and weight: start fresh
+      className={`fx-dialog m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-left align-baseline text-base font-normal tracking-normal whitespace-normal normal-case text-ink shadow-2xl backdrop:bg-ink/40 ${
         wide ? "max-w-2xl" : "max-w-md"
       }`}
     >
       {shown && (
-        <div className="max-h-[85dvh] overflow-y-auto p-6">
+        <div className="max-h-[85dvh] overflow-x-hidden overflow-y-auto p-6">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 id={`${id}-title`} className="text-lg font-semibold text-ink">
+            <div className="min-w-0">
+              <h2 id={`${id}-title`} className="text-lg font-semibold [overflow-wrap:anywhere] text-ink">
                 {title}
               </h2>
               {description && (

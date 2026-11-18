@@ -107,12 +107,14 @@ adminToolsRouter.get("/documents", async (req, res) => {
               status: true,
               permitNumber: true,
               permitExpiresAt: true,
+              permitPausedAt: true,
               owner: { select: { name: true, phone: true } },
               renewals: { where: { status: "PENDING" }, select: { id: true } },
             },
           })
-        ).map(({ permitNumber, permitExpiresAt, owner, renewals, ...store }) => ({
+        ).map(({ permitNumber, permitExpiresAt, permitPausedAt, owner, renewals, ...store }) => ({
           ...store,
+          paused: permitPausedAt !== null,
           number: permitNumber,
           expiresAt: permitExpiresAt,
           contact: owner,
@@ -144,6 +146,7 @@ adminToolsRouter.get("/documents", async (req, res) => {
           contact: user,
           renewalWaiting: renewals.length > 0,
           storeName: vendor?.name ?? null,
+          paused: false,
         }));
   res.json({ view, kind, page, pageSize: PAGE_SIZE, total: counts[view][kind], counts, items });
 });
@@ -255,7 +258,8 @@ adminToolsRouter.post("/stuck/:id/release-rider", async (req, res) => {
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.order.updateMany({
       where: { id, riderId, status: { in: OPEN_JOB } },
-      data: { riderId: null, dispatch: "NEW", nextDispatchAt: new Date() },
+      // Not back to the rider the resident had asked for: they may be the one being released
+      data: { riderId: null, dispatch: "NEW", nextDispatchAt: new Date(), preferredRiderId: null },
     });
     if (count === 0) throw new HttpError(409, "The rider already collected this order, so it can't be taken back.");
     // They aren't answering, so new jobs shouldn't go to them either

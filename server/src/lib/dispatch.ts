@@ -1,4 +1,4 @@
-import type { JobDispatch, OrderStatus, Prisma } from "../generated/prisma/client.js";
+import type { ErrandStatus, JobDispatch, OrderStatus, Prisma } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
 import { broadcastOrder, orderCode } from "./orders.js";
 import { notify } from "./liveUpdates.js";
@@ -9,6 +9,19 @@ import { getSettings, type Settings } from "./settings.js";
 export const OPEN_JOB: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY"];
 /** Statuses where a rider is busy with an order. */
 export const BUSY: OrderStatus[] = ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"];
+/** A Pabili errand keeps its rider busy from accepting it until it's delivered. */
+export const BUSY_ERRAND: ErrandStatus[] = ["ACCEPTED", "BOUGHT"];
+/** How long the rider a resident asked for has the job (or the Pabili) to themselves */
+export const PREFERRED_RIDER_SECONDS = 90;
+
+/** True while the rider is on a delivery or a Pabili: one job at a time. */
+export async function riderIsBusy(userId: string) {
+  const [orders, errands] = await Promise.all([
+    prisma.order.count({ where: { riderId: userId, status: { in: BUSY } } }),
+    prisma.errand.count({ where: { riderId: userId, status: { in: BUSY_ERRAND } } }),
+  ]);
+  return orders + errands > 0;
+}
 
 const FIRST_WAVE = 3;
 const SECOND_WAVE = 5;
@@ -34,7 +47,7 @@ export async function forgetRiderPosition(userId: string) {
  * The `count` riders nearest the spot, out of `candidates`. Riders with no recent position
  * aren't included: they get the job in the last step, when it opens to every free rider.
  */
-async function nearestRiders(at: { lat: number; lng: number }, candidates: Set<string>, count: number) {
+export async function nearestRiders(at: { lat: number; lng: number }, candidates: Set<string>, count: number) {
   if (candidates.size === 0) return [];
   const byDistance = (await redis.geosearch(POSITIONS, "FROMLONLAT", at.lng, at.lat, "BYRADIUS", SEARCH_RADIUS_KM, "km", "ASC")) as string[];
   const eligible = byDistance.filter((id) => candidates.has(id));
@@ -42,6 +55,22 @@ async function nearestRiders(at: { lat: number; lng: number }, candidates: Set<s
   const times = await redis.hmget(POSITION_TIMES, ...eligible);
   const oldest = Date.now() - POSITION_FRESH_MS;
   return eligible.filter((_, i) => Number(times[i] ?? 0) >= oldest).slice(0, count);
+}
+
+/** How far each rider is from a spot, in km, for riders with a recent position (others are left out). */
+export async function riderDistances(at: { lat: number; lng: number }, candidates: Set<string>) {
+  const found = new Map<string, number>();
+  if (candidates.size === 0) return found;
+  const rows = (await redis.geosearch(POSITIONS, "FROMLONLAT", at.lng, at.lat, "BYRADIUS", SEARCH_RADIUS_KM, "km", "ASC", "WITHDIST")) as [string, string][];
+  const ids = rows.map(([id]) => id).filter((id) => candidates.has(id));
+  if (ids.length === 0) return found;
+  const times = await redis.hmget(POSITION_TIMES, ...ids);
+  const oldest = Date.now() - POSITION_FRESH_MS;
+  const km = new Map(rows.map(([id, d]) => [id, Number(d)]));
+  ids.forEach((id, i) => {
+    if (Number(times[i] ?? 0) >= oldest) found.set(id, km.get(id)!);
+  });
+  return found;
 }
 
 // ---------- Who may see a job ----------
@@ -55,16 +84,16 @@ export const jobVisibleTo = (rider: { userId: string; vendorId: string | null })
 
 // ---------- Spreading a job, step by step ----------
 
-/** Riders who could take a job right now: online, allowed to work, and not on a delivery. */
+/** Riders who could take a job right now: online, allowed to work, and not on a delivery or a Pabili. */
 export const availableRider = (where: Prisma.RiderProfileWhereInput, user: Prisma.UserWhereInput = {}): Prisma.RiderProfileWhereInput => ({
   ...where,
   status: "APPROVED",
   isOnline: true,
-  user: { ...user, disabledAt: null, deliveries: { none: { status: { in: BUSY } } } },
+  user: { ...user, disabledAt: null, deliveries: { none: { status: { in: BUSY } } }, errandRuns: { none: { status: { in: BUSY_ERRAND } } } },
 });
 
 type Tx = Prisma.TransactionClient;
-type Advance = { orderId: string; storeName: string; stage: JobDispatch; offeredTo: string[] };
+type Advance = { orderId: string; storeName: string; stage: JobDispatch; from: JobDispatch; offeredTo: string[] };
 
 /** Gives the job to the nearest free riders it hasn't reached yet. Empty if there are none. */
 async function offerToNearest(tx: Tx, order: { id: string; vendor: { latitude: number | null; longitude: number | null } }, count: number) {
@@ -90,7 +119,7 @@ async function offerToNearest(tx: Tx, order: { id: string; vendor: { latitude: n
 async function advance(tx: Tx, id: string, settings: Settings): Promise<Advance | null> {
   const order = await tx.order.findUniqueOrThrow({
     where: { id },
-    select: { id: true, status: true, riderId: true, dispatch: true, vendorId: true, vendor: { select: { name: true, latitude: true, longitude: true } } },
+    select: { id: true, status: true, riderId: true, dispatch: true, vendorId: true, preferredRiderId: true, vendor: { select: { name: true, latitude: true, longitude: true } } },
   });
   // Taken or cancelled in the meantime: nothing more to do
   if (order.riderId || !OPEN_JOB.includes(order.status)) {
@@ -100,14 +129,22 @@ async function advance(tx: Tx, id: string, settings: Settings): Promise<Advance 
 
   const moveTo = async (stage: JobDispatch, waitMs: number | null, offeredTo: string[]) => {
     await tx.order.update({ where: { id }, data: { dispatch: stage, nextDispatchAt: waitMs === null ? null : new Date(Date.now() + waitMs) } });
-    return { orderId: id, storeName: order.vendor.name, stage, offeredTo };
+    return { orderId: id, storeName: order.vendor.name, stage, from: order.dispatch, offeredTo };
   };
 
-  if (order.dispatch === "NEW") {
+  // The resident asked for a rider: if they're free, the job is theirs alone for a moment
+  if (order.dispatch === "NEW" && order.preferredRiderId) {
+    const chosen = await tx.riderProfile.findFirst({ where: availableRider({ userId: order.preferredRiderId, vendorId: null }), select: { userId: true } });
+    if (chosen) {
+      await tx.jobOffer.createMany({ data: [{ orderId: id, riderId: chosen.userId }], skipDuplicates: true });
+      return moveTo("PREFERRED", PREFERRED_RIDER_SECONDS * 1000, [chosen.userId]);
+    }
+  }
+  if (order.dispatch === "NEW" || order.dispatch === "PREFERRED") {
     const own = await tx.riderProfile.findMany({ where: availableRider({ vendorId: order.vendorId }), select: { userId: true } });
     if (own.length) return moveTo("STORE_RIDERS", settings.storeRiderSeconds * 1000, own.map((r) => r.userId));
   }
-  if (order.dispatch === "NEW" || order.dispatch === "STORE_RIDERS") {
+  if (order.dispatch === "NEW" || order.dispatch === "PREFERRED" || order.dispatch === "STORE_RIDERS") {
     const riders = await offerToNearest(tx, order, FIRST_WAVE);
     if (riders.length) return moveTo("NEAREST", settings.riderWaveSeconds * 1000, riders);
   }
@@ -152,9 +189,30 @@ export async function runDueDispatches(log: (...args: unknown[]) => void, batchS
     return results;
   });
 
-  for (const { orderId, storeName, stage, offeredTo } of moved) {
+  for (const { orderId, storeName, stage, from, offeredTo } of moved) {
     log(`job ${orderCode(orderId)} from ${storeName}: ${stage}, reached ${offeredTo.length} rider(s)`);
-    await Promise.all(offeredTo.map((riderId) => notify(riderId, { title: "New delivery job", body: `Pick up at ${storeName}.`, link: "/rider" })));
+    const asked = stage === "PREFERRED";
+    await Promise.all(
+      offeredTo.map((riderId) =>
+        notify(
+          riderId,
+          asked
+            ? { title: "A customer asked for you", body: `Pick up at ${storeName}. It's yours for ${PREFERRED_RIDER_SECONDS} seconds, then it goes to other riders.`, link: "/rider" }
+            : { title: "New delivery job", body: `Pick up at ${storeName}.`, link: "/rider" },
+        ),
+      ),
+    );
+    // The rider the resident asked for didn't take it in time
+    if (from === "PREFERRED") {
+      const order = await prisma.order.findUnique({ where: { id: orderId }, select: { riderId: true, preferredRider: { select: { name: true } }, checkout: { select: { residentId: true } } } });
+      if (order && !order.riderId) {
+        await notify(order.checkout.residentId, {
+          title: `${order.preferredRider?.name.split(" ")[0] ?? "Your rider"} couldn't take your order`,
+          body: "It went to the riders nearest the store, so it still gets to you.",
+          link: `/resident/orders/${orderId}`,
+        });
+      }
+    }
     // Riders' job lists and the store's order board load again
     await broadcastOrder(orderId);
   }

@@ -64,6 +64,8 @@ enum OrderStatus {
 /// How far a delivery job has spread among riders. Each step is explained in lib/dispatch.ts.
 enum JobDispatch {
   NEW
+  /// The resident chose a rider: only they see the job, for a short while
+  PREFERRED
   STORE_RIDERS
   NEAREST
   WIDER
@@ -179,12 +181,21 @@ model User {
   largeTargets      Boolean   @default(false)
   /// How maps look: the usual map, satellite photos, or dark for night rides
   mapStyle          MapStyle  @default(DEFAULT)
+  /// When the person agreed to Feasto's Terms of Service and Privacy Policy, and which version
+  termsAcceptedAt   DateTime?
+  termsVersion      String?
   createdAt         DateTime  @default(now())
 
   vendor        Vendor? // set when role = VENDOR
   riderProfile  RiderProfile? // set when role = RIDER
   checkouts     Checkout[]
   deliveries    Order[]        @relation("RiderDeliveries")
+  /// Deliveries where the resident asked for this rider first
+  preferredFor  Order[]        @relation("PreferredRider")
+  /// Pabili: errands a resident asked for, ones a rider runs, and ones a resident asked this rider for
+  errands       Errand[]       @relation("ResidentErrands")
+  errandRuns    Errand[]       @relation("RiderErrands")
+  errandAsks    Errand[]       @relation("PreferredErrandRider")
   settlements   Settlement[]   @relation("RiderSettlements")
   feastoPayments FeastoPayment[] @relation("RiderFeastoPayments")
   payouts       Payout[]       @relation("RiderPayouts")
@@ -237,6 +248,9 @@ model Vendor {
   businessPhone       String?
   permitNumber        String?
   permitExpiresAt     DateTime?      @db.Date
+  /// Set by Feasto when the permit has been expired longer than the grace period: the store takes no
+  /// orders or bookings until a renewed permit is approved (cleared then)
+  permitPausedAt      DateTime?
   /// File name of the business permit in the private documents folder, never a public URL
   permitFile          String?
   /// Riders enter this when they sign up to join this store
@@ -450,6 +464,9 @@ model Order {
   vendor           Vendor      @relation(fields: [vendorId], references: [id])
   riderId          String?
   rider            User?       @relation("RiderDeliveries", fields: [riderId], references: [id])
+  /// The rider the resident chose at checkout; the job is theirs alone for a short while, then goes to everyone
+  preferredRiderId String?
+  preferredRider   User?       @relation("PreferredRider", fields: [preferredRiderId], references: [id])
   status           OrderStatus @default(PLACED)
   fulfillment      Fulfillment
   subtotal         Decimal     @db.Decimal(10, 2)
@@ -778,4 +795,55 @@ model OutboxEvent {
   createdAt   DateTime  @default(now())
 
   @@index([publishedAt, createdAt])
+}
+
+/// Pabili: a resident asks a rider to buy things at a shop that isn't on Feasto and bring them.
+enum ErrandStatus {
+  /// Waiting for a rider (the chosen one first, then any free rider nearby)
+  REQUESTED
+  /// A rider took it and is on the way to the shop
+  ACCEPTED
+  /// Bought: the receipt is in, the rider is on the way to the resident
+  BOUGHT
+  DELIVERED
+  CANCELLED
+}
+
+model Errand {
+  id               String       @id @default(cuid())
+  residentId       String
+  resident         User         @relation("ResidentErrands", fields: [residentId], references: [id])
+  riderId          String?
+  rider            User?        @relation("RiderErrands", fields: [riderId], references: [id])
+  /// The rider the resident asked for; they have it to themselves until exclusiveUntil
+  preferredRiderId String?
+  preferredRider   User?        @relation("PreferredErrandRider", fields: [preferredRiderId], references: [id])
+  exclusiveUntil   DateTime?
+  shopName         String
+  shopAddress      String
+  shopLat          Float
+  shopLng          Float
+  /// What to buy: [{ name, quantity, note }]
+  items            Json
+  notes            String?
+  /// The most the rider may spend on the items; paid back in cash on delivery with the fee
+  budget           Decimal      @db.Decimal(10, 2)
+  deliveryAddress  String
+  deliveryLat      Float?
+  deliveryLng      Float?
+  deliveryFee      Decimal      @db.Decimal(10, 2)
+  /// What the shop's receipt says, and its photo; the resident pays this plus the fee
+  receiptTotal     Decimal?     @db.Decimal(10, 2)
+  receiptPhotoUrl  String?
+  deliveryPhotoUrl String?
+  status           ErrandStatus @default(REQUESTED)
+  cancelReason     String?
+  createdAt        DateTime     @default(now())
+  acceptedAt       DateTime?
+  boughtAt         DateTime?
+  finishedAt       DateTime?
+
+  @@index([status, createdAt])
+  @@index([riderId, status])
+  @@index([residentId, createdAt])
 }

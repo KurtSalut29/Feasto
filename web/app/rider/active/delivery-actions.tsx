@@ -46,7 +46,7 @@ export function DeliveryActions({ orderId, status }: { orderId: string; status: 
 }
 
 /** Photo of the handed-over order, required before the delivery can be finished. Opens the back camera on phones. */
-function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (photoUrl: string) => void }) {
+export function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (photoUrl: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -65,7 +65,7 @@ function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (p
   }
 
   return (
-    <section className="rounded-2xl border border-line p-4">
+    <section id="proof" className="scroll-mt-20 rounded-2xl border border-line p-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Proof of delivery</p>
       <p className="mt-1 text-sm text-muted">Hand the order over, then take a photo of it. The customer and the store will see it.</p>
 

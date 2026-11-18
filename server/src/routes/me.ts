@@ -20,7 +20,7 @@ meRouter.use(requireAuth);
 // ---------- Live updates ----------
 
 function liveChannels(session: NonNullable<Express.Request["session"]>) {
-  const channels = [CHANNELS.user(session.userId)];
+  const channels = [CHANNELS.user(session.userId), CHANNELS.everyone];
   if (session.role === "RIDER") channels.push(CHANNELS.riders);
   if (session.role === "ADMIN") channels.push(CHANNELS.admin);
   return channels;

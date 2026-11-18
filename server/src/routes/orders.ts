@@ -26,6 +26,8 @@ const orderInclude = {
   vendor: { select: { id: true, name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
   items: { select: { id: true, name: true, unitPrice: true, quantity: true, note: true } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true, ratingSum: true, ratingCount: true } } } },
+  /** The rider the resident asked for, while it waits for them */
+  preferredRider: { select: { name: true } },
   checkout: {
     select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
   },

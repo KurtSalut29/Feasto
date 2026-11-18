@@ -5,7 +5,6 @@ import { Suspense, type ReactNode } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { StepBar } from "@/components/app/step-bar";
 import { StoreCover } from "@/components/app/store-card";
-import { DirectionsButton } from "@/components/map/directions-button";
 import { ButtonLink } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth";
 import { formatPeso } from "@/lib/format";
@@ -18,6 +17,8 @@ import { OrderChat } from "@/components/app/order-chat";
 import { DeliveryActions } from "./delivery-actions";
 import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
+import { TripDirections, TripDirectionsButton } from "./trip-directions";
+import { ErrandActive, type RiderErrand } from "./errand-active";
 
 export const metadata: Metadata = { title: "Active delivery" };
 
@@ -33,8 +34,8 @@ const pill =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
 
 /**
- * One end of the trip: who and where, with in-app directions and a call button. A dashed line
- * joins it to the next. The store's stop shows its photo.
+ * One end of the trip: who and where, with in-app directions (which follow the trip, see
+ * TripDirections) and a call button. A dashed line joins it to the next. The store's stop shows its photo.
  */
 function Stop({
   Icon,
@@ -44,7 +45,6 @@ function Stop({
   address,
   phone,
   pin,
-  near,
   kind,
   done,
   last,
@@ -58,8 +58,6 @@ function Stop({
   address: string;
   phone: string | null;
   pin: LatLng | null;
-  /** Where to look for an address saved without a pin */
-  near?: LatLng | null;
   kind: "store" | "home";
   done?: boolean;
   last?: boolean;
@@ -68,7 +66,7 @@ function Stop({
 }) {
   return (
     <li className={`relative flex gap-3 ${last ? "" : "pb-5"}`}>
-      {!last && <span aria-hidden className="absolute top-10 bottom-1 left-[17px] border-l-2 border-dashed border-line" />}
+      {!last && <span aria-hidden className="absolute top-10 bottom-1 left-[1.0625rem] border-l-2 border-dashed border-line" />}
       {imageUrl !== undefined ? (
         <span className="relative z-10 shrink-0">
           <StoreCover imageUrl={imageUrl} className="size-9 rounded-full ring-4 ring-white" />
@@ -91,8 +89,8 @@ function Stop({
         <p className={`text-xs font-semibold tracking-wider uppercase ${done ? "text-emerald-700" : "text-gray-500"}`}>{label}</p>
         <p className="mt-0.5 font-semibold text-ink">{title}</p>
         <p className="text-sm text-muted">{address}</p>
-        <div className="mt-2.5 flex gap-2">
-          {(pin || address) && <DirectionsButton to={pin} near={near} name={title} address={address} kind={kind} className={pill} />}
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {(pin || address) && <TripDirectionsButton leg={kind} name={title} className={pill} />}
           {phone && (
             <a href={`tel:${phone}`} aria-label={`Call ${title}`} className={pill}>
               <Phone className="size-4 text-brand-600" aria-hidden />
@@ -122,7 +120,13 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
  */
 async function RiderActive() {
   await requireRole("RIDER");
-  const { order } = await serverApi<{ order: RiderDelivery | null }>("/rider/active");
+  const [{ order }, { errand }] = await Promise.all([
+    serverApi<{ order: RiderDelivery | null }>("/rider/active"),
+    serverApi<{ errand: RiderErrand | null }>("/rider/errands/active"),
+  ]);
+
+  // A Pabili instead of a delivery (a rider has one job at a time)
+  if (!order && errand) return <ErrandActive errand={errand} />;
 
   if (!order) {
     return (
@@ -187,6 +191,12 @@ async function RiderActive() {
         </div>
       </section>
 
+      <TripDirections
+        orderId={order.id}
+        status={order.status}
+        store={{ at: store, name: order.vendor.name, address: order.vendor.address }}
+        home={{ at: home, name: order.checkout.resident.name, address: order.checkout.deliveryAddress ?? "", near: store }}
+      >
       {/* Laptops up: the map stays on the left while the steps, payment and route sit beside it */}
       <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={store} home={home} homeAddress={order.checkout.deliveryAddress} status={order.status} />
@@ -225,7 +235,6 @@ async function RiderActive() {
             <Stop
               Icon={MapPin}
               pin={home}
-              near={store}
               kind="home"
               label="2 · Deliver to"
               last
@@ -281,6 +290,7 @@ async function RiderActive() {
           )}
         </Box>
       </div>
+      </TripDirections>
     </>
   );
 }

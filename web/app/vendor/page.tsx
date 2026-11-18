@@ -143,7 +143,11 @@ async function VendorOverview() {
           date={store.permitExpiresAt}
           documentName="business permit"
           href="/vendor/store#permit"
-          blocked="The admin may suspend your store until your renewed permit is approved. Click to send it."
+          blocked={
+            store.permitPausedAt
+              ? "Your store is paused: residents can't order or book until your renewed permit is approved. Click to send it."
+              : `Your store keeps taking orders until ${pauseDay(store.permitExpiresAt)}, then pauses until your renewed permit is approved. Click to send it.`
+          }
         />
       )}
 
@@ -429,4 +433,12 @@ function Figure({
   ) : (
     <div className={box}>{body}</div>
   );
+}
+
+/** The day a store with an expired permit pauses: its expiry date plus the 7-day grace period (PERMIT_GRACE_DAYS on the API), plus one */
+function pauseDay(expiresAt: string | null) {
+  if (!expiresAt) return "soon";
+  const day = new Date(`${expiresAt.slice(0, 10)}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() + 8);
+  return new Intl.DateTimeFormat("en-PH", { month: "long", day: "numeric", timeZone: "UTC" }).format(day);
 }

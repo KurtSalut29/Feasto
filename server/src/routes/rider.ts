@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
-import { BUSY, forgetRiderPosition, jobVisibleTo, OPEN_JOB, saveRiderPosition } from "../lib/dispatch.js";
+import { BUSY, forgetRiderPosition, jobVisibleTo, OPEN_JOB, riderIsBusy, saveRiderPosition } from "../lib/dispatch.js";
 import { bboxQuery, nearQuery, nextOffset, pageQuery } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, orderCode, settlePayment, transition } from "../lib/orders.js";
@@ -14,6 +14,7 @@ import { averageOf, shortName } from "../lib/riderRatings.js";
 import { payoutWords } from "../lib/earnings.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { shareErrandLocation } from "./errands.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
 
 export const riderRouter = Router();
@@ -154,8 +155,7 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
   const lock = `lock:rider:${userId}`;
   if ((await redis.set(lock, "1", "EX", 10, "NX")) !== "OK") throw new HttpError(429, "Hold on, still accepting your last job.");
   try {
-    const busy = await prisma.order.count({ where: { riderId: userId, status: { in: BUSY } } });
-    if (busy > 0) throw new HttpError(409, "Finish your current delivery first.");
+    if (await riderIsBusy(userId)) throw new HttpError(409, "Finish your current delivery first.");
 
     // The claim itself: only succeeds if nobody has taken the job yet. When several riders
     // tap at once, the database lets exactly one UPDATE through.
@@ -259,7 +259,11 @@ riderRouter.post("/location", async (req, res) => {
     where: { id: orderId, riderId: req.session!.userId, status: { in: BUSY } },
     select: { checkout: { select: { residentId: true } }, vendor: { select: { ownerId: true } } },
   });
-  if (!order) throw new HttpError(409, "Location is only shared while you have a delivery.");
+  if (!order) {
+    // Not a delivery: a Pabili this rider is running
+    if (await shareErrandLocation(req.session!.userId, orderId, lat, lng)) return void res.status(204).end();
+    throw new HttpError(409, "Location is only shared while you have a delivery.");
+  }
   const at = new Date().toISOString();
   await redis.set(locationKey(orderId), marshal({ lat, lng, at }, { transport: "redis", channel: locationKey(orderId), kind: "rider location" }), "EX", 3600);
   // The customer follows the rider to their door; the store sees them coming for the pickup

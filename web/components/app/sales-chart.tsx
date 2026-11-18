@@ -116,16 +116,19 @@ export function SalesChart({
       {/* X axis */}
       <div aria-hidden className="mt-2 flex gap-3 text-[0.6875rem] text-gray-500">
         <div className="w-9 shrink-0" />
-        <div className="flex flex-1">
+        <div className="flex min-w-0 flex-1">
           {days.map((day, i) => (
-            <span key={day.date} className="flex-1 text-center whitespace-nowrap">
+            // The last label ("Today") lines up with the right edge, so it never sticks out past the card
+            <span key={day.date} className="flex min-w-0 flex-1 justify-center whitespace-nowrap last:justify-end">
               {day.date === today ? "Today" : (days.length - 1 - i) % labelEvery === 0 ? dayLabel(day.date, "short") : ""}
             </span>
           ))}
         </div>
       </div>
 
-      <table className="sr-only">
+      {/* Wrapped: a table never shrinks to the 1px of sr-only and would make the page scroll sideways */}
+      <div className="sr-only">
+      <table>
         <caption>
           {valueLabel} per {unit}
         </caption>
@@ -146,6 +149,7 @@ export function SalesChart({
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }

@@ -190,9 +190,9 @@ export function SidebarNav({
   return (
     <>
       {/* Big screens */}
-      <aside aria-label="Main menu" className="fixed inset-y-4 left-4 z-30 hidden w-64 flex-col rounded-3xl border border-line/80 bg-white shadow-[0_16px_48px_-20px_rgba(31,45,61,0.28)] transition-[width] duration-300 ease-out lg:flex lg:collapsed:w-[76px]">
+      <aside aria-label="Main menu" className="fixed inset-y-4 left-4 z-30 hidden w-64 flex-col rounded-3xl border border-line/80 bg-white shadow-[0_16px_48px_-20px_rgba(31,45,61,0.28)] transition-[width] duration-300 ease-out lg:flex lg:collapsed:w-[4.75rem]">
         <CollapseToggle />
-        <div className="flex h-[76px] shrink-0 items-center px-6 lg:collapsed:justify-center lg:collapsed:px-0">
+        <div className="flex h-[4.75rem] shrink-0 items-center px-6 lg:collapsed:justify-center lg:collapsed:px-0">
           <Brand role={role} />
         </div>
         <div className="shrink-0 px-3 pb-2">{context}</div>

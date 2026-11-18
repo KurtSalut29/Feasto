@@ -58,7 +58,7 @@ export function DashboardShell({ role, children }: { role: DashboardRole; childr
           )}
         />
         {/* Phones: room at the bottom for the tabs. Big screens: room on the left for the sidebar. */}
-        <main id="main" tabIndex={-1} className="min-w-0 scroll-mt-20 px-4 outline-none pt-5 pb-[calc(var(--tabbar-h)+2rem+env(safe-area-inset-bottom))] sm:px-6 lg:py-8 lg:pr-10 lg:pl-[312px] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[132px]">
+        <main id="main" tabIndex={-1} className="min-w-0 scroll-mt-20 px-4 outline-none pt-5 pb-[calc(var(--tabbar-h)+2rem+env(safe-area-inset-bottom))] sm:px-6 lg:py-8 lg:pr-10 lg:pl-[19.5rem] lg:transition-[padding] lg:duration-300 lg:collapsed:pl-[8.25rem]">
           <div className="mx-auto max-w-6xl">
             {/* Big screens: today's date on the left, the bell on the right, above every page.
                 On small screens the bell sits in the sidebar's top bar instead. */}
@@ -117,7 +117,9 @@ async function SidebarContext() {
   const user = await getCurrentUser();
   const store = user.vendor;
   const state = store
-    ? store.status === "APPROVED" && store.isTemporarilyClosed
+    ? store.status === "APPROVED" && store.permitPausedAt
+      ? { label: "Paused: permit expired", dot: "bg-red-500" }
+      : store.status === "APPROVED" && store.isTemporarilyClosed
       ? { label: "Temporarily closed", dot: "bg-gray-400" }
       : STORE_STATE[store.status]
     : { label: "All stores and riders", dot: "bg-brand-500" };

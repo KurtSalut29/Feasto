@@ -14,6 +14,7 @@ type Step = "accept" | "preparing" | "ready" | "complete";
 /** Who a delivery job has reached so far, in the store's words. */
 const LOOKING_FOR_RIDER: Record<JobDispatch, string> = {
   NEW: "Looking for a rider…",
+  PREFERRED: "Asking the rider the customer chose",
   STORE_RIDERS: "Asking your own riders first",
   NEAREST: "Asking the riders nearest your store",
   WIDER: "Asking more riders nearby",

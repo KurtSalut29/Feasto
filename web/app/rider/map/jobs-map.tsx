@@ -77,7 +77,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
       />
 
       {/* Laptops up: every job in view listed beside the map; choosing one shows its pin */}
-      <aside aria-label="Jobs in view" className="absolute top-3 bottom-3 left-3 z-[1] hidden w-[320px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5 lg:flex">
+      <aside aria-label="Jobs in view" className="absolute top-3 bottom-3 left-3 z-[1] hidden w-80 flex-col overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/5 lg:flex">
         <div className="shrink-0 border-b border-line px-4 py-3">
           <p className="font-semibold text-ink">{online ? `${total} open ${total === 1 ? "job" : "jobs"} in view` : "You're offline"}</p>
           <p className="text-xs text-muted">{online ? "Move the map to see jobs elsewhere." : "Go online to see and take jobs."}</p>
@@ -115,7 +115,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         )}
       </aside>
 
-      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 lg:left-[344px]">
+      <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-2 lg:left-[21.5rem]">
         <div className="pointer-events-auto flex flex-col items-start gap-2">
           <p className="rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-ink shadow-md ring-1 ring-black/5">
             {online ? `${total} open ${total === 1 ? "job" : "jobs"} here` : "You're offline"}
@@ -146,7 +146,7 @@ export function JobsMap({ active, online }: { active: RiderDelivery | null; onli
         </div>
       </div>
       {error === "blocked" && (
-        <p className="absolute inset-x-3 top-24 rounded-xl md:right-auto md:max-w-sm lg:left-[344px] bg-white px-3 py-2 text-sm text-red-600 shadow-md">
+        <p className="absolute inset-x-3 top-24 rounded-xl md:right-auto md:max-w-sm lg:left-[21.5rem] bg-white px-3 py-2 text-sm text-red-600 shadow-md">
           Location is blocked. Allow it in your browser settings to see yourself on the map.
         </p>
       )}

@@ -35,6 +35,8 @@ export type User = {
     status: ApprovalStatus;
     reviewNote: string | null;
     permitExpiresAt: string | null;
+    /** Set while the store takes no orders because its permit stayed expired past the grace period */
+    permitPausedAt: string | null;
   } | null;
   riderProfile: {
     vehicleModel: string | null;
@@ -155,7 +157,7 @@ export type DeliveryQuote = {
 
 export type Cart = {
   groups: {
-    store: { id: string; name: string; imageUrl: string | null; address: string; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
+    store: { id: string; name: string; imageUrl: string | null; address: string; latitude?: number | null; longitude?: number | null; opensAt: string; closesAt: string; isOpen: boolean; acceptsCash: boolean; onlinePayments: OnlinePayment[] };
     items: { menuItemId: string; name: string; imageUrl: string | null; price: number; quantity: number; lineTotal: number; problem: CartProblem | null; stock: number | null; /** For the store, this dish only */ note?: string | null }[];
     subtotal: number;
     problem: CartProblem | null;
@@ -232,6 +234,8 @@ export type ResidentOrder = OrderBase & {
   tipMethod?: OnlinePayment | null;
   /** The resident's rating of the rider, once they've given one */
   riderRating?: RiderRatingGiven | null;
+  /** The rider the resident asked for at checkout */
+  preferredRider?: { name: string } | null;
   checkout: {
     id: string;
     paymentMethod: PaymentMethod;
@@ -262,7 +266,7 @@ export type RiderRatingGiven = { rating: number; tags: string[]; comment: string
 
 /** An order as the store sees it. */
 /** How far a delivery job has spread among riders. */
-export type JobDispatch = "NEW" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYONE";
+export type JobDispatch = "NEW" | "PREFERRED" | "STORE_RIDERS" | "NEAREST" | "WIDER" | "EVERYONE";
 
 /** When a waiting order will be cancelled by itself, and why (no store reply, or no rider) */
 export type AutoCancel = { at: string; why: "NO_STORE_REPLY" | "NO_RIDER" } | null;

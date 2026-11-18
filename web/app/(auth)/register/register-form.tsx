@@ -31,6 +31,7 @@ import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-ty
 import type { Role, StoreType, User } from "@/lib/types";
 import { PERMIT_FIELDS, RIDER_LICENSE_FIELDS, RIDER_PERSONAL_FIELDS, STORE_CODE_FIELD, type VerificationField } from "@/lib/verification-fields";
 import { AUTH_BUTTON } from "../auth-ui";
+import { LegalDialog, type Doc } from "../legal-links";
 
 type SignupRole = Exclude<Role, "ADMIN">;
 type Step = "account" | "store" | "location" | "permit" | "personal" | "license";
@@ -161,6 +162,7 @@ export function RegisterForm() {
   const [acceptsReservations, setAcceptsReservations] = useState(false);
   const [pin, setPin] = useState<LatLng | null>(null);
   const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -215,7 +217,7 @@ export function RegisterForm() {
 
   function requestBody() {
     const { name, email, phone, password } = values;
-    const account = { role, name, email, phone, password };
+    const account = { role, name, email, phone, password, acceptTerms: agreed };
     const pick = (fields: VerificationField[]) => Object.fromEntries(fields.map((f) => [f.name, values[f.name] ?? ""]));
     if (role === "VENDOR") {
       return {
@@ -239,6 +241,7 @@ export function RegisterForm() {
     setError(undefined);
 
     const errors = checkStep();
+    if (isLastStep && !agreed) errors.acceptTerms = [TERMS_MISSING];
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (!isLastStep) {
@@ -279,6 +282,18 @@ export function RegisterForm() {
 
   const fieldError = (name: string) => fieldErrors[name]?.[0];
 
+  /** Agreeing to the Terms and Privacy Policy, just above Create account */
+  const terms = (
+    <TermsAgreement
+      checked={agreed}
+      onChange={(value) => {
+        setAgreed(value);
+        if (value) clearError("acceptTerms");
+      }}
+      error={fieldError("acceptTerms")}
+    />
+  );
+
   /** Text boxes for a list of verification details. */
   const fieldBoxes = (fields: VerificationField[], focusFirst = true) =>
     fields.map(({ name, label, type, placeholder, Icon, hint, uppercase, optional }, index) => (
@@ -311,6 +326,7 @@ export function RegisterForm() {
         error={error}
         submitting={submitting}
         isLast={isLastStep}
+        beforeSubmit={isLastStep ? terms : null}
         onBack={() => {
           setError(undefined);
           setFieldErrors({});
@@ -476,6 +492,8 @@ export function RegisterForm() {
           hint={values.password && <PasswordStrength password={values.password} />}
         />
 
+        {isLastStep && terms}
+
         <div className="pt-1">
           <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
             {/* Fades in afresh when the account type changes */}
@@ -505,6 +523,7 @@ function DetailsStep({
   error,
   submitting,
   isLast,
+  beforeSubmit,
   onBack,
   onSubmit,
   children,
@@ -516,6 +535,7 @@ function DetailsStep({
   error?: string;
   submitting: boolean;
   isLast: boolean;
+  beforeSubmit: ReactNode;
   onBack: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
@@ -529,6 +549,7 @@ function DetailsStep({
       <form onSubmit={onSubmit} noValidate className="mt-5 space-y-3">
         {error && <Alert tone="error">{error}</Alert>}
         {children}
+        {beforeSubmit}
         <div className="flex gap-3 pt-1">
           <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to the previous step">
             <ArrowLeft className="size-5" aria-hidden />
@@ -539,5 +560,54 @@ function DetailsStep({
         </div>
       </form>
     </>
+  );
+}
+
+const TERMS_MISSING = "Agree to the Terms of Service and Privacy Policy to create your account.";
+
+/** The box to tick before an account is made. The names open the full text in a pop-up, so nothing typed is lost. */
+function TermsAgreement({ checked, onChange, error }: { checked: boolean; onChange: (checked: boolean) => void; error?: string }) {
+  const link = "font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-500";
+  // The pop-up sits outside the sentence, so it isn't part of the box's name
+  const [reading, setReading] = useState<Doc | null>(null);
+  return (
+    <div>
+      <div className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 ${error ? "border-red-300 bg-red-50/60" : "border-line bg-canvas/60"}`}>
+        <input
+          id="accept-terms"
+          type="checkbox"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+          aria-label="I agree to Feasto's Terms of Service and Privacy Policy"
+          aria-invalid={!!error}
+          aria-describedby={error ? "accept-terms-error" : undefined}
+          className="mt-0.5 size-5 shrink-0 cursor-pointer rounded accent-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+        />
+        {/* The label covers the words only, so tapping a policy's name opens it instead of ticking the box */}
+        <p className="text-sm leading-snug text-ink">
+          <label htmlFor="accept-terms" className="cursor-pointer">
+            I agree to Feasto&apos;s{" "}
+          </label>
+          <button type="button" onClick={() => setReading("terms")} className={link}>
+            Terms of Service
+          </button>{" "}
+          <label htmlFor="accept-terms" className="cursor-pointer">
+            and{" "}
+          </label>
+          <button type="button" onClick={() => setReading("privacy")} className={link}>
+            Privacy Policy
+          </button>
+          <label htmlFor="accept-terms" className="cursor-pointer">
+            .
+          </label>
+        </p>
+      </div>
+      <LegalDialog doc={reading} onClose={() => setReading(null)} />
+      {error && (
+        <p id="accept-terms-error" role="alert" className="mt-1.5 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

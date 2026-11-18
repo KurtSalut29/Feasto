@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronRight, Heart, Store, type LucideIcon } from "lucide-react";
+import { CalendarDays, ChevronRight, Heart, ShoppingBasket, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -58,9 +58,11 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
           <section className="mt-6 md:mt-8" aria-label="Categories">
             <SectionHeading title="Categories" seeAll={{ href: browseHref(NO_FILTERS), label: `All ${sections.total} stores` }} />
             <CategoryGrid categories={sections.categories} />
-            <div className="mt-4 grid grid-cols-2 gap-3 md:max-w-md">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:max-w-xl">
               <Shortcut href={browseHref({ ...NO_FILTERS, bookable: true })} Icon={CalendarDays} label="Book a table" />
               <Shortcut href="/resident/saved" Icon={Heart} label="Saved stores" />
+              {/* Pabili: a rider buys from a shop that isn't on Feasto */}
+              <Shortcut href="/resident/pabili" Icon={ShoppingBasket} label="Pabili" />
             </div>
           </section>
 

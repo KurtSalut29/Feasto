@@ -48,6 +48,8 @@ type MonitorRow = {
   renewalWaiting: boolean;
   storeName: string | null;
   suspendedByAdmin: boolean;
+  /** A store Feasto paused because its permit stayed expired past the grace period */
+  paused: boolean;
 };
 type Response = {
   view: View;
@@ -159,6 +161,11 @@ function MonitorItem({ item, kind }: { item: MonitorRow; kind: Kind }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {item.status === "SUSPENDED" && <ApprovalBadge status="SUSPENDED" />}
+        {item.paused && item.status !== "SUSPENDED" && (
+          <Badge tone="danger" dot>
+            Paused: not taking orders
+          </Badge>
+        )}
         {item.renewalWaiting && (
           <Link href="/admin/documents?view=renewals">
             <Badge tone="info" dot>

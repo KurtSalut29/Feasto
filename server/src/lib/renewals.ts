@@ -7,9 +7,13 @@ import { logActivity, type Actor } from "./activity.js";
 import { prisma } from "./db.js";
 import { HttpError } from "./http.js";
 import { notify } from "./liveUpdates.js";
+import { invalidateStore } from "./redisCache.js";
 
 /** How long before the expiry date people are warned and the admin's monitor lists it. */
 export const EXPIRING_SOON_DAYS = 30;
+
+/** How long a store may keep selling after its business permit expires, to get the renewal in. After it, the store pauses. */
+export const PERMIT_GRACE_DAYS = 7;
 
 /** Today in Manila as a date, to compare with the DATE columns. */
 export const manilaToday = () => new Date(`${new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10)}T00:00:00Z`);
@@ -40,7 +44,7 @@ export async function reviewRenewal(id: string, { decision, note }: z.infer<type
       number: true,
       expiresAt: true,
       file: true,
-      vendor: { select: { id: true, name: true, ownerId: true, permitFile: true, status: true } },
+      vendor: { select: { id: true, name: true, ownerId: true, permitFile: true, status: true, permitPausedAt: true } },
       rider: { select: { id: true, userId: true, vendorId: true, licenseFile: true, status: true, user: { select: { name: true } }, vendor: { select: { name: true } } } },
     },
   });
@@ -62,7 +66,8 @@ export async function reviewRenewal(id: string, { decision, note }: z.infer<type
       });
       if (count === 0) throw new HttpError(409, "This renewal was already reviewed. Refresh to see the latest.");
       if (approved && vendor) {
-        await tx.vendor.update({ where: { id: vendor.id }, data: { permitNumber: renewal!.number, permitExpiresAt: renewal!.expiresAt, permitFile: renewal!.file } });
+        // A store paused for its expired permit takes orders again at once
+        await tx.vendor.update({ where: { id: vendor.id }, data: { permitNumber: renewal!.number, permitExpiresAt: renewal!.expiresAt, permitFile: renewal!.file, permitPausedAt: null } });
       }
       if (approved && rider) {
         await tx.riderProfile.update({ where: { id: rider.id }, data: { licenseNumber: renewal!.number, licenseExpiresAt: renewal!.expiresAt, licenseFile: renewal!.file } });
@@ -84,9 +89,17 @@ export async function reviewRenewal(id: string, { decision, note }: z.infer<type
   // Only once the database agrees: the file that's no longer in use
   await removeDocument(approved ? (vendor?.permitFile ?? rider?.licenseFile) : renewal!.file);
   const suspended = (vendor?.status ?? rider?.status) === "SUSPENDED";
+  const unpaused = approved && !!vendor?.permitPausedAt;
+  if (vendor) await invalidateStore(vendor.id);
   await notify(vendor?.ownerId ?? rider!.userId, {
     title: approved ? `Your renewed ${documentName} was approved` : `Your renewed ${documentName} wasn't approved`,
-    body: approved ? (suspended ? "Your account is still suspended until it's reinstated." : "Thanks for keeping it up to date.") : `Reason: ${note}`,
+    body: approved
+      ? suspended
+        ? "Your account is still suspended until it's reinstated."
+        : unpaused
+          ? "Your store is taking orders again."
+          : "Thanks for keeping it up to date."
+      : `Reason: ${note}`,
     link: vendor ? "/vendor/store#permit" : "/rider/license",
   });
 }

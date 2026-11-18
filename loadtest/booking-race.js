@@ -33,6 +33,7 @@ export function setup() {
       email: `race-owner-${run}@test.com`,
       phone: "09170000001",
       password: "loadtest123",
+      acceptTerms: true,
       storeName: `Race Test Diner ${run % 10000}`,
       storeAddress: "1 Test Street, Quezon City",
       storeType: "RESTAURANT",
@@ -75,6 +76,7 @@ export function setup() {
           email: `racer-${run}-${i}@test.com`,
           phone: "09170000002",
           password: "loadtest123",
+          acceptTerms: true,
         }),
       ),
     );

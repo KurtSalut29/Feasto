@@ -53,3 +53,6 @@ export async function syncPasswordChanges() {
 
 /** A store residents can see and order from: approved, and its owner's account isn't disabled. */
 export const ACTIVE_STORE = { status: "APPROVED", owner: { disabledAt: null } } as const;
+
+/** A store that can take new orders and bookings: active, and not paused for an expired business permit. */
+export const TAKING_ORDERS = { ...ACTIVE_STORE, permitPausedAt: null } as const;

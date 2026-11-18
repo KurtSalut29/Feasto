@@ -2,9 +2,10 @@ import type { Prisma } from "../generated/prisma/client.js";
 import { logActivity, notifyAdmin } from "./activity.js";
 import { prisma } from "./db.js";
 import { forgetRiderPosition, OPEN_JOB } from "./dispatch.js";
-import { notify } from "./liveUpdates.js";
+import { CHANNELS, notify, publish } from "./liveUpdates.js";
 import { redis } from "./redis.js";
-import { daysFromToday, EXPIRING_SOON_DAYS, manilaToday } from "./renewals.js";
+import { invalidateStore } from "./redisCache.js";
+import { daysFromToday, EXPIRING_SOON_DAYS, manilaToday, PERMIT_GRACE_DAYS } from "./renewals.js";
 import { getSettings } from "./settings.js";
 
 type Log = (...args: unknown[]) => void;
@@ -78,6 +79,45 @@ async function takeExpiredRidersOffline(log: Log) {
   }
 }
 
+const dateWords = new Intl.DateTimeFormat("en-PH", { month: "long", day: "numeric", timeZone: "Asia/Manila" });
+
+/**
+ * A store keeps selling for PERMIT_GRACE_DAYS after its business permit expires, then pauses: no new
+ * orders or bookings until a renewed permit is approved. Orders already placed can still be finished.
+ * UPDATE ... RETURNING hands each store to one worker only, so the store and the admin are told once.
+ */
+async function pauseLapsedStores(log: Log) {
+  // Good through its date, then PERMIT_GRACE_DAYS more; paused from the day after that
+  const lastGoodDay = daysFromToday(-PERMIT_GRACE_DAYS).toISOString().slice(0, 10);
+  const paused = await prisma.$queryRaw<{ id: string; name: string; ownerId: string }[]>`
+    UPDATE "Vendor" SET "permitPausedAt" = NOW()
+    WHERE "permitPausedAt" IS NULL AND status = 'APPROVED' AND "permitExpiresAt" < ${lastGoodDay}::date
+    RETURNING id, name, "ownerId"`;
+  // A permit date fixed some other way (not through a renewal): the pause is lifted by itself
+  const today = manilaToday().toISOString().slice(0, 10);
+  const lifted = await prisma.$queryRaw<{ id: string; name: string; ownerId: string }[]>`
+    UPDATE "Vendor" SET "permitPausedAt" = NULL
+    WHERE "permitPausedAt" IS NOT NULL AND "permitExpiresAt" >= ${today}::date
+    RETURNING id, name, "ownerId"`;
+  for (const store of paused) {
+    await invalidateStore(store.id);
+    await logActivity(prisma, null, { category: "DOCUMENTS", action: "Paused store: business permit expired", target: store.name });
+    await notify(store.ownerId, {
+      title: "Your store stopped taking orders",
+      body: `Your business permit expired more than ${PERMIT_GRACE_DAYS} days ago. Upload the renewed permit; once it's approved, residents can order again.`,
+      link: "/vendor/store#permit",
+    });
+    await notifyAdmin({ title: `${store.name} was paused`, body: "Its business permit is still expired. It takes orders again once you approve a renewal.", link: "/admin/documents?view=expired&kind=stores" });
+    log(`${store.name} paused: business permit expired`);
+  }
+  for (const store of lifted) {
+    await invalidateStore(store.id);
+    await notify(store.ownerId, { title: "Your store is taking orders again", body: "Your business permit is up to date.", link: "/vendor" });
+  }
+  // Residents' open pages show the change without a refresh
+  if (paused.length || lifted.length) await publish(CHANNELS.everyone, { type: "data.changed", by: "ADMIN" });
+}
+
 async function remindStores() {
   const stores = await prisma.vendor.findMany({
     where: { status: "APPROVED", permitExpiresAt: { lte: daysFromToday(EXPIRING_SOON_DAYS) } },
@@ -89,10 +129,13 @@ async function remindStores() {
     if (!(await firstToClaim(key, EXPIRING_SOON_DAYS + 10))) continue;
     await notify(store.ownerId, {
       title: `Your business permit ${inWords(daysLeft)}`,
-      body: daysLeft < 0 ? "Upload your renewed permit so Feasto can keep your store open." : "Upload your renewed permit before it expires.",
+      body:
+        daysLeft < 0
+          ? `Upload your renewed permit. If it isn't renewed, your store stops taking orders on ${dateWords.format(daysFromToday(daysLeft + PERMIT_GRACE_DAYS + 1))}.`
+          : `Upload your renewed permit before it expires. Feasto pauses a store whose permit stays expired for ${PERMIT_GRACE_DAYS} days.`,
       link: "/vendor/store#permit",
     });
-    if (daysLeft < 0) await notifyAdmin({ title: `${store.name}'s business permit has expired`, body: "Check whether a renewal came in, or suspend the store.", link: "/admin/documents?view=expired&kind=stores" });
+    if (daysLeft < 0) await notifyAdmin({ title: `${store.name}'s business permit has expired`, body: `Check whether a renewal came in. Feasto pauses the store after ${PERMIT_GRACE_DAYS} days if it isn't renewed.`, link: "/admin/documents?view=expired&kind=stores" });
   }
 }
 
@@ -118,6 +161,7 @@ async function remindRiders() {
 export async function runMonitors(log: Log) {
   await takeExpiredRidersOffline(log);
   await remindStores();
+  await pauseLapsedStores(log);
   await remindRiders();
   const fresh = await announceStuckOrders();
   if (fresh) log(`${fresh} order(s) newly stuck, told the admin`);

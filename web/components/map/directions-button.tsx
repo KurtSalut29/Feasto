@@ -23,7 +23,7 @@ import type { Route, RouteStep } from "./map-engine";
 import { useAddressPin } from "./use-address-pin";
 import { useGeolocation } from "./use-my-location";
 
-type Destination = { at: LatLng | null; name: string; address?: string; kind?: "store" | "home"; near?: LatLng | null };
+export type Destination = { at: LatLng | null; name: string; address?: string; kind?: "store" | "home"; near?: LatLng | null };
 
 /**
  * Directions inside Feasto: opens a full-screen map with the way from where you are to the
@@ -83,7 +83,8 @@ function stepIcon(step: RouteStep): LucideIcon {
   return TURN_ICON[step.modifier ?? "straight"] ?? ArrowUp;
 }
 
-function DirectionsView({ destination, onClose }: { destination: Destination; onClose: () => void }) {
+/** The full-screen directions. `footer` sits above the turns, for what to do on arrival (a rider's next step). */
+export function DirectionsView({ destination, onClose, footer }: { destination: Destination; onClose: () => void; footer?: ReactNode }) {
   const { position, error } = useGeolocation();
   const [route, setRoute] = useState<Route | null>(null);
   const close = useRef<HTMLButtonElement>(null);
@@ -147,6 +148,7 @@ function DirectionsView({ destination, onClose }: { destination: Destination; on
       </div>
 
       <div className="h-[42dvh] shrink-0 overflow-y-auto border-t border-line pb-[env(safe-area-inset-bottom)] shadow-[0_-12px_24px_-18px_rgba(31,45,61,0.4)]">
+        {footer}
         {place.approximate && (
           <p className="flex items-start gap-2 border-b border-line bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />

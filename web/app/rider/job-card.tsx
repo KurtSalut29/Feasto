@@ -44,7 +44,7 @@ export function JobCard({ job, me, busy, arrivals }: { job: RiderJob; me: LatLng
       </div>
       <div className="px-4 py-3">
         {/* The route: store at the top, customer at the bottom, joined by a dashed line */}
-        <ol className="relative space-y-3 text-sm before:absolute before:top-9 before:bottom-5 before:left-[17px] before:border-l-2 before:border-dashed before:border-line">
+        <ol className="relative space-y-3 text-sm before:absolute before:top-9 before:bottom-5 before:left-[1.0625rem] before:border-l-2 before:border-dashed before:border-line">
           <li className="relative flex gap-3">
             <StoreCover imageUrl={job.vendor.imageUrl} className="z-10 size-9 shrink-0 rounded-full ring-4 ring-white" />
             <span className="min-w-0">

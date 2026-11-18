@@ -31,11 +31,16 @@ export const newPassword = z
   .regex(/[A-Za-z]/, "Include at least one letter.")
   .regex(/\d/, "Include at least one number.");
 
+/** The version of the Terms of Service and Privacy Policy on the web's /terms and /privacy pages.
+ * Change it with the text; each account records the version it agreed to. */
+export const TERMS_VERSION = "2026-11-19";
+
 const accountFields = {
   name: z.string().trim().min(2, "Enter your full name.").max(80),
   email,
   phone: mobileNumber,
   password: newPassword,
+  acceptTerms: z.literal(true, "Agree to Feasto's Terms of Service and Privacy Policy to create an account."),
 };
 
 // Admin accounts are never self-registered; they come from the seed step.
@@ -84,6 +89,7 @@ const publicUser = {
       status: true,
       reviewNote: true,
       permitExpiresAt: true,
+      permitPausedAt: true,
     },
   },
   riderProfile: {
@@ -131,6 +137,8 @@ authRouter.post("/register", async (req, res) => {
         phone: input.phone,
         role: input.role,
         passwordHash: await hashPassword(input.password),
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
         // A vendor account and its store are created together in one transaction.
         // New stores start as PENDING until an admin approves them.
         ...(input.role === "VENDOR" && {

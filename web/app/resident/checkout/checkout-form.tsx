@@ -7,6 +7,7 @@ import { DishPhoto } from "@/components/app/dish-photo";
 import { DeliveryFeeLine } from "@/components/app/delivery-fee";
 import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
 import { useApiData } from "@/components/app/use-api-data";
+import { RiderPicker, type ChoosableRider } from "@/components/app/rider-picker";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -97,6 +98,8 @@ export function CheckoutForm({
   const paymentMethod: PaymentMethod = pay === "COD" ? "COD" : "ONLINE";
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
+  // A rider the resident asked for (delivery from one store only)
+  const [rider, setRider] = useState<ChoosableRider | null>(null);
   const [placing, setPlacing] = useState(false);
   // Leaving for Xendit's payment page: a short cover so the jump to another site isn't a surprise
   const [leaving, setLeaving] = useState(false);
@@ -155,6 +158,7 @@ export function CheckoutForm({
         notes,
         scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
+        preferredRiderId: fulfillment === "DELIVERY" && stores === 1 ? rider?.id : undefined,
         simulatePaymentFailure: paymentMethod === "ONLINE" && !realPayments && simulateFailure,
       },
     });
@@ -249,6 +253,17 @@ export function CheckoutForm({
                   for live tracking and directions.
                 </Alert>
               )}
+            </div>
+          )}
+          {/* Who brings it: the nearest rider, or one the resident trusts */}
+          {stores === 1 && (
+            <div className="mt-4">
+              <h3 className="mb-2 text-sm font-semibold text-ink">Who delivers it</h3>
+              <RiderPicker
+                near={cart.groups[0]!.store.latitude != null && cart.groups[0]!.store.longitude != null ? { lat: cart.groups[0]!.store.latitude, lng: cart.groups[0]!.store.longitude } : null}
+                value={rider}
+                onChange={setRider}
+              />
             </div>
           )}
         </Step>

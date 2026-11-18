@@ -15,6 +15,8 @@ export const CHANNELS = {
   riders: "rt:riders",
   /** The admin's pages reload whenever any order changes */
   admin: "rt:admin",
+  /** Every signed-in page: a store or the admin changed something others may be looking at */
+  everyone: "rt:everyone",
 };
 
 export type RealtimeEvent =
@@ -33,7 +35,10 @@ export type RealtimeEvent =
       message: { id: string; body: string; part: string; name: string; mine: boolean; createdAt: string };
     }
   /** The account was disabled: open pages should log out */
-  | { type: "session.ended" };
+  | { type: "session.ended" }
+  /** A store or the admin saved a change (menu, store settings, payments, fees, approvals…):
+   * every open page loads its data again in the background, so nobody has to refresh */
+  | { type: "data.changed"; by: "VENDOR" | "ADMIN" };
 
 export function publish(channel: string, event: RealtimeEvent) {
   return redis.publish(channel, marshal(event, { transport: "pubsub", channel }));
