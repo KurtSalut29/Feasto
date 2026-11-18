@@ -21,7 +21,6 @@ import { riderRouter } from "./routes/rider.js";
 import { storesRouter } from "./routes/stores.js";
 import { uploadsRouter } from "./routes/uploads.js";
 import { adminToolsRouter } from "./routes/adminTools.js";
-import { adminPabiliPlacesRouter } from "./routes/pabiliPlaces.js";
 import { adminEarningsRouter, riderEarningsRouter, vendorEarningsRouter } from "./routes/earnings.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { adminPayoutsRouter, riderPayoutsRouter, vendorPayoutsRouter } from "./routes/payouts.js";
@@ -73,7 +72,6 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin", adminToolsRouter);
-app.use("/api/admin", adminPabiliPlacesRouter);
 app.use("/api/admin", adminEarningsRouter);
 app.use("/api/admin", adminPayoutsRouter);
 app.use("/api/me", meRouter);

@@ -8,8 +8,9 @@ export type Errand = {
   status: ErrandStatus;
   shopName: string;
   shopAddress: string;
-  shopLat: number;
-  shopLng: number;
+  /** Unknown until the rider buys: then where their phone was */
+  shopLat: number | null;
+  shopLng: number | null;
   items: { name: string; quantity: number; note: string | null }[];
   notes: string | null;
   budget: string;
@@ -17,10 +18,8 @@ export type Errand = {
   deliveryLat: number | null;
   deliveryLng: number | null;
   deliveryFee: string;
-  /** The fee first quoted, when the rider found the shop away from the pin and the fee was corrected */
-  quotedFee: string | null;
-  shopMovedKm: number | null;
-  placeId: string | null;
+  /** The most the fee can be; until the rider buys, deliveryFee is the lowest */
+  feeMax: string | null;
   receiptTotal: string | null;
   receiptPhotoUrl: string | null;
   deliveryPhotoUrl: string | null;
@@ -40,16 +39,6 @@ export const ERRAND_STATUS: Record<ErrandStatus, { label: string; tone: BadgeTon
   CANCELLED: { label: "Cancelled", tone: "neutral" },
 };
 
-export type PlaceKind = "MARKET" | "PHARMACY" | "GROCERY" | "HARDWARE" | "SARI_SARI" | "OTHER";
-
-export const PLACE_KIND: Record<PlaceKind, string> = {
-  MARKET: "Market",
-  PHARMACY: "Drugstore",
-  GROCERY: "Grocery",
-  HARDWARE: "Hardware",
-  SARI_SARI: "Sari-sari store",
-  OTHER: "Other shop",
-};
-
-/** A shop on the admin's list of Pabili places */
-export type PabiliPlace = { id: string; name: string; kind: PlaceKind; address: string; latitude: number; longitude: number; distanceKm: number | null };
+/** A shop's name and address as a Google Maps search, for finding a shop that has no pin */
+export const mapsSearch = (name: string, address: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${address}, Naval, Biliran`)}`;

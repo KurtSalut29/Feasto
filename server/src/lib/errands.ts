@@ -14,10 +14,13 @@ export const PABILI_BUDGET_MAX = 1000;
 export const PABILI_BUDGET_MIN = 20;
 /** A Pabili nobody takes in this long is cancelled, and the resident is told */
 export const ERRAND_WAIT_MINUTES = 15;
-/** How far a shop the resident pinned themselves may be from where it's delivered */
+/**
+ * A Pabili shop has no map pin: the fee is worked out from where the rider buys (their phone's
+ * spot) to the customer, and never goes above the fee for a shop this far by road.
+ */
 export const PABILI_MAX_KM = 5;
-/** If the rider buys farther than this from the resident's pin, the shop moves there and the fee is worked out again */
-export const SHOP_PIN_TOLERANCE_KM = 0.5;
+/** The middle of Naval, for an address without a pin */
+const TOWN_CENTER = { lat: 11.5618, lng: 124.3965 };
 /** How many free riders near the shop hear about a new Pabili */
 const NEARBY_RIDERS = 10;
 
@@ -86,11 +89,12 @@ export async function broadcastErrand(errand: { id: string; residentId: string; 
   ]);
 }
 
-/** The free riders nearest the shop hear about a Pabili anyone can take. */
-export async function tellNearbyRiders(errand: { id: string; shopName: string; shopLat: number; shopLng: number; preferredRiderId?: string | null }) {
+/** The free riders nearest the customer hear about a Pabili anyone can take (the shop has no pin; it's usually close by). */
+export async function tellNearbyRiders(errand: { id: string; shopName: string; deliveryLat: number | null; deliveryLng: number | null; preferredRiderId?: string | null }) {
   const free = await prisma.riderProfile.findMany({ where: availableRider({ vendorId: null }), select: { userId: true } });
   const ids = new Set(free.map((r) => r.userId).filter((id) => id !== errand.preferredRiderId));
-  const near = await nearestRiders({ lat: errand.shopLat, lng: errand.shopLng }, ids, NEARBY_RIDERS);
+  const at = errand.deliveryLat != null && errand.deliveryLng != null ? { lat: errand.deliveryLat, lng: errand.deliveryLng } : TOWN_CENTER;
+  const near = await nearestRiders(at, ids, NEARBY_RIDERS);
   await Promise.all(near.map((riderId) => notify(riderId, { title: "New Pabili request", body: `Buy at ${errand.shopName} and deliver it.`, link: "/rider" })));
   return near.length;
 }
@@ -102,10 +106,10 @@ export async function tellNearbyRiders(errand: { id: string; shopName: string; s
  *   nobody took it in ERRAND_WAIT_MINUTES: it's cancelled and the resident is told.
  */
 export async function runErrandTimers(log: Log) {
-  const opened = await prisma.$queryRaw<{ id: string; residentId: string; shopName: string; shopLat: number; shopLng: number; preferredRiderId: string | null }[]>`
+  const opened = await prisma.$queryRaw<{ id: string; residentId: string; shopName: string; deliveryLat: number | null; deliveryLng: number | null; preferredRiderId: string | null }[]>`
     UPDATE "Errand" SET "exclusiveUntil" = NULL
     WHERE status = 'REQUESTED' AND "exclusiveUntil" IS NOT NULL AND "exclusiveUntil" < NOW()
-    RETURNING id, "residentId", "shopName", "shopLat", "shopLng", "preferredRiderId"`;
+    RETURNING id, "residentId", "shopName", "deliveryLat", "deliveryLng", "preferredRiderId"`;
   for (const errand of opened) {
     const reached = await tellNearbyRiders(errand);
     const rider = errand.preferredRiderId ? await prisma.user.findUnique({ where: { id: errand.preferredRiderId }, select: { name: true } }) : null;

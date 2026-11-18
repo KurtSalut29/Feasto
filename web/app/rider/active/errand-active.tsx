@@ -1,8 +1,9 @@
-import { Banknote, MapPin, Phone, ShoppingBasket } from "lucide-react";
+import { Banknote, ExternalLink, MapPin, Phone, ShoppingBasket } from "lucide-react";
 import { StepBar } from "@/components/app/step-bar";
 import { DirectionsButton } from "@/components/map/directions-button";
 import { formatPeso } from "@/lib/format";
 import { pinOf } from "@/lib/geo";
+import { mapsSearch } from "../../resident/pabili/errand";
 import { ErrandSteps } from "./errand-steps";
 import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
@@ -12,8 +13,8 @@ export type RiderErrand = {
   status: "ACCEPTED" | "BOUGHT";
   shopName: string;
   shopAddress: string;
-  shopLat: number;
-  shopLng: number;
+  shopLat: number | null;
+  shopLng: number | null;
   items: { name: string; quantity: number; note: string | null }[];
   notes: string | null;
   budget: string;
@@ -21,6 +22,7 @@ export type RiderErrand = {
   deliveryLat: number | null;
   deliveryLng: number | null;
   deliveryFee: string;
+  feeMax: string | null;
   receiptTotal: string | null;
   resident: { name: string; phone: string | null };
 };
@@ -29,15 +31,20 @@ const pill =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
 
 /**
- * The Pabili the rider is running: the map and live location (the same as a delivery, so the
- * customer follows them), the shopping list, the next step (receipt, then the delivery photo),
- * and how much cash to collect.
+ * The Pabili the rider is running: the map with the customer's pin and the rider's live location
+ * (the same as a delivery, so the customer follows them), the shopping list, the next step
+ * (receipt, then the delivery photo), and how much cash to collect. The shop has no pin: the
+ * rider finds it by its name and address (or a Google Maps search), and their spot when they
+ * buy becomes the shop's.
  */
 export function ErrandActive({ errand }: { errand: RiderErrand }) {
-  const shop = { lat: errand.shopLat, lng: errand.shopLng };
+  const shop = pinOf(errand.shopLat, errand.shopLng);
   const home = pinOf(errand.deliveryLat, errand.deliveryLng);
   const bought = errand.status === "BOUGHT";
   const fee = Number(errand.deliveryFee);
+  const feeMax = Number(errand.feeMax ?? errand.deliveryFee);
+  // The demo ride needs somewhere to ride to before the shop is known: a few streets from the customer
+  const demoShop = shop ?? (home ? { lat: home.lat + 0.006, lng: home.lng + 0.004 } : null);
   const first = errand.resident.name.split(" ")[0];
 
   return (
@@ -52,7 +59,7 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
             <p className="mt-0.5 truncate text-sm text-muted">Buy at {errand.shopName}</p>
           </div>
           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 tabular-nums">
-            <span className="sr-only">You earn </span>+{formatPeso(fee)}
+            <span className="sr-only">You earn </span>+{bought || feeMax === fee ? formatPeso(fee) : `₱${Math.round(fee)}–${Math.round(feeMax)}`}
           </span>
         </div>
         <div className="mt-3">
@@ -62,8 +69,8 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
 
       <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={shop} home={home} homeAddress={errand.deliveryAddress} status={bought ? "PICKED_UP" : "ACCEPTED"} />
-        <ErrandSteps id={errand.id} status={errand.status} budget={Number(errand.budget)} fee={fee} />
-        <LocationSharer orderId={errand.id} heading={bought ? "home" : "store"} store={shop} home={home} />
+        <ErrandSteps id={errand.id} status={errand.status} budget={Number(errand.budget)} fee={fee} feeMax={feeMax} />
+        <LocationSharer orderId={errand.id} heading={bought ? "home" : "store"} store={demoShop} home={home} />
 
         <div className="flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-amber-900">
           <Banknote className="size-6 shrink-0" aria-hidden />
@@ -73,7 +80,7 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
                 Collect <span className="text-base font-bold">{formatPeso(Number(errand.receiptTotal ?? 0) + fee)}</span> in cash: the receipt plus your fee.
               </>
             ) : (
-              <>Pay at the shop with your money (up to {formatPeso(errand.budget)}). {first} pays you back in cash with your fee.</>
+              <>Pay at the shop with your money (up to {formatPeso(errand.budget)}). {first} pays you back in cash with your fee, set from where you buy.</>
             )}
           </p>
         </div>
@@ -96,7 +103,13 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
 
         <section className="space-y-4 rounded-2xl border border-line p-4">
           <Stop label={bought ? "Bought at" : "1 · Buy at"} title={errand.shopName} address={errand.shopAddress}>
-            <DirectionsButton to={shop} name={errand.shopName} address={errand.shopAddress} kind="store" className={pill} />
+            {!bought && (
+              <a href={mapsSearch(errand.shopName, errand.shopAddress)} target="_blank" rel="noopener noreferrer" className={pill}>
+                <ExternalLink className="size-4 text-brand-600" aria-hidden />
+                Find it on Google Maps
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            )}
           </Stop>
           <Stop label="2 · Deliver to" title={errand.resident.name} address={errand.deliveryAddress}>
             <DirectionsButton to={home} near={shop} name={errand.resident.name} address={errand.deliveryAddress} kind="home" className={pill} />

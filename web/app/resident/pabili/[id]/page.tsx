@@ -40,6 +40,8 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
   const { errand, budgetMax } = await serverApi<{ errand: Detail; budgetMax: number }>(`/errands/${id}`);
   const live = errand.status === "REQUESTED" || errand.status === "ACCEPTED" || errand.status === "BOUGHT";
   const status = ERRAND_STATUS[errand.status];
+  /** Once the rider buys, the fee is final; before, it's a range */
+  const feeSet = errand.status === "BOUGHT" || errand.status === "DELIVERED";
 
   return (
     <>
@@ -64,7 +66,7 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
             <RiderTracking
               orderId={errand.id}
               initial={errand.riderLocation}
-              store={{ lat: errand.shopLat, lng: errand.shopLng }}
+              store={pinOf(errand.shopLat, errand.shopLng)}
               storeName={errand.shopName}
               home={pinOf(errand.deliveryLat, errand.deliveryLng)}
               homeAddress={errand.deliveryAddress}
@@ -116,18 +118,21 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">Delivery fee</dt>
                 <dd className="text-ink tabular-nums">
-                  {errand.quotedFee && <s className="mr-1.5 text-muted">{formatPeso(errand.quotedFee)}</s>}
-                  {formatPeso(errand.deliveryFee)}
+                  {feeSet || !errand.feeMax ? formatPeso(errand.deliveryFee) : `${formatPeso(errand.deliveryFee)} to ${formatPeso(errand.feeMax)}`}
                 </dd>
               </div>
               <div className="flex justify-between gap-3 border-t border-line pt-1 text-[0.9375rem] font-bold text-ink">
                 <dt>{errand.total !== null ? "Total" : "Total, at most"}</dt>
-                <dd className="tabular-nums">{formatPeso(errand.total ?? Number(errand.budget) + Number(errand.deliveryFee))}</dd>
+                <dd className="tabular-nums">{formatPeso(errand.total ?? Number(errand.budget) + Number(errand.feeMax ?? errand.deliveryFee))}</dd>
               </div>
             </dl>
-            {errand.quotedFee && errand.shopMovedKm !== null && (
-              <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                The shop was {errand.shopMovedKm} km from your pin, so the delivery fee follows where the rider really bought it.
+            {errand.status !== "CANCELLED" && (
+              <p className="mt-3 text-sm text-muted">
+                {!feeSet
+                  ? "The delivery fee is set when the rider buys, from where the shop is to you."
+                  : errand.shopLat !== null
+                    ? "The delivery fee is from where the rider bought to your address."
+                    : "The rider's location wasn't shared when they bought, so you pay the lowest delivery fee."}
               </p>
             )}
           </section>

@@ -1,11 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
-import { quoteDelivery } from "../lib/deliveryFee.js";
+import { priceDelivery, quoteDelivery } from "../lib/deliveryFee.js";
 import { PREFERRED_RIDER_SECONDS, riderIsBusy, riderDistances } from "../lib/dispatch.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
-import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MAX, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, SHOP_PIN_TOLERANCE_KM, tellNearbyRiders } from "../lib/errands.js";
-import { distanceKm } from "../lib/geo.js";
+import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MAX, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, tellNearbyRiders } from "../lib/errands.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { marshal } from "../lib/marshalling.js";
@@ -44,13 +43,9 @@ const itemSchema = z.object({
 });
 
 const errandSchema = z.object({
-  /** A listed Pabili place: its name, address and pin come from the list, not the resident */
-  placeId: z.string().min(1).optional(),
-  /** Only for a shop that isn't listed: the resident names and pins it */
-  shopName: z.string().trim().min(2, "Enter the shop's name.").max(80).optional(),
-  shopAddress: z.string().trim().min(3, "Say where the shop is, like the street or a landmark.").max(200).optional(),
-  shopLat: z.number("Set the shop's pin on the map.").min(-90).max(90).optional(),
-  shopLng: z.number("Set the shop's pin on the map.").min(-180).max(180).optional(),
+  /** The shop, by name and where it is, the way you'd tell a friend: no map pin (the rider's phone sets its spot when they buy) */
+  shopName: z.string().trim().min(2, "Enter the shop's name.").max(80),
+  shopAddress: z.string().trim().min(3, "Say where the shop is, like the street or a landmark.").max(200),
   items: z.array(itemSchema).min(1, "Add at least one thing to buy.").max(20, "20 things at most in one Pabili."),
   notes: z.string().trim().max(200).optional().transform((v) => v || null),
   budget: z
@@ -60,7 +55,7 @@ const errandSchema = z.object({
   addressId: z.string().min(1, "Choose where to deliver it."),
   /** Ask a particular rider first; without it, the free riders nearest the shop hear about it */
   preferredRiderId: z.string().min(1).optional(),
-  /** The fee the resident saw; if it changed in the meantime, they're asked to look again */
+  /** The lowest fee the resident saw; if it changed in the meantime, they're asked to look again */
   expectedFee: z.number().optional(),
 });
 
@@ -73,53 +68,33 @@ async function addressOf(userId: string, addressId: string) {
 const feeFor = async (shop: { lat: number; lng: number }, address: { latitude: number | null; longitude: number | null }) =>
   quoteDelivery({ latitude: shop.lat, longitude: shop.lng }, address, await getSettings());
 
-/** The delivery fee from the shop to an address, before sending the request */
-errandsRouter.get("/quote", async (req, res) => {
-  const { lat, lng, addressId } = spot.extend({ addressId: z.string().min(1) }).parse(req.query);
-  const address = await addressOf(req.session!.userId, addressId);
-  const quote = await feeFor({ lat, lng }, address);
-  res.json({ fee: quote.fee, km: quote.km, budgetMax: PABILI_BUDGET_MAX });
-});
-
-/** Where a Pabili buys: a listed place (pinned by the admin), or the shop the resident named and pinned */
-async function shopOf(input: z.infer<typeof errandSchema>) {
-  if (input.placeId) {
-    const place = await prisma.pabiliPlace.findFirst({ where: { id: input.placeId, isActive: true } });
-    if (!place) throw new ValidationError({ placeId: ["That shop isn't on the list anymore. Choose another one."] });
-    return { placeId: place.id, name: place.name, address: place.address, lat: place.latitude, lng: place.longitude };
-  }
-  const missing: Record<string, string[]> = {
-    ...(!input.shopName && { shopName: ["Enter the shop's name."] }),
-    ...(!input.shopAddress && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
-    ...((input.shopLat === undefined || input.shopLng === undefined) && { shopLat: ["Move the map so the pin sits on the shop."] }),
-  };
-  if (Object.keys(missing).length) throw new ValidationError(missing);
-  return { placeId: null, name: input.shopName!, address: input.shopAddress!, lat: input.shopLat!, lng: input.shopLng! };
+/**
+ * The fee before anyone knows where the shop is: from the lowest (a shop close to the customer)
+ * to a shop PABILI_MAX_KM away. The rider's phone sets the real one when they buy.
+ */
+async function feeRange() {
+  const settings = await getSettings();
+  return { min: priceDelivery(null, settings).fee, max: priceDelivery(PABILI_MAX_KM, settings).fee };
 }
 
+errandsRouter.get("/quote", async (_req, res) => {
+  res.json({ ...(await feeRange()), maxKm: PABILI_MAX_KM, budgetMax: PABILI_BUDGET_MAX });
+});
+
 /**
- * Shops to buy from: the listed Pabili places (nearest to the delivery address first), and any
- * Feasto stores that match the search, so the resident orders those from their menu instead.
+ * Feasto stores whose name matches the shop being typed: those are ordered from their menu
+ * instead, so the store gets the order (and the resident can still choose their rider).
  */
-errandsRouter.get("/places", async (req, res) => {
-  const { q, addressId } = z.object({ q: z.string().trim().max(60).optional().default(""), addressId: z.string().optional() }).parse(req.query);
-  const address = addressId ? await prisma.address.findFirst({ where: { id: addressId, userId: req.session!.userId } }) : null;
-  const home = address?.latitude != null && address.longitude != null ? { lat: address.latitude, lng: address.longitude } : null;
-  const search = q.length >= 2 ? { contains: q, mode: "insensitive" as const } : undefined;
-  const [places, stores] = await Promise.all([
-    prisma.pabiliPlace.findMany({
-      where: { isActive: true, ...(search && { OR: [{ name: search }, { address: search }] }) },
-      select: { id: true, name: true, kind: true, address: true, latitude: true, longitude: true },
-      take: 300,
-    }),
-    search
-      ? prisma.vendor.findMany({ where: { ...ACTIVE_STORE, name: search }, select: { id: true, name: true, address: true }, orderBy: { name: "asc" }, take: 5 })
-      : Promise.resolve([]),
-  ]);
-  const listed = places
-    .map((p) => ({ ...p, distanceKm: home ? Math.round(distanceKm(home, { lat: p.latitude, lng: p.longitude }) * 10) / 10 : null }))
-    .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0) || a.name.localeCompare(b.name));
-  res.json({ places: listed.slice(0, 30), total: listed.length, stores, maxKm: PABILI_MAX_KM });
+errandsRouter.get("/on-feasto", async (req, res) => {
+  const { q } = z.object({ q: z.string().trim().max(60).optional().default("") }).parse(req.query);
+  if (q.length < 3) return void res.json({ stores: [] });
+  const stores = await prisma.vendor.findMany({
+    where: { ...ACTIVE_STORE, name: { contains: q, mode: "insensitive" } },
+    select: { id: true, name: true, address: true },
+    orderBy: { name: "asc" },
+    take: 3,
+  });
+  res.json({ stores });
 });
 
 errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of Pabili just now."), async (req, res) => {
@@ -128,17 +103,9 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });
   if (open >= 2) throw new HttpError(409, "You already have two Pabili on the way. Wait for one to arrive first.");
   const address = await addressOf(userId, input.addressId);
-  const shop = await shopOf(input);
-  // A shop the resident pinned: it has to be near where it's delivered, so a stray pin can't make a wild fee
-  if (!shop.placeId && address.latitude != null && address.longitude != null) {
-    const km = distanceKm(shop, { lat: address.latitude, lng: address.longitude });
-    if (km > PABILI_MAX_KM) {
-      throw new ValidationError({ shopLat: [`The pin is ${km.toFixed(1)} km from your address. A Pabili shop has to be within ${PABILI_MAX_KM} km, so check the pin.`] });
-    }
-  }
-  const quote = await feeFor(shop, address);
-  if (input.expectedFee !== undefined && Math.abs(input.expectedFee - quote.fee) > 0.001) {
-    throw new HttpError(409, `The delivery fee changed to ₱${quote.fee}. Check it, then send your Pabili again.`);
+  const fee = await feeRange();
+  if (input.expectedFee !== undefined && Math.abs(input.expectedFee - fee.min) > 0.001) {
+    throw new HttpError(409, `The delivery fee changed to ₱${fee.min} to ₱${fee.max}. Check it, then send your Pabili again.`);
   }
   const rider = input.preferredRiderId ? await chosenRider(input.preferredRiderId) : null;
 
@@ -147,26 +114,24 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
       residentId: userId,
       preferredRiderId: rider?.id ?? null,
       exclusiveUntil: rider ? new Date(Date.now() + PREFERRED_RIDER_SECONDS * 1000) : null,
-      placeId: shop.placeId,
-      shopName: shop.name,
-      shopAddress: shop.address,
-      shopLat: shop.lat,
-      shopLng: shop.lng,
+      shopName: input.shopName,
+      shopAddress: input.shopAddress,
       items: input.items,
       notes: input.notes,
       budget: input.budget,
       deliveryAddress: [address.details, address.landmark].filter(Boolean).join(" · "),
       deliveryLat: address.latitude,
       deliveryLng: address.longitude,
-      deliveryFee: quote.fee,
+      deliveryFee: fee.min,
+      feeMax: fee.max,
     },
-    select: { id: true, residentId: true, status: true, shopName: true, shopLat: true, shopLng: true },
+    select: { id: true, residentId: true, status: true, shopName: true, deliveryLat: true, deliveryLng: true },
   });
   const resident = req.session!.name.split(" ")[0];
   if (rider) {
     await notify(rider.id, {
       title: `${resident} asked you for a Pabili`,
-      body: `Buy at ${shop.name} (up to ₱${input.budget}). It's yours for ${PREFERRED_RIDER_SECONDS} seconds, then it goes to other riders.`,
+      body: `Buy at ${input.shopName} (up to ₱${input.budget}). It's yours for ${PREFERRED_RIDER_SECONDS} seconds, then it goes to other riders.`,
       link: "/rider",
     });
   } else {
@@ -190,9 +155,7 @@ const errandView = {
   deliveryLat: true,
   deliveryLng: true,
   deliveryFee: true,
-  quotedFee: true,
-  shopMovedKm: true,
-  placeId: true,
+  feeMax: true,
   receiptTotal: true,
   receiptPhotoUrl: true,
   deliveryPhotoUrl: true,
@@ -296,12 +259,29 @@ riderErrandsRouter.get("/errands", async (req, res) => {
     where: visibleTo(userId),
     orderBy: { createdAt: "asc" },
     take: 20,
-    select: { id: true, shopName: true, shopAddress: true, shopLat: true, shopLng: true, items: true, budget: true, deliveryFee: true, deliveryAddress: true, preferredRiderId: true, exclusiveUntil: true, createdAt: true, resident: { select: { name: true } } },
+    select: {
+      id: true,
+      shopName: true,
+      shopAddress: true,
+      deliveryLat: true,
+      deliveryLng: true,
+      items: true,
+      budget: true,
+      deliveryFee: true,
+      feeMax: true,
+      deliveryAddress: true,
+      preferredRiderId: true,
+      exclusiveUntil: true,
+      createdAt: true,
+      resident: { select: { name: true } },
+    },
   });
-  // How far the rider is from each shop, from the position their phone last sent
-  const away = await Promise.all(errands.map((e) => riderDistances({ lat: e.shopLat, lng: e.shopLng }, new Set([userId]))));
+  // How far the rider is from each customer (the shop has no pin), from the position their phone last sent
+  const away = await Promise.all(
+    errands.map((e) => (e.deliveryLat != null && e.deliveryLng != null ? riderDistances({ lat: e.deliveryLat, lng: e.deliveryLng }, new Set([userId])) : new Map<string, number>())),
+  );
   res.json({
-    errands: errands.map(({ resident, preferredRiderId, items, ...e }, i) => ({
+    errands: errands.map(({ resident, preferredRiderId, items, deliveryLat: _lat, deliveryLng: _lng, ...e }, i) => ({
       ...e,
       distanceKm: away[i]!.has(userId) ? Math.round(away[i]!.get(userId)! * 10) / 10 : null,
       itemCount: (items as unknown[]).length,
@@ -371,45 +351,42 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const input = parseBody(boughtSchema, req.body);
   const errand = await prisma.errand.findFirst({
     where: { id, riderId: userId },
-    select: { budget: true, residentId: true, deliveryFee: true, placeId: true, shopLat: true, shopLng: true, deliveryLat: true, deliveryLng: true },
+    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true },
   });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   if (input.receiptTotal > Number(errand.budget) + 0.001) {
     throw new ValidationError({ receiptTotal: [`That's over the ₱${peso(errand.budget)} budget. Call the customer: they can raise it in the app.`] });
   }
 
-  // A shop the resident pinned themselves: if the rider is buying well away from the pin, the pin
-  // was off, so the shop moves to where the rider is and the fee is worked out from there. Listed
-  // places were pinned by the admin, so they're never moved.
+  // The shop is where the rider is as they buy: the fee is worked out from there to the customer,
+  // never above the most the resident was shown. Without a recent spot, the lowest fee stays.
+  const at = await riderSpot(id);
   let fee = Number(errand.deliveryFee);
-  let correction: { shopLat: number; shopLng: number; deliveryFee: number; quotedFee: number; shopMovedKm: number } | null = null;
-  const at = errand.placeId ? null : await riderSpot(id);
   if (at) {
-    const off = distanceKm(at, { lat: errand.shopLat, lng: errand.shopLng });
-    if (off > SHOP_PIN_TOLERANCE_KM) {
-      const quote = await feeFor(at, { latitude: errand.deliveryLat, longitude: errand.deliveryLng });
-      correction = { shopLat: at.lat, shopLng: at.lng, deliveryFee: quote.fee, quotedFee: fee, shopMovedKm: Math.round(off * 10) / 10 };
-      fee = quote.fee;
-    }
+    const quote = await feeFor(at, { latitude: errand.deliveryLat, longitude: errand.deliveryLng });
+    fee = Math.min(quote.fee, Number(errand.feeMax ?? quote.fee));
   }
 
   const { count } = await prisma.errand.updateMany({
     where: { id, riderId: userId, status: "ACCEPTED" },
-    data: { status: "BOUGHT", boughtAt: new Date(), receiptTotal: input.receiptTotal, receiptPhotoUrl: input.receiptPhotoUrl, ...correction },
+    data: {
+      status: "BOUGHT",
+      boughtAt: new Date(),
+      receiptTotal: input.receiptTotal,
+      receiptPhotoUrl: input.receiptPhotoUrl,
+      deliveryFee: fee,
+      ...(at && { shopLat: at.lat, shopLng: at.lng }),
+    },
   });
   if (count === 0) throw new HttpError(409, "This Pabili isn't waiting to be bought anymore. Refresh to see the latest.");
   const total = peso(input.receiptTotal + fee);
-  const feeChanged = correction !== null && correction.deliveryFee !== correction.quotedFee;
-  const moved = feeChanged
-    ? ` The shop was ${correction!.shopMovedKm} km from your pin, so the delivery fee is now ₱${peso(fee)} (it was ₱${peso(correction!.quotedFee)}).`
-    : "";
   await notify(errand.residentId, {
     title: "Your Pabili was bought",
-    body: `The receipt says ₱${peso(input.receiptTotal)}. With the delivery fee, have ₱${total} ready in cash.${moved}`,
+    body: `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.`,
     link: `/resident/pabili/${id}`,
   });
   await broadcastErrand({ id, residentId: errand.residentId, status: "BOUGHT" });
-  res.json({ ok: true, fee: peso(fee), collect: total, feeChanged });
+  res.json({ ok: true, fee: peso(fee), collect: total, fromGps: Boolean(at) });
 });
 
 riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {

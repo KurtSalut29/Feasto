@@ -73,6 +73,7 @@ export function TermsOfService({ inPopup = false }: { inPopup?: boolean }) {
             "You may ask for a particular rider. They get your delivery first for a short time; if they can't take it, it goes to the nearest free rider.",
             "Pabili lets you ask a rider to buy things at a shop that isn't on Feasto. The rider pays at the shop, shows you the receipt, and you pay them back in cash with the delivery fee.",
             "You pay what the receipt says, never more than the budget you set. The budget has a limit shown in the app, so a rider never lends a large amount.",
+            "The delivery fee is worked out from where the rider buys (their phone's location at the shop) to your address, and is never more than the highest fee shown before you send it.",
             "A Pabili can be cancelled only until a rider takes it. One nobody takes in the time shown is cancelled, and you pay nothing.",
             "Don't ask for anything illegal, dangerous or age-restricted. The rider may refuse an item, and Feasto isn't responsible for what a shop outside Feasto sells.",
           ]}

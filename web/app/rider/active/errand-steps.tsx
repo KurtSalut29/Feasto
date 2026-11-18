@@ -17,7 +17,7 @@ import { ProofOfDelivery } from "./delivery-actions";
  * The rider's next step on a Pabili: at the shop, the receipt's photo and total (it can't be more
  * than the budget; the customer can raise it); at the door, the delivery photo.
  */
-export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "ACCEPTED" | "BOUGHT"; budget: number; fee: number }) {
+export function ErrandSteps({ id, status, budget, fee, feeMax }: { id: string; status: "ACCEPTED" | "BOUGHT"; budget: number; fee: number; feeMax: number }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "
   async function bought() {
     setBusy(true);
     setError(undefined);
-    const result = await apiRequest<{ fee: number; collect: number; feeChanged: boolean }>(`/rider/errands/${id}/bought`, {
+    const result = await apiRequest<{ fee: number; collect: number; fromGps: boolean }>(`/rider/errands/${id}/bought`, {
       method: "POST",
       body: { receiptPhotoUrl: photo, receiptTotal: Number(total) },
     });
@@ -49,9 +49,9 @@ export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "
     if (!result.ok) return setError(result.fieldErrors?.receiptTotal?.[0] ?? result.fieldErrors?.receiptPhotoUrl?.[0] ?? result.error);
     toast.success(
       "Receipt sent",
-      result.data.feeChanged
-        ? `The shop wasn't where the customer pinned it, so your fee is now ${formatPeso(result.data.fee)}. Collect ${formatPeso(result.data.collect)}.`
-        : `Now bring it to the customer and collect ${formatPeso(result.data.collect)}.`,
+      result.data.fromGps
+        ? `Your fee from here to the customer is ${formatPeso(result.data.fee)}. Bring it over and collect ${formatPeso(result.data.collect)}.`
+        : `Your location wasn't shared, so the lowest fee applies (${formatPeso(result.data.fee)}). Collect ${formatPeso(result.data.collect)}.`,
     );
     router.refresh();
   }
@@ -75,7 +75,10 @@ export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "
         <ReceiptText className="size-4 text-brand-600" aria-hidden />
         At the shop
       </p>
-      <p className="mt-1 text-sm text-muted">Buy the list (up to {formatPeso(budget)}), then take a photo of the receipt and enter its total. The customer sees both.</p>
+      <p className="mt-1 text-sm text-muted">
+        Buy the list (up to {formatPeso(budget)}), then take a photo of the receipt and enter its total. The customer sees both. Tap &ldquo;Bought everything&rdquo; while you&apos;re still at the
+        shop, with your location on: your fee ({fee === feeMax ? formatPeso(fee) : `${formatPeso(fee)} to ${formatPeso(feeMax)}`}) is worked out from there to the customer.
+      </p>
 
       <button
         type="button"
@@ -133,7 +136,7 @@ export function ErrandSteps({ id, status, budget, fee }: { id: string; status: "
         onChange={(e) => setTotal(e.target.value)}
         placeholder="0.00"
         error={over ? `That's over the ${formatPeso(budget)} budget. Call the customer: they can raise it in the app.` : undefined}
-        hint={amount ? `Collect ${formatPeso(amount + fee)} in cash: the receipt plus your ${formatPeso(fee)} fee.` : undefined}
+        hint={amount ? `You collect the receipt plus your fee, at most ${formatPeso(amount + feeMax)} in cash.` : undefined}
       />
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <Button className="mt-3 w-full" loading={busy} disabled={!photo || uploading || !amount || over} onClick={bought}>

@@ -1,12 +1,11 @@
 "use client";
 
-import { Banknote, MapPin, Minus, Plus, Store, Trash2 } from "lucide-react";
+import { ArrowRight, Banknote, MapPin, Minus, Plus, Store, Trash2, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RiderPicker, type ChoosableRider } from "@/components/app/rider-picker";
 import { useApiData } from "@/components/app/use-api-data";
-import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
@@ -14,10 +13,7 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { toast } from "@/components/ui/toast";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { formatPeso } from "@/lib/format";
-import type { LatLng } from "@/lib/geo";
 import type { Address } from "@/lib/types";
-import type { PabiliPlace } from "./errand";
-import { ShopPicker } from "./shop-picker";
 
 type Item = { key: number; name: string; quantity: number; note: string };
 
@@ -39,7 +35,7 @@ function Section({ n, title, children }: { n: number; title: string; children: R
 }
 
 /**
- * Asking for a Pabili in one go: the shop (from the list, or named and pinned), everything to buy as a list, the most the
+ * Asking for a Pabili in one go: the shop (its name and where it is; no map pin), everything to buy as a list, the most the
  * rider may spend, where to bring it, and (if they like) which rider. Easier than sending a rider
  * one message per item: the rider gets the whole list, the fee is known before sending, and the
  * receipt photo shows exactly what was spent.
@@ -48,9 +44,6 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const router = useRouter();
   const [shopName, setShopName] = useState("");
   const [shopAddress, setShopAddress] = useState("");
-  const [place, setPlace] = useState<PabiliPlace | null>(null);
-  const [custom, setCustom] = useState(false);
-  const [pin, setPin] = useState<LatLng | null>(null);
   const [items, setItems] = useState<Item[]>([blankItem()]);
   const [notes, setNotes] = useState("");
   const [budget, setBudget] = useState("");
@@ -61,9 +54,9 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const home = addresses.find((a) => a.id === addressId);
-  const shop = place ? { lat: place.latitude, lng: place.longitude } : custom ? pin : null;
   const near = home?.latitude != null && home.longitude != null ? { lat: home.latitude, lng: home.longitude } : null;
-  const { data: quote } = useApiData<{ fee: number; km: number | null }>(shop && addressId ? `/errands/quote?lat=${shop.lat}&lng=${shop.lng}&addressId=${addressId}` : null);
+  // The shop has no pin, so the fee is a range until the rider buys: their phone sets the real one
+  const { data: quote } = useApiData<{ min: number; max: number; maxKm: number }>("/errands/quote");
   const spend = Number(budget) || 0;
 
   const update = (key: number, change: Partial<Item>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...change } : i)));
@@ -73,10 +66,8 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     setError(undefined);
     const filled = items.filter((i) => i.name.trim());
     const problems: FieldErrors = {
-      ...(!place && !custom && { placeId: ["Choose the shop, or tap “My shop isn't on the list”."] }),
-      ...(custom && shopName.trim().length < 2 && { shopName: ["Enter the shop's name."] }),
-      ...(custom && shopAddress.trim().length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
-      ...(custom && !pin && { shopLat: ["Move the map so the pin sits on the shop."] }),
+      ...(shopName.trim().length < 2 && { shopName: ["Enter the shop's name."] }),
+      ...(shopAddress.trim().length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
       ...(filled.length === 0 && { items: ["Add at least one thing to buy."] }),
       ...((spend < 20 || spend > budgetMax) && { budget: [`Enter ₱20 to ₱${budgetMax.toLocaleString("en-PH")}.`] }),
       ...(!addressId && { addressId: ["Choose where to deliver it."] }),
@@ -88,13 +79,14 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     const result = await apiRequest<{ errand: { id: string } }>("/errands", {
       method: "POST",
       body: {
-        ...(place ? { placeId: place.id } : { shopName, shopAddress, shopLat: pin!.lat, shopLng: pin!.lng }),
+        shopName,
+        shopAddress,
         items: filled.map((i) => ({ name: i.name, quantity: i.quantity, note: i.note || undefined })),
         notes: notes || undefined,
         budget: spend,
         addressId,
         preferredRiderId: rider?.id,
-        expectedFee: quote?.fee,
+        expectedFee: quote?.min,
       },
     });
     setSending(false);
@@ -129,37 +121,19 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     >
       <Section n={1} title="Where to buy">
         <div className="space-y-3">
-          <ShopPicker
-            addressId={addressId}
-            value={place}
-            custom={custom}
-            onPick={(p) => {
-              setPlace(p);
-              setFieldErrors(({ placeId: _, ...rest }) => rest);
-            }}
-            onCustom={() => setCustom(true)}
-            onReset={() => {
-              setPlace(null);
-              setCustom(false);
-            }}
-            error={err("placeId")}
+          <TextField label="Shop name" name="shopName" icon={Store} value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Aling Rosa's Sari-sari Store" required error={err("shopName")} />
+          <OnFeasto name={shopName} />
+          <TextField
+            label="Where it is"
+            name="shopAddress"
+            icon={MapPin}
+            value={shopAddress}
+            onChange={(e) => setShopAddress(e.target.value)}
+            placeholder="Across the plaza, beside the bakery"
+            hint="A street, barangay or landmark the rider will know. No map needed: the rider finds it."
+            required
+            error={err("shopAddress")}
           />
-          {custom && (
-            <>
-              <TextField label="Shop name" name="shopName" icon={Store} value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="Aling Rosa's Sari-sari Store" required error={err("shopName")} />
-              <TextField
-                label="Where it is"
-                name="shopAddress"
-                icon={MapPin}
-                value={shopAddress}
-                onChange={(e) => setShopAddress(e.target.value)}
-                placeholder="Street, barangay or a landmark"
-                required
-                error={err("shopAddress")}
-              />
-              <LocationPicker value={pin} onChange={setPin} near={near} label="The shop on the map" hint="Move the map so the pin sits on the shop. It sets the delivery fee and the rider's directions." required error={err("shopLat") ?? err("shopLng")} />
-            </>
-          )}
         </div>
       </Section>
 
@@ -269,7 +243,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
       </Section>
 
       <Section n={5} title="Who buys it">
-        <RiderPicker near={shop} value={rider} onChange={setRider} />
+        <RiderPicker near={near} value={rider} onChange={setRider} />
       </Section>
 
       <div className="rounded-2xl border border-line bg-canvas/60 p-4 text-sm">
@@ -280,15 +254,15 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           </div>
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Delivery fee</dt>
-            <dd className="font-semibold text-ink tabular-nums">{quote ? formatPeso(quote.fee) : shop ? "…" : "Choose the shop"}</dd>
+            <dd className="font-semibold text-ink tabular-nums">{quote ? `${formatPeso(quote.min)} to ${formatPeso(quote.max)}` : "…"}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-1 text-[0.9375rem] font-bold text-ink">
             <dt>Cash to have ready, at most</dt>
-            <dd className="tabular-nums">{spend && quote ? formatPeso(spend + quote.fee) : "—"}</dd>
+            <dd className="tabular-nums">{spend && quote ? formatPeso(spend + quote.max) : "—"}</dd>
           </div>
         </dl>
         <p className="mt-2 text-muted">
-          You pay what the receipt says, not the whole budget. If no rider takes it in {waitMinutes} minutes, it&apos;s cancelled and you pay nothing.
+          The delivery fee is set when the rider buys, from where the shop is to you, and never more than {quote ? formatPeso(quote.max) : "the most shown"}. You pay what the receipt says, not the whole budget. If no rider takes it in {waitMinutes} minutes, it&apos;s cancelled and you pay nothing.
         </p>
       </div>
 
@@ -297,5 +271,42 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
         Send Pabili
       </Button>
     </form>
+  );
+}
+
+type FeastoStore = { id: string; name: string; address: string };
+
+/**
+ * When the shop being typed is a Feasto store, point to its menu instead: ordering there reaches
+ * the store right away, and the resident can still choose their rider at checkout.
+ */
+function OnFeasto({ name }: { name: string }) {
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(name.trim()), 300);
+    return () => clearTimeout(t);
+  }, [name]);
+  const { data } = useApiData<{ stores: FeastoStore[] }>(search.length >= 3 ? `/errands/on-feasto?q=${encodeURIComponent(search)}` : null);
+  const stores = search.length >= 3 ? (data?.stores ?? []) : [];
+  if (stores.length === 0) return null;
+  return (
+    <div aria-live="polite" className="space-y-2">
+      {stores.map((s) => (
+        <div key={s.id} className="rounded-2xl border border-brand-200 bg-brand-50/60 p-3">
+          <p className="flex items-center gap-2 font-semibold text-ink">
+            <UtensilsCrossed className="size-4 shrink-0 text-brand-600" aria-hidden />
+            {s.name} is on Feasto
+          </p>
+          <p className="mt-1 text-sm text-muted">Order from its menu instead: the store gets your order right away, and you can still choose your rider at checkout.</p>
+          <Link
+            href={`/resident/stores/${s.id}`}
+            className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+          >
+            See the menu
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+        </div>
+      ))}
+    </div>
   );
 }

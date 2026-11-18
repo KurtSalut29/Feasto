@@ -17,6 +17,7 @@ type Request = {
   shopAddress: string;
   budget: string;
   deliveryFee: string;
+  feeMax: string | null;
   deliveryAddress: string;
   itemCount: number;
   customer: string;
@@ -53,7 +54,9 @@ export function PabiliRequests({ busy }: { busy: boolean }) {
         <ShoppingBasket className="size-5 text-brand-600" aria-hidden />
         Pabili requests
       </h2>
-      <p className="mb-3 text-sm text-muted">Buy at the shop with your money; the customer pays you back in cash with the delivery fee, which is all yours.</p>
+      <p className="mb-3 text-sm text-muted">
+        Buy at the shop with your money; the customer pays you back in cash with the delivery fee, which is all yours. The fee is set from where you buy to the customer.
+      </p>
       <ul className="space-y-3">
         {requests.map((r) => (
           <li key={r.id} className={`rounded-2xl border p-4 ${r.askedForYou ? "border-brand-300 bg-brand-50/60" : "border-line bg-white"}`}>
@@ -69,7 +72,7 @@ export function PabiliRequests({ busy }: { busy: boolean }) {
                 <p className="text-sm text-muted">{r.shopAddress}</p>
               </div>
               <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-sm font-bold text-emerald-700 tabular-nums">
-                <span className="sr-only">You earn </span>+{formatPeso(r.deliveryFee)}
+                <span className="sr-only">You earn </span>+{r.feeMax && r.feeMax !== r.deliveryFee ? `₱${Math.round(Number(r.deliveryFee))}–${Math.round(Number(r.feeMax))}` : formatPeso(r.deliveryFee)}
               </span>
             </div>
             <p className="mt-2 text-sm text-ink">
@@ -79,7 +82,7 @@ export function PabiliRequests({ busy }: { busy: boolean }) {
               <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
               <span>
                 To {r.deliveryAddress}
-                {r.distanceKm !== null && ` · the shop is ${formatDistance(r.distanceKm)} from you`}
+                {r.distanceKm !== null && ` · ${formatDistance(r.distanceKm)} from you`}
               </span>
             </p>
             <Button className="mt-3 w-full" loading={taking === r.id} disabled={busy || (taking !== null && taking !== r.id)} onClick={() => take(r.id)}>
