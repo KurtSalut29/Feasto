@@ -84,6 +84,10 @@ Every store can log in with its e-mail below and the `STORE_PASSWORD` from `.env
   running Feasto without starting over (only fills in missing photos and adds missing dishes):
   `python server/naval/source/apply_kuwang.py --live`. Cup Stop's add-ons (pearls, nata, cream
   cheese…) are left out: Feasto has no add-ons yet.
+- **Wikimedia Commons** (2026-11-20): the 425 dishes that still had no photo show a free-licensed
+  photo of the same kind of dish, picked by looking at each one. It shows the dish, not that store's
+  own plate, so a store can replace it with its own photo any time. Every photo's author and license
+  is in `PHOTO_CREDITS.md`.
 - `source/menus.txt`: menus typed out by hand from the menu-board photos (D'Adaone, Mareola, Jollibee,
   McDonald's, Mang Inasal, the cafés, the milk tea and snack stores). Prices are what the photos showed;
   stores change them often, so each store should check its own menu.
