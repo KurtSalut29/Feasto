@@ -1,7 +1,7 @@
 // Feasto service worker. It makes the app installable and shows a friendly page when the
 // phone has no connection. Everything else goes straight to the network: orders, stock and
 // live updates must always be fresh, so nothing else is cached.
-const CACHE = "feasto-offline-v2";
+const CACHE = "feasto-offline-v3";
 const OFFLINE_PAGE = "/offline.html";
 const OFFLINE_ICON = "/icons/icon-192.png";
 

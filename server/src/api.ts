@@ -29,6 +29,7 @@ import { availableRidersRouter, errandsRouter, riderErrandsRouter } from "./rout
 import { vendorRidersRouter } from "./routes/vendorRiders.js";
 import { vendorRouter } from "./routes/vendor.js";
 import { adminReportsRouter, reportsRouter } from "./routes/userReports.js";
+import { adminResidentIdsRouter } from "./routes/residentIds.js";
 
 const app = express();
 // Requests arrive through Nginx; trust it to report the visitor's real IP address.
@@ -74,6 +75,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin", adminToolsRouter);
 app.use("/api/admin", adminReportsRouter);
+app.use("/api/admin", adminResidentIdsRouter);
 app.use("/api/admin", adminEarningsRouter);
 app.use("/api/admin", adminPayoutsRouter);
 app.use("/api/me", meRouter);

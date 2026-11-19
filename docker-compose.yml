@@ -27,6 +27,13 @@ x-server-env: &server-env
   PAYMENTS: ${PAYMENTS:-}
   # Requests one signed-in account may make per minute (0 = off, for the stress test in loadtest/)
   API_REQUESTS_PER_MINUTE: ${API_REQUESTS_PER_MINUTE:-1200}
+  # The Gmail (or other) account that sends sign-up codes. Sign-ups need it: without it nobody can
+  # get a code. For Gmail, SMTP_PASS is an App Password (Google Account > Security > App passwords).
+  SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  MAIL_FROM: ${MAIL_FROM:-}
 
 # Settings shared by the three API copies.
 x-api: &api

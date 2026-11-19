@@ -138,7 +138,7 @@ export function PrivacyPolicy({ inPopup = false }: { inPopup?: boolean }) {
         <List
           items={[
             "Everyone: your name, email, mobile number and password (stored only as a scrambled hash, never as typed), and your display settings.",
-            "Residents: delivery addresses and their map pins, orders, bookings, saved stores, ratings and order chats.",
+            "Residents: your name as on your ID, a photo of one valid ID (only Feasto's admin sees it, to check who you are), delivery addresses and their map pins, orders, bookings, saved stores, ratings and order chats.",
             "Food businesses: the store's name, address and map pin, owner and business contact details, the business permit's number, expiry date and photo, the menu, and sales.",
             "Riders: birth date, home address, emergency contact, motorcycle and plate number, the driver's license's number, expiry date and photo, and earnings.",
             "Riders' location: only while you're online or on a delivery, so jobs reach the nearest riders and customers can follow their order. Going offline removes your last position.",

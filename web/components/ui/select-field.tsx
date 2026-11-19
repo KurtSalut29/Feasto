@@ -33,9 +33,12 @@ export function SelectField({ label, placeholder, options, error, className, val
             }`}
           {...selectProps}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          {/* A list with its own empty choice (like "None") can go back to it; otherwise the placeholder can't be picked */}
+          {!options.some((option) => option.value === "") && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
           {options.map((option) => (
             <option key={option.value} value={option.value} className="text-ink">
               {option.label}

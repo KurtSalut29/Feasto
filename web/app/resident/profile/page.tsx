@@ -20,7 +20,7 @@ async function EditProfile() {
     // Forms stay a readable width on big screens
     <div className="md:max-w-2xl">
       <MobileHeading title="Edit profile" />
-      <ProfileForm name={user.name} phone={user.phone} email={user.email} />
+      <ProfileForm user={user} />
     </div>
   );
 }

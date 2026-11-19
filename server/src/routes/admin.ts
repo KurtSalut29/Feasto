@@ -35,7 +35,7 @@ adminRouter.get("/overview", async (_req, res) => {
   // The counts are independent, so they run in parallel instead of one after another
   const { stuckMinutes } = await getSettings();
   const today = manilaToday();
-  const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress, stuckOrders, renewals, expiredStores, expiredRiders, openReports] = await Promise.all([
+  const [pendingStores, pendingRiders, activeStores, activeRiders, ridersOnline, residents, ordersInProgress, stuckOrders, renewals, expiredStores, expiredRiders, openReports, idsToCheck] = await Promise.all([
     prisma.vendor.count({ where: { status: "PENDING" } }),
     prisma.riderProfile.count({ where: { status: "PENDING", vendorId: null } }),
     prisma.vendor.count({ where: { status: "APPROVED" } }),
@@ -48,6 +48,7 @@ adminRouter.get("/overview", async (_req, res) => {
     prisma.vendor.count({ where: { status: "APPROVED", permitExpiresAt: { lt: today } } }),
     prisma.riderProfile.count({ where: { status: "APPROVED", licenseExpiresAt: { lt: today } } }),
     prisma.report.count({ where: { status: "OPEN" } }),
+    prisma.user.count({ where: { role: "RESIDENT", idStatus: "PENDING" } }),
   ]);
   res.json({
     pendingStores,
@@ -61,6 +62,7 @@ adminRouter.get("/overview", async (_req, res) => {
     renewals,
     expiredDocuments: expiredStores + expiredRiders,
     openReports,
+    idsToCheck,
   });
 });
 

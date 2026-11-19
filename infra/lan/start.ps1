@@ -18,6 +18,9 @@ if (-not $Ip) {
     Write-Host "Using $Ip on '$($candidates[0].InterfaceAlias)'."
 }
 $site = ($Ip -replace "\.", "-") + ".local-ip.sh"
+# The WiFi's name, shown next to the QR code in Admin > System
+$ssid = netsh wlan show interfaces 2>$null | Select-String '^\s*SSID\s*:\s*(.+)$' | Select-Object -First 1
+$wifi = if ($ssid) { $ssid.Matches[0].Groups[1].Value.Trim() } else { "" }
 
 # 2. The certificate for *.local-ip.sh (public, refreshed by local-ip.sh), so phones trust the HTTPS
 $certs = Join-Path $PSScriptRoot "certs"
@@ -49,6 +52,7 @@ if ($net -and $net.NetworkCategory -eq "Public") {
 
 # 4. Start everything: the backend, the web app and Caddy (HTTPS)
 $env:SITE_ADDRESS = $site
+$env:LAN_WIFI = $wifi
 $ErrorActionPreference = "Continue"  # docker prints its progress on stderr
 docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
 if ($LASTEXITCODE -ne 0) { throw "docker compose failed." }
@@ -58,4 +62,5 @@ docker compose -f docker-compose.yml -f docker-compose.lan.yml restart caddy
 Write-Host ""
 Write-Host "Feasto is running on this laptop. On the same WiFi, open:" -ForegroundColor Green
 Write-Host "    https://$site" -ForegroundColor Green
-Write-Host "Admin > System shows this laptop's workers and load. Stop with .\infra\lan\stop.ps1"
+Write-Host "Admin > System shows a QR code for this address (phones just scan it), and this laptop's workers and load."
+Write-Host "Stop with .\infra\lan\stop.ps1"

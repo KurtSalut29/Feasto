@@ -1,7 +1,7 @@
 "use client";
 
-import { FileCheck2, Upload } from "lucide-react";
-import { useId, useRef } from "react";
+import { Camera, FileCheck2, Upload } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { resizePhoto } from "@/components/ui/image-upload";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -32,15 +32,27 @@ export function DocumentPicker({
   file,
   onChange,
   error,
+  camera = false,
 }: {
   label: string;
   hint: string;
   file: File | null;
   onChange: (file: File) => void;
   error?: string;
+  /** Also offer "Take a photo", which opens the phone's camera (for an ID card) */
+  camera?: boolean;
 }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
+  const shoot = useRef<HTMLInputElement>(null);
+  // A small look at the photo picked, so the person can see it's readable
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!camera || !file || !file.type.startsWith("image/")) return setPreview(null);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [camera, file]);
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-ink">
@@ -72,6 +84,36 @@ export function DocumentPicker({
           event.target.value = "";
         }}
       />
+      {camera && (
+        <>
+          <button
+            type="button"
+            onClick={() => shoot.current?.click()}
+            className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+          >
+            <Camera className="size-[18px]" aria-hidden />
+            {file ? "Take the photo again" : "Take a photo with the camera"}
+          </button>
+          <input
+            ref={shoot}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(event) => {
+              const chosen = event.target.files?.[0];
+              if (chosen) onChange(chosen);
+              event.target.value = "";
+            }}
+          />
+          {preview && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="The photo you picked" className="mt-2 max-h-48 w-full rounded-xl bg-canvas object-contain" />
+          )}
+        </>
+      )}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );

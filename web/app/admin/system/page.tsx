@@ -8,6 +8,7 @@ import { TABLE, TBODY, TD, TH, THEAD } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
+import { JoinQr } from "./join-qr";
 import { MarshallingPanel } from "./marshalling-panel";
 
 export const metadata: Metadata = { title: "System" };
@@ -156,6 +157,7 @@ async function SystemMonitor() {
     <>
       <AutoRefresh everyMs={5000} />
       <PageHeader eyebrow="Insights" title="System" description="Live status of every server, and every message they marshal and unmarshal." />
+      <JoinQr />
 
       <section
         aria-label="Overall status"

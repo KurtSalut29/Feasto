@@ -40,6 +40,15 @@ export const config = {
     privateKey: process.env.VAPID_PRIVATE_KEY ?? "",
     subject: process.env.VAPID_SUBJECT || "mailto:admin@feasto.com",
   },
+  // The email account that sends sign-up codes (Gmail: an App Password, not the normal password).
+  // Without a user and password, no code can be sent, so nobody can sign up.
+  mail: {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT || 465),
+    user: process.env.SMTP_USER ?? "",
+    pass: (process.env.SMTP_PASS ?? "").replace(/\s+/g, ""),
+    from: process.env.MAIL_FROM || process.env.SMTP_USER || "",
+  },
   // Requests one signed-in account may make per minute (0 = no limit, for the raw stress test in
   // loadtest/browse.js). A person tapping around never comes close; it stops a script flooding the API.
   apiRequestsPerMinute: Number(process.env.API_REQUESTS_PER_MINUTE ?? 1200),

@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Bike,
+  IdCard,
+  MailCheck,
   LockKeyhole,
   Mail,
   MapPin,
@@ -13,12 +15,12 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
-import { addTransitionType, startTransition, useState, ViewTransition, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { addTransitionType, startTransition, useEffect, useState, ViewTransition, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { DocumentPicker, uploadDocument } from "@/components/app/document-upload";
 import { LocationPicker } from "@/components/map/location-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { PasswordStrength } from "@/components/ui/password-strength";
+import { passwordProblem, PasswordRules, PasswordStrength } from "@/components/ui/password-strength";
 import { SelectField } from "@/components/ui/select-field";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
@@ -26,6 +28,7 @@ import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import type { LatLng } from "@/lib/geo";
 import { rememberCircleAt } from "@/lib/page-entrance";
+import { ID_TYPE_OPTIONS, nameProblem, SUFFIX_OPTIONS } from "@/lib/identity";
 import { ROLE_HOME } from "@/lib/roles";
 import { acceptsReservationsByDefault, STORE_TYPE_OPTIONS } from "@/lib/store-types";
 import type { Role, StoreType, User } from "@/lib/types";
@@ -34,7 +37,7 @@ import { AUTH_BUTTON } from "../auth-ui";
 import { LegalDialog, type Doc } from "../legal-links";
 
 type SignupRole = Exclude<Role, "ADMIN">;
-type Step = "account" | "store" | "location" | "permit" | "personal" | "license";
+type Step = "account" | "verify" | "identity" | "store" | "location" | "permit" | "personal" | "license";
 
 const roleOptions: { value: SignupRole; label: string; Icon: LucideIcon; about: string }[] = [
   { value: "RESIDENT", label: "Resident", Icon: ShoppingBag, about: "Order food from stores around Naval" },
@@ -47,12 +50,15 @@ const SWAP = { "auth-forward": "auth-forward", "auth-back": "auth-back", default
 
 /** The steps of each role's sign-up, short enough that each fits on one screen. */
 const STEPS: Record<SignupRole, Step[]> = {
-  RESIDENT: ["account"],
-  VENDOR: ["account", "store", "location", "permit"],
-  RIDER: ["account", "personal", "license"],
+  // Right after the account step, everyone types the code Feasto emailed them
+  RESIDENT: ["account", "verify", "identity"],
+  VENDOR: ["account", "verify", "store", "location", "permit"],
+  RIDER: ["account", "verify", "personal", "license"],
 };
 
 const STEP_TEXT: Record<Exclude<Step, "account">, { title: string; subtitle: string }> = {
+  verify: { title: "Check your email", subtitle: "We sent a 6-digit code to make sure this email is yours." },
+  identity: { title: "Your valid ID", subtitle: "So stores and riders know who they're serving. Only Feasto's admin sees it." },
   store: { title: "Your store", subtitle: "What residents will see." },
   location: { title: "Where is your store?", subtitle: "Riders and residents use this pin to find you." },
   permit: { title: "Your business permit", subtitle: "An admin checks this before your store goes live." },
@@ -62,7 +68,9 @@ const STEP_TEXT: Record<Exclude<Step, "account">, { title: string; subtitle: str
 
 /** Which fields each step holds, to return to the right step when the server finds a problem. */
 const STEP_FIELDS: Record<Step, string[]> = {
-  account: ["name", "email", "phone", "password"],
+  account: ["firstName", "middleName", "lastName", "suffix", "email", "phone", "password"],
+  verify: ["emailCode"],
+  identity: ["idType"],
   store: ["storeName", "storeAddress", "storeType"],
   location: ["latitude", "longitude"],
   permit: PERMIT_FIELDS.map((f) => f.name),
@@ -71,7 +79,12 @@ const STEP_FIELDS: Record<Step, string[]> = {
 };
 
 const emptyValues: Record<string, string> = {
-  name: "",
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  suffix: "",
+  idType: "",
+  emailCode: "",
   email: "",
   phone: "",
   password: "",
@@ -145,12 +158,24 @@ function RolePicker({ value, onChange }: { value: SignupRole; onChange: (role: S
 /** Quick checks before moving on from the account step. The API still validates everything. */
 function checkAccountFields(values: Record<string, string>): FieldErrors {
   const errors: FieldErrors = {};
-  if (values.name.trim().length < 2) errors.name = ["Enter your full name."];
-  if (!/^\S+@\S+\.\S+$/.test(values.email.trim())) errors.email = ["Enter a valid email address."];
-  if (!/^(\+639|09)\d{9}$/.test(values.phone.trim())) errors.phone = ["Enter a mobile number like 09171234567."];
-  if (values.password.length < 8) errors.password = ["Use at least 8 characters."];
-  else if (!/[A-Za-z]/.test(values.password) || !/\d/.test(values.password))
-    errors.password = ["Include at least one letter and one number."];
+  const parts = [
+    ["firstName", "first name", true],
+    ["middleName", "middle name", false],
+    ["lastName", "last name", true],
+  ] as const;
+  for (const [field, what, required] of parts) {
+    const problem = nameProblem(values[field], what, required);
+    if (problem) errors[field] = [problem];
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(values.email.trim())) errors.email = ["Enter a valid email address, like juan@gmail.com."];
+  if (!/^09\d{9}$/.test(values.phone.trim())) errors.phone = ["Enter the 11-digit mobile number, like 09171234567."];
+  const weak = passwordProblem(values.password);
+  if (weak) errors.password = [weak];
+  else {
+    // The password shouldn't hold the person's own name or email
+    const own = [values.firstName, values.lastName, values.email.split("@")[0]].map((w) => w.toLowerCase().replace(/[^a-z0-9]/g, "")).filter((w) => w.length >= 4);
+    if (own.some((w) => values.password.toLowerCase().includes(w))) errors.password = ["Don't use your name or email in your password."];
+  }
   return errors;
 }
 
@@ -166,6 +191,23 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  /** A likely fix for a mistyped email ("gmial.com"), from the server's check */
+  const [emailFix, setEmailFix] = useState<string | null>(null);
+  /** The email a code was sent to, and the one whose code was typed right */
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [verified, setVerified] = useState<string | null>(null);
+  /** Seconds until another code can be asked for */
+  const [resendIn, setResendIn] = useState(0);
+  /** Whether Feasto can email codes at all (sign-ups are closed until the admin sets it up) */
+  const [mailReady, setMailReady] = useState(true);
+  useEffect(() => {
+    void apiRequest<{ ready: boolean }>("/auth/email-code").then((r) => r.ok && setMailReady(r.data.ready));
+  }, []);
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
   const steps = STEPS[role];
   const stepIndex = steps.indexOf(step);
@@ -184,9 +226,40 @@ export function RegisterForm() {
     setFieldErrors((current) => (current[name] ? { ...current, [name]: undefined } : current));
   }
 
-  function update(event: ChangeEvent<HTMLInputElement>) {
-    setValues((current) => ({ ...current, [event.target.name]: event.target.value }));
+  function update(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
+    // The code is 6 digits; anything else typed or pasted is dropped
+    const value = event.target.name === "emailCode" ? event.target.value.replace(/\D/g, "").slice(0, 6) : event.target.value;
+    setValues((current) => ({ ...current, [event.target.name]: value }));
     clearError(event.target.name);
+    if (event.target.name === "email") setEmailFix(null);
+  }
+
+  /** Emails a code; false (with the reason under the email box) when it can't */
+  async function sendCode(email: string) {
+    setSubmitting(true);
+    const result = await apiRequest<{ minutes: number; resendSeconds: number }>("/auth/email-code", { method: "POST", body: { email } });
+    setSubmitting(false);
+    if (!result.ok) {
+      if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+      else setError(result.error);
+      if (result.fieldErrors?.email && step !== "account") goTo("account", "auth-back");
+      return false;
+    }
+    setCodeSentTo(email);
+    setVerified(null);
+    setValues((current) => ({ ...current, emailCode: "" }));
+    setResendIn(result.data.resendSeconds);
+    return true;
+  }
+
+  /** On leaving the email box: a typo, a throwaway inbox, a domain that takes no mail, or an email already used */
+  async function checkEmail() {
+    const typed = values.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(typed)) return;
+    const result = await apiRequest<{ ok: boolean; error?: string; suggestion?: string }>("/auth/check-email", { method: "POST", body: { email: typed } });
+    if (!result.ok || result.data.ok) return;
+    setFieldErrors((current) => ({ ...current, email: [result.data.error!] }));
+    setEmailFix(result.data.suggestion ?? null);
   }
 
   // Picking a store type also sets the usual reservations choice for it; the vendor can still flip it.
@@ -201,6 +274,7 @@ export function RegisterForm() {
     const blank = (fields: VerificationField[]) =>
       Object.fromEntries(fields.filter((f) => !f.optional && !values[f.name]?.trim()).map((f) => [f.name, [f.missing ?? "Fill this in."]]));
     if (step === "account") return checkAccountFields(values);
+    if (step === "verify") return /^\d{6}$/.test(values.emailCode) ? {} : { emailCode: ["Type the 6 digits from the email."] };
     if (step === "store") {
       return {
         ...(values.storeName.trim().length < 2 && { storeName: ["Enter your store's name."] }),
@@ -209,15 +283,18 @@ export function RegisterForm() {
       };
     }
     if (step === "location") return pin ? {} : { latitude: ["Move the map so the pin sits on your store."] };
-    const documentMissing = documentFile ? {} : { document: [`Upload a photo or PDF of your ${step === "permit" ? "business permit" : "driver's license"}.`] };
+    const documentMissing = documentFile
+      ? {}
+      : { document: [step === "identity" ? "Take or upload a photo of your valid ID." : `Upload a photo or PDF of your ${step === "permit" ? "business permit" : "driver's license"}.`] };
+    if (step === "identity") return { ...(!values.idType && { idType: ["Choose the kind of ID."] }), ...documentMissing };
     if (step === "permit") return { ...blank(PERMIT_FIELDS), ...documentMissing };
     if (step === "personal") return blank(RIDER_PERSONAL_FIELDS);
     return { ...blank(RIDER_LICENSE_FIELDS), ...documentMissing };
   }
 
   function requestBody() {
-    const { name, email, phone, password } = values;
-    const account = { role, name, email, phone, password, acceptTerms: agreed };
+    const { firstName, middleName, lastName, suffix, email, phone, password } = values;
+    const account = { role, firstName, middleName, lastName, suffix, email, phone, password, acceptTerms: agreed };
     const pick = (fields: VerificationField[]) => Object.fromEntries(fields.map((f) => [f.name, values[f.name] ?? ""]));
     if (role === "VENDOR") {
       return {
@@ -232,7 +309,7 @@ export function RegisterForm() {
       };
     }
     if (role === "RIDER") return { ...account, ...pick([...RIDER_PERSONAL_FIELDS, ...RIDER_LICENSE_FIELDS, STORE_CODE_FIELD]) };
-    return account;
+    return { ...account, idType: values.idType };
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -245,6 +322,25 @@ export function RegisterForm() {
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (!isLastStep) {
+      const email = values.email.trim().toLowerCase();
+      if (step === "account") {
+        // Already confirmed this email: straight past the code
+        if (verified === email) return goTo(steps[stepIndex + 2], "auth-forward");
+        if (codeSentTo !== email || resendIn === 0) {
+          if (!(await sendCode(email))) return;
+        }
+        return goTo("verify", "auth-forward");
+      }
+      if (step === "verify") {
+        setSubmitting(true);
+        const result = await apiRequest("/auth/email-code/verify", { method: "POST", body: { email, code: values.emailCode } });
+        setSubmitting(false);
+        if (!result.ok) {
+          setFieldErrors(result.fieldErrors ?? { emailCode: [result.error] });
+          return;
+        }
+        setVerified(email);
+      }
       goTo(steps[stepIndex + 1], "auth-forward");
       return;
     }
@@ -258,6 +354,7 @@ export function RegisterForm() {
       setFieldErrors(result.fieldErrors ?? {});
       // Go back to the first step with a problem (e.g. email already used)
       const wrong = steps.find((s) => STEP_FIELDS[s].some((field) => result.fieldErrors?.[field]));
+      if (wrong === "verify") setVerified(null);
       if (wrong) setStep(wrong);
       setSubmitting(false);
       return;
@@ -267,7 +364,9 @@ export function RegisterForm() {
     const role = result.data.user.role;
     toast.later(
       role === "RESIDENT"
-        ? { tone: "success", title: "Your account is ready!", description: "Welcome to Feasto. Pick a store near you to order." }
+        ? uploaded
+          ? { tone: "success", title: "Your account is ready!", description: "Welcome to Feasto. The admin will check your ID soon." }
+          : { tone: "warning", title: "Account created, but your ID didn't upload", description: "Upload it again from your home page." }
         : uploaded
           ? { tone: "success", title: "Account created", description: "Feasto will review your details. We'll let you know when you're approved." }
           : { tone: "warning", title: "Account created, but the document didn't upload", description: "Upload it again from your home page so Feasto can review you." },
@@ -330,7 +429,8 @@ export function RegisterForm() {
         onBack={() => {
           setError(undefined);
           setFieldErrors({});
-          goTo(steps[stepIndex - 1], "auth-back");
+          const previous = steps[stepIndex - 1];
+          goTo(previous === "verify" && verified === values.email.trim().toLowerCase() ? "account" : previous, "auth-back");
         }}
         onSubmit={handleSubmit}
       >
@@ -403,6 +503,79 @@ export function RegisterForm() {
             />
           </>
         )}
+        {step === "verify" && (
+          <>
+            <p className="flex items-start gap-2.5 rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted">
+              <MailCheck className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+              <span>
+                Sent to <span className="font-semibold break-all text-ink">{values.email.trim()}</span>. Check your inbox and Spam folder. It works for 10 minutes.
+              </span>
+            </p>
+            <TextField
+              label="6-digit code"
+              name="emailCode"
+              value={values.emailCode}
+              onChange={update}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="123456"
+              autoFocus
+              required
+              className="[&_input]:text-center [&_input]:text-xl [&_input]:font-semibold [&_input]:tracking-[0.4em]"
+              error={fieldError("emailCode")}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <button
+                type="button"
+                disabled={resendIn > 0 || submitting}
+                onClick={() => void sendCode(values.email.trim().toLowerCase())}
+                className="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 disabled:text-muted disabled:no-underline focus-visible:outline-2 focus-visible:outline-brand-500"
+              >
+                {resendIn > 0 ? `Send a new code in ${resendIn}s` : "Send a new code"}
+              </button>
+              <button
+                type="button"
+                onClick={() => goTo("account", "auth-back")}
+                className="font-semibold text-muted underline underline-offset-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+              >
+                Change email
+              </button>
+            </div>
+          </>
+        )}
+        {step === "identity" && (
+          <>
+            <SelectField
+              label="Kind of ID"
+              name="idType"
+              placeholder="Choose your ID"
+              options={ID_TYPE_OPTIONS}
+              value={values.idType}
+              onChange={update}
+              required
+              autoFocus
+              error={fieldError("idType")}
+            />
+            <DocumentPicker
+              label="Photo of your ID"
+              hint="The front, with your name and photo readable. JPG, PNG or PDF, up to 5 MB."
+              file={documentFile}
+              camera
+              onChange={(file) => {
+                setDocumentFile(file);
+                clearError("document");
+              }}
+              error={fieldError("document")}
+            />
+            <p className="flex items-start gap-2 rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted">
+              <IdCard className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+              <span>
+                The name on the ID must match <span className="font-semibold text-ink">{[values.firstName, values.middleName, values.lastName, values.suffix].filter((x) => x.trim()).join(" ")}</span>. You can order right away while the admin checks it.
+              </span>
+            </p>
+          </>
+        )}
         {step === "personal" && fieldBoxes(RIDER_PERSONAL_FIELDS)}
         {step === "license" && (
           <>
@@ -441,18 +614,45 @@ export function RegisterForm() {
         />
 
         {error && <Alert tone="error">{error}</Alert>}
+        {!mailReady && <Alert tone="pending">Sign-ups are closed for now: Feasto can&apos;t email the confirmation code yet. Please try again later.</Alert>}
 
-        <TextField
-          label="Full name"
-          name="name"
-          value={values.name}
-          onChange={update}
-          autoComplete="name"
-          placeholder="Juan Dela Cruz"
-          icon={UserRound}
-          required
-          error={fieldError("name")}
-        />
+        {/* The name in parts, exactly as on a valid ID */}
+        <fieldset className="space-y-3">
+          <legend className="sr-only">Your name, as on your ID</legend>
+          <TextField
+            label="First name"
+            name="firstName"
+            value={values.firstName}
+            onChange={update}
+            autoComplete="given-name"
+            placeholder="Juan"
+            icon={UserRound}
+            required
+            error={fieldError("firstName")}
+          />
+          <TextField
+            label="Middle name (optional)"
+            name="middleName"
+            value={values.middleName}
+            onChange={update}
+            autoComplete="additional-name"
+            placeholder="Santos"
+            error={fieldError("middleName")}
+          />
+          <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3">
+            <TextField
+              label="Last name"
+              name="lastName"
+              value={values.lastName}
+              onChange={update}
+              autoComplete="family-name"
+              placeholder="Dela Cruz"
+              required
+              error={fieldError("lastName")}
+            />
+            <SelectField label="Suffix" name="suffix" placeholder="None" options={SUFFIX_OPTIONS} value={values.suffix} onChange={update} error={fieldError("suffix")} />
+          </div>
+        </fieldset>
         <TextField
           label="Email"
           name="email"
@@ -460,11 +660,25 @@ export function RegisterForm() {
           value={values.email}
           onChange={update}
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder="juan@gmail.com"
           icon={Mail}
           required
+          onBlur={() => void checkEmail()}
           error={fieldError("email")}
         />
+        {emailFix && (
+          <button
+            type="button"
+            onClick={() => {
+              setValues((current) => ({ ...current, email: emailFix }));
+              setEmailFix(null);
+              clearError("email");
+            }}
+            className="-mt-1 text-sm font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-500"
+          >
+            Use {emailFix}
+          </button>
+        )}
         <TextField
           label="Mobile number"
           name="phone"
@@ -485,12 +699,15 @@ export function RegisterForm() {
           value={values.password}
           onChange={update}
           autoComplete="new-password"
-          placeholder="8+ letters and numbers"
+          placeholder="Like Kape@Umaga24"
           icon={LockKeyhole}
           required
           error={fieldError("password")}
           hint={values.password && <PasswordStrength password={values.password} />}
         />
+        <div className="-mt-1">
+          <PasswordRules password={values.password} />
+        </div>
 
         {isLastStep && terms}
 
@@ -498,13 +715,7 @@ export function RegisterForm() {
           <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>
             {/* Fades in afresh when the account type changes */}
             <span key={role} className="fx-role-about">
-              {role === "VENDOR"
-                ? "Continue to store details"
-                : role === "RIDER"
-                  ? "Continue to rider details"
-                  : submitting
-                    ? "Creating account…"
-                    : "Create account"}
+              {submitting ? "Sending the code…" : "Continue"}
             </span>
             {steps.length > 1 && <ArrowRight className="size-[18px] transition group-hover:translate-x-0.5" aria-hidden />}
           </Button>

@@ -10,6 +10,8 @@ import {
   verifyPassword,
 } from "../lib/auth.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
+import { checkSignupCode, emailVerified, forgetVerified, mailReady, sendSignupCode } from "../lib/emailCodes.js";
+import { emailProblem, fullName, ID_TYPES, nameFields, newPassword, passwordHasOwnDetails } from "../lib/identity.js";
 import { atLimit, clearFailedLogins, clientIp, hit, loginLockSeconds, recordFailedLogin, tooMany } from "../lib/rateLimit.js";
 import { getSettings } from "../lib/settings.js";
 import { acceptsReservationsByDefault, STORE_TYPES } from "../lib/storeTypes.js";
@@ -23,20 +25,15 @@ const email = z
   .trim()
   .transform((value) => value.toLowerCase());
 
-/** The rules for a password at sign-up, also used when changing it. */
-export const newPassword = z
-  .string()
-  .min(8, "Use at least 8 characters.")
-  .max(72)
-  .regex(/[A-Za-z]/, "Include at least one letter.")
-  .regex(/\d/, "Include at least one number.");
+/** The rules for a new password (sign-up and changing it) live with the other identity checks */
+export { newPassword };
 
 /** The version of the Terms of Service and Privacy Policy on the web's /terms and /privacy pages.
  * Change it with the text; each account records the version it agreed to. */
 export const TERMS_VERSION = "2026-11-19";
 
 const accountFields = {
-  name: z.string().trim().min(2, "Enter your full name.").max(80),
+  ...nameFields,
   email,
   phone: mobileNumber,
   password: newPassword,
@@ -45,7 +42,8 @@ const accountFields = {
 
 // Admin accounts are never self-registered; they come from the seed step.
 const registerSchema = z.discriminatedUnion("role", [
-  z.object({ role: z.literal("RESIDENT"), ...accountFields }),
+  // A resident also says which valid ID they're uploading (the photo goes up right after the account is made)
+  z.object({ role: z.literal("RESIDENT"), ...accountFields, idType: z.enum(ID_TYPES, "Choose the kind of ID you're uploading.") }),
   z.object({ role: z.literal("RIDER"), ...accountFields, ...riderFields }),
   z.object({
     role: z.literal("VENDOR"),
@@ -71,6 +69,13 @@ const loginSchema = z.object({
 const publicUser = {
   id: true,
   name: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  suffix: true,
+  idType: true,
+  idStatus: true,
+  idReviewNote: true,
   email: true,
   phone: true,
   role: true,
@@ -118,8 +123,69 @@ function uniqueViolationField(error: Prisma.PrismaClientKnownRequestError): stri
 const SIGNUPS_OVERALL = 300;
 const SIGNUP_WINDOW = 10 * 60;
 
+/**
+ * Checks an email while the person is still typing the form: a typo in a big mail domain (with the
+ * fix), a throwaway inbox, a domain no email can reach, or an email that already has an account.
+ */
+authRouter.post("/check-email", async (req, res) => {
+  const ip = clientIp(req);
+  if (ip) {
+    const { over, retryAfter } = await hit(`rate:check-email:${ip}`, 60, 600);
+    if (over) tooMany(res, retryAfter, "Too many email checks from this network.");
+  }
+  const parsed = email.safeParse(req.body?.email);
+  if (!parsed.success) return void res.json({ ok: false, error: "Enter a valid email address, like juan@gmail.com." });
+  if (await prisma.user.findUnique({ where: { email: parsed.data }, select: { id: true } })) {
+    return void res.json({ ok: false, error: "An account with this email already exists. Log in instead.", taken: true });
+  }
+  const problem = await emailProblem(parsed.data);
+  if (problem) return void res.json({ ok: false, error: problem.message, suggestion: problem.suggestion });
+  res.json({ ok: true });
+});
+
+/** Emails a 6-digit code, after the same checks as check-email (so no code goes to a bad address) */
+authRouter.post("/email-code", async (req, res) => {
+  const ip = clientIp(req);
+  if (ip) {
+    const { over, retryAfter } = await hit(`rate:email-code:${ip}`, 20, 3600);
+    if (over) tooMany(res, retryAfter, "Too many codes from this network.");
+  }
+  const address = parseBody(z.object({ email }), req.body).email;
+  if (await prisma.user.findUnique({ where: { email: address }, select: { id: true } })) {
+    throw new ValidationError({ email: ["An account with this email already exists. Log in instead."] });
+  }
+  const problem = await emailProblem(address);
+  if (problem) throw new ValidationError({ email: [problem.message] });
+  res.json(await sendSignupCode(address));
+});
+
+/** The code they typed: right marks the email verified for the rest of the sign-up */
+authRouter.post("/email-code/verify", async (req, res) => {
+  const ip = clientIp(req);
+  if (ip) {
+    const { over, retryAfter } = await hit(`rate:email-verify:${ip}`, 60, 600);
+    if (over) tooMany(res, retryAfter, "Too many tries from this network.");
+  }
+  const input = parseBody(z.object({ email, code: z.string().trim().regex(/^\d{6}$/, "Type the 6 digits from the email.") }), req.body);
+  await checkSignupCode(input.email, input.code);
+  res.json({ ok: true });
+});
+
+/** Whether sign-up codes can be emailed now (the form says so up front when they can't) */
+authRouter.get("/email-code", (_req, res) => {
+  res.json({ ready: mailReady() });
+});
+
 authRouter.post("/register", async (req, res) => {
   const input = parseBody(registerSchema, req.body);
+  // Beyond the format: a domain that can't receive mail, a throwaway inbox, or a typo
+  const problem = await emailProblem(input.email);
+  if (problem) throw new ValidationError({ email: [problem.message] });
+  // The code Feasto emailed must have been typed first: the email is really theirs
+  if (!(await emailVerified(input.email))) throw new ValidationError({ emailCode: ["Confirm your email first: type the code we sent to it."] });
+  if (passwordHasOwnDetails(input.password, [input.firstName, input.lastName, input.email.split("@")[0]])) {
+    throw new ValidationError({ password: ["Don't use your name or email in your password."] });
+  }
   // Only accounts actually made are counted (a typo in the form costs nothing), so check first
   const ip = clientIp(req);
   const networkKey = ip ? `rate:signup:ip:${ip}` : null;
@@ -132,7 +198,12 @@ authRouter.post("/register", async (req, res) => {
   try {
     const user = await prisma.user.create({
       data: {
-        name: input.name,
+        name: fullName(input),
+        firstName: input.firstName,
+        middleName: input.middleName,
+        lastName: input.lastName,
+        suffix: input.suffix,
+        ...(input.role === "RESIDENT" && { idType: input.idType }),
         email: input.email,
         phone: input.phone,
         role: input.role,
@@ -181,6 +252,7 @@ authRouter.post("/register", async (req, res) => {
       select: publicUser,
     });
 
+    await forgetVerified(input.email);
     if (riderStore) await notifyStoreOfRider(riderStore.ownerId, user.name);
     await Promise.all([hit("rate:signup:all", SIGNUPS_OVERALL, SIGNUP_WINDOW), networkKey && hit(networkKey, signupsPerNetwork, SIGNUP_WINDOW)]);
 

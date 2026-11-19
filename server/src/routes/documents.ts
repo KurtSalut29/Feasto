@@ -16,9 +16,9 @@ import { perAccount } from "../lib/rateLimit.js";
 import { detectImageType } from "./uploads.js";
 
 /**
- * Business permits and driver's licenses. They hold personal details, so unlike photos they
- * aren't in the folder Nginx serves: each file goes out through here, to the admin, its
- * owner, or (for a rider's license) the store the rider applied to.
+ * Business permits, driver's licenses and residents' valid IDs. They hold personal details, so
+ * unlike photos they aren't in the folder Nginx serves: each file goes out through here, to the
+ * admin, its owner, or (for a rider's license) the store the rider applied to.
  */
 export const documentsRouter = Router();
 documentsRouter.use(requireAuth);
@@ -39,10 +39,10 @@ async function sendDocument(res: express.Response, name: string) {
 /** Documents can only change before approval; a reviewed one stays what was checked. */
 const EDITABLE = ["PENDING", "REJECTED"] as const;
 
-/** A store's permit or a rider's license, uploaded by its owner. */
+/** A store's permit, a rider's license or a resident's valid ID, uploaded by its owner. */
 documentsRouter.put(
   "/mine",
-  requireRole("VENDOR", "RIDER"),
+  requireRole("VENDOR", "RIDER", "RESIDENT"),
   // Counted before the file is read, so a flood of uploads costs nothing
   perAccount("upload", 30, 600, "You've uploaded a lot of files just now."),
   express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES }),
@@ -57,6 +57,20 @@ documentsRouter.put(
     await writeFile(path.join(config.documentDir, name), data);
 
     const userId = req.session!.userId;
+    if (req.session!.role === "RESIDENT") {
+      // A new photo of the ID goes back to the admin to check; a verified one stays as it was
+      const me = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { idFile: true } });
+      const { count } = await prisma.user.updateMany({
+        where: { id: userId, OR: [{ idStatus: null }, { idStatus: { not: "VERIFIED" } }] },
+        data: { idFile: name, idStatus: "PENDING", idReviewNote: null, idReviewedAt: null },
+      });
+      if (count === 0) {
+        await removeDocument(name);
+        throw new HttpError(409, "Your ID is already verified, so it can't be changed.");
+      }
+      await removeDocument(me.idFile);
+      return void res.json({ document: documentKind(name) });
+    }
     const previous =
       req.session!.role === "VENDOR"
         ? (await prisma.vendor.findUnique({ where: { ownerId: userId }, select: { permitFile: true } }))?.permitFile
@@ -80,6 +94,15 @@ documentsRouter.get("/store/:id", async (req, res) => {
   // The same answer for "not yours" and "doesn't exist", so ids can't be probed
   if (!store?.permitFile || !allowed) throw new HttpError(404, "We couldn't find this document. It may have been replaced or removed.");
   await sendDocument(res, store.permitFile);
+});
+
+/** A resident's valid ID: to the admin, and to the resident themselves */
+documentsRouter.get("/resident/:id", async (req, res) => {
+  const id = String(req.params.id);
+  const allowed = req.session!.role === "ADMIN" || req.session!.userId === id;
+  const user = allowed ? await prisma.user.findUnique({ where: { id }, select: { idFile: true } }) : null;
+  if (!user?.idFile) throw new HttpError(404, "We couldn't find this document. It may have been replaced or removed.");
+  await sendDocument(res, user.idFile);
 });
 
 documentsRouter.get("/rider/:id", async (req, res) => {

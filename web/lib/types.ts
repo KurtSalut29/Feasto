@@ -18,6 +18,15 @@ export type StoreType =
 export type User = {
   id: string;
   name: string;
+  /** The name in parts, as on a valid ID (null for accounts made before it was asked) */
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  suffix: string | null;
+  /** A resident's valid ID: which kind, and the admin's check (null until a photo is uploaded) */
+  idType: string | null;
+  idStatus: "PENDING" | "VERIFIED" | "REJECTED" | null;
+  idReviewNote: string | null;
   email: string;
   phone: string | null;
   role: Role;

@@ -29,10 +29,11 @@ export function setup() {
   const vendor = session(
     post("/auth/register", {
       role: "VENDOR",
-      name: "Race Test Owner",
+      firstName: "Rachel",
+      lastName: "Santos",
       email: `race-owner-${run}@test.com`,
       phone: "09170000001",
-      password: "loadtest123",
+      password: "Loadtest#2026",
       acceptTerms: true,
       storeName: `Race Test Diner ${run % 10000}`,
       storeAddress: "1 Test Street, Quezon City",
@@ -72,10 +73,13 @@ export function setup() {
       session(
         post("/auth/register", {
           role: "RESIDENT",
-          name: `Racer ${i + 1}`,
+          // Names take letters only: Racer Aa, Racer Ab, …
+          firstName: "Racer",
+          lastName: `Santos ${String.fromCharCode(65 + Math.floor(i / 26) % 26)}${String.fromCharCode(97 + (i % 26))}`,
+          idType: "PHILSYS",
           email: `racer-${run}-${i}@test.com`,
           phone: "09170000002",
-          password: "loadtest123",
+          password: "Loadtest#2026",
           acceptTerms: true,
         }),
       ),

@@ -45,6 +45,9 @@ services:
     environment:
       API_URL: http://nginx
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      # Admin > System turns these into the QR code phones scan (set by infra/lan/start.ps1)
+      SITE_ADDRESS: ${SITE_ADDRESS:-}
+      LAN_WIFI: ${LAN_WIFI:-}
     depends_on:
       - nginx
 

@@ -12,6 +12,7 @@ import { pushEnabled, pushTo } from "../lib/push.js";
 import { config } from "../config.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { newPassword } from "./auth.js";
+import { fullName, ID_TYPES, nameFields } from "../lib/identity.js";
 
 /** Things every signed-in user does with their own account. */
 export const meRouter = Router();
@@ -83,16 +84,33 @@ meRouter.delete("/push", async (req, res) => {
 // ---------- Profile ----------
 
 const profileSchema = z.object({
-  name: z.string().trim().min(2, "Enter your full name.").max(80),
+  ...nameFields,
   phone: z
     .string()
     .trim()
-    .regex(/^(\+639|09)\d{9}$/, "Enter a mobile number like 09171234567."),
+    .regex(/^09\d{9}$/, "Enter the 11-digit mobile number, like 09171234567."),
 });
 
 meRouter.patch("/profile", async (req, res) => {
   const input = parseBody(profileSchema, req.body);
-  await prisma.user.update({ where: { id: req.session!.userId }, data: input });
+  const name = fullName(input);
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, idStatus: true } });
+  // Once the admin matched the name to a valid ID, it stays that name
+  if (me.idStatus === "VERIFIED" && name !== me.name) {
+    throw new ValidationError({ firstName: ["Your name matches your verified ID, so it can't be changed here. Contact Feasto if it's wrong."] });
+  }
+  await prisma.user.update({
+    where: { id: req.session!.userId },
+    data: { name, firstName: input.firstName, middleName: input.middleName, lastName: input.lastName, suffix: input.suffix, phone: input.phone },
+  });
+  res.json({ ok: true });
+});
+
+/** A resident picks another kind of ID before sending its photo (not once it's verified) */
+meRouter.put("/id-type", requireRole("RESIDENT"), async (req, res) => {
+  const { idType } = parseBody(z.object({ idType: z.enum(ID_TYPES, "Choose the kind of ID.") }), req.body);
+  const { count } = await prisma.user.updateMany({ where: { id: req.session!.userId, OR: [{ idStatus: null }, { idStatus: { not: "VERIFIED" } }] }, data: { idType } });
+  if (count === 0) throw new HttpError(409, "Your ID is already verified.");
   res.json({ ok: true });
 });
 

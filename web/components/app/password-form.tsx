@@ -4,19 +4,13 @@ import { Check, CircleCheck, KeyRound, LockKeyhole, MonitorSmartphone, ShieldChe
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { PasswordStrength } from "@/components/ui/password-strength";
+import { PASSWORD_RULES, PasswordRules, PasswordStrength } from "@/components/ui/password-strength";
 import { TextField } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 
 const EMPTY = { currentPassword: "", newPassword: "", confirm: "" };
 
-/** The same rules the server checks (server/src/routes/auth.ts newPassword) */
-const RULES = [
-  { label: "8+ characters", met: (p: string) => p.length >= 8 },
-  { label: "A letter", met: (p: string) => /[A-Za-z]/.test(p) },
-  { label: "A number", met: (p: string) => /\d/.test(p) },
-];
 
 /**
  * Change the password. The server logs the account out on every other device.
@@ -34,7 +28,7 @@ export function PasswordForm({ onCancel, onDone, doneHref }: { onCancel?: () => 
     setFieldErrors((errors) => ({ ...errors, [field]: undefined }));
   };
 
-  const rulesMet = RULES.every((rule) => rule.met(values.newPassword));
+  const rulesMet = PASSWORD_RULES.every((rule) => rule.met(values.newPassword));
   const matches = values.confirm !== "" && values.confirm === values.newPassword;
 
   async function save(event: FormEvent) {
@@ -108,36 +102,15 @@ export function PasswordForm({ onCancel, onDone, doneHref }: { onCancel?: () => 
             value={values.newPassword}
             onChange={set("newPassword")}
             autoComplete="new-password"
-            placeholder="8+ letters and numbers"
+            placeholder="Like Kape@Umaga24"
             error={fieldErrors.newPassword?.[0]}
           />
           {/* Each rule ticks green as it is met */}
-          <ul aria-label="Your new password needs" className="mt-2.5 flex flex-wrap gap-1.5">
-            {RULES.map((rule) => {
-              const met = rule.met(values.newPassword);
-              return (
-                <li
-                  key={rule.label}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                    met ? "bg-emerald-100 text-emerald-800" : "bg-white text-muted ring-1 ring-line"
-                  }`}
-                >
-                  <span
-                    aria-hidden
-                    className={`flex size-3.5 items-center justify-center rounded-full transition-colors ${met ? "bg-emerald-600 text-white" : "bg-line"}`}
-                  >
-                    {met && <Check className="size-2.5 motion-safe:animate-[pop_0.25s_ease-out]" strokeWidth={3.5} />}
-                  </span>
-                  {rule.label}
-                  <span className="sr-only">{met ? " (done)" : " (not yet)"}</span>
-                </li>
-              );
-            })}
-          </ul>
+          <PasswordRules password={values.newPassword} />
           {values.newPassword && (
             <div className="mt-3">
               <PasswordStrength password={values.newPassword} />
-              {rulesMet && <p className="mt-1 text-xs text-muted">Make it longer, or mix in capitals or a symbol, to make it stronger.</p>}
+              {rulesMet && <p className="mt-1 text-xs text-muted">Longer is stronger: 12 or more characters makes it hard to guess.</p>}
             </div>
           )}
         </div>

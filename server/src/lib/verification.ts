@@ -6,11 +6,11 @@ import { prisma } from "./db.js";
 import { HttpError, ValidationError } from "./http.js";
 import { notify } from "./liveUpdates.js";
 
-/** Philippine mobile numbers: 09XXXXXXXXX or +639XXXXXXXXX */
+/** Philippine mobile numbers, the 11 digits people write: 09XXXXXXXXX */
 export const mobileNumber = z
   .string("Enter a mobile number like 09171234567.")
   .trim()
-  .regex(/^(\+639|09)\d{9}$/, "Enter a mobile number like 09171234567.");
+  .regex(/^09\d{9}$/, "Enter the 11-digit mobile number, like 09171234567.");
 
 const text = (min: number, max: number, message: string) => z.string(message).trim().min(min, message).max(max, message);
 

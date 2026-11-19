@@ -19,7 +19,7 @@ export function setup() {
   const email = `loadtest-${Date.now()}@test.com`;
   const res = http.post(
     `${BASE}/auth/register`,
-    JSON.stringify({ role: "RESIDENT", name: "Load Tester", email, phone: "09170000000", password: "loadtest123", acceptTerms: true }),
+    JSON.stringify({ role: "RESIDENT", firstName: "Lorna", lastName: "Santos", idType: "PHILSYS", email, phone: "09170000000", password: "Loadtest#2026", acceptTerms: true }),
     { headers: { "Content-Type": "application/json" } },
   );
   const cookie = res.cookies.feasto_session[0].value;

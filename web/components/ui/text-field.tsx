@@ -19,6 +19,20 @@ export function TextField({ label, error, hint, icon: Icon, className, type, ...
   const id = useId();
   const [revealed, setRevealed] = useState(false);
   const isPassword = type === "password";
+  // Mobile numbers: digits only, and no more than the 11 of 09XXXXXXXXX
+  const isPhone = type === "tel";
+  const phoneProps = isPhone
+    ? {
+        inputMode: "numeric" as const,
+        maxLength: 11,
+        pattern: "09[0-9]{9}",
+        onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+          const digits = event.target.value.replace(/\D/g, "").slice(0, 11);
+          if (digits !== event.target.value) event.target.value = digits;
+          inputProps.onChange?.(event);
+        },
+      }
+    : {};
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 
   return (
@@ -46,6 +60,7 @@ export function TextField({ label, error, hint, icon: Icon, className, type, ...
               : "border-line hover:border-gray-300 focus:border-brand-500 focus:ring-brand-500/15"
           }`}
           {...inputProps}
+          {...phoneProps}
         />
         {isPassword && (
           <button

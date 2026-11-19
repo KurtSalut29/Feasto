@@ -13,6 +13,7 @@ import { CategoryGrid } from "./category-grid";
 import { HomeHero } from "./home-hero";
 import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreSearch } from "./stores/store-browse";
 import { StaggerOnce } from "@/components/app/stagger-once";
+import { IdNotice } from "./id-notice";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -42,7 +43,8 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
 
   return (
     <>
-      <HomeHero firstName={user.name.split(" ")[0]} addresses={addresses} />
+      <HomeHero firstName={user.firstName ?? user.name.split(" ")[0]} addresses={addresses} />
+      <IdNotice user={user} />
 
       {/* Big screens search from the top bar */}
       <div className="mt-4 lg:hidden">

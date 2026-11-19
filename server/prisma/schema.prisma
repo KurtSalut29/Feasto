@@ -175,6 +175,17 @@ model User {
   /// Suspended by the admin after a report: can sign in, but can't order, take jobs or get orders until then.
   /// Feasto lifts it by itself when the time is up (an "until the admin lifts it" suspension is year 2999).
   suspendedUntil    DateTime?
+  /// The name in parts, as on a valid ID; `name` is them joined, for display
+  firstName         String?
+  middleName        String?
+  lastName          String?
+  suffix            String?
+  /// A resident's valid ID: what kind, the photo (private, in the documents folder) and the admin's check
+  idType            String?
+  idFile            String?
+  idStatus          IdCheck?
+  idReviewNote      String?
+  idReviewedAt      DateTime?
   /// Sessions signed before this moment stop working, so a new password logs out other devices
   passwordChangedAt DateTime?
   /// Display & accessibility, chosen by the person and applied on every device they log in on
@@ -216,6 +227,8 @@ model User {
   pushDevices   PushSubscription[]
   riderRatings  RiderRating[]  @relation("RatingsReceived")
   ratingsGiven  RiderRating[]  @relation("RatingsGiven")
+
+  @@index([role, idStatus])
 }
 
 /// A resident's saved delivery address.
@@ -919,4 +932,11 @@ model Report {
   @@unique([reporterId, reportedId, bookingId])
   @@index([status, createdAt])
   @@index([reportedId, createdAt])
+}
+
+/// Where the admin's check of a resident's valid ID is
+enum IdCheck {
+  PENDING
+  VERIFIED
+  REJECTED
 }

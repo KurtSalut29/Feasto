@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<title>Offline · Feasto</title>
+<title>Can't reach Feasto</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; margin: 0; }
@@ -13,27 +13,64 @@
     padding: 24px 16px; background: #ffffff; color: #1f2937; text-align: center;
     font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-  main { max-width: 320px; }
-  img { width: 112px; height: 112px; border-radius: 28px; }
-  h1 { margin-top: 20px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  main { width: 100%; max-width: 360px; }
+  img { width: 96px; height: 96px; border-radius: 24px; }
+  h1 { margin-top: 18px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
   p { margin-top: 8px; font-size: 15px; line-height: 1.5; color: #6b7280; }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; color: #1f2937; background: #f3f4f6; padding: 2px 6px; border-radius: 6px; word-break: break-all; }
+  ol { margin-top: 16px; padding: 14px 14px 14px 34px; text-align: left; background: #f9fafb; border-radius: 14px; font-size: 14px; line-height: 1.45; color: #374151; }
+  li + li { margin-top: 8px; }
+  b { color: #1f2937; }
   button {
-    margin-top: 24px; width: 100%; height: 48px; border: 0; border-radius: 12px;
+    margin-top: 20px; width: 100%; height: 48px; border: 0; border-radius: 12px;
     background: #d24600; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
   }
   button:focus-visible { outline: 2px solid #fe5502; outline-offset: 2px; }
+  .status { margin-top: 10px; font-size: 13px; color: #9ca3af; }
+  [hidden] { display: none; }
 </style>
 </head>
 <body>
 <main>
   <img src="/icons/icon-192.png" alt="">
-  <h1>You're offline</h1>
-  <p>Feasto needs an internet connection. Check your Wi-Fi or mobile data, then try again.</p>
+  <h1 id="title">You're offline</h1>
+  <p id="lead">Feasto needs an internet connection. Check your Wi-Fi or mobile data, then try again.</p>
+  <!-- On the classroom laptop (infra/lan): the phone is online but can't reach the laptop -->
+  <ol id="lan" hidden>
+    <li>Connect to the <b>same Wi-Fi as the Feasto laptop</b>, not mobile data.</li>
+    <li>Check the address. It changes when the laptop moves to another Wi-Fi: scan the <b>QR code in Admin › System</b> on the laptop.</li>
+    <li>Turn off anything that changes how the phone finds websites: on Android, <b>Settings › Network › Private DNS › Off</b>; on iPhone, turn off <b>Private Relay</b> and any VPN.</li>
+    <li>Set the phone's <b>date and time to automatic</b>.</li>
+  </ol>
   <button type="button" onclick="location.reload()">Try again</button>
+  <p class="status" id="status" aria-live="polite"></p>
 </main>
 <script>
-  // Come back on our own as soon as the connection returns
+  // Which problem it is: no connection at all, or online but this server isn't answering
+  const host = location.host;
+  const lan = /\.local-ip\.sh$/.test(location.hostname);
+  function explain() {
+    if (navigator.onLine) {
+      document.getElementById("title").textContent = "Can't reach Feasto";
+      document.getElementById("lead").innerHTML = "Your phone is online, but the Feasto server at <code></code> isn't answering.";
+      document.querySelector("#lead code").textContent = host;
+      document.getElementById("lan").hidden = !lan;
+    }
+  }
+  explain();
   addEventListener("online", () => location.reload());
+  // Keep checking by itself, and come back as soon as the server answers
+  let tries = 0;
+  setInterval(async () => {
+    tries += 1;
+    document.getElementById("status").textContent = "Checking again… (" + tries + ")";
+    try {
+      await fetch("/manifest.webmanifest?ping=" + Date.now(), { cache: "no-store" });
+      location.reload();
+    } catch {
+      explain();
+    }
+  }, 5000);
 </script>
 </body>
 </html>
