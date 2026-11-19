@@ -1,6 +1,7 @@
 "use client";
 
-import { Banknote, Check, ChevronDown, Nfc } from "lucide-react";
+import { Banknote, Check, ChevronDown, IdCard, Nfc } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { formatPeso } from "@/lib/format";
 import { PAYMENT_OPTIONS as OPTIONS, PaymentLogo as Logo, type PaymentOption as Option, type PayChoice } from "@/components/app/payment-brands";
@@ -33,7 +34,10 @@ export function PaymentPicker({
   parts,
   refusedBy = () => null,
   realPayments = false,
+  cashNeedsId = false,
 }: {
+  /** Cash is off until the resident sends a valid ID */
+  cashNeedsId?: boolean;
   /** Paid on Xendit's page (test mode) instead of simulated */
   realPayments?: boolean;
   value: PayChoice;
@@ -60,7 +64,7 @@ export function PaymentPicker({
               <p className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">{group}</p>
               <div className="grid grid-cols-3 gap-2">
                 {OPTIONS.filter((o) => o.group === group).map((option) => (
-                  <Tile key={option.value} option={option} on={option.value === value} onChange={onChange} refusedBy={refusedBy(option.value)} />
+                  <Tile key={option.value} option={option} on={option.value === value} onChange={onChange} refusedBy={refusedBy(option.value)} needsId={cashNeedsId && option.value === "COD"} />
                 ))}
               </div>
             </div>
@@ -68,7 +72,7 @@ export function PaymentPicker({
         ) : (
           <div className="grid grid-cols-3 gap-2">
             {OPTIONS.filter((o) => FIRST.has(o.value)).map((option) => (
-              <Tile key={option.value} option={option} on={option.value === value} onChange={onChange} refusedBy={refusedBy(option.value)} />
+              <Tile key={option.value} option={option} on={option.value === value} onChange={onChange} refusedBy={refusedBy(option.value)} needsId={cashNeedsId && option.value === "COD"} />
             ))}
             <button
               type="button"
@@ -95,16 +99,29 @@ export function PaymentPicker({
           </button>
         )}
       </fieldset>
+      {cashNeedsId && (
+        <p className="mt-3 flex items-start gap-2.5 rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted">
+          <IdCard className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+          <span>
+            Cash on delivery needs your valid ID.{" "}
+            <Link href="/resident#valid-id" className="font-semibold text-brand-700 underline underline-offset-2 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-500">
+              Add it on Home
+            </Link>
+            , or pay online now.
+          </span>
+        </p>
+      )}
 
       <PayCard key={chosen.value} option={chosen} total={total} holder={holder} phone={phone} delivery={delivery} parts={parts} real={realPayments} />
     </div>
   );
 }
 
-function Tile({ option, on, onChange, refusedBy }: { option: Option; on: boolean; onChange: (value: PayChoice) => void; refusedBy: string | null }) {
+function Tile({ option, on, onChange, refusedBy: storeRefusing, needsId = false }: { option: Option; on: boolean; onChange: (value: PayChoice) => void; refusedBy: string | null; needsId?: boolean }) {
+  const refusedBy = storeRefusing ?? (needsId ? "id" : null);
   return (
     <label
-      title={refusedBy ? `${refusedBy} doesn't take ${option.name}` : undefined}
+      title={needsId ? "Needs your valid ID" : refusedBy ? `${refusedBy} doesn't take ${option.name}` : undefined}
       className={`relative flex flex-col items-center gap-1.5 rounded-xl border px-1.5 py-3 text-center transition has-focus-visible:outline-2 has-focus-visible:outline-brand-500 ${
         refusedBy
           ? "cursor-not-allowed border-dashed border-line bg-canvas/60 opacity-60 grayscale"
@@ -126,7 +143,11 @@ function Tile({ option, on, onChange, refusedBy }: { option: Option; on: boolean
         {option.tile ? <Logo file={option.tile} tint={option.brand} className="h-6 w-12" /> : <Banknote className="size-6" style={{ color: option.brand }} />}
       </span>
       <span className="text-sm leading-tight font-semibold text-ink">{option.name}</span>
-      {refusedBy && <span className="-mt-1 line-clamp-1 text-[0.6875rem] leading-tight text-muted">Not at {refusedBy}</span>}
+      {storeRefusing ? (
+        <span className="-mt-1 line-clamp-1 text-[0.6875rem] leading-tight text-muted">Not at {storeRefusing}</span>
+      ) : (
+        needsId && <span className="-mt-1 line-clamp-1 text-[0.6875rem] leading-tight text-muted">Needs your ID</span>
+      )}
       {on && (
         <span className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-brand-600 text-white" aria-hidden>
           <Check className="size-3" strokeWidth={3} />

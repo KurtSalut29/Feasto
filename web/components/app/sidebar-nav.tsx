@@ -12,7 +12,7 @@ import { ROLE_HOME } from "@/lib/roles";
 import { SIDEBAR_STORAGE_KEY } from "@/lib/sidebar";
 import type { Role } from "@/lib/types";
 import { NotificationBell } from "./notification-bell";
-import { RailTooltip } from "./rail-tooltip";
+import { placeRailTooltip, RailTooltip } from "./rail-tooltip";
 
 /** The roles with a sidebar on big screens (the rider gets one too, from laptops up) */
 type DashboardRole = Extract<Role, "VENDOR" | "ADMIN" | "RIDER">;
@@ -115,7 +115,7 @@ function Links({
 }) {
   const current = pathname === null ? null : activeHref(NAVIGATION[role], pathname);
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:collapsed:space-y-2">
       {groupItems(NAVIGATION[role].filter((item) => !only || only(item))).map((group, index) => (
         <div key={group.label}>
           {group.label && (
@@ -123,8 +123,8 @@ function Links({
               {group.label}
             </p>
           )}
-          {index > 0 && <div aria-hidden className="mx-auto mb-3 hidden h-px w-8 bg-line lg:collapsed:block" />}
-          <ul className="space-y-1">
+          {index > 0 && <div aria-hidden className="mx-auto mb-2 hidden h-px w-6 bg-line lg:collapsed:block" />}
+          <ul className="space-y-1 lg:collapsed:space-y-0.5">
             {group.items.map((item) => {
               const active = item.href === current;
               return (
@@ -132,8 +132,10 @@ function Links({
                   <Link
                     href={item.href}
                     onClick={onNavigate}
+                    onPointerEnter={placeRailTooltip}
+                    onFocus={placeRailTooltip}
                     aria-current={active ? "page" : undefined}
-                    className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 lg:collapsed:justify-center lg:collapsed:px-0 ${
+                    className={`group relative flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-500 lg:collapsed:mx-auto lg:collapsed:h-10 lg:collapsed:w-11 lg:collapsed:justify-center lg:collapsed:px-0 ${
                       active
                         ? "bg-brand-600 text-white shadow-[0_8px_20px_-8px_rgba(210,70,0,0.6)]"
                         : "text-muted hover:bg-canvas hover:text-ink"
@@ -192,14 +194,14 @@ export function SidebarNav({
       {/* Big screens */}
       <aside aria-label="Main menu" className="fixed inset-y-4 left-4 z-30 hidden w-64 flex-col rounded-3xl border border-line/80 bg-white shadow-[0_16px_48px_-20px_rgba(31,45,61,0.28)] transition-[width] duration-300 ease-out lg:flex lg:collapsed:w-[4.75rem]">
         <CollapseToggle />
-        <div className="flex h-[4.75rem] shrink-0 items-center px-6 lg:collapsed:justify-center lg:collapsed:px-0">
+        <div className="flex h-[4.75rem] shrink-0 items-center px-6 lg:collapsed:h-16 lg:collapsed:justify-center lg:collapsed:px-0">
           <Brand role={role} />
         </div>
         <div className="shrink-0 px-3 pb-2">{context}</div>
-        <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto px-3 py-3 lg:collapsed:overflow-visible">
+        <nav aria-label="Main" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3 lg:collapsed:py-2 lg:collapsed:[scrollbar-width:none] lg:collapsed:[&::-webkit-scrollbar]:hidden">
           <NavLinks role={role} badges={badges} />
         </nav>
-        <div className="shrink-0 border-t border-line p-3">{footer}</div>
+        <div className="shrink-0 border-t border-line p-3 lg:collapsed:px-0 lg:collapsed:py-2.5">{footer}</div>
       </aside>
 
       {phone && (

@@ -48,7 +48,7 @@ export function LogoutButton({ variant = "icon" }: { variant?: "icon" | "row" })
 const GOODBYE_MS = 900;
 
 /** Pop-up with the Feasto logo asking "Log out of Feasto?". */
-function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function LogoutConfirm({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   /** The goodbye check mark: the app closes in a circle towards it */
   const checkRef = useRef<HTMLSpanElement>(null);

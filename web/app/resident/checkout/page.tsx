@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { requireRole } from "@/lib/auth";
+import { needsIdFor } from "@/lib/identity";
 import { serverApi } from "@/lib/server-api";
 import type { Address, Cart } from "@/lib/types";
 import { CheckoutForm } from "./checkout-form";
@@ -30,7 +31,7 @@ async function Checkout() {
   return (
     <>
       <MobileHeading title="Checkout" />
-      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} realPayments={payments === "xendit"} />
+      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} realPayments={payments === "xendit"} cashNeedsId={needsIdFor(user)} />
     </>
   );
 }

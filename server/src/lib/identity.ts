@@ -1,5 +1,7 @@
 import { resolve4, resolveMx } from "node:dns/promises";
 import { z } from "zod";
+import { prisma } from "./db.js";
+import { HttpError } from "./http.js";
 
 /**
  * Who someone is, checked as well as a sign-up form can: the name in parts as on a valid ID (no
@@ -154,4 +156,27 @@ export async function emailProblem(email: string): Promise<{ message: string; su
   }
   if (!(await domainTakesMail(domain))) return { message: `No email can be delivered to ${domain}. Check the spelling of your email.` };
   return null;
+}
+
+// ---------- What a resident needs an ID for ----------
+
+/**
+ * Pabili and cash on delivery are where a fake account costs someone real money: the rider pays
+ * for a Pabili out of pocket, and a store cooks a cash order before anyone has paid. So both need
+ * an uploaded ID first. Waiting for the admin's check isn't needed (a pending ID is enough); an ID
+ * the admin didn't accept blocks them again until a new one is sent. Paid-online orders need none.
+ */
+export async function refuseWithoutId(userId: string, what: "pabili" | "cod") {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, idFile: true, idStatus: true } });
+  if (!user || user.role !== "RESIDENT") return;
+  if (user.idFile && user.idStatus !== "REJECTED") return;
+  const action = what === "pabili" ? "use Pabili" : "pay cash on delivery";
+  throw new HttpError(
+    403,
+    user.idStatus === "REJECTED"
+      ? `Your valid ID wasn't accepted. Send a new one on Home to ${action}.`
+      : what === "cod"
+        ? "Add your valid ID on Home to pay cash on delivery. You can still pay online."
+        : "Add your valid ID on Home to use Pabili.",
+  );
 }

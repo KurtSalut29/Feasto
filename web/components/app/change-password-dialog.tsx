@@ -30,10 +30,17 @@ export function ChangePasswordButton({ email, variant = "button", className = ""
           Change password
         </Button>
       )}
-      <Dialog open={open} onClose={close} title="Change password" description={`For ${email}`}>
-        <PasswordForm onCancel={close} onDone={close} />
-      </Dialog>
+      <ChangePasswordDialog open={open} onClose={close} email={email} />
     </>
+  );
+}
+
+/** The change-password pop-up itself, for a button that opens it from elsewhere (the folded sidebar's account menu) */
+export function ChangePasswordDialog({ open, onClose, email }: { open: boolean; onClose: () => void; email: string }) {
+  return (
+    <Dialog open={open} onClose={onClose} title="Change password" description={`For ${email}`}>
+      <PasswordForm onCancel={onClose} onDone={onClose} />
+    </Dialog>
   );
 }
 

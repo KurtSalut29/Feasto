@@ -6,8 +6,10 @@ import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { Badge } from "@/components/ui/badge";
 import { requireRole } from "@/lib/auth";
 import { formatPeso, timeAgo } from "@/lib/format";
+import { needsIdFor } from "@/lib/identity";
 import { serverApi } from "@/lib/server-api";
 import type { Address } from "@/lib/types";
+import { IdNotice } from "../id-notice";
 import { ERRAND_STATUS, type Errand } from "./errand";
 import { PabiliForm } from "./pabili-form";
 
@@ -27,7 +29,7 @@ export default function PabiliPage() {
  * item by item; the rider pays at the shop and is paid back in cash on delivery.
  */
 async function Pabili() {
-  await requireRole("RESIDENT");
+  const user = await requireRole("RESIDENT");
   const [{ addresses }, { errands, budgetMax, waitMinutes }] = await Promise.all([
     serverApi<{ addresses: Address[] }>("/me/addresses"),
     serverApi<{ errands: (Errand & { rider: { name: string } | null })[]; budgetMax: number; waitMinutes: number }>("/errands"),
@@ -37,7 +39,14 @@ async function Pabili() {
     <>
       <MobileHeading title="Pabili" subtitle="A rider buys it for you at a shop that isn't on Feasto, like the market or a drugstore, and brings it." />
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-6">
-        <PabiliForm addresses={addresses} budgetMax={budgetMax} waitMinutes={waitMinutes} />
+        {/* The rider pays for a Pabili out of pocket, so it needs a valid ID first: sent right here */}
+        {needsIdFor(user) ? (
+          <div className="-mt-4">
+            <IdNotice user={user} />
+          </div>
+        ) : (
+          <PabiliForm addresses={addresses} budgetMax={budgetMax} waitMinutes={waitMinutes} />
+        )}
 
         <section aria-labelledby="my-pabili" className="mt-6 lg:sticky lg:top-24 lg:mt-0">
           <h2 id="my-pabili" className="mb-2 font-semibold text-ink">

@@ -10,6 +10,7 @@ import { LiveUpdates } from "./live-updates";
 import { LogoutButton } from "./logout-button";
 import { NotificationBell } from "./notification-bell";
 import { PageBack } from "./page-back";
+import { RailAccountMenu } from "./rail-account-menu";
 import { SidebarNav } from "./sidebar-nav";
 import { SkipLink } from "./skip-link";
 import { DisplaySync } from "./display-settings";
@@ -131,7 +132,7 @@ async function SidebarContext() {
   return (
     <div
       title={store ? `${store.name}: ${state.label}` : "Admin console"}
-      className="flex items-center gap-3 rounded-2xl border border-line/80 bg-canvas/70 p-2.5 lg:collapsed:justify-center lg:collapsed:border-transparent lg:collapsed:bg-transparent lg:collapsed:p-0"
+      className={`flex items-center gap-3 rounded-2xl border border-line/80 bg-canvas/70 p-2.5 lg:collapsed:justify-center lg:collapsed:border-transparent lg:collapsed:bg-transparent lg:collapsed:p-0 ${store ? "" : "lg:collapsed:hidden"}`}
     >
       <span className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-50 text-brand-600">
         {store?.imageUrl ? (
@@ -160,33 +161,40 @@ export async function SidebarUser() {
   const user = await getCurrentUser();
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl p-1.5 lg:collapsed:flex-col lg:collapsed:gap-1.5 lg:collapsed:p-0">
-      <span
-        title={user.name}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-semibold text-white"
-      >
-        {initials(user.name)}
-      </span>
-      <div className="min-w-0 flex-1 lg:collapsed:sr-only">
-        <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
-        <p className="truncate text-xs text-muted">{user.email}</p>
+    <>
+      {/* Open sidebar (and the phone's More sheet): who it is, with the password and log-out buttons */}
+      <div className="flex items-center gap-3 rounded-2xl p-1.5 lg:collapsed:hidden">
+        <span
+          title={user.name}
+          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-semibold text-white"
+        >
+          {initials(user.name)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+          <p className="truncate text-xs text-muted">{user.email}</p>
+        </div>
+        <div className="flex shrink-0 items-center">
+          {user.role === "RIDER" ? (
+            <Link
+              href="/rider/password"
+              aria-label="Change password"
+              title="Change password"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <KeyRound className="size-[18px]" aria-hidden />
+            </Link>
+          ) : (
+            <ChangePasswordButton email={user.email} variant="icon" />
+          )}
+          <LogoutButton />
+        </div>
       </div>
-      <div className="flex shrink-0 items-center lg:collapsed:flex-col lg:collapsed:gap-1.5">
-        {user.role === "RIDER" ? (
-          <Link
-            href="/rider/password"
-            aria-label="Change password"
-            title="Change password"
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
-          >
-            <KeyRound className="size-[18px]" aria-hidden />
-          </Link>
-        ) : (
-          <ChangePasswordButton email={user.email} variant="icon" />
-        )}
-        <LogoutButton />
+      {/* Folded sidebar: just the initials, which open a menu with the same two actions */}
+      <div className="hidden justify-center lg:collapsed:flex">
+        <RailAccountMenu name={user.name} email={user.email} passwordHref={user.role === "RIDER" ? "/rider/password" : undefined} />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -212,7 +220,7 @@ async function NavCount({ role, href, meaning }: { role: DashboardRole; href: st
   const count = (await waitingCounts(role))[href] ?? 0;
   if (count === 0) return null;
   return (
-    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[0.6875rem] font-semibold text-white group-aria-[current=page]:bg-white group-aria-[current=page]:text-brand-700 lg:collapsed:absolute lg:collapsed:top-2 lg:collapsed:right-3 lg:collapsed:ml-0 lg:collapsed:size-2.5 lg:collapsed:min-w-0 lg:collapsed:p-0 lg:collapsed:ring-2 lg:collapsed:ring-white lg:collapsed:group-aria-[current=page]:ring-brand-600">
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[0.6875rem] font-semibold text-white group-aria-[current=page]:bg-white group-aria-[current=page]:text-brand-700 lg:collapsed:absolute lg:collapsed:top-1.5 lg:collapsed:right-2 lg:collapsed:ml-0 lg:collapsed:size-2.5 lg:collapsed:min-w-0 lg:collapsed:p-0 lg:collapsed:ring-2 lg:collapsed:ring-white lg:collapsed:group-aria-[current=page]:ring-brand-600">
       <span className="lg:collapsed:sr-only">{count > 99 ? "99+" : count}</span>
       <span className="sr-only"> {meaning}</span>
     </span>

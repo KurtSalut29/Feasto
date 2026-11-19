@@ -15,6 +15,7 @@ import { averageOf, shortName } from "../lib/riderRatings.js";
 import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
+import { refuseWithoutId } from "../lib/identity.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
 
 const peso = (n: unknown) => Math.round(Number(n) * 100) / 100;
@@ -102,6 +103,7 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   const input = parseBody(errandSchema, req.body);
   const userId = req.session!.userId;
   await refuseIfSuspended(userId, "pabili");
+  await refuseWithoutId(userId, "pabili");
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });
   if (open >= 2) throw new HttpError(409, "You already have two Pabili on the way. Wait for one to arrive first.");
   const address = await addressOf(userId, input.addressId);

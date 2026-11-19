@@ -40,3 +40,7 @@ export function splitName(name: string) {
   if (words.length < 2) return { firstName: name.trim(), lastName: "" };
   return { firstName: words.slice(0, -1).join(" "), lastName: words.at(-1)! };
 }
+
+/** Pabili and cash on delivery need an uploaded ID; one waiting for the admin's check is enough (server: refuseWithoutId) */
+export const needsIdFor = (user: { role?: string; idStatus?: string | null }) =>
+  user.role === "RESIDENT" && user.idStatus !== "PENDING" && user.idStatus !== "VERIFIED";

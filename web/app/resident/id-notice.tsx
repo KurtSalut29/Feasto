@@ -29,7 +29,7 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
       <p className="mt-4 flex items-start gap-2.5 rounded-2xl border border-line bg-white px-4 py-3 text-sm text-muted">
         <Hourglass className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
         <span>
-          Feasto is checking your <span className="font-semibold text-ink">{idTypeLabel(user.idType)}</span>. You can order in the meantime.
+          Feasto is checking your <span className="font-semibold text-ink">{idTypeLabel(user.idType)}</span>. You can order, use Pabili and pay cash in the meantime.
         </span>
       </p>
     );
@@ -58,8 +58,9 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
 
   return (
     <section
+      id="valid-id"
       aria-labelledby="id-notice"
-      className={`mt-4 rounded-2xl border p-4 ${rejected ? "border-red-200 bg-red-50/70" : "border-amber-200 bg-amber-50/70"}`}
+      className={`mt-4 scroll-mt-20 rounded-2xl border p-4 ${rejected ? "border-red-200 bg-red-50/70" : "border-amber-200 bg-amber-50/70"}`}
     >
       <h2 id="id-notice" className={`flex items-center gap-2 font-semibold ${rejected ? "text-red-800" : "text-amber-900"}`}>
         {rejected ? <TriangleAlert className="size-5 shrink-0" aria-hidden /> : <IdCard className="size-5 shrink-0" aria-hidden />}
@@ -67,8 +68,8 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
       </h2>
       <p className={`mt-1 text-sm ${rejected ? "text-red-800" : "text-amber-900"}`}>
         {rejected
-          ? `${user.idReviewNote ?? "The photo couldn't be checked."} Send a clear photo of a valid ID with the name ${user.name}.`
-          : `So stores and riders know who they're serving. The name on it must be ${user.name}. Only Feasto's admin sees it.`}
+          ? `${user.idReviewNote ?? "The photo couldn't be checked."} Send a clear photo of a valid ID with the name ${user.name}. Until then, Pabili and cash on delivery are off.`
+          : `Pabili and cash on delivery need it, so riders and stores know who they're serving. The name on it must be ${user.name}. Only Feasto's admin sees it.`}
       </p>
       <div className="mt-3 space-y-3">
         <SelectField label="Kind of ID" placeholder="Choose your ID" options={ID_TYPE_OPTIONS} value={idType} onChange={(e) => setIdType(e.target.value)} />
