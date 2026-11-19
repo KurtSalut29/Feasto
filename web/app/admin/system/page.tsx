@@ -1,5 +1,6 @@
 import { ArrowRight, CircleAlert, CircleCheck, Database, HardDrive, Inbox, Network, Server, Workflow, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AutoRefresh } from "@/components/app/auto-refresh";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
@@ -28,7 +29,11 @@ type Instance = {
   /** How many workers were started, and on how many CPUs */
   workerCount?: number;
   cpuCount?: number;
+  /** Jobs this worker finished since it started, and how many were a store's share of a sales report */
+  jobsDone?: number;
+  reportParts?: number;
 };
+type LastReport = { id: string; from: string; to: string; finishedAt: string | null; durationMs: number | null; stores: number; byWorker: Record<string, number> };
 type SystemStatus = {
   servedBy: string;
   checkedAt: string;
@@ -37,6 +42,7 @@ type SystemStatus = {
   postgres: { up: boolean; ms: number | null; connections: number | null };
   redis: { up: boolean; ms: number | null; keys?: number; memory?: string };
   outboxWaiting: number;
+  lastReport: LastReport | null;
 };
 
 const QUEUE_LABEL: Record<string, string> = {
@@ -86,6 +92,50 @@ function FlowNode({ Icon, name, detail, up }: { Icon: LucideIcon; name: string; 
   );
 }
 
+/**
+ * Who computed the newest sales report: stores per worker, from the report's own rows. "Busy now"
+ * above is only a moment's look and a report takes about a second, so this is the record.
+ */
+function LastReportSplit({ report, workers }: { report: LastReport; workers: string[] }) {
+  const names = [...new Set([...workers, ...Object.keys(report.byWorker)])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const most = Math.max(1, ...Object.values(report.byWorker));
+  const seconds = report.durationMs === null ? null : (report.durationMs / 1000).toLocaleString("en-PH", { maximumFractionDigits: 1 });
+  return (
+    <div className="border-t border-line px-5 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="font-semibold text-ink">Last sales report: who computed each store</p>
+        <Link href={`/admin/reports?id=${report.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500">
+          Open the report
+          <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+      <p className="mt-0.5 text-sm text-muted">
+        {formatShortDate(report.from)} to {formatShortDate(report.to)} · {report.stores} stores{seconds ? ` in ${seconds} s` : ""}. Same as the report&apos;s Computed by column.
+      </p>
+      <ul className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+        {names.map((name) => {
+          const count = report.byWorker[name] ?? 0;
+          return (
+            <li key={name} className="flex items-center gap-3 text-sm">
+              <span className="w-20 shrink-0 font-medium text-ink">{name}</span>
+              <span className="h-2 flex-1 overflow-hidden rounded-full bg-canvas" aria-hidden>
+                <span className="block h-full rounded-full bg-brand-500" style={{ width: `${(count / most) * 100}%` }} />
+              </span>
+              <span className="w-16 shrink-0 text-right text-muted tabular-nums">
+                {count} {count === 1 ? "store" : "stores"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function formatShortDate(day: string) {
+  return new Date(`${day}T00:00:00+08:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric", timeZone: "Asia/Manila" });
+}
+
 function uptime(startedAt: string, at: string) {
   const s = Math.max(0, Math.round((new Date(at).getTime() - new Date(startedAt).getTime()) / 1000));
   if (s < 60) return `${s}s`;
@@ -132,10 +182,10 @@ async function SystemMonitor() {
                 </>
               ) : (
                 <>
-                  <Metric label="Busy jobs">
+                  <Metric label="Busy now">
                     {i.busyJobs ?? 0} / {i.parallelJobs ?? 0}
                   </Metric>
-                  <Metric label="Up for">{uptime(i.startedAt, i.at)}</Metric>
+                  <Metric label="Jobs done">{(i.jobsDone ?? 0).toLocaleString("en-PH")}</Metric>
                 </>
               )}
               <Metric label="Memory">{i.memoryMb} MB</Metric>
@@ -144,6 +194,11 @@ async function SystemMonitor() {
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-canvas" aria-hidden>
                 <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${load * 100}%` }} />
               </div>
+            )}
+            {i.role === "worker" && (
+              <p className="mt-2.5 text-xs text-muted">
+                Up for {uptime(i.startedAt, i.at)} · {i.reportParts ?? 0} report {i.reportParts === 1 ? "store" : "stores"} computed
+              </p>
             )}
           </>
         ) : (
@@ -198,6 +253,7 @@ async function SystemMonitor() {
 
       <Card title="Workers" description={workersNote} Icon={Workflow} className="mt-6">
         <ul className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">{workers.map(instanceCard)}</ul>
+        {status.lastReport && <LastReportSplit report={status.lastReport} workers={workers.map((w) => w.instance)} />}
       </Card>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] xl:items-stretch">

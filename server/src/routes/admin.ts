@@ -9,7 +9,7 @@ import { invalidateStore } from "../lib/redisCache.js";
 import { prisma } from "../lib/db.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { readTrace } from "../lib/marshalling.js";
-import { readHeartbeats } from "../lib/heartbeat.js";
+import { readHeartbeats, readWorkerJobs } from "../lib/heartbeat.js";
 import { stuckOrdersWhere } from "../lib/monitor.js";
 import { enqueue } from "../lib/outbox.js";
 import { QUEUES } from "../lib/rabbitmq.js";
@@ -414,9 +414,26 @@ async function timed<T>(fn: () => Promise<T>) {
   }
 }
 
+/**
+ * The newest finished sales report, as how many stores each worker computed. Counted from the
+ * report's own rows, so it always matches the "Computed by" column on the Reports page.
+ */
+async function lastFinishedReport() {
+  for (const id of await redis.lrange(REPORT_LIST, 0, 9)) {
+    const report = await readReport(id);
+    if (report?.status !== "done") continue;
+    const byWorker: Record<string, number> = {};
+    for (const row of report.rows) byWorker[row.computedBy] = (byWorker[row.computedBy] ?? 0) + 1;
+    return { id, from: report.from, to: report.to, finishedAt: report.finishedAt, durationMs: report.durationMs, stores: report.rows.length, byWorker };
+  }
+  return null;
+}
+
 adminRouter.get("/system", async (_req, res) => {
-  const [instances, queues, database, cache, outbox] = await Promise.all([
+  const [heartbeats, jobs, lastReport, queues, database, cache, outbox] = await Promise.all([
     readHeartbeats(),
+    readWorkerJobs(),
+    lastFinishedReport(),
     queueStats(),
     timed(
       () =>
@@ -428,10 +445,13 @@ adminRouter.get("/system", async (_req, res) => {
     })),
     prisma.outboxEvent.count({ where: { publishedAt: null } }),
   ]);
+  // Each worker's finished jobs, read live from Redis (not from its 5-second heartbeat)
+  const instances = heartbeats.map((i) => (i.role === "worker" ? { ...i, jobsDone: jobs(i.instance), reportParts: jobs(i.instance, QUEUES.reportPart) } : i));
   res.json({
     servedBy: config.instanceId,
     checkedAt: new Date().toISOString(),
     instances,
+    lastReport,
     rabbitmq: queues,
     postgres: { up: database.up, ms: database.ms, connections: database.value ? Number(database.value[0].connections) : null },
     redis: { up: cache.up, ms: cache.ms, ...(cache.value ?? {}) },

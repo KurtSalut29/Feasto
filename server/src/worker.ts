@@ -10,7 +10,7 @@ import { checkPayouts, sendPayout } from "./lib/payouts.js";
 import { ONLINE_LABEL } from "./lib/payments.js";
 import { refundInvoice, XenditError } from "./lib/xendit.js";
 import { relayOutbox } from "./lib/outbox.js";
-import { startHeartbeat } from "./lib/heartbeat.js";
+import { startHeartbeat, WORKER_JOBS_KEY } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
 import { runErrandTimers } from "./lib/errands.js";
 import { autoCancelStaleOrders } from "./lib/autoCancel.js";
@@ -27,6 +27,18 @@ let busyJobs = 0;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const log = (...args: unknown[]) => console.log(`[${config.instanceId}]`, ...args);
 
+// This worker's job counts start again from zero, like its "Up for" (lib/heartbeat.ts)
+await redis.hdel(WORKER_JOBS_KEY, config.instanceId, ...Object.values(QUEUES).map((queue) => `${config.instanceId}|${queue}`));
+
+/** One more job done by this worker, in all and for its queue */
+async function countJob(queue: string) {
+  try {
+    await redis.multi().hincrby(WORKER_JOBS_KEY, config.instanceId, 1).hincrby(WORKER_JOBS_KEY, `${config.instanceId}|${queue}`, 1).exec();
+  } catch {
+    // A missed count only affects the System page, never the job itself
+  }
+}
+
 const { connection, channel } = await connectQueue();
 await channel.prefetch(PARALLEL_JOBS);
 
@@ -42,6 +54,8 @@ async function consume<T>(queue: QueueName, handler: (payload: T) => Promise<voi
     busyJobs++;
     try {
       await handler(unmarshal<T>(message.content.toString(), { transport: "rabbitmq", channel: queue, kind: queue, messageId: message.properties.messageId ?? null }));
+      // Counted only once the job has succeeded, just before RabbitMQ is told it's done
+      await countJob(queue);
       channel.ack(message);
     } catch (error) {
       console.error(`[${config.instanceId}] ${queue} failed`, error);

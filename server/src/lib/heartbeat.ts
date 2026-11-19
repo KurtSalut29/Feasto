@@ -55,3 +55,16 @@ export async function readHeartbeats() {
     .filter((r) => !gone.includes(r))
     .sort((a, b) => a.role.localeCompare(b.role) || a.instance.localeCompare(b.instance));
 }
+
+/**
+ * Jobs each worker finished since it started, in a Redis hash: "worker-3" for every job, and
+ * "worker-3|report.part" per queue. A worker adds one right after a job succeeds (a job that
+ * fails or is handed to another worker isn't counted), and clears its own numbers when it starts,
+ * so they line up with its "Up for".
+ */
+export const WORKER_JOBS_KEY = "worker-jobs";
+
+export async function readWorkerJobs() {
+  const raw = await redis.hgetall(WORKER_JOBS_KEY);
+  return (instance: string, queue?: string) => Number(raw[queue ? `${instance}|${queue}` : instance] ?? 0);
+}
