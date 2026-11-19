@@ -58,6 +58,9 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   // The shop has no pin, so the fee is a range until the rider buys: their phone sets the real one
   const { data: quote } = useApiData<{ min: number; max: number; maxKm: number }>("/errands/quote");
   const spend = Number(budget) || 0;
+  const most = `₱${budgetMax.toLocaleString("en-PH")}`;
+  // Said as soon as it's typed, with why and what to do instead
+  const overLimit = spend > budgetMax ? `${most} is the most for one Pabili, because the rider pays at the shop with their own money. Lower the budget, or split your list into two Pabili.` : undefined;
 
   const update = (key: number, change: Partial<Item>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...change } : i)));
   const err = (name: string) => fieldErrors[name]?.[0];
@@ -69,7 +72,8 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
       ...(shopName.trim().length < 2 && { shopName: ["Enter the shop's name."] }),
       ...(shopAddress.trim().length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
       ...(filled.length === 0 && { items: ["Add at least one thing to buy."] }),
-      ...((spend < 20 || spend > budgetMax) && { budget: [`Enter ₱20 to ₱${budgetMax.toLocaleString("en-PH")}.`] }),
+      ...(spend < 20 && { budget: ["Enter at least ₱20."] }),
+      ...(overLimit && { budget: [overLimit] }),
       ...(!addressId && { addressId: ["Choose where to deliver it."] }),
     };
     setFieldErrors(problems);
@@ -217,8 +221,8 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           onChange={(e) => setBudget(e.target.value)}
           placeholder="500"
           required
-          error={err("budget")}
-          hint={`Up to ₱${budgetMax.toLocaleString("en-PH")}. The rider pays at the shop and shows you the receipt; you pay them back in cash, plus the delivery fee.`}
+          error={overLimit ?? err("budget")}
+          hint={`₱20 to ${most}. The rider pays at the shop and shows you the receipt; you pay them back in cash, plus the delivery fee.`}
         />
       </Section>
 

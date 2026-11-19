@@ -8,9 +8,9 @@ import { averageOf, shortName } from "./riderRatings.js";
 /**
  * Pabili: a resident asks a rider to buy things at a shop that isn't on Feasto. The rider pays at
  * the shop and is paid back in cash on delivery (the receipt's total plus the delivery fee), so
- * the budget is capped to keep what a rider lends small.
+ * the budget is capped to keep what a rider lends small. The cap is the admin's setting
+ * (pabiliBudgetMax); this is the least a Pabili can be.
  */
-export const PABILI_BUDGET_MAX = 1000;
 export const PABILI_BUDGET_MIN = 20;
 /** A Pabili nobody takes in this long is cancelled, and the resident is told */
 export const ERRAND_WAIT_MINUTES = 15;

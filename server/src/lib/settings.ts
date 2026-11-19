@@ -37,6 +37,8 @@ export const DEFAULT_SETTINGS = {
   riderFeePercent: 10,
   /** A newly approved store pays no commission for this many days */
   freeTrialDays: 30,
+  /** The most a rider may spend on one Pabili: they pay at the shop with their own money */
+  pabiliBudgetMax: 1000,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -119,6 +121,11 @@ export const settingsSchema = z.object({
   pickupCommissionPercent: percent(30),
   riderFeePercent: percent(30),
   freeTrialDays: whole(0, 365, "days"),
+  pabiliBudgetMax: z
+    .number("Enter ₱100 to ₱20,000.")
+    .int("Enter whole pesos, like 1500.")
+    .min(100, "Enter ₱100 to ₱20,000.")
+    .max(20000, "Enter ₱100 to ₱20,000."),
 });
 
 /**
@@ -129,7 +136,7 @@ export function getSettings(): Promise<Settings> {
   return cached(CACHE_KEYS.settings, 60, async () => {
     const row = await prisma.platformSettings.findUnique({ where: { id: 1 } });
     if (!row) return DEFAULT_SETTINGS;
-    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork, freeTrialDays } = row;
+    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork, freeTrialDays, pabiliBudgetMax } = row;
     const saved = peakHours.safeParse(row.peakHours);
     return {
       deliveryFee: Number(deliveryFee),
@@ -146,6 +153,7 @@ export function getSettings(): Promise<Settings> {
       pickupCommissionPercent: Number(row.pickupCommissionPercent),
       riderFeePercent: Number(row.riderFeePercent),
       freeTrialDays,
+      pabiliBudgetMax,
     };
   });
 }

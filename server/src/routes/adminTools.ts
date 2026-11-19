@@ -369,6 +369,7 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   pickupCommissionPercent: { label: "Commission on pickup orders", show: (value) => `${value}%` },
   riderFeePercent: { label: "Feasto's share of the delivery fee", show: (value) => `${value}%` },
   freeTrialDays: { label: "Free days for new stores", show: (value) => (value ? `${value} days` : "none") },
+  pabiliBudgetMax: { label: "Most a rider may spend on a Pabili", show: (value) => `₱${value.toLocaleString("en-PH")}` },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);

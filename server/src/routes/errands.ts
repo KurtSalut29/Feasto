@@ -4,7 +4,7 @@ import { prisma } from "../lib/db.js";
 import { priceDelivery, quoteDelivery } from "../lib/deliveryFee.js";
 import { PREFERRED_RIDER_SECONDS, riderIsBusy, riderDistances } from "../lib/dispatch.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
-import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MAX, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, tellNearbyRiders } from "../lib/errands.js";
+import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, tellNearbyRiders } from "../lib/errands.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { marshal } from "../lib/marshalling.js";
@@ -50,16 +50,27 @@ const errandSchema = z.object({
   shopAddress: z.string().trim().min(3, "Say where the shop is, like the street or a landmark.").max(200),
   items: z.array(itemSchema).min(1, "Add at least one thing to buy.").max(20, "20 things at most in one Pabili."),
   notes: z.string().trim().max(200).optional().transform((v) => v || null),
-  budget: z
-    .number("Enter how much the rider may spend.")
-    .min(PABILI_BUDGET_MIN, `Enter at least ₱${PABILI_BUDGET_MIN}.`)
-    .max(PABILI_BUDGET_MAX, `A Pabili is paid in cash on delivery, so the rider can spend at most ₱${PABILI_BUDGET_MAX.toLocaleString("en-PH")}.`),
+  /** The most is the admin's setting, checked by withinBudgetLimit */
+  budget: z.number("Enter how much the rider may spend.").min(PABILI_BUDGET_MIN, `Enter at least ₱${PABILI_BUDGET_MIN}.`),
   addressId: z.string().min(1, "Choose where to deliver it."),
   /** Ask a particular rider first; without it, the free riders nearest the shop hear about it */
   preferredRiderId: z.string().min(1).optional(),
   /** The lowest fee the resident saw; if it changed in the meantime, they're asked to look again */
   expectedFee: z.number().optional(),
 });
+
+const budgetMax = async () => (await getSettings()).pabiliBudgetMax;
+
+/** The rider pays at the shop with their own money, so a Pabili stays within what the admin set */
+async function withinBudgetLimit(budget: number) {
+  const max = await budgetMax();
+  if (budget > max) {
+    const most = `₱${max.toLocaleString("en-PH")}`;
+    throw new ValidationError({
+      budget: [`${most} is the most for one Pabili, because the rider pays at the shop with their own money. Lower the budget, or split your list into two Pabili.`],
+    });
+  }
+}
 
 async function addressOf(userId: string, addressId: string) {
   const address = await prisma.address.findFirst({ where: { id: addressId, userId } });
@@ -80,7 +91,7 @@ async function feeRange() {
 }
 
 errandsRouter.get("/quote", async (_req, res) => {
-  res.json({ ...(await feeRange()), maxKm: PABILI_MAX_KM, budgetMax: PABILI_BUDGET_MAX });
+  res.json({ ...(await feeRange()), maxKm: PABILI_MAX_KM, budgetMax: await budgetMax() });
 });
 
 /**
@@ -101,6 +112,7 @@ errandsRouter.get("/on-feasto", async (req, res) => {
 
 errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of Pabili just now."), async (req, res) => {
   const input = parseBody(errandSchema, req.body);
+  await withinBudgetLimit(input.budget);
   const userId = req.session!.userId;
   await refuseIfSuspended(userId, "pabili");
   await refuseWithoutId(userId, "pabili");
@@ -178,7 +190,7 @@ errandsRouter.get("/", async (req, res) => {
     take: 20,
     select: { ...errandView, rider: { select: { name: true } } },
   });
-  res.json({ errands, budgetMax: PABILI_BUDGET_MAX, waitMinutes: ERRAND_WAIT_MINUTES });
+  res.json({ errands, budgetMax: await budgetMax(), waitMinutes: ERRAND_WAIT_MINUTES });
 });
 
 errandsRouter.get("/:id", async (req, res) => {
@@ -205,7 +217,7 @@ errandsRouter.get("/:id", async (req, res) => {
       riderLocation: raw ? (JSON.parse(raw) as { lat: number; lng: number; at: string }) : null,
       total: errand.receiptTotal === null ? null : peso(Number(errand.receiptTotal) + Number(errand.deliveryFee)),
     },
-    budgetMax: PABILI_BUDGET_MAX,
+    budgetMax: await budgetMax(),
   });
 });
 
@@ -227,6 +239,7 @@ errandsRouter.post("/:id/cancel", async (req, res) => {
 errandsRouter.post("/:id/budget", async (req, res) => {
   const id = String(req.params.id);
   const { budget } = parseBody(z.object({ budget: errandSchema.shape.budget }), req.body);
+  await withinBudgetLimit(budget);
   const errand = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId }, select: { budget: true, riderId: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   if (budget < Number(errand.budget)) throw new ValidationError({ budget: ["The budget can only go up once it's sent. Enter more than it is now."] });
@@ -336,7 +349,8 @@ riderErrandsRouter.get("/errands/active", async (req, res) => {
 
 const boughtSchema = z.object({
   receiptPhotoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the receipt first."),
-  receiptTotal: z.number("Enter the receipt's total.").positive("Enter the receipt's total.").max(PABILI_BUDGET_MAX),
+  // Never more than the budget (checked below), which the admin's limit already caps
+  receiptTotal: z.number("Enter the receipt's total.").positive("Enter the receipt's total.").max(100000),
 });
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, Bike, CalendarHeart, Clock, Hourglass, Percent, Route, ShieldCheck, Store, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
+import { BadgePercent, Bike, CalendarHeart, Clock, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -34,6 +34,8 @@ export type PlatformSettings = {
   riderFeePercent: number;
   /** A newly approved store pays no commission for this many days */
   freeTrialDays: number;
+  /** The most a rider may spend on one Pabili */
+  pabiliBudgetMax: number;
 };
 type Key = Exclude<keyof PlatformSettings, "peakHours">;
 
@@ -137,6 +139,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     pickupCommissionPercent: String(initial.pickupCommissionPercent),
     riderFeePercent: String(initial.riderFeePercent),
     freeTrialDays: String(initial.freeTrialDays),
+    pabiliBudgetMax: String(initial.pabiliBudgetMax),
   });
   const [peakHours, setPeakHours] = useState<PeakWindow[]>(initial.peakHours);
   const [saving, setSaving] = useState(false);
@@ -181,6 +184,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         pickupCommissionPercent: number("pickupCommissionPercent"),
         riderFeePercent: number("riderFeePercent"),
         freeTrialDays: number("freeTrialDays"),
+        pabiliBudgetMax: number("pabiliBudgetMax"),
       },
     });
     setSaving(false);
@@ -315,14 +319,32 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         </div>
       </Card>
 
-      {/* Across both columns on wide screens, the field beside its note, so no hole is left under the cards above */}
+      <Card
+        title="Pabili budget"
+        Icon={ShoppingBag}
+        description="The rider pays at the shop with their own money and is paid back in cash at the door, so keep this to what a rider can usually lend."
+      >
+        <div className="space-y-4 p-5">
+          <TextField
+            label="Most a rider may spend on one Pabili (₱)"
+            min="100"
+            step="50"
+            icon={ShoppingBag}
+            hint="₱100 to ₱20,000, in whole pesos. Residents see this limit while they type their budget."
+            {...field("pabiliBudgetMax")}
+          />
+          <p className="text-sm text-muted">
+            A Pabili already sent keeps its budget. A resident can still raise theirs up to this limit until the rider has bought everything.
+          </p>
+        </div>
+      </Card>
+
       <Card
         title="Sign-up limit"
         Icon={ShieldCheck}
         description="Stops a script from making hundreds of fake accounts, without stopping a class that signs up together."
-        className="xl:col-span-2"
       >
-        <div className="grid gap-4 p-5 sm:grid-cols-2 xl:items-start">
+        <div className="grid gap-4 p-5">
           <TextField
             label="New accounts per network, every 10 minutes"
             min="5"
@@ -330,7 +352,7 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
             hint="5 to 1000. Everyone on the same WiFi or pocket WiFi shares one network, so leave room for a whole class."
             {...field("signupsPerNetwork")}
           />
-          <p className="text-sm text-muted sm:col-span-2 xl:col-span-1 xl:pt-7">
+          <p className="text-sm text-muted">
             Feasto can only tell networks apart through the tunnel and on a cloud server. On the classroom laptop every phone looks the same to it, so
             there only the overall cap applies: 300 new accounts in 10 minutes across all of Feasto. Only accounts actually made are counted.
           </p>
