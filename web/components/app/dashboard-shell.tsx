@@ -25,6 +25,7 @@ const COUNTED_LINKS: Record<DashboardRole, { href: string; meaning: string }[]> 
     { href: "/admin/approvals", meaning: "waiting for review" },
     { href: "/admin/documents", meaning: "documents to check" },
     { href: "/admin/resident-ids", meaning: "IDs to check" },
+    { href: "/admin/transfers", meaning: "transfers to check" },
     { href: "/admin/stuck", meaning: "stuck orders" },
     { href: "/admin/user-reports", meaning: "reports to check" },
   ],
@@ -202,13 +203,14 @@ export async function SidebarUser() {
 const waitingCounts = cache(async (role: DashboardRole): Promise<Record<string, number>> => {
   try {
     if (role === "VENDOR") return { "/vendor/orders": (await serverApi<{ pending: number }>("/vendor/overview")).pending };
-    const stats = await serverApi<{ pendingStores: number; pendingRiders: number; renewals: number; expiredDocuments: number; stuckOrders: number; openReports: number; idsToCheck: number }>("/admin/overview");
+    const stats = await serverApi<{ pendingStores: number; pendingRiders: number; renewals: number; expiredDocuments: number; stuckOrders: number; openReports: number; idsToCheck: number; transfersToCheck: number }>("/admin/overview");
     return {
       "/admin/approvals": stats.pendingStores + stats.pendingRiders,
       "/admin/documents": stats.renewals + stats.expiredDocuments,
       "/admin/stuck": stats.stuckOrders,
       "/admin/user-reports": stats.openReports,
       "/admin/resident-ids": stats.idsToCheck,
+      "/admin/transfers": stats.transfersToCheck,
     };
   } catch {
     return {}; // a missing count shouldn't break the whole dashboard

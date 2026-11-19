@@ -5,7 +5,7 @@ import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { requireRole } from "@/lib/auth";
 import { needsIdFor } from "@/lib/identity";
 import { serverApi } from "@/lib/server-api";
-import type { Address, Cart } from "@/lib/types";
+import type { Address, Cart, ReceivingAccount, SavedPayMethod } from "@/lib/types";
 import { CheckoutForm } from "./checkout-form";
 
 export const metadata: Metadata = { title: "Checkout" };
@@ -20,9 +20,11 @@ export default function CheckoutPage() {
 
 async function Checkout() {
   const user = await requireRole("RESIDENT");
-  const [{ cart, payments }, { addresses }] = await Promise.all([
+  const [{ cart, payments }, { addresses }, { accounts }, { methods }] = await Promise.all([
     serverApi<{ cart: Cart; payments: "simulated" | "xendit" }>("/cart"),
     serverApi<{ addresses: Address[] }>("/me/addresses"),
+    serverApi<{ accounts: ReceivingAccount[] }>("/transfers/accounts"),
+    serverApi<{ methods: SavedPayMethod[] }>("/me/pay-methods"),
   ]);
   // Nothing to pay for, or something changed: back to the cart to fix it. A store that's only
   // closed right now is fine: the order can be scheduled for when it's open.
@@ -31,7 +33,7 @@ async function Checkout() {
   return (
     <>
       <MobileHeading title="Checkout" />
-      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} realPayments={payments === "xendit"} cashNeedsId={needsIdFor(user)} />
+      <CheckoutForm cart={cart} addresses={addresses} holder={user.name} phone={user.phone} realPayments={payments === "xendit"} cashNeedsId={needsIdFor(user)} accounts={accounts} saved={methods} />
     </>
   );
 }

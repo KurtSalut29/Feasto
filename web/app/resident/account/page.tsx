@@ -1,4 +1,4 @@
-import { Accessibility, Bell, CalendarDays, Heart, KeyRound, MapPin, ReceiptText, UserPen } from "lucide-react";
+import { Accessibility, Bell, CalendarDays, CreditCard, Heart, KeyRound, MapPin, ReceiptText, UserPen } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NowCard, Tile } from "@/components/app/account-tiles";
@@ -80,6 +80,7 @@ async function ResidentAccount() {
 
         <RowGroup title="Delivery">
           <Row Icon={MapPin} label={home ? `Deliver to ${home.label}` : "Add a delivery address"} value={home ? `${addresses.length} saved` : undefined} href="/resident/addresses" />
+          <Row Icon={CreditCard} label="Payment methods" value="GCash, Maya and cards" href="/resident/payment-methods" />
         </RowGroup>
         <InstallAppRow />
         <RowGroup title="Settings">

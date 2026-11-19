@@ -210,7 +210,7 @@ export function StoreForm({ initial, permit, account }: { initial: StoreSettings
     // Keep Feasto's order, so the saved list doesn't depend on the order of the clicks
     set(
       "onlinePayments",
-      PAYMENT_OPTIONS.map((o) => o.value).filter((m): m is OnlinePayment => m !== "COD" && next.includes(m)),
+      PAYMENT_OPTIONS.map((o) => o.value).filter((m): m is OnlinePayment => m !== "COD" && next.includes(m as OnlinePayment)),
     );
   }
 

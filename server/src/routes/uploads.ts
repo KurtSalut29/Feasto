@@ -30,7 +30,8 @@ export function detectImageType(data: Buffer): "jpg" | "png" | "webp" | null {
 uploadsRouter.post(
   "/",
   requireAuth,
-  requireRole("VENDOR", "RIDER"),
+  // The admin uploads the QR codes of Feasto's own GCash and Maya accounts (Settings)
+  requireRole("VENDOR", "RIDER", "ADMIN"),
   perAccount("upload", 30, 600, "You've uploaded a lot of photos just now."),
   express.raw({ type: ["image/jpeg", "image/png", "image/webp"], limit: MAX_BYTES }),
   async (req, res) => {

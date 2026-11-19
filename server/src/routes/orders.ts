@@ -29,7 +29,7 @@ const orderInclude = {
   /** The rider the resident asked for, while it waits for them */
   preferredRider: { select: { name: true } },
   checkout: {
-    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
+    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, transferTo: true, transferFrom: true, transferSentAt: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
   },
   review: { select: { rating: true, comment: true, createdAt: true } },
   riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },

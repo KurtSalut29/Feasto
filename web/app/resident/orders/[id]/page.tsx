@@ -148,7 +148,21 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
         {order.status === "AWAITING_PAYMENT" && (
           <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3 text-amber-900">
             <LoaderCircle className="size-5 animate-spin" aria-hidden />
-            <p className="min-w-0 flex-1 text-sm font-medium">Waiting for your online payment…</p>
+            <p className="min-w-0 flex-1 text-sm font-medium">
+              {order.checkout.transferAccountId
+                ? order.checkout.transferSentAt
+                  ? "Feasto is checking your transfer. The store gets your order once it's confirmed."
+                  : "Waiting for your transfer…"
+                : "Waiting for your online payment…"}
+            </p>
+            {order.checkout.transferAccountId && !order.checkout.transferSentAt && (
+              <Link
+                href={`/resident/checkout/transfer?checkout=${order.checkout.id}`}
+                className="rounded-lg bg-amber-900 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700"
+              >
+                Send the payment
+              </Link>
+            )}
             {order.checkout.paymentUrl && (
               <Link
                 href={`/resident/checkout/paying?checkout=${order.checkout.id}`}
@@ -193,7 +207,9 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             {order.refundedAt
               ? order.refundNote?.startsWith("Refund failed")
                 ? " Your refund is being sorted out by Feasto. You'll get a notification once it's back."
-                : ` ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} went back to ${order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet"}.`
+                : order.checkout.transferAccountId
+                  ? ` Feasto will send ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} back to ${order.checkout.transferFrom ?? "the account you paid from"}.`
+                  : ` ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} went back to ${order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet"}.`
               : order.checkout.paymentStatus === "REFUNDED" && " Your online payment was refunded."}
           </Alert>
         ) : scheduled ? null : (

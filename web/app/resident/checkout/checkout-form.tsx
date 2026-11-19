@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { DishPhoto } from "@/components/app/dish-photo";
 import { DeliveryFeeLine } from "@/components/app/delivery-fee";
-import { PAYMENT_OPTIONS, takes } from "@/components/app/payment-brands";
+import { PAYMENT_OPTIONS, takes, transferIdOf } from "@/components/app/payment-brands";
 import { useApiData } from "@/components/app/use-api-data";
 import { RiderPicker, type ChoosableRider } from "@/components/app/rider-picker";
 import { type PayChoice, PaymentPicker } from "./payment-picker";
@@ -20,7 +20,7 @@ import { apiRequest } from "@/lib/browser-api";
 import { celebrate } from "@/components/app/celebrate";
 import { formatPeso } from "@/lib/format";
 import { clockOf, scheduleDays, sendAtOf, whenInSentence, whenOf } from "@/lib/schedule";
-import type { Address, Cart, Fulfillment, PaymentMethod } from "@/lib/types";
+import type { Address, Cart, Fulfillment, PaymentMethod, ReceivingAccount, SavedPayMethod } from "@/lib/types";
 import { WhenPicker } from "./when-picker";
 
 function Choice({
@@ -79,7 +79,12 @@ export function CheckoutForm({
   phone,
   realPayments,
   cashNeedsId = false,
+  accounts = [],
+  saved = [],
 }: {
+  /** Feasto's own accounts to send a transfer to, and the resident's saved wallets and cards */
+  accounts?: ReceivingAccount[];
+  saved?: SavedPayMethod[];
   /** Cash on delivery needs a valid ID first (lib/identity needsIdFor) */
   cashNeedsId?: boolean;
   cart: Cart;
@@ -96,7 +101,13 @@ export function CheckoutForm({
   const [fulfillment, setFulfillment] = useState<Fulfillment>("DELIVERY");
   const [addressId, setAddressId] = useState(addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? "");
   // Each store chooses the ways to pay it takes; one payment covers the cart, so every store must take it
-  const refusedBy = (choice: PayChoice) => cart.groups.find((g) => !takes(g.store, choice))?.store.name ?? null;
+  const refusedBy = (choice: PayChoice) => {
+    // A transfer counts as its e-wallet; a bank transfer as any online payment
+    const transfer = transferIdOf(choice);
+    const account = transfer ? accounts.find((a) => a.id === transfer) : null;
+    const as = account ? (account.channel === "BANK" ? "ONLINE" : account.channel) : choice;
+    return cart.groups.find((g) => !takes(g.store, as))?.store.name ?? null;
+  };
   const [pay, setPay] = useState<PayChoice>(() => PAYMENT_OPTIONS.find((o) => !refusedBy(o.value) && !(cashNeedsId && o.value === "COD"))?.value ?? "COD");
   const paymentMethod: PaymentMethod = pay === "COD" ? "COD" : "ONLINE";
   const [simulateFailure, setSimulateFailure] = useState(false);
@@ -150,14 +161,15 @@ export function CheckoutForm({
   async function placeOrder() {
     setPlacing(true);
     setError(undefined);
-    const result = await apiRequest<{ checkoutId: string; orderIds: string[]; paymentUrl?: string | null }>("/checkout", {
+    const result = await apiRequest<{ checkoutId: string; orderIds: string[]; paymentUrl?: string | null; transfer?: boolean }>("/checkout", {
       method: "POST",
       body: {
         idempotencyKey,
         fulfillment,
         addressId: fulfillment === "DELIVERY" ? addressId : undefined,
         paymentMethod,
-        onlineMethod: pay === "COD" ? undefined : pay,
+        onlineMethod: pay === "COD" || transferIdOf(pay) ? undefined : pay,
+        transferAccountId: transferIdOf(pay) ?? undefined,
         notes,
         scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
@@ -172,7 +184,12 @@ export function CheckoutForm({
       setQuoteKey((k) => k + 1);
       return;
     }
-    const { orderIds, paymentUrl } = result.data;
+    const { orderIds, paymentUrl, transfer, checkoutId } = result.data;
+    // A transfer: next is where to send it, and the receipt
+    if (transfer) {
+      router.replace(`/resident/checkout/transfer?checkout=${checkoutId}`);
+      return;
+    }
     // Card or e-wallet: pay on Xendit's secure page, which brings the resident back to Feasto after.
     // The button keeps spinning while the browser leaves.
     if (paymentUrl) {
@@ -309,6 +326,8 @@ export function CheckoutForm({
           onChange={setPay}
           refusedBy={refusedBy}
           cashNeedsId={cashNeedsId}
+          accounts={accounts}
+          saved={saved}
           total={total}
           holder={holder}
           phone={phone}

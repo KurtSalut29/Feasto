@@ -220,6 +220,7 @@ model User {
   bookings      Booking[]
   addresses     Address[]
   notifications Notification[]
+  payMethods    SavedPayMethod[]
   reviews       Review[]
   favorites     Favorite[]
   orderMessages OrderMessage[]  @relation("OrderMessages")
@@ -470,8 +471,74 @@ model Checkout {
   deliveryLng     Float?
   notes           String?
   createdAt       DateTime      @default(now())
+  /// Paid by sending money to one of Feasto's own accounts (set by the admin) instead of on Xendit's
+  /// page. The admin checks it against the account's history before the orders go to the stores.
+  transferAccountId String?
+  transferAccount   ReceivingAccount? @relation(fields: [transferAccountId], references: [id], onDelete: Restrict)
+  /// Copied at checkout ("GCash 0917 123 4567, Feasto Naval"), so the line stays true if the account changes
+  transferTo        String?
+  /// The reference number on the resident's receipt; the same one can't pay two orders
+  transferRef       String?       @unique
+  /// The resident's screenshot of the receipt, a private file like the documents
+  transferProof     String?
+  /// The resident's account it came from, e.g. "GCash 0918 765 4321, Juan Dela Cruz"
+  transferFrom      String?
+  transferSentAt    DateTime?
+  transferCheckedAt DateTime?
+  /// Why the admin couldn't confirm it
+  transferNote      String?
 
   orders Order[]
+
+  @@index([transferSentAt])
+}
+
+/// Where residents can send a bank or e-wallet transfer for an online order. The admin sets these.
+enum ReceiveChannel {
+  GCASH
+  MAYA
+  BANK
+}
+
+model ReceivingAccount {
+  id            String         @id @default(cuid())
+  channel       ReceiveChannel
+  /// BANK only: which bank, e.g. BDO
+  bankName      String?
+  accountName   String
+  accountNumber String
+  /// The account's QR code (GCash or Maya "Receive money"), a photo served from /uploads
+  qrUrl         String?
+  enabled       Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  checkouts     Checkout[]
+}
+
+/// A resident's own way to pay, shown on the checkout's payment card. A card keeps only what's
+/// safe to keep: the brand, the last 4 digits, the expiry and the name. Never the full number or the CVV.
+enum PayMethodKind {
+  GCASH
+  MAYA
+  CARD
+}
+
+model SavedPayMethod {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       PayMethodKind
+  holderName String
+  /// E-wallets: the 11-digit mobile number
+  number     String?
+  /// Cards: VISA, MASTERCARD, JCB or AMEX, and the last 4 digits
+  brand      OnlinePayment?
+  last4      String?
+  expMonth   Int?
+  expYear    Int?
+  createdAt  DateTime       @default(now())
+
+  @@index([userId])
 }
 
 /// The part of a checkout that belongs to a single vendor.

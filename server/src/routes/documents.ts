@@ -23,14 +23,14 @@ import { detectImageType } from "./uploads.js";
 export const documentsRouter = Router();
 documentsRouter.use(requireAuth);
 
-const MAX_BYTES = 5 * 1024 * 1024;
-const CONTENT_TYPE = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" } as const;
+export const MAX_BYTES = 5 * 1024 * 1024;
+export const CONTENT_TYPE = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", pdf: "application/pdf" } as const;
 
 /** Recognise the file from its first bytes rather than trusting its name. */
-const detectDocumentType = (data: Buffer) => (data.toString("ascii", 0, 5) === "%PDF-" ? "pdf" : detectImageType(data));
+export const detectDocumentType = (data: Buffer) => (data.toString("ascii", 0, 5) === "%PDF-" ? "pdf" : detectImageType(data));
 
 /** Sends one private document. The browser shows it but mustn't keep a copy. */
-async function sendDocument(res: express.Response, name: string) {
+export async function sendDocument(res: express.Response, name: string) {
   const extension = path.extname(name).slice(1) as keyof typeof CONTENT_TYPE;
   const data = await readFile(path.join(config.documentDir, name));
   res.set({ "Content-Type": CONTENT_TYPE[extension], "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }).send(data);

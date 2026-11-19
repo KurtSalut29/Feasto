@@ -56,7 +56,7 @@ export async function confirmPaid(checkoutId: string, paidChannel: string | null
 }
 
 /** Compensating steps: the payment failed or expired, so undo what checkout did. */
-export async function failPayment(checkoutId: string, reason: string, log: Log = () => {}) {
+export async function failPayment(checkoutId: string, reason: string, log: Log = () => {}, message?: string) {
   const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, include: { orders: { select: { id: true, vendorId: true } } } });
   if (!checkout || checkout.paymentStatus !== "PENDING") return false;
 
@@ -76,7 +76,7 @@ export async function failPayment(checkoutId: string, reason: string, log: Log =
 
   await Promise.all(checkout.orders.map((o) => invalidateStore(o.vendorId)));
   await Promise.all(checkout.orders.map((o) => broadcastOrder(o.id)));
-  await notify(checkout.residentId, { title: "Payment not completed", body: `${reason}. Your order was cancelled and you weren't charged. You can try again.`, link: "/resident/orders" });
+  await notify(checkout.residentId, { title: "Payment not completed", body: message ?? `${reason}. Your order was cancelled and you weren't charged. You can try again.`, link: "/resident/orders" });
   log(`payment for checkout ${checkoutId} FAILED (${reason}): orders cancelled and stock restored`);
   return true;
 }
@@ -127,8 +127,8 @@ export async function startOnlinePayment(checkoutId: string, origin: string) {
  * times, from the webhook, the resident's return page and the worker's regular check.
  */
 export async function syncPayment(checkoutId: string, log: Log = () => {}) {
-  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, select: { paymentStatus: true, paymentRef: true, createdAt: true } });
-  if (!checkout || checkout.paymentStatus !== "PENDING") return checkout?.paymentStatus ?? null;
+  const checkout = await prisma.checkout.findUnique({ where: { id: checkoutId }, select: { paymentStatus: true, paymentRef: true, createdAt: true, transferAccountId: true } });
+  if (!checkout || checkout.paymentStatus !== "PENDING" || checkout.transferAccountId) return checkout?.paymentStatus ?? null;
   if (!checkout.paymentRef) {
     // The payment page was never made (Xendit was down mid-checkout): give up after a while
     if (Date.now() - checkout.createdAt.getTime() > 2 * 60_000) await failPayment(checkoutId, "The payment page couldn't be opened", log);
@@ -157,7 +157,7 @@ export async function closeUnpaidPage(checkoutId: string) {
 export async function checkWaitingPayments(log: Log) {
   if (config.payments !== "xendit") return;
   const waiting = await prisma.checkout.findMany({
-    where: { paymentMethod: "ONLINE", paymentStatus: "PENDING", createdAt: { lt: new Date(Date.now() - 20_000) } },
+    where: { paymentMethod: "ONLINE", paymentStatus: "PENDING", transferAccountId: null, createdAt: { lt: new Date(Date.now() - 20_000) } },
     orderBy: { createdAt: "asc" },
     take: 20,
     select: { id: true },

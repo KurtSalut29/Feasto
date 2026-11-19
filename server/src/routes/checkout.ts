@@ -18,6 +18,7 @@ import { announceScheduled, scheduleProblem } from "../lib/schedule.js";
 import { getSettings } from "../lib/settings.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { refuseWithoutId } from "../lib/identity.js";
+import { accountLine, walletOfChannel } from "../lib/transfers.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
 
 export const checkoutRouter = Router();
@@ -32,6 +33,8 @@ const checkoutSchema = z
     paymentMethod: z.enum(["COD", "ONLINE"]),
     /** The e-wallet or card, for online payments */
     onlineMethod: z.enum(ONLINE_PAYMENTS).optional(),
+    /** Paying by transfer to one of Feasto's own accounts (the admin's list) instead of on Xendit's page */
+    transferAccountId: z.string().min(1).optional(),
     notes: z
       .string()
       .trim()
@@ -50,7 +53,7 @@ const checkoutSchema = z
   })
   .refine((v) => v.fulfillment === "PICKUP" || v.addressId, { path: ["addressId"], message: "Choose where to deliver." });
 
-const checkoutSummary = { id: true, paymentStatus: true, paymentUrl: true, orders: { select: { id: true } } } as const;
+const checkoutSummary = { id: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, orders: { select: { id: true } } } as const;
 
 /** Where the resident's browser opened Feasto, so the payment page can send them back to it */
 export function originOf(req: Request) {
@@ -72,7 +75,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   const existing = await prisma.checkout.findUnique({ where: { idempotencyKey: input.idempotencyKey }, select: { ...checkoutSummary, residentId: true } });
   if (existing) {
     if (existing.residentId !== userId) throw new HttpError(409, "Please refresh the page and try again.");
-    res.json({ checkoutId: existing.id, orderIds: existing.orders.map((o) => o.id), paymentUrl: pendingPage(existing), repeated: true });
+    res.json({ checkoutId: existing.id, orderIds: existing.orders.map((o) => o.id), paymentUrl: pendingPage(existing), transfer: Boolean(existing.transferAccountId), repeated: true });
     return;
   }
 
@@ -89,8 +92,18 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     if (problem) throw new HttpError(400, problem);
   }
 
+  // A transfer goes to one of the admin's accounts, never to one the request names
+  const transferAccount = input.transferAccountId
+    ? await prisma.receivingAccount.findFirst({ where: { id: input.transferAccountId, enabled: true } })
+    : null;
+  if (input.transferAccountId && (!transferAccount || input.paymentMethod !== "ONLINE")) throw new HttpError(409, "That account isn't taking payments anymore. Choose another way to pay.");
+  const transferWallet = transferAccount ? walletOfChannel(transferAccount.channel) : null;
+
   // Each store chooses the ways to pay it takes; one payment covers the whole cart, so every store must take it
-  const refusing = storeRefusing(cart.groups.map((g) => g.store), input.paymentMethod === "COD" ? "COD" : (input.onlineMethod ?? "ONLINE"));
+  const refusing = storeRefusing(
+    cart.groups.map((g) => g.store),
+    input.paymentMethod === "COD" ? "COD" : transferAccount ? (transferWallet ?? "ONLINE") : (input.onlineMethod ?? "ONLINE"),
+  );
   if (refusing) throw new HttpError(409, `${refusing.name} doesn't take ${input.paymentMethod === "COD" ? "cash" : "this way to pay"}. Choose another way to pay.`);
 
   // The rider the resident asked for. For later, they only need to be a free rider now; whether
@@ -157,7 +170,8 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
           idempotencyKey: input.idempotencyKey,
           fulfillment: input.fulfillment,
           paymentMethod: input.paymentMethod,
-          onlineMethod: input.paymentMethod === "ONLINE" ? (input.onlineMethod ?? null) : null,
+          onlineMethod: input.paymentMethod === "ONLINE" ? (transferAccount ? transferWallet : (input.onlineMethod ?? null)) : null,
+          ...(transferAccount && { transferAccountId: transferAccount.id, transferTo: accountLine(transferAccount) }),
           deliveryAddress,
           ...deliveryPin,
           notes: input.notes,
@@ -192,7 +206,8 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
 
       if (input.paymentMethod === "ONLINE") {
         // Real payments open Xendit's payment page after this commits; the simulation is a queued job
-        if (config.payments === "simulated") await enqueue(tx, QUEUES.paymentRequested, { checkoutId: created.id, simulateFailure: Boolean(input.simulatePaymentFailure) });
+        // A transfer waits for the resident to send it and the admin to check it (routes/transfers.ts)
+        if (config.payments === "simulated" && !transferAccount) await enqueue(tx, QUEUES.paymentRequested, { checkoutId: created.id, simulateFailure: Boolean(input.simulatePaymentFailure) });
       } else if (!scheduledFor) {
         for (const order of created.orders) await enqueue(tx, QUEUES.ordersPlaced, { orderId: order.id });
       }
@@ -202,6 +217,10 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     await clearCart(userId);
     await Promise.all(cart.groups.map((g) => invalidateStore(g.store.id))); // stock changed
     // Card or e-wallet through Xendit: the resident pays on Xendit's page, which sends them back after
+    if (transferAccount) {
+      res.status(201).json({ checkoutId: checkout.id, orderIds: checkout.orders.map((o) => o.id), transfer: true });
+      return;
+    }
     if (input.paymentMethod === "ONLINE" && config.payments === "xendit") {
       const paymentUrl = await startOnlinePayment(checkout.id, originOf(req));
       if (!paymentUrl) throw new HttpError(502, "We couldn't open the payment page, so your order was cancelled and the items went back to the store. Check your connection and try again, or pay with cash.");

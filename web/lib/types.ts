@@ -252,6 +252,11 @@ export type ResidentOrder = OrderBase & {
     paymentStatus: PaymentStatus;
     /** Xendit's payment page, while the online payment is still waiting */
     paymentUrl?: string | null;
+    /** Paid by transfer to one of Feasto's accounts: which one, where it came from, and when the receipt was sent */
+    transferAccountId?: string | null;
+    transferTo?: string | null;
+    transferFrom?: string | null;
+    transferSentAt?: string | null;
     deliveryAddress: string | null;
     deliveryLat: number | null;
     deliveryLng: number | null;
@@ -426,4 +431,31 @@ export type PayoutsData = {
   mode: "simulated" | "xendit";
   /** Admin only: Feasto's balance at Xendit, null when it can't be read */
   balance?: number | null;
+};
+
+/** One of Feasto's own accounts that residents can send a transfer to (the admin sets them) */
+export type ReceivingAccount = {
+  id: string;
+  channel: "GCASH" | "MAYA" | "BANK";
+  /** "GCash", "Maya", or the bank's name */
+  label: string;
+  bankName: string | null;
+  accountName: string;
+  accountNumber: string;
+  /** "0917 123 4567" */
+  shownNumber: string;
+  qrUrl: string | null;
+  enabled: boolean;
+};
+
+/** A resident's own GCash, Maya or card. A card keeps only its brand, last 4 digits, expiry and name. */
+export type SavedPayMethod = {
+  id: string;
+  kind: "GCASH" | "MAYA" | "CARD";
+  holderName: string;
+  number: string | null;
+  brand: OnlinePayment | null;
+  last4: string | null;
+  expMonth: number | null;
+  expYear: number | null;
 };

@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
 import type { OnlinePayment } from "@/lib/types";
 
-export type PayChoice = "COD" | OnlinePayment;
+/** Cash, an e-wallet or card on Xendit's page, or a transfer to one of Feasto's own accounts ("TRANSFER:<id>") */
+export type PayChoice = "COD" | OnlinePayment | `TRANSFER:${string}`;
+export const transferIdOf = (choice: PayChoice) => (choice.startsWith("TRANSFER:") ? choice.slice("TRANSFER:".length) : null);
 
 /** A logo file in /public/payments. `color` keeps the brand's own colors; otherwise it's drawn in one color. */
 export type LogoFile = { src: string; color?: boolean };
@@ -137,6 +139,8 @@ export function PaymentLogo({ file, tint, className }: { file: LogoFile; tint: s
 /** The ways a store takes, from its settings */
 export type StorePayments = { acceptsCash: boolean; onlinePayments: OnlinePayment[] };
 
-export function takes(store: StorePayments, choice: PayChoice) {
-  return choice === "COD" ? store.acceptsCash : store.onlinePayments.includes(choice);
+/** A transfer to Feasto counts as its e-wallet (GCash or Maya), or as any online payment for a bank */
+export function takes(store: StorePayments, choice: PayChoice | "ONLINE") {
+  if (choice === "ONLINE") return store.onlinePayments.length > 0;
+  return choice === "COD" ? store.acceptsCash : store.onlinePayments.includes(choice as OnlinePayment);
 }

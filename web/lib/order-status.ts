@@ -52,7 +52,8 @@ export const ONLINE_LABEL: Record<OnlinePayment, string> = {
 };
 
 /** "Cash", "GCash", "Card"… Orders from before wallets were offered say "Online payment". */
-export function paymentName(checkout: { paymentMethod: PaymentMethod; onlineMethod?: OnlinePayment | null }) {
+export function paymentName(checkout: { paymentMethod: PaymentMethod; onlineMethod?: OnlinePayment | null; transferAccountId?: string | null }) {
+  if (checkout.transferAccountId) return checkout.onlineMethod ? `${ONLINE_LABEL[checkout.onlineMethod]} transfer` : "Bank transfer";
   return checkout.paymentMethod === "ONLINE" && checkout.onlineMethod ? ONLINE_LABEL[checkout.onlineMethod] : PAYMENT_LABEL[checkout.paymentMethod];
 }
 

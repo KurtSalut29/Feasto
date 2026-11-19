@@ -6,6 +6,8 @@ import { prisma } from "./lib/db.js";
 import { broadcastOrder, orderCode } from "./lib/orders.js";
 import { checkWaitingFeastoPayments } from "./lib/feastoPayments.js";
 import { checkWaitingPayments, confirmPaid, failPayment } from "./lib/paymentFlow.js";
+import { expireUnsentTransfers } from "./lib/transfers.js";
+import { notifyAdmin } from "./lib/activity.js";
 import { checkPayouts, sendPayout } from "./lib/payouts.js";
 import { ONLINE_LABEL } from "./lib/payments.js";
 import { refundInvoice, XenditError } from "./lib/xendit.js";
@@ -129,11 +131,24 @@ await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) =
   if (!(await firstTime(`refund:${orderId}`))) return;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { subtotal: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true } } },
+    select: { subtotal: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true, transferAccountId: true, transferFrom: true } } },
   });
   if (!order) return;
   const amount = Math.round((Number(order.subtotal) + Number(order.deliveryFee)) * 100) / 100;
   let note = "Simulated refund";
+  if (order.checkout.transferAccountId) {
+    // Paid by transfer to Feasto's account: the admin sends it back to where it came from
+    note = `Refund by hand: send ₱${amount.toFixed(2)} back to ${order.checkout.transferFrom ?? "the resident"}`.slice(0, 300);
+    await notifyAdmin({ title: "A transfer to refund", body: `${orderCode(orderId)} from ${order.vendor.name} was cancelled. ${note}.`, link: "/admin/transfers?status=CHECKED" });
+    await prisma.order.update({ where: { id: orderId }, data: { refundNote: note } });
+    await notify(order.checkout.residentId, {
+      title: `₱${amount.toFixed(2)} to be refunded`,
+      body: `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled. Feasto will send the money back to ${order.checkout.transferFrom ?? "the account you paid from"}.`,
+      link: `/resident/orders/${orderId}`,
+    });
+    log(`refund for ${orderCode(orderId)}: ${note}`);
+    return;
+  }
   if (order.checkout.paymentRef && config.payments === "xendit") {
     try {
       const refund = await refundInvoice({ invoiceId: order.checkout.paymentRef, amount, referenceId: orderId, reason: "CANCELLATION" });
@@ -278,6 +293,7 @@ const paymentsTimer = setInterval(async () => {
     // One worker at a time asks Xendit, so six workers don't send six times the calls
     if ((await redis.set("lock:payments-check", config.instanceId, "EX", 25, "NX")) === "OK") {
       await checkWaitingPayments(log);
+      await expireUnsentTransfers(log);
       await checkWaitingFeastoPayments(log);
       await checkPayouts(log);
     }
