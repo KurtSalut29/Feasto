@@ -69,10 +69,13 @@ async function loadStoreList() {
     select: {
       ...storeFields,
       menuItems: { where: { deletedAt: null, isAvailable: true }, select: { name: true, category: true } },
+      _count: { select: { tables: { where: { isActive: true } } } },
     },
   });
-  return stores.map(({ menuItems, ...store }) => ({
+  return stores.map(({ menuItems, _count, ...store }) => ({
     ...withRating(store),
+    // "Takes bookings" only once there's a table to book, so the bookings list never leads nowhere
+    acceptsReservations: store.acceptsReservations && _count.tables > 0,
     dishCount: menuItems.length,
     // Kept for searching by dish; not sent to the browser
     dishes: menuItems.map((item) => item.name),

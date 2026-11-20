@@ -22,6 +22,9 @@ const NAVAL_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", 
 const PHOTO_DIR = path.join(NAVAL_DIR, "photos");
 
 type Dish = { name: string; category: string; price: number; description: string | null; photo: string | null };
+
+/** Seats per table: a restaurant has room for families and groups, a café mostly twos */
+const tablesFor = (type: string) => (type === "RESTAURANT" ? [2, 2, 4, 4, 6, 8] : [2, 2, 2, 4, 4]);
 type Store = {
   slug: string;
   email: string;
@@ -102,6 +105,10 @@ async function main() {
       include: { vendor: true },
     });
     const vendorId = owner.vendor!.id;
+    // Restaurants and cafés take table bookings, so they start with tables to book
+    if (owner.vendor!.acceptsReservations) {
+      await prisma.diningTable.createMany({ data: tablesFor(s.storeType).map((seats, i) => ({ vendorId, label: `Table ${i + 1}`, seats })) });
+    }
     for (const dish of s.menu) {
       await prisma.menuItem.create({
         data: { vendorId, name: dish.name, category: dish.category, description: dish.description, price: dish.price, imageUrl: await photo(dish.photo) },

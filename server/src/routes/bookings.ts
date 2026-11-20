@@ -3,6 +3,7 @@ import { TAKING_ORDERS } from "../lib/accounts.js";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
+import { invalidateStore } from "../lib/redisCache.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { manilaTime } from "../lib/storeHours.js";
@@ -189,6 +190,8 @@ vendorBookingsRouter.post("/tables", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   await assertLabelFree(vendorId, input.label);
   const table = await prisma.diningTable.create({ data: { ...input, vendorId } });
+  // Residents' store list and page show "Book a table" only while there's a table
+  await invalidateStore(vendorId);
   res.status(201).json({ table });
 });
 
@@ -198,6 +201,7 @@ vendorBookingsRouter.patch("/tables/:id", async (req, res) => {
   await assertLabelFree(vendorId, input.label, String(req.params.id));
   const { count } = await prisma.diningTable.updateMany({ where: { id: String(req.params.id), vendorId, isActive: true }, data: input });
   if (count === 0) throw new HttpError(404, "We couldn't find this table. It may have been removed.");
+  await invalidateStore(vendorId);
   res.json({ ok: true });
 });
 
@@ -209,6 +213,7 @@ vendorBookingsRouter.delete("/tables/:id", async (req, res) => {
   // Hidden rather than deleted, because past bookings point to it
   const { count } = await prisma.diningTable.updateMany({ where: { id, vendorId, isActive: true }, data: { isActive: false } });
   if (count === 0) throw new HttpError(404, "We couldn't find this table. It may have been removed.");
+  await invalidateStore(vendorId);
   res.status(204).end();
 });
 

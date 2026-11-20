@@ -32,7 +32,11 @@ export const detectDocumentType = (data: Buffer) => (data.toString("ascii", 0, 5
 /** Sends one private document. The browser shows it but mustn't keep a copy. */
 export async function sendDocument(res: express.Response, name: string) {
   const extension = path.extname(name).slice(1) as keyof typeof CONTENT_TYPE;
-  const data = await readFile(path.join(config.documentDir, name));
+  // A file that's gone (removed by hand, or a lost disk) is "not found", not a server error
+  const data = await readFile(path.join(config.documentDir, name)).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") throw new HttpError(404, "This file is no longer on Feasto. Ask them to upload it again.");
+    throw error;
+  });
   res.set({ "Content-Type": CONTENT_TYPE[extension], "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }).send(data);
 }
 
