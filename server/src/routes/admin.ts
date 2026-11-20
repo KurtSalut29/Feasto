@@ -20,7 +20,7 @@ import { periodSchema } from "../lib/reportDates.js";
 import { platformDocument } from "../lib/reportExport/document.js";
 import { exportFormat, onScreen, sendReport } from "../lib/reportExport/index.js";
 import { manilaToday } from "../lib/renewals.js";
-import { dailySales } from "../lib/sales.js";
+import { dailySales, weekTrend } from "../lib/sales.js";
 import { freeUntil } from "../lib/earnings.js";
 import { getSettings } from "../lib/settings.js";
 import { ALLOWED_FROM, decisionVerbs, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
@@ -208,7 +208,8 @@ adminRouter.post("/riders/:id/review", async (req, res) => {
 
 adminRouter.get("/sales", async (req, res) => {
   const { days } = z.object({ days: z.coerce.number().int().min(7).max(90).default(14) }).parse(req.query);
-  res.json({ days: await dailySales(days) });
+  const [byDay, week] = await Promise.all([dailySales(days), weekTrend()]);
+  res.json({ days: byDay, week });
 });
 
 // ---------- Users ----------

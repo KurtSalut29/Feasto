@@ -392,7 +392,9 @@ async function main() {
     });
     orders++;
 
-    if (!failed && chance(0.62)) {
+    // A rating comes a while after the food arrives: today's latest orders aren't rated yet
+    const reviewAt = at(between(70, 400));
+    if (!failed && chance(0.62) && reviewAt.getTime() < Date.now()) {
       const rating = weightedRating();
       await prisma.review.create({
         data: {
@@ -401,12 +403,13 @@ async function main() {
           residentId: resident.user.id,
           rating,
           comment: chance(0.55) ? pick(COMMENTS[rating]) : null,
-          createdAt: at(between(70, 400)),
+          createdAt: reviewAt,
         },
       });
       reviews++;
     }
-    if (rider && riderStars !== null) {
+    const riderRatedAt = at(ready + between(40, 300));
+    if (rider && riderStars !== null && riderRatedAt.getTime() < Date.now()) {
       await prisma.riderRating.create({
         data: {
           orderId: order.id,
@@ -415,7 +418,7 @@ async function main() {
           rating: riderStars,
           tags: pickTags(riderStars),
           comment: chance(0.3) ? pick(RIDER_COMMENTS[riderStars]) : null,
-          createdAt: at(ready + between(40, 300)),
+          createdAt: riderRatedAt,
         },
       });
       riderRatings++;

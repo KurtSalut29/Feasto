@@ -3,6 +3,35 @@ import { manilaStartOfDay } from "./storeHours.js";
 
 export type SalesDay = { date: string; orders: number; sales: number };
 
+/** The last 7 × 24 hours, and the same hours one week earlier */
+export type WeekTrend = { orders: number; sales: number; previousOrders: number; previousSales: number };
+
+/**
+ * This week against last week, fairly: the last 7 × 24 hours up to now, against the 7 × 24
+ * hours before that. Counting by calendar days would set today's few morning orders against a
+ * whole day from last week, so every morning would look like a drop.
+ */
+export async function weekTrend(vendorId?: string): Promise<WeekTrend> {
+  const now = Date.now();
+  const weekAgo = new Date(now - 7 * 86400_000);
+  const twoWeeksAgo = new Date(now - 14 * 86400_000);
+  const [row] = await prisma.$queryRaw<{ orders: bigint; sales: string | null; previousOrders: bigint; previousSales: string | null }[]>`
+    SELECT count(*) FILTER (WHERE "createdAt" >= ${weekAgo}) AS orders,
+           (sum(subtotal) FILTER (WHERE "createdAt" >= ${weekAgo}))::text AS sales,
+           count(*) FILTER (WHERE "createdAt" < ${weekAgo}) AS "previousOrders",
+           (sum(subtotal) FILTER (WHERE "createdAt" < ${weekAgo}))::text AS "previousSales"
+    FROM "Order"
+    WHERE status NOT IN ('AWAITING_PAYMENT', 'REJECTED', 'CANCELLED')
+      AND "createdAt" >= ${twoWeeksAgo} AND "createdAt" <= ${new Date(now)}
+      AND (${vendorId ?? null}::text IS NULL OR "vendorId" = ${vendorId ?? null})`;
+  return {
+    orders: Number(row?.orders ?? 0),
+    sales: Number(row?.sales ?? 0),
+    previousOrders: Number(row?.previousOrders ?? 0),
+    previousSales: Number(row?.previousSales ?? 0),
+  };
+}
+
 /**
  * Orders and sales per day for the last `days` days (Philippine dates), oldest first.
  * Days without orders are included as zeros so a chart has no gaps.

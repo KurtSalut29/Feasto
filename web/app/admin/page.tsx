@@ -15,7 +15,7 @@ import { formatPeso, timeAgo } from "@/lib/format";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType } from "@/lib/types";
+import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType, WeekTrend } from "@/lib/types";
 import { AdminHero, type Attention } from "./admin-hero";
 
 export const metadata: Metadata = { title: "Overview" };
@@ -58,18 +58,15 @@ const sum = (days: SalesDay[], key: "sales" | "orders") => days.reduce((n, d) =>
 
 async function AdminOverview() {
   const user = await requireRole("ADMIN");
-  const [stats, { days }, { stores }, pendingStores, pendingRiders, live] = await Promise.all([
+  const [stats, { days, week }, { stores }, pendingStores, pendingRiders, live] = await Promise.all([
     serverApi<Overview>("/admin/overview"),
-    serverApi<{ days: SalesDay[] }>("/admin/sales?days=14"),
+    serverApi<{ days: SalesDay[]; week: WeekTrend }>("/admin/sales?days=14"),
     serverApi<{ stores: StoreSummary[] }>("/stores?sort=rating&limit=200"),
     serverApi<{ items: PendingStore[] }>("/admin/approvals?kind=stores&status=PENDING"),
     serverApi<{ items: PendingRider[] }>("/admin/approvals?kind=riders&status=PENDING"),
     serverApi<{ orders: LiveOrder[] }>("/admin/orders?group=active"),
   ]);
 
-  // This week against the week before, from the same 14 days the chart shows
-  const thisWeek = days.slice(7);
-  const lastWeek = days.slice(0, 7);
   const queue = [
     ...pendingStores.items.map((s) => ({ id: s.id, name: s.name, kind: "stores" as const, detail: STORE_TYPE_LABEL[s.storeType], createdAt: s.createdAt })),
     ...pendingRiders.items.map((r) => ({ id: r.id, name: r.user.name, kind: "riders" as const, detail: r.vehicleModel ?? "Motorcycle", createdAt: r.createdAt })),
@@ -98,16 +95,16 @@ async function AdminOverview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Sales, last 7 days"
-          value={formatPeso(sum(thisWeek, "sales"))}
-          change={percentChange(sum(thisWeek, "sales"), sum(lastWeek, "sales"))}
+          value={formatPeso(week.sales)}
+          change={percentChange(week.sales, week.previousSales)}
           hint="vs the 7 days before"
           Icon={Wallet}
           accent="brand"
         />
         <StatCard
           label="Orders, last 7 days"
-          value={sum(thisWeek, "orders")}
-          change={percentChange(sum(thisWeek, "orders"), sum(lastWeek, "orders"))}
+          value={week.orders}
+          change={percentChange(week.orders, week.previousOrders)}
           hint="vs the 7 days before"
           Icon={ReceiptText}
           accent="sky"

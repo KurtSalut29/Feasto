@@ -146,6 +146,9 @@ export type StoreDetail = Omit<StoreSummary, "dishCount" | "categories" | "match
 /** Orders and sales on one day (Philippine date "YYYY-MM-DD"). */
 export type SalesDay = { date: string; orders: number; sales: number };
 
+/** The last 7 × 24 hours against the 7 × 24 hours before, so a morning isn't compared with a whole day */
+export type WeekTrend = { orders: number; sales: number; previousOrders: number; previousSales: number };
+
 export type CartProblem = "SOLD_OUT" | "UNAVAILABLE" | "NOT_ENOUGH_STOCK" | "STORE_CLOSED" | "STORE_UNAVAILABLE";
 
 /** One store's delivery fee to an address, and how it was worked out (server/src/lib/deliveryFee.ts) */

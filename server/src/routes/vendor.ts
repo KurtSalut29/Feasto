@@ -12,7 +12,7 @@ import { BUSY } from "../lib/dispatch.js";
 import { ONLINE_PAYMENTS } from "../lib/payments.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
-import { dailySales } from "../lib/sales.js";
+import { dailySales, weekTrend } from "../lib/sales.js";
 import { periodSchema } from "../lib/reportDates.js";
 import { payoutWords } from "../lib/earnings.js";
 import { storeDocument } from "../lib/reportExport/document.js";
@@ -308,7 +308,9 @@ const daysQuery = z.object({ days: z.coerce.number().int().min(7).max(90).defaul
 
 vendorRouter.get("/sales", async (req, res) => {
   const { days } = daysQuery.parse(req.query);
-  res.json({ days: await dailySales(days, await myVendorId(req.session!.userId)) });
+  const vendorId = await myVendorId(req.session!.userId);
+  const [byDay, week] = await Promise.all([dailySales(days, vendorId), weekTrend(vendorId)]);
+  res.json({ days: byDay, week });
 });
 
 // ---------- Reports: any period the vendor picks, and downloads in the Feasto format ----------

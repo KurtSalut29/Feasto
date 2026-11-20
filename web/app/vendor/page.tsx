@@ -32,7 +32,7 @@ import { formatPeso, renderTime, timeAgo } from "@/lib/format";
 import { itemsSummary, orderCode, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
-import type { SalesDay, VendorOrder } from "@/lib/types";
+import type { SalesDay, VendorOrder, WeekTrend } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
 import { stageOf } from "./orders/queue";
 import { WaitClock } from "./orders/wait-clock";
@@ -83,15 +83,13 @@ const sum = (days: SalesDay[]) => days.reduce((n, d) => n + d.sales, 0);
 async function VendorOverview() {
   const user = await requireRole("VENDOR");
   const store = user.vendor!;
-  const [stats, { days }, reviews, { orders: queue }] = await Promise.all([
+  const [stats, { days, week }, reviews, { orders: queue }] = await Promise.all([
     serverApi<Overview>("/vendor/overview"),
-    serverApi<{ days: SalesDay[] }>("/vendor/sales?days=14"),
+    serverApi<{ days: SalesDay[]; week: WeekTrend }>("/vendor/sales?days=14"),
     serverApi<Reviews>("/vendor/reviews"),
     serverApi<{ orders: VendorOrder[] }>("/vendor/orders?tab=active"),
   ]);
   const verification = store.status === "PENDING" || store.status === "REJECTED" ? await serverApi<Verification>("/documents/verification") : null;
-  const thisWeek = sum(days.slice(7));
-  const lastWeek = sum(days.slice(0, 7));
   const topQuantity = stats.bestSellers[0]?.quantity ?? 0;
   const renderedAt = renderTime();
   const readyCount = queue.filter((o) => o.status === "READY" || o.status === "PICKED_UP").length;
@@ -329,7 +327,7 @@ async function VendorOverview() {
 
         <Card
           title="Sales, last 14 days"
-          description={<Trend change={percentChange(thisWeek, lastWeek)} label="this week vs last week" />}
+          description={<Trend change={percentChange(week.sales, week.previousSales)} label="this week vs last week" />}
           className="xl:col-span-2"
           footer={
             <Link href="/vendor/reports" className={CARD_LINK}>
