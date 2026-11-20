@@ -14,13 +14,13 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/resident/map", label: "Map", Icon: MapIcon },
     { href: "/resident/orders", label: "Orders", Icon: ReceiptText },
     { href: "/resident/bookings", label: "Bookings", Icon: CalendarDays },
-    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications", "/resident/display"] },
+    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications", "/resident/display", "/resident/payment-methods"] },
   ],
   RIDER: [
     { href: "/rider", label: "Home", Icon: House },
     { href: "/rider/map", label: "Map", Icon: MapIcon },
     { href: "/rider/active", label: "Active", Icon: Bike },
-    { href: "/rider/history", label: "History", Icon: History },
+    { href: "/rider/history", label: "History", Icon: History, also: ["/rider/ratings"] },
     { href: "/rider/account", label: "Account", Icon: User, also: ["/rider/profile", "/rider/license", "/rider/password", "/rider/notifications", "/rider/display"] },
   ],
   VENDOR: [

@@ -11,9 +11,9 @@ const TIPS = [
 /** The change-password page for residents and riders (vendor and admin use the pop-up). */
 export function PasswordPage({ email, backHref }: { email: string; backHref: string }) {
   return (
-    <div className="md:max-w-3xl">
-      <MobileHeading title="Change password" />
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:gap-6">
+    <>
+      <MobileHeading title="Change password" subtitle="Use a strong one you don't use anywhere else." />
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_260px] md:gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section aria-label="New password" className="overflow-hidden rounded-3xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
           {/* Who this is for, so nobody changes the wrong account on a shared phone */}
           <div className="relative flex items-center gap-3.5 overflow-hidden bg-gradient-to-br from-brand-600 to-brand-700 px-5 py-4 text-white">
@@ -31,7 +31,7 @@ export function PasswordPage({ email, backHref }: { email: string; backHref: str
           </div>
         </section>
 
-        <aside aria-label="Good to know" className="rounded-3xl bg-brand-50/60 p-5 ring-1 ring-brand-100">
+        <aside aria-label="Good to know" className="rounded-3xl md:sticky md:top-24 bg-brand-50/60 p-5 ring-1 ring-brand-100">
           <h2 className="text-sm font-semibold text-ink">Good to know</h2>
           <ul className="mt-3 space-y-3 text-sm text-muted">
             {TIPS.map(({ Icon, text }) => (
@@ -43,6 +43,6 @@ export function PasswordPage({ email, backHref }: { email: string; backHref: str
           </ul>
         </aside>
       </div>
-    </div>
+    </>
   );
 }

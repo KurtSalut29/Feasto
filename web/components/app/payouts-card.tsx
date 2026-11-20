@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, CircleCheck, Clock, Landmark, Pencil, Plus, RotateCcw, Send, ShieldCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, Clock, Pencil, Plus, RotateCcw, Send, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -12,6 +12,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { TextField } from "@/components/ui/text-field";
 import { toast } from "@/components/ui/toast";
 import { AutoRefresh } from "@/components/app/auto-refresh";
+import { AccountCard } from "@/components/app/pay-card-face";
 import { apiRequest } from "@/lib/browser-api";
 import { formatDate, formatPeso } from "@/lib/format";
 import type { Payout, PayoutAccount, PayoutChannel, PayoutsData, PayoutStatus } from "@/lib/types";
@@ -67,21 +68,30 @@ export function PayoutsCard({ who, data }: { who: "store" | "rider"; data: Payou
     >
       <div id="payout" className="scroll-mt-24 border-b border-line px-5 py-4">
         {account ? (
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted ring-1 ring-line">
-              <Landmark className="size-5" aria-hidden />
-            </span>
+          // Beside each other only when the card itself is wide (the store's reports put it in a narrow column)
+          <div className="@container">
+          <div className="flex flex-col gap-4 @md:flex-row @md:items-center">
+            <AccountCard
+              kind={isWallet(account.channel) ? (account.channel as "GCASH" | "MAYA") : "BANK"}
+              bank={PAYOUT_LABEL[account.channel]}
+              number={account.number}
+              name={account.name}
+              hide
+              size="sm"
+              className="w-full max-w-[18rem] shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted">Sent to</p>
               <p className="truncate font-semibold text-ink">
                 {PAYOUT_LABEL[account.channel]} ••{account.number.slice(-4)}
               </p>
-              <p className="truncate text-xs text-muted">{account.name}</p>
+              <p className="truncate text-sm text-muted">{account.name}</p>
+              <Button variant="secondary" className="mt-3 h-9! gap-1.5! px-3! text-sm!" aria-label="Change where Feasto sends your money" onClick={() => setEditing(true)}>
+                <Pencil className="size-3.5" aria-hidden />
+                Change
+              </Button>
             </div>
-            <Button variant="secondary" className="h-8! shrink-0 gap-1.5! px-2.5! text-[0.8125rem]!" aria-label="Change where Feasto sends your money" onClick={() => setEditing(true)}>
-              <Pencil className="size-3.5" aria-hidden />
-              Change
-            </Button>
+          </div>
           </div>
         ) : (
           <div className="rounded-xl bg-amber-50 p-3.5 text-amber-900">
@@ -217,6 +227,15 @@ function AccountDialog({ open, onClose, account, path }: { open: boolean; onClos
   return (
     <Dialog open={open} onClose={onClose} title={account ? "Change where we send your money" : "Where should Feasto send your money?"} description="Your share of online orders is sent here as soon as each one is finished.">
       <form onSubmit={save} className="mt-4 space-y-4" noValidate>
+        {/* How it will show on the reports page, filled in as it's typed */}
+        <AccountCard
+          kind={channel && !isWallet(channel) ? "BANK" : channel === "MAYA" ? "MAYA" : "GCASH"}
+          bank={channel ? PAYOUT_LABEL[channel] : undefined}
+          number={number}
+          name={name}
+          size="sm"
+          className="mx-auto max-w-xs"
+        />
         <SelectField label="E-wallet or bank" placeholder="Choose one" options={CHANNEL_OPTIONS} value={channel} onChange={(e) => setChannel(e.target.value as PayoutChannel)} error={fields.channel} required />
         <TextField label="Account name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" error={fields.name} hint="The name on the account, exactly as GCash or the bank has it." required />
         <TextField

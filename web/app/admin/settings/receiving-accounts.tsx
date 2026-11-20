@@ -1,9 +1,9 @@
 "use client";
 
-import { Landmark, Pencil, Plus, Send, Trash2, Wallet } from "lucide-react";
+import { Landmark, Pencil, Plus, QrCode, Send, Trash2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PAYMENT_OPTIONS, PaymentLogo } from "@/components/app/payment-brands";
+import { AccountCard } from "@/components/app/pay-card-face";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
@@ -20,15 +20,6 @@ type Channel = ReceivingAccount["channel"];
 type Draft = { channel: Channel; bankName: string; accountName: string; accountNumber: string; qrUrl: string | null; enabled: boolean };
 
 const EMPTY: Draft = { channel: "GCASH", bankName: "", accountName: "", accountNumber: "", qrUrl: null, enabled: true };
-
-function Mark({ channel }: { channel: Channel }) {
-  const option = channel === "BANK" ? null : PAYMENT_OPTIONS.find((o) => o.value === channel);
-  return (
-    <span className="flex h-9 w-14 shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-line" aria-hidden>
-      {option?.tile ? <PaymentLogo file={option.tile} tint={option.brand} className="h-6 w-11" /> : <Landmark className="size-5 text-slate-700" />}
-    </span>
-  );
-}
 
 /**
  * Feasto's own GCash, Maya and bank accounts that residents can send a transfer to at checkout.
@@ -100,21 +91,25 @@ export function ReceivingAccounts({ accounts }: { accounts: AdminAccount[] }) {
       {accounts.length === 0 ? (
         <p className="px-5 py-6 text-sm text-muted">No accounts yet. Until you add one, residents pay online only on Xendit&apos;s page (or in cash).</p>
       ) : (
-        <ul className="divide-y divide-line">
+        <ul className="grid gap-x-5 gap-y-6 p-5 sm:grid-cols-2 xl:grid-cols-3">
           {accounts.map((a) => (
-            <li key={a.id} className={`flex flex-wrap items-center gap-3 px-5 py-3.5 ${a.enabled ? "" : "opacity-60"}`}>
-              <Mark channel={a.channel} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">
-                  {a.label} <span className="font-mono font-medium tracking-wide">{a.shownNumber}</span>
+            <li key={a.id} className="min-w-0">
+              <AccountCard
+                kind={a.channel}
+                bank={a.bankName ?? undefined}
+                number={a.accountNumber}
+                name={a.accountName}
+                caption={a.channel === "BANK" ? "Send to account number" : "Send to mobile number"}
+                dimmed={!a.enabled}
+                corner={a.qrUrl ? <QrCode className="size-6 text-white/85" aria-label="Has a QR code" /> : undefined}
+              />
+              <div className="mt-2.5 flex items-center gap-2 px-1">
+                <p className="min-w-0 flex-1 leading-tight">
+                  <span className={`inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold ${a.enabled ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                    {a.enabled ? "On at checkout" : "Off"}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-muted">{a.used ? `${a.used} ${a.used === 1 ? "payment" : "payments"}` : "No payments yet"}</span>
                 </p>
-                <p className="truncate text-sm text-muted">
-                  {a.accountName}
-                  {a.qrUrl ? " · with QR" : ""} · {a.used ? `${a.used} ${a.used === 1 ? "payment" : "payments"}` : "No payments yet"}
-                </p>
-              </div>
-              <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${a.enabled ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>{a.enabled ? "On" : "Off"}</span>
-              <div className="flex items-center gap-1">
                 <Button variant="secondary" className="h-9 px-3 text-sm" onClick={() => void toggle(a)}>
                   {a.enabled ? "Turn off" : "Turn on"}
                 </Button>
@@ -134,6 +129,17 @@ export function ReceivingAccounts({ accounts }: { accounts: AdminAccount[] }) {
 
       <Dialog open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add an account" : "Edit the account"} description="Residents see exactly what you type here, so copy it from the app or the bank.">
         <div className="space-y-4">
+          {/* What residents will see at checkout, filled in as it's typed */}
+          <AccountCard
+            kind={draft.channel}
+            bank={draft.bankName}
+            number={draft.accountNumber}
+            name={draft.accountName}
+            caption={wallet ? "Send to mobile number" : "Send to account number"}
+            size="sm"
+            dimmed={!draft.enabled}
+            className="mx-auto max-w-xs"
+          />
           <SegmentedControl
             name="channel"
             legend="Kind of account"

@@ -70,10 +70,13 @@ async function RiderRatings() {
   const issues = data.tags.filter((t) => ISSUES.has(t.tag));
 
   return (
-    <div className="md:max-w-3xl">
+    <>
       {heading}
 
-      <section aria-label="Your rating" className="mb-5 rounded-3xl border border-line p-4">
+      {/* Big screens: the summary stays on the left while the ratings scroll on the right */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,25rem)_minmax(0,1fr)]">
+      <div className="lg:sticky lg:top-24">
+      <section aria-label="Your rating" className="mb-5 rounded-3xl border border-line bg-white p-4">
         <div className="flex items-center gap-5">
           <div className="text-center">
             <p className="text-[2.5rem] leading-none font-bold tracking-tight text-ink tabular-nums">{data.average!.toFixed(1)}</p>
@@ -111,14 +114,17 @@ async function RiderRatings() {
       </section>
 
       {(praise.length > 0 || issues.length > 0) && (
-        <section className="mb-5 grid gap-3 sm:grid-cols-2">
+        <section className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           {praise.length > 0 && <TagCounts title="What residents like" tags={praise} tone="good" />}
           {issues.length > 0 && <TagCounts title="To work on" tags={issues} tone="bad" />}
         </section>
       )}
 
+      </div>
+
+      <div className="min-w-0">
       <h2 className="mb-2 text-sm font-semibold tracking-wider text-gray-500 uppercase">Latest ratings</h2>
-      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
+      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
         {data.ratings.map((r) => (
           <li key={r.id} className="flex gap-3 px-4 py-3">
             <Avatar name={r.author} size="sm" />
@@ -157,14 +163,16 @@ async function RiderRatings() {
         ))}
       </ul>
       {data.ratings.length < data.count && <p className="mt-4 text-center text-xs text-muted">Showing your latest {data.ratings.length} ratings.</p>}
-    </div>
+      </div>
+      </div>
+    </>
   );
 }
 
 function TagCounts({ title, tags, tone }: { title: string; tags: { tag: string; count: number }[]; tone: "good" | "bad" }) {
   const top = tags[0].count;
   return (
-    <div className="rounded-2xl border border-line p-4">
+    <div className="rounded-2xl border border-line bg-white p-4">
       <h2 className="mb-3 text-sm font-semibold text-ink">{title}</h2>
       <ul className="space-y-2">
         {tags.map((t) => (
