@@ -12,7 +12,7 @@ export function AccessibilityButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded font-medium text-muted underline underline-offset-4 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
+        className="tap rounded font-medium text-muted underline underline-offset-4 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500"
       >
         Accessibility
       </button>

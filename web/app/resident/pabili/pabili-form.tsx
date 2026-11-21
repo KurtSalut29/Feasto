@@ -444,7 +444,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
                   maxLength={120}
                   className="mt-2 h-10 w-full rounded-xl border border-line bg-canvas/60 px-3 text-sm text-ink placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                 />
-                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,6.5rem)] gap-2">
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,6.5rem)] gap-2 max-[479px]:grid-cols-1">
                   <SelectField
                     label="If it's not there"
                     placeholder="Choose"

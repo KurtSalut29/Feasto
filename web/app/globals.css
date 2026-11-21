@@ -41,6 +41,16 @@
   }
 }
 
+/*
+ * A text-sized button or link ("Use my location", "Clear all", "See all") with a finger-sized tap
+ * area: the padding makes it at least 32 px tall, and the negative margin gives the room back, so
+ * nothing on the page moves. (WCAG 2.5.8 asks for 24 px; 20 px text alone is too small on a phone.)
+ */
+@utility tap {
+  padding-block: 0.375rem;
+  margin-block: -0.375rem;
+}
+
 @theme inline {
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }

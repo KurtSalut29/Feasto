@@ -98,7 +98,7 @@ function SectionHeading({ title, subtitle, seeAll }: { title: string; subtitle?:
         {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
       </div>
       {seeAll && (
-        <Link href={seeAll.href} className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline">
+        <Link href={seeAll.href} className="tap flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline">
           {seeAll.label}
           <ChevronRight className="size-4" aria-hidden />
         </Link>

@@ -9,7 +9,8 @@ import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import type { VendorOrder } from "@/lib/types";
 import { EtaLine } from "@/components/app/order-eta";
 import { OrderActions } from "./order-actions";
-import { IF_UNAVAILABLE_WORDS, RanOutButton } from "./ran-out-button";
+import { IF_UNAVAILABLE_WORDS } from "./if-unavailable";
+import { RanOutButton } from "./ran-out-button";
 import { commissionLine, DishThumb, paymentLine } from "./order-parts";
 import { RiderLive } from "./rider-live";
 import { WaitClock } from "./wait-clock";
@@ -136,12 +137,12 @@ export function OrderPanel({
         </p>
         <ul className="divide-y divide-line">
           {order.items.map((item) => (
-            <li key={item.id} className={`flex items-center gap-3 px-4 py-2.5 text-sm ${item.removedAt ? "opacity-60" : ""}`}>
+            <li key={item.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 text-sm ${item.removedAt ? "opacity-60" : ""}`}>
               <DishThumb src={item.menuItem?.imageUrl} className="size-11" />
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink text-xs font-bold text-white tabular-nums">
                 {item.quantity}×
               </span>
-              <span className={`min-w-0 flex-1 font-medium text-ink ${item.removedAt ? "line-through" : ""}`}>
+              <span className={`min-w-[8rem] flex-1 font-medium break-words text-ink ${item.removedAt ? "line-through" : ""}`}>
                 {item.name}
                 {item.removedAt && <span className="block text-xs font-semibold text-amber-800 no-underline">Ran out: taken off the order</span>}
                 {item.note && (
@@ -151,10 +152,12 @@ export function OrderPanel({
                   </span>
                 )}
               </span>
-              <span className="shrink-0 text-muted tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
-              {!item.removedAt && ["PLACED", "ACCEPTED", "PREPARING"].includes(order.status) && (
-                <RanOutButton orderId={order.id} itemId={item.id} name={item.name} choice={order.checkout.ifUnavailable ?? "REMOVE"} phone={order.checkout.resident.phone} />
-              )}
+              <span className="ml-auto flex shrink-0 items-center gap-3">
+                <span className="text-muted tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
+                {!item.removedAt && ["PLACED", "ACCEPTED", "PREPARING"].includes(order.status) && (
+                  <RanOutButton orderId={order.id} itemId={item.id} name={item.name} choice={order.checkout.ifUnavailable ?? "REMOVE"} phone={order.checkout.resident.phone} />
+                )}
+              </span>
             </li>
           ))}
         </ul>

@@ -45,7 +45,7 @@ export function ItemNote({ menuItemId, name, note }: { menuItemId: string; name:
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="mt-1 inline-flex items-center gap-1 rounded-md text-[0.8125rem] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
+        className="-mt-0.5 -mb-1.5 inline-flex items-center gap-1 rounded-md py-1.5 text-[0.8125rem] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500"
       >
         <MessageSquarePlus className="size-3.5" aria-hidden />
         Add note

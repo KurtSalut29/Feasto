@@ -140,7 +140,7 @@ export function VoucherPicker({
           id="voucher-code"
           value={typed}
           onChange={(e) => setTyped(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20))}
-          placeholder="Have a code? Type it here"
+          placeholder="Voucher code"
           className="h-11 min-w-0 flex-1 rounded-xl border border-line bg-white px-4 text-[0.9375rem] tracking-wide text-ink uppercase outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-gray-500 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
         />
         <button type="submit" disabled={!typed.trim()} className="h-11 shrink-0 rounded-xl bg-ink px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-40">

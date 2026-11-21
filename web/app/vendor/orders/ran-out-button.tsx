@@ -9,12 +9,6 @@ import { toast } from "@/components/ui/toast";
 import { apiRequest } from "@/lib/browser-api";
 import type { IfUnavailable } from "@/lib/types";
 
-export const IF_UNAVAILABLE_WORDS: Record<IfUnavailable, string> = {
-  REMOVE: "take it off and send the rest",
-  CALL: "call them first",
-  CANCEL: "cancel the whole order",
-};
-
 /**
  * An item ran out after the order came in. What happens is what the customer chose at checkout:
  * it's taken off (and refunded if paid online), or the whole order is cancelled. "Call me first"

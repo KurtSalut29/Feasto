@@ -22,7 +22,7 @@ export default function AccessibilityPage() {
           <Link href="/" className="rounded-lg focus-visible:outline-2 focus-visible:outline-brand-500">
             <Image src="/Logo/feasto-logo.png" alt="Feasto home" width={122} height={36} className="h-9 w-[122px] object-contain" priority />
           </Link>
-          <Link href="/" className="text-sm font-semibold text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
+          <Link href="/" className="tap text-sm font-semibold text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
             Back to Feasto
           </Link>
         </div>

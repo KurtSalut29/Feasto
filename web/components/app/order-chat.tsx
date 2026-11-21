@@ -32,7 +32,7 @@ const looks = {
   button:
     "inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-line bg-white px-5 text-[0.9375rem] font-semibold text-ink transition hover:bg-canvas motion-safe:active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500",
   pill: "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500",
-  link: "inline-flex w-fit items-center gap-2 font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500",
+  link: "tap inline-flex w-fit items-center gap-2 font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500",
 };
 
 /**

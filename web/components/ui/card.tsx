@@ -50,4 +50,4 @@ export function Card({
 
 /** "See all →" style link for a card footer or header. */
 export const CARD_LINK =
-  "inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500";
+  "tap inline-flex items-center gap-1 text-sm font-semibold text-brand-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500";

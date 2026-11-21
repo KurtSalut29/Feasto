@@ -40,7 +40,7 @@ export function LegalButton({ doc, className, children }: { doc: Doc; className?
   );
 }
 
-const link = "rounded font-medium text-muted underline underline-offset-4 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500";
+const link = "tap rounded font-medium text-muted underline underline-offset-4 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-500";
 
 /** "Terms · Privacy" under the login and sign-up cards */
 export function LegalLinks() {

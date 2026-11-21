@@ -19,10 +19,10 @@ export default function TermsPage() {
             <Image src="/Logo/feasto-logo.png" alt="Feasto home" width={122} height={36} className="h-9 w-[7.625rem] object-contain" priority />
           </Link>
           <nav aria-label="Feasto's policies" className="flex items-center gap-4 text-sm font-semibold">
-            <Link href="/privacy" className="text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
+            <Link href="/privacy" className="tap text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
               Privacy Policy
             </Link>
-            <Link href="/" className="text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
+            <Link href="/" className="tap text-brand-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-500">
               Back to Feasto
             </Link>
           </nav>

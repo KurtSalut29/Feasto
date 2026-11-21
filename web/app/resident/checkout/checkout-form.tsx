@@ -282,7 +282,7 @@ export function CheckoutForm({
           n={2}
           title="Deliver to"
           action={
-            <Link href="/resident/addresses" className="text-sm font-semibold text-brand-700 hover:underline">
+            <Link href="/resident/addresses" className="tap text-sm font-semibold text-brand-700 hover:underline">
               {addresses.length ? "Manage" : "Add address"}
             </Link>
           }
@@ -398,10 +398,10 @@ export function CheckoutForm({
       </Step>
 
       <Step
-        n={5}
+        n={6}
         title="Your order"
         action={
-          <Link href="/resident/cart" className="text-sm font-semibold text-brand-700 hover:underline">
+          <Link href="/resident/cart" className="tap text-sm font-semibold text-brand-700 hover:underline">
             Edit
           </Link>
         }

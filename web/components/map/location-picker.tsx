@@ -104,7 +104,7 @@ export function LocationPicker({
           type="button"
           onClick={useMyLocation}
           disabled={!ready || locating}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline disabled:opacity-50"
+          className="tap inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline disabled:opacity-50"
         >
           {locating ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <LocateFixed className="size-4" aria-hidden />}
           Use my location

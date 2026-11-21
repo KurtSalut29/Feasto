@@ -164,7 +164,7 @@ function GroupHeading({ title, Icon, taken, options, onAll }: { title: string; I
           {taken} of {options.length}
         </span>
       </p>
-      <button type="button" onClick={() => onAll(!all)} className="text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500">
+      <button type="button" onClick={() => onAll(!all)} className="tap text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-500">
         {all ? "Clear all" : "Take all"}
       </button>
     </div>

@@ -132,7 +132,7 @@ export function LocationSharer({ orderId, heading, store, home }: { orderId: str
         {status}
       </p>
       {mode !== "simulated" && (
-        <button type="button" onClick={() => setMode("simulated")} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline">
+        <button type="button" onClick={() => setMode("simulated")} className="mt-0.5 -mb-1.5 inline-flex items-center gap-1.5 py-1.5 text-sm font-semibold text-brand-700 hover:underline">
           <Route className="size-4" aria-hidden />
           Demo: simulate the ride
         </button>
