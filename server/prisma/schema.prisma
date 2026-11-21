@@ -225,6 +225,7 @@ model User {
   /// As on their ID (residents): alcohol and cigarettes are for 18 and older
   birthDate     DateTime?      @db.Date
   shopSuggestions PabiliShopSuggestion[]
+  passkeys      Passkey[]
   errandRuns    Errand[]       @relation("RiderErrands")
   errandAsks    Errand[]       @relation("PreferredErrandRider")
   /// Reports this person sent, and reports about them
@@ -473,6 +474,10 @@ model PlatformSettings {
   require2fa              Boolean @default(true)
   /// A liquor ban is on: no alcohol through Pabili
   liquorBan               Boolean @default(false)
+  /// Riders must use two-step login too (a passkey or an authenticator app)
+  require2faRiders        Boolean @default(true)
+  /// The admin logs in with three steps: password, a code and a passkey
+  require3faAdmin         Boolean @default(false)
   updatedAt         DateTime @updatedAt
 }
 
@@ -1236,4 +1241,27 @@ model RestrictedTerm {
   term      String       @unique
   rule      RestrictRule
   createdAt DateTime     @default(now())
+}
+
+/// A passkey: the phone's or laptop's fingerprint, face or screen lock, as a login step
+model Passkey {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The credential's id (base64url), as the browser sends it back
+  credentialId String    @unique
+  publicKey    Bytes
+  /// How many times the authenticator says it was used (a copied key shows up as going backwards)
+  counter      Int       @default(0)
+  transports   String[]  @default([])
+  /// The domain it works on: "local-ip.sh" on the classroom WiFi, whatever the laptop's address
+  rpId         String
+  /// "Chrome on Android", from where it was made
+  label        String
+  /// Synced to the person's other devices (Google Password Manager, iCloud Keychain)
+  backedUp     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
 }

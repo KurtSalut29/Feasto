@@ -49,8 +49,12 @@ export type PlatformSettings = {
   doorWaitMinutes: number;
   /** Admins and store owners must log in with an authenticator app too */
   require2fa: boolean;
+  /** Riders must use two-step login too (a passkey or the app) */
+  require2faRiders: boolean;
+  /** The admin logs in with a code and a passkey */
+  require3faAdmin: boolean;
 };
-type Key = Exclude<keyof PlatformSettings, "require2fa">;
+type Key = Exclude<keyof PlatformSettings, "require2fa" | "require2faRiders" | "require3faAdmin">;
 
 const whenInWords = (seconds: number) => (seconds < 60 ? `${seconds} s` : seconds % 60 === 0 ? `${seconds / 60} min` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`);
 
@@ -162,6 +166,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     doorWaitMinutes: String(initial.doorWaitMinutes),
   });
   const [require2fa, setRequire2fa] = useState(initial.require2fa);
+  const [require2faRiders, setRequire2faRiders] = useState(initial.require2faRiders);
+  const [require3faAdmin, setRequire3faAdmin] = useState(initial.require3faAdmin);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
@@ -211,6 +217,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         noShowStrikes: number("noShowStrikes"),
         doorWaitMinutes: number("doorWaitMinutes"),
         require2fa,
+        require2faRiders,
+        require3faAdmin,
       },
     });
     setSaving(false);
@@ -389,18 +397,40 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         </div>
       </Card>
 
-      <Card title="Two-step login" Icon={ShieldCheck} description="A code from an authenticator app after the password, so a stolen password isn't enough.">
+      <Card title="Two-step login" Icon={ShieldCheck} description="A passkey (fingerprint, face or screen lock) or a code from an authenticator app after the password, so a stolen password isn't enough.">
         <div className="space-y-3 p-5">
           <SwitchField
             label="Required for admins and store owners"
-            description="They set up the app at their next login. Residents and riders can turn it on for themselves."
+            description="They set up a passkey or the app at their next login. Residents can turn it on for themselves."
             checked={require2fa}
             onChange={(v) => {
               setSaved(false);
               setRequire2fa(v);
             }}
           />
-          <p className="text-sm text-muted">Turn it off only for a demo where store accounts are shared. Each new device still sends its owner a sign-in alert.</p>
+          <SwitchField
+            label="Required for riders"
+            description="Riders carry cash and customers' addresses. They set up a passkey or the app at their next login."
+            checked={require2faRiders}
+            onChange={(v) => {
+              setSaved(false);
+              setRequire2faRiders(v);
+            }}
+          />
+          <SwitchField
+            label="Three-step login for the admin"
+            description="Password, a code (app, backup or email) and your passkey, every time. Add a passkey to your account first (Admin › Password)."
+            checked={require3faAdmin}
+            onChange={(v) => {
+              setSaved(false);
+              setRequire3faAdmin(v);
+            }}
+          />
+          {fieldErrors.require3faAdmin?.[0] && <p className="text-sm text-red-600">{fieldErrors.require3faAdmin[0]}</p>}
+          <p className="text-sm text-muted">
+            Turn the first two off only for a demo where accounts are shared. Each new device still sends its owner a sign-in alert. If the admin loses the passkey, a code sent to the admin&apos;s email stands in
+            for it.
+          </p>
         </div>
       </Card>
 

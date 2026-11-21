@@ -16,10 +16,13 @@ import { newBackupCodes, newSecret, openSecret, otpauthUrl, base32, sealSecret, 
  * Logging in, with the second step when it's on:
  *
  *   1. Email and password, as before.
- *   2. If the account uses an authenticator app, a 6-digit code from it (or a backup code, or a code
- *      sent by email if the phone is lost), unless this browser was remembered for 30 days.
- *      Admins and store owners must set the app up first, while the admin's "require2fa" is on.
- *   3. The session cookie. A browser the account never used before gets a "new sign-in" alert.
+ *   2. If the account has a second step: a 6-digit code from the authenticator app, or its passkey
+ *      (fingerprint, face or screen lock), or a backup code, or a code sent by email if the phone
+ *      is lost; unless this browser was remembered for 30 days. Admins and store owners (require2fa)
+ *      and riders (require2faRiders) must set one up first.
+ *   3. For the admin, when require3faAdmin is on: the other one of the two (a code after a passkey,
+ *      a passkey after a code). A remembered browser still asks for the passkey.
+ *   4. The session cookie. A browser the account never used before gets a "new sign-in" alert.
  *
  * Between 1 and 2 the browser only holds a short-lived token that proves the password was right.
  */
@@ -31,22 +34,31 @@ const PENDING_MINUTES = 10;
 const MAX_TRIES = 6;
 const CODE_MINUTES = 10;
 
-type Pending = { userId: string; purpose: "verify" | "setup" };
+/** What the third step still needs, after the second used one kind ("trusted": a remembered browser skipped it) */
+export type Done = "code" | "passkey" | "trusted";
+type Pending = { userId: string; purpose: "verify" | "setup" | "third"; done?: Done; remember?: boolean };
 const purposeKey = new TextEncoder().encode(`${config.jwtSecret}:two-step`);
 
 export async function pendingToken(p: Pending) {
-  return new SignJWT({ purpose: p.purpose }).setProtectedHeader({ alg: "HS256" }).setSubject(p.userId).setIssuedAt().setExpirationTime(`${PENDING_MINUTES}m`).sign(purposeKey);
+  return new SignJWT({ purpose: p.purpose, ...(p.done && { done: p.done }), ...(p.remember && { remember: true }) })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(p.userId)
+    .setIssuedAt()
+    .setExpirationTime(`${PENDING_MINUTES}m`)
+    .sign(purposeKey);
 }
 
-async function readPending(token: string, purpose: Pending["purpose"]) {
+async function readPendingFull(token: string, purpose: Pending["purpose"]) {
   try {
     const { payload } = await jwtVerify(token, purposeKey, { algorithms: ["HS256"] });
     if (payload.purpose !== purpose || !payload.sub) throw new Error("wrong purpose");
-    return payload.sub;
+    return { userId: payload.sub, done: payload.done as Done | undefined, remember: payload.remember === true };
   } catch {
     throw new HttpError(401, "This login took too long. Enter your email and password again.");
   }
 }
+const readPending = async (token: string, purpose: Pending["purpose"]) => (await readPendingFull(token, purpose)).userId;
+export const readThird = (token: string) => readPendingFull(token, "third");
 
 // ---------- The browser ----------
 
@@ -86,23 +98,44 @@ export function deviceLabel(userAgent = "") {
 
 type LoginUser = { id: string; email: string; name: string; role: Role; totpEnabledAt: Date | null };
 
-export const mustUseApp = async (role: Role) => (role === "ADMIN" || role === "VENDOR") && (await getSettings()).require2fa;
+/** Admins and store owners (require2fa), and riders (require2faRiders), must have a second step */
+export async function mustUseApp(role: Role) {
+  const settings = await getSettings();
+  return ((role === "ADMIN" || role === "VENDOR") && settings.require2fa) || (role === "RIDER" && settings.require2faRiders);
+}
 
-/** What comes after the password: nothing, the code, or setting up the app first */
-export async function nextStep(user: LoginUser, device: string): Promise<"done" | "verify" | "setup"> {
-  if (user.totpEnabledAt) {
+/** The admin's three steps: password, a code and a passkey */
+export const needsThird = async (role: Role) => role === "ADMIN" && (await getSettings()).require3faAdmin;
+
+export const passkeyCount = (userId: string) => prisma.passkey.count({ where: { userId } });
+
+/** What comes after the password: nothing, the second step, setting one up, or (admin) the third */
+export async function nextStep(user: LoginUser, device: string): Promise<"done" | "verify" | "setup" | "third"> {
+  const passkeys = await passkeyCount(user.id);
+  if (user.totpEnabledAt || passkeys > 0) {
     const known = await prisma.knownDevice.findUnique({ where: { userId_deviceHash: { userId: user.id, deviceHash: device } }, select: { trustedUntil: true } });
-    return known?.trustedUntil && known.trustedUntil > new Date() ? "done" : "verify";
+    const trusted = Boolean(known?.trustedUntil && known.trustedUntil > new Date());
+    if (!trusted) return "verify";
+    return passkeys > 0 && (await needsThird(user.role)) ? "third" : "done";
   }
   return (await mustUseApp(user.role)) ? "setup" : "done";
 }
 
 const maskEmail = (email: string) => email.replace(/^(.)(.*)(.@.*)$/, (_m, a: string, mid: string, b: string) => `${a}${"•".repeat(Math.min(mid.length, 6))}${b}`);
 
-/** What the login page needs for the second step */
-export async function secondStep(user: LoginUser, step: "verify" | "setup") {
-  const token = await pendingToken({ userId: user.id, purpose: step });
-  return step === "verify" ? { twoStep: { token, email: maskEmail(user.email), canEmail: mailReady() } } : { twoStepSetup: { token, email: user.email } };
+/** What the login page needs for the next step */
+export async function secondStep(user: LoginUser, step: "verify" | "setup" | "third", done: Done = "trusted", remember = false) {
+  if (step === "setup") return { twoStepSetup: { token: await pendingToken({ userId: user.id, purpose: "setup" }), email: user.email } };
+  if (step === "third") {
+    // After a passkey, a code; after a code (or a remembered browser), the passkey
+    const token = await pendingToken({ userId: user.id, purpose: "third", done, remember });
+    return { thirdStep: { token, need: done === "passkey" ? "code" : "passkey", email: maskEmail(user.email), canEmail: mailReady(), hasApp: Boolean(user.totpEnabledAt) } };
+  }
+  const token = await pendingToken({ userId: user.id, purpose: "verify" });
+  const [passkeys, backup] = await Promise.all([passkeyCount(user.id), prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { backupCodes: true } })]);
+  return {
+    twoStep: { token, email: maskEmail(user.email), canEmail: mailReady(), methods: { app: Boolean(user.totpEnabledAt), passkey: passkeys > 0, backup: backup.backupCodes.length > 0 } },
+  };
 }
 
 // ---------- Finishing the login ----------
@@ -174,9 +207,9 @@ const hashCode = (userId: string, code: string) => createHash("sha256").update(B
 
 export type Method = "app" | "backup" | "email";
 
-/** The second step: a code from the app, a backup code, or the code just emailed. Each works once. */
-export async function checkSecondStep(token: string, method: Method, code: string) {
-  const userId = await readPending(token, "verify");
+/** The second step: a code from the app, a backup code, or the code just emailed. Each works once. (Also the admin's third step after a passkey.) */
+export async function checkSecondStep(token: string, method: Method, code: string, purpose: "verify" | "third" = "verify") {
+  const userId = await readPending(token, purpose);
   await countTry(userId);
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, email: true, name: true, role: true, totpEnabledAt: true, totpSecret: true, backupCodes: true, disabledAt: true } });
   if (user.disabledAt) throw new HttpError(403, "This account has been disabled. Please contact Feasto support.");
@@ -206,7 +239,7 @@ export async function checkSecondStep(token: string, method: Method, code: strin
 
 /** A lost phone: a one-time code by email instead */
 export async function emailSecondStep(token: string) {
-  const userId = await readPending(token, "verify");
+  const userId = await readPending(token, "verify").catch(() => readPending(token, "third"));
   if (!mailReady()) throw new HttpError(503, "Feasto can't send emails right now. Use a backup code instead.");
   const wait = await redis.ttl(`two-step-email-wait:${userId}`);
   if (wait > 0) throw new HttpError(429, `A code was just sent. You can ask for another in ${wait} seconds.`);
@@ -269,3 +302,18 @@ export async function checkOwnCode(userId: string, code: string) {
   }
   await redis.del(`two-step-tries:${userId}`);
 }
+
+// ---------- Passkeys as a login step ----------
+
+/** Which pending login a token belongs to, for the passkey's options (second or third step, or setting one up) */
+export async function pendingUser(token: string) {
+  for (const purpose of ["verify", "third", "setup"] as const) {
+    const found = await readPendingFull(token, purpose).catch(() => null);
+    if (found) return { ...found, purpose };
+  }
+  throw new HttpError(401, "This login took too long. Enter your email and password again.");
+}
+
+/** Counts a passkey try like a code (a stolen password can't be tried against it forever) */
+export const countPasskeyTry = (userId: string) => countTry(userId);
+export const clearTries = (userId: string) => redis.del(`two-step-tries:${userId}`);

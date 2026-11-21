@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
@@ -20,7 +20,9 @@ import { requireAuth } from "../middleware/auth.js";
 import { requireHuman } from "../lib/turnstile.js";
 import { alreadyRead, checkingOn } from "../lib/documentCheck.js";
 import { answerPrecheck, chosenIdType, headerText, precheckBody, precheckOff } from "./documents.js";
-import { checkOwnCode, checkSecondStep, confirmSetup, deviceOf, emailSecondStep, finishLogin, mustUseApp, nextStep, renewBackupCodes, secondStep, setupUserOf, startSetup, warnLockedOut } from "../lib/twoStep.js";
+import { checkOwnCode, checkSecondStep, clearTries, confirmSetup, countPasskeyTry, deviceLabel, deviceOf, emailSecondStep, finishLogin, mustUseApp, needsThird, nextStep, passkeyCount, pendingUser, readThird, renewBackupCodes, secondStep, setupUserOf, startSetup, warnLockedOut } from "../lib/twoStep.js";
+import { authenticationOptions, checkAuthentication, registrationOptions, saveRegistration } from "../lib/passkeys.js";
+import type { AuthenticationResponseJSON, RegistrationResponseJSON } from "@simplewebauthn/server";
 
 export const authRouter = Router();
 
@@ -339,12 +341,91 @@ const secondStepSchema = z.object({
   remember: z.boolean().optional().default(false),
 });
 
+const loginUserOf = (id: string) => prisma.user.findUniqueOrThrow({ where: { id }, select: { id: true, email: true, name: true, role: true, totpEnabledAt: true, disabledAt: true } });
+
+/** Logged in: the cookie, and the account for the page */
+async function loggedIn(req: Request, res: Response, user: Awaited<ReturnType<typeof loginUserOf>>, remember: boolean, extra: Record<string, unknown> = {}) {
+  if (user.disabledAt) throw new HttpError(403, "This account has been disabled. Please contact Feasto support.");
+  await finishLogin(req, res, user, { remember });
+  const profile = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });
+  res.json({ user: profile, ...extra });
+}
+
 authRouter.post("/two-step", async (req, res) => {
   const input = parseBody(secondStepSchema, req.body);
   const { user, backupLeft } = await checkSecondStep(input.token, input.method, input.code);
-  await finishLogin(req, res, user, { remember: input.remember });
-  const profile = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });
-  res.json({ user: profile, backupLeft });
+  // The admin's third step: a passkey after the code
+  if ((await needsThird(user.role)) && (await passkeyCount(user.id)) > 0) return void res.json(await secondStep(user, "third", "code", input.remember));
+  await loggedIn(req, res, await loginUserOf(user.id), input.remember, { backupLeft });
+});
+
+/** The admin's third step when the second was a passkey: a code */
+authRouter.post("/two-step/third", async (req, res) => {
+  const input = parseBody(secondStepSchema, req.body);
+  const pending = await readThird(input.token);
+  // After a code, the passkey; an emailed code stands in for a lost passkey (another inbox to get into)
+  if (pending.done !== "passkey" && input.method !== "email") throw new HttpError(400, "Use your passkey for this step, or ask for a code by email if you lost it.");
+  const { user, backupLeft } = await checkSecondStep(input.token, input.method, input.code, "third");
+  await loggedIn(req, res, await loginUserOf(user.id), pending.remember, { backupLeft });
+});
+
+/** The browser's passkey prompt during login: to sign in with one, or (setting up) to make one */
+authRouter.post("/two-step/passkey/options", async (req, res) => {
+  const { token } = parseBody(z.object({ token: z.string().min(10) }), req.body);
+  const pending = await pendingUser(token);
+  res.json({ options: pending.purpose === "setup" ? await registrationOptions(req, pending.userId) : await authenticationOptions(req, pending.userId), mode: pending.purpose === "setup" ? "create" : "get" });
+});
+
+const passkeyStepSchema = z.object({
+  token: z.string().min(10),
+  response: z.looseObject({ id: z.string(), type: z.string(), response: z.looseObject({}) }),
+  remember: z.boolean().optional().default(false),
+});
+
+authRouter.post("/two-step/passkey", async (req, res) => {
+  const input = parseBody(passkeyStepSchema, req.body);
+  const pending = await pendingUser(input.token);
+  const user = await loginUserOf(pending.userId);
+  if (pending.purpose === "setup") {
+    // A required second step, set up as a passkey: no app or backup codes needed (a lost phone uses an emailed code)
+    await saveRegistration(req, user.id, input.response as unknown as RegistrationResponseJSON, deviceLabel(req.get("user-agent")));
+    return void (await loggedIn(req, res, user, false, { passkeyAdded: true }));
+  }
+  if (pending.purpose === "third" && pending.done === "passkey") throw new HttpError(400, "Type a code for this step.");
+  await countPasskeyTry(user.id);
+  if (!(await checkAuthentication(req, user.id, input.response as unknown as AuthenticationResponseJSON))) {
+    throw new HttpError(401, "That passkey didn't work. Try again, or use a code.");
+  }
+  await clearTries(user.id);
+  const remember = pending.purpose === "third" ? pending.remember : input.remember;
+  // The admin's third step after a passkey: a code
+  if (pending.purpose === "verify" && (await needsThird(user.role))) return void res.json(await secondStep(user, "third", "passkey", remember));
+  await loggedIn(req, res, user, remember);
+});
+
+// ---------- Passkeys for someone logged in ----------
+
+authRouter.post("/passkeys/options", requireAuth, async (req, res) => {
+  res.json({ options: await registrationOptions(req, req.session!.userId) });
+});
+
+authRouter.post("/passkeys", requireAuth, async (req, res) => {
+  const { response } = parseBody(z.object({ response: passkeyStepSchema.shape.response }), req.body);
+  const passkey = await saveRegistration(req, req.session!.userId, response as unknown as RegistrationResponseJSON, deviceLabel(req.get("user-agent")));
+  res.status(201).json({ passkey });
+});
+
+authRouter.delete("/passkeys/:id", requireAuth, async (req, res) => {
+  const userId = req.session!.userId;
+  const passkey = await prisma.passkey.findFirst({ where: { id: String(req.params.id), userId } });
+  if (!passkey) throw new HttpError(404, "That passkey isn't on your account.");
+  const [count, me] = await Promise.all([passkeyCount(userId), prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { totpEnabledAt: true, role: true } })]);
+  if (count === 1) {
+    if (await needsThird(me.role)) throw new HttpError(403, "Three-step login needs a passkey. Add another passkey first, or turn three-step login off in Settings.");
+    if (!me.totpEnabledAt && (await mustUseApp(me.role))) throw new HttpError(403, "Your account must keep a second step. Add another passkey or the authenticator app first.");
+  }
+  await prisma.passkey.delete({ where: { id: passkey.id } });
+  res.json({ ok: true });
 });
 
 authRouter.post("/two-step/email", async (req, res) => {
@@ -371,9 +452,21 @@ authRouter.post("/two-step/setup/confirm", async (req, res) => {
 
 /** For someone logged in: whether it's on, required, and how many backup codes are left */
 authRouter.get("/two-step/status", requireAuth, async (req, res) => {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { totpEnabledAt: true, backupCodes: true, role: true } });
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: req.session!.userId },
+    select: { totpEnabledAt: true, backupCodes: true, role: true, passkeys: { orderBy: { createdAt: "asc" }, select: { id: true, label: true, createdAt: true, lastUsedAt: true, backedUp: true, rpId: true } } },
+  });
   const devices = await prisma.knownDevice.findMany({ where: { userId: req.session!.userId }, orderBy: { lastSeenAt: "desc" }, take: 10, select: { id: true, label: true, lastSeenAt: true, trustedUntil: true, createdAt: true } });
-  res.json({ enabled: Boolean(user.totpEnabledAt), since: user.totpEnabledAt, required: await mustUseApp(user.role), backupLeft: user.backupCodes.length, devices, mailReady: mailReady() });
+  res.json({
+    enabled: Boolean(user.totpEnabledAt),
+    since: user.totpEnabledAt,
+    required: await mustUseApp(user.role),
+    threeStep: await needsThird(user.role),
+    backupLeft: user.backupCodes.length,
+    devices,
+    passkeys: user.passkeys,
+    mailReady: mailReady(),
+  });
 });
 
 authRouter.post("/two-step/start", requireAuth, async (req, res) => {
@@ -393,7 +486,9 @@ authRouter.post("/two-step/backup-codes", requireAuth, async (req, res) => {
 
 authRouter.post("/two-step/off", requireAuth, async (req, res) => {
   const { code } = parseBody(z.object({ code: z.string("Type the code.").trim().min(6).max(8) }), req.body);
-  if (await mustUseApp(req.session!.role)) throw new HttpError(403, "Admins and store owners must keep two-step login on.");
+  if ((await mustUseApp(req.session!.role)) && (await passkeyCount(req.session!.userId)) === 0) {
+    throw new HttpError(403, "Your account must keep a second step. Add a passkey first, then you can turn the app off.");
+  }
   await checkOwnCode(req.session!.userId, code);
   await prisma.user.update({ where: { id: req.session!.userId }, data: { totpSecret: null, totpEnabledAt: null, backupCodes: [] } });
   await prisma.knownDevice.updateMany({ where: { userId: req.session!.userId }, data: { trustedUntil: null } });

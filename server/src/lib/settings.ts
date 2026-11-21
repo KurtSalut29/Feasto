@@ -43,6 +43,10 @@ export const DEFAULT_SETTINGS = {
   require2fa: true,
   /** A liquor ban is on (switched in Admin › Pabili): no alcohol through Pabili */
   liquorBan: false,
+  /** Riders must use two-step login too (a passkey or an authenticator app) */
+  require2faRiders: true,
+  /** The admin logs in with three steps: password, a code and a passkey (needs a passkey first) */
+  require3faAdmin: false,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -103,6 +107,8 @@ export const settingsSchema = z.object({
   noShowStrikes: whole(1, 10, "orders"),
   doorWaitMinutes: whole(3, 30, "minutes"),
   require2fa: z.boolean(),
+  require2faRiders: z.boolean(),
+  require3faAdmin: z.boolean(),
 });
 
 /**
@@ -137,6 +143,8 @@ export function getSettings(): Promise<Settings> {
       doorWaitMinutes,
       require2fa,
       liquorBan: row.liquorBan,
+      require2faRiders: row.require2faRiders,
+      require3faAdmin: row.require3faAdmin,
     };
   });
 }

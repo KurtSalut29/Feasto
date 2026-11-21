@@ -1,6 +1,6 @@
 "use client";
 
-import { Laptop, ShieldCheck, ShieldOff } from "lucide-react";
+import { Fingerprint, Laptop, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { formatDateTime } from "@/lib/format";
+import { addPasskey, passkeysWork } from "@/lib/passkey";
 import { BackupCodes, CodeField, SetupQr } from "./two-step-setup";
 
 type Status = {
@@ -17,6 +18,8 @@ type Status = {
   required: boolean;
   backupLeft: number;
   devices: { id: string; label: string; lastSeenAt: string; trustedUntil: string | null; createdAt: string }[];
+  passkeys: { id: string; label: string; createdAt: string; lastUsedAt: string | null; backedUp: boolean }[];
+  threeStep: boolean;
 };
 
 type Flow = { kind: "setup"; qr: { otpauthUrl: string; secret: string } | null } | { kind: "codes"; codes: string[] } | { kind: "renew" } | { kind: "off" } | null;
@@ -34,6 +37,8 @@ export function TwoStepCard({ className = "" }: { className?: string }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const again = () => setReload((n) => n + 1);
+  /** On with the app, a passkey, or both */
+  const on = Boolean(data && (data.enabled || data.passkeys.length > 0));
 
   function open(next: Flow) {
     setFlow(next);
@@ -69,6 +74,22 @@ export function TwoStepCard({ className = "" }: { className?: string }) {
     again();
   }
 
+  async function newPasskey() {
+    setBusy(true);
+    const result = await addPasskey();
+    setBusy(false);
+    if (!result.ok) return void toast.error("Couldn't add the passkey", result.error);
+    toast.success("Passkey added", "Next time, log in with your password and your fingerprint, face or screen lock.");
+    again();
+  }
+
+  async function removePasskey(id: string) {
+    const result = await apiRequest(`/auth/passkeys/${id}`, { method: "DELETE" });
+    if (!result.ok) return void toast.error("Couldn't remove it", result.error);
+    toast.info("Passkey removed");
+    again();
+  }
+
   async function forget() {
     const result = await apiRequest("/auth/two-step/forget-devices", { method: "POST" });
     if (!result.ok) return void toast.error("Couldn't do it", result.error);
@@ -79,37 +100,84 @@ export function TwoStepCard({ className = "" }: { className?: string }) {
   return (
     <section aria-label="Two-step login" className={`overflow-hidden rounded-3xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] ${className}`}>
       <div className="flex flex-wrap items-start gap-3 px-5 py-4">
-        <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${data?.enabled ? "bg-emerald-50 text-emerald-700" : "bg-canvas text-gray-500"}`}>
-          {data?.enabled ? <ShieldCheck className="size-6" aria-hidden /> : <ShieldOff className="size-6" aria-hidden />}
+        <span className={`flex size-11 shrink-0 items-center justify-center rounded-2xl ${on ? "bg-emerald-50 text-emerald-700" : "bg-canvas text-gray-500"}`}>
+          {on ? <ShieldCheck className="size-6" aria-hidden /> : <ShieldOff className="size-6" aria-hidden />}
         </span>
         <div className="min-w-0 flex-1 basis-56">
           <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
             Two-step login
-            {data && (data.enabled ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>)}
-            {data?.required && <Badge tone="brand">Required for your account</Badge>}
+            {data && (on ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>)}
+            {data?.threeStep ? <Badge tone="brand">Three steps</Badge> : data?.required && <Badge tone="brand">Required for your account</Badge>}
           </p>
           <p className="mt-0.5 text-sm text-muted">
             {!data
               ? "Checking…"
               : data.enabled
-                ? `A code from your authenticator app is needed after your password, since ${formatDateTime(data.since!)}. ${data.backupLeft} backup code${data.backupLeft === 1 ? "" : "s"} left.`
-                : "Add a code from an authenticator app after your password, so a stolen password isn't enough to get in."}
+                ? `A code from your authenticator app${data.passkeys.length ? " or your passkey" : ""} is needed after your password, since ${formatDateTime(data.since!)}. ${data.backupLeft} backup code${data.backupLeft === 1 ? "" : "s"} left.`
+                : data.passkeys.length
+                  ? "Your passkey is needed after your password. You can add the authenticator app too, as a second way in."
+                  : "Add a passkey or a code from an authenticator app after your password, so a stolen password isn't enough to get in."}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-2 sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
-          {data && !data.enabled && <Button onClick={start}>Turn on</Button>}
+          {data && !data.enabled && (
+            <Button variant={data.passkeys.length ? "secondary" : "primary"} onClick={start}>
+              {data.passkeys.length ? "Add the app" : "Use an app"}
+            </Button>
+          )}
           {data?.enabled && (
             <Button variant="secondary" onClick={() => open({ kind: "renew" })}>
               New backup codes
             </Button>
           )}
-          {data?.enabled && !data.required && (
+          {data?.enabled && (!data.required || data.passkeys.length > 0) && (
             <Button variant="secondary" className="text-red-700" onClick={() => open({ kind: "off" })}>
               Turn off
             </Button>
           )}
         </div>
       </div>
+
+      {data && (
+        <div className="border-t border-line px-5 py-4">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Fingerprint className="size-4 text-brand-600" aria-hidden />
+              Passkeys
+            </p>
+            {passkeysWork() && (
+              <Button variant={data.passkeys.length ? "secondary" : "primary"} loading={busy && flow === null} onClick={newPasskey}>
+                Add a passkey on this device
+              </Button>
+            )}
+          </div>
+          <p className="text-sm text-muted">
+            Log in with your fingerprint, face or screen lock instead of typing a code. It can&apos;t be phished or read off your screen.
+            {data.threeStep && " Three-step login asks for a code and a passkey."}
+          </p>
+          {!passkeysWork() && <p className="mt-1 text-sm text-amber-800">This browser can&apos;t make passkeys. Try Chrome, Safari or Edge on your phone or laptop.</p>}
+          {data.passkeys.length > 0 && (
+            <ul className="mt-2 divide-y divide-line text-sm">
+              {data.passkeys.map((k) => (
+                <li key={k.id} className="flex items-center gap-3 py-2">
+                  <Fingerprint className="size-4 shrink-0 text-muted" aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="text-ink">{k.label}</span>
+                    <span className="block text-xs text-muted">
+                      Added {formatDateTime(k.createdAt)}
+                      {k.lastUsedAt ? ` · last used ${formatDateTime(k.lastUsedAt)}` : ""}
+                      {k.backedUp ? " · synced to your other devices" : ""}
+                    </span>
+                  </span>
+                  <button type="button" onClick={() => removePasskey(k.id)} aria-label={`Remove the passkey from ${k.label}`} className="flex size-9 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-600">
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {data && data.devices.length > 0 && (
         <div className="border-t border-line px-5 py-4">

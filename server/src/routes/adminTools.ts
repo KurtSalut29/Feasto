@@ -5,7 +5,7 @@ import { logActivity, type Actor } from "../lib/activity.js";
 import { busyFeeFor, demandNow, rainNow, setRain } from "../lib/feeAddOns.js";
 import { prisma } from "../lib/db.js";
 import { availableRider, forgetRiderPosition, OPEN_JOB } from "../lib/dispatch.js";
-import { HttpError, parseBody } from "../lib/http.js";
+import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { stuckOrdersWhere, whyStuck } from "../lib/monitor.js";
 import { broadcastOrder, orderCode, refreshStoreCache, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { notify } from "../lib/liveUpdates.js";
@@ -371,6 +371,8 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   doorWaitMinutes: { label: "Rider waits at the door", show: (value) => `${value} min` },
   require2fa: { label: "Two-step login for admins and stores", show: (value) => (value ? "required" : "optional") },
   liquorBan: { label: "Liquor ban", show: (value) => (value ? "on" : "off") },
+  require2faRiders: { label: "Two-step login for riders", show: (value) => (value ? "required" : "optional") },
+  require3faAdmin: { label: "Three-step login for the admin", show: (value) => (value ? "on" : "off") },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);
@@ -378,6 +380,10 @@ const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_W
 adminToolsRouter.put("/settings", async (req, res) => {
   const next = parseBody(settingsSchema, req.body);
   const previous = await getSettings();
+  // Three steps need a passkey to be the third: turning it on without one would lock the admin out
+  if (next.require3faAdmin && !previous.require3faAdmin && (await prisma.passkey.count({ where: { userId: req.session!.userId } })) === 0) {
+    throw new ValidationError({ require3faAdmin: ["Add a passkey to your account first (Admin › Password), then turn this on."] });
+  }
   const changes = (Object.keys(next) as (keyof typeof next)[]).filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]));
   if (changes.length > 0) {
     await prisma.$transaction(async (tx) => {
