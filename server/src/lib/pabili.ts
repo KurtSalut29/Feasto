@@ -149,5 +149,5 @@ export const estimateOf = (items: Pick<PabiliItem, "estimate" | "notBought">[]) 
 export function priceFlagFor(receipt: number, estimate: number | null) {
   if (!estimate || receipt <= estimate * 1.25 + 20) return null;
   const over = receipt - estimate;
-  return `The receipt is ₱${over.toFixed(2)} (${Math.round((over / estimate) * 100)}%) more than your estimates of ₱${estimate.toFixed(2)}. Check the receipt photo.`;
+  return `The receipt is ₱${over.toFixed(2)} (${Math.round((over / estimate) * 100)}%) more than your estimates for what was bought (₱${estimate.toFixed(2)}). Check the receipt photo.`;
 }

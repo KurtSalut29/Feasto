@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/app/dashboard-shell";
+import { Suspense } from "react";
+import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
 import { requireRole } from "@/lib/auth";
 import { PabiliAdmin } from "./pabili-admin";
 
 export const metadata: Metadata = { title: "Pabili" };
 
-export default async function AdminPabiliPage() {
+export default function AdminPabiliPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <AdminPabili />
+    </Suspense>
+  );
+}
+
+async function AdminPabili() {
   await requireRole("ADMIN");
   return (
     <>

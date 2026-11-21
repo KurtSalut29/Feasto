@@ -417,7 +417,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
                     </button>
                   )}
                 </div>
-                <div className="mt-2 grid grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,6.5rem)] gap-2">
+                <div className="mt-2 grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)] gap-2">
                   <TextField
                     label="How much"
                     type="number"
@@ -435,15 +435,6 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
                     value={item.unit}
                     onChange={(e) => update(item.key, { unit: e.target.value as Unit })}
                   />
-                  <TextField
-                    label="Costs about"
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    value={item.estimate}
-                    onChange={(e) => update(item.key, { estimate: e.target.value })}
-                    placeholder="₱"
-                  />
                 </div>
                 <input
                   value={item.note}
@@ -453,7 +444,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
                   maxLength={120}
                   className="mt-2 h-10 w-full rounded-xl border border-line bg-canvas/60 px-3 text-sm text-ink placeholder:text-gray-500 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none"
                 />
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,6.5rem)] gap-2">
                   <SelectField
                     label="If it's not there"
                     placeholder="Choose"
@@ -461,8 +452,17 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
                     value={item.ifMissing}
                     onChange={(e) => update(item.key, { ifMissing: e.target.value as IfMissing })}
                   />
+                  <TextField
+                    label="Costs about"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    value={item.estimate}
+                    onChange={(e) => update(item.key, { estimate: e.target.value })}
+                    placeholder="₱"
+                  />
                   {item.ifMissing === "REPLACE" && (
-                    <TextField label="Get this instead" value={item.replacement} onChange={(e) => update(item.key, { replacement: e.target.value })} placeholder="Royal 1.5L" maxLength={80} error={err(`replacement.${item.key}`)} />
+                    <TextField className="col-span-2" label="Get this instead" value={item.replacement} onChange={(e) => update(item.key, { replacement: e.target.value })} placeholder="Royal 1.5L" maxLength={80} error={err(`replacement.${item.key}`)} />
                   )}
                 </div>
                 {category === "PHARMACY" && (
