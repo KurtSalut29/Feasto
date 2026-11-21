@@ -41,6 +41,8 @@ export const DEFAULT_SETTINGS = {
   doorWaitMinutes: 10,
   /** Admins and store owners must log in with an authenticator app too */
   require2fa: true,
+  /** A liquor ban is on (switched in Admin › Pabili): no alcohol through Pabili */
+  liquorBan: false,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -134,6 +136,7 @@ export function getSettings(): Promise<Settings> {
       noShowStrikes,
       doorWaitMinutes,
       require2fa,
+      liquorBan: row.liquorBan,
     };
   });
 }

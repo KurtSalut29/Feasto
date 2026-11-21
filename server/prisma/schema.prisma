@@ -222,6 +222,9 @@ model User {
   preferredFor  Order[]        @relation("PreferredRider")
   /// Pabili: errands a resident asked for, ones a rider runs, and ones a resident asked this rider for
   errands       Errand[]       @relation("ResidentErrands")
+  /// As on their ID (residents): alcohol and cigarettes are for 18 and older
+  birthDate     DateTime?      @db.Date
+  shopSuggestions PabiliShopSuggestion[]
   errandRuns    Errand[]       @relation("RiderErrands")
   errandAsks    Errand[]       @relation("PreferredErrandRider")
   /// Reports this person sent, and reports about them
@@ -339,6 +342,7 @@ model Vendor {
   favoredBy Favorite[]
   riders    RiderProfile[]
   renewals  DocumentRenewal[]
+  pabiliShops PabiliShop[]
 }
 
 /// A motorcycle rider's details. Riders can't go online or take jobs until they're approved:
@@ -467,6 +471,8 @@ model PlatformSettings {
   doorWaitMinutes         Int     @default(10)
   /// Admins and store owners must use an authenticator app to log in
   require2fa              Boolean @default(true)
+  /// A liquor ban is on: no alcohol through Pabili
+  liquorBan               Boolean @default(false)
   updatedAt         DateTime @updatedAt
 }
 
@@ -1003,6 +1009,27 @@ model Errand {
   boughtAt         DateTime?
   finishedAt       DateTime?
 
+  /// The listed shop it was bought at, and its kind (also for a shop typed in)
+  shopId           String?
+  shop             PabiliShop?   @relation(fields: [shopId], references: [id])
+  shopCategory     ShopCategory?
+  /// The prescription's photo, in the private documents folder, for medicine that needs one
+  prescriptionFile String?
+  /// Alcohol or cigarettes on the list: the rider checks the ID at the door
+  adultCheck       Boolean      @default(false)
+  /// What the rider should know: "CHEMICAL", "LPG", "BULKY"
+  handling         String[]     @default([])
+  /// The resident's estimates added up
+  estimateTotal    Decimal?     @db.Decimal(10, 2)
+  /// A photo of what was bought, at the shop
+  itemsPhotoUrl    String?
+  /// Why the receipt looks high next to the estimates
+  priceFlag        String?
+  /// When the rider confirmed the ID at the door (alcohol, cigarettes)
+  idCheckedAt      DateTime?
+  /// When the resident confirmed they got everything
+  confirmedAt      DateTime?
+
   reports Report[]
 
   @@index([status, createdAt])
@@ -1124,4 +1151,89 @@ model DocumentCheck {
 
   @@index([numberHash])
   @@index([userId])
+}
+
+/// The kinds of shops a Pabili can be bought at
+enum ShopCategory {
+  GROCERY
+  SARI_SARI
+  MARKET
+  RICE
+  BAKERY
+  PHARMACY
+  HARDWARE
+  SCHOOL_SUPPLIES
+  WATER
+  LPG
+  AGRI_PET
+  PERSONAL_CARE
+  GADGETS
+  FRUITS
+  OTHER
+}
+
+/// What happens when a word is on a Pabili list
+enum RestrictRule {
+  /// Never sent
+  BANNED
+  /// Only from a botika, with a photo of the prescription
+  PRESCRIPTION
+  /// 18 and older with a verified ID; none during a liquor ban
+  ALCOHOL
+  /// 18 and older with a verified ID
+  TOBACCO
+  /// Sealed only; the rider is told
+  CHEMICAL
+  /// A cooking gas tank: only if the rider can carry it safely
+  LPG
+  /// May not fit on a motorcycle
+  BULKY
+}
+
+enum SuggestionStatus {
+  OPEN
+  ADDED
+  DISMISSED
+}
+
+/// A shop in Naval the admin lists for Pabili: no map, just its kind, barangay and landmark
+model PabiliShop {
+  id        String       @id @default(cuid())
+  name      String
+  category  ShopCategory
+  barangay  String?
+  landmark  String
+  /// As people say it, e.g. "7 AM to 8 PM, closed Sundays"
+  hours     String?
+  /// The same shop on Feasto: residents are pointed to its menu
+  vendorId  String?
+  vendor    Vendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @default(now()) @updatedAt
+  errands   Errand[]
+
+  @@index([category, isActive])
+}
+
+/// A shop a resident used that isn't listed yet, for the admin to add
+model PabiliShopSuggestion {
+  id        String           @id @default(cuid())
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name      String
+  category  ShopCategory
+  location  String
+  status    SuggestionStatus @default(OPEN)
+  createdAt DateTime         @default(now())
+
+  @@index([status, createdAt])
+}
+
+/// A word on a Pabili list that's not allowed or needs something (Filipino and English)
+model RestrictedTerm {
+  id        String       @id @default(cuid())
+  term      String       @unique
+  rule      RestrictRule
+  createdAt DateTime     @default(now())
 }

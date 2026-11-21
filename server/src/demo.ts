@@ -5,6 +5,7 @@
 //
 // Run:  docker compose run --rm demo      (see README "Demo data")
 import { randomBytes } from "node:crypto";
+import { STARTER_SHOPS } from "./pabiliStarter.js";
 import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -784,6 +785,9 @@ async function main() {
       { actorId: null, actorName: "Kape Kanto", category: "DOCUMENTS" as const, action: "Submitted renewed business permit", target: "Kape Kanto", createdAt: ago(90) },
     ],
   });
+
+  // Pabili: the starting shops, to be replaced by the real ones in Admin › Pabili
+  await prisma.pabiliShop.createMany({ data: STARTER_SHOPS });
 
   const totals = await prisma.order.count();
   console.log(`\nDone: ${stores.length} stores (+${PENDING_STORES.length} pending), ${riders.length} riders, ${residents.length} residents, ${totals} orders.`);

@@ -1,4 +1,5 @@
 import type { BadgeTone } from "@/components/ui/badge";
+import type { PabiliItem, ShopCategory } from "@/lib/pabili";
 
 export type ErrandStatus = "REQUESTED" | "ACCEPTED" | "BOUGHT" | "DELIVERED" | "CANCELLED";
 
@@ -11,7 +12,7 @@ export type Errand = {
   /** Unknown until the rider buys: then where their phone was */
   shopLat: number | null;
   shopLng: number | null;
-  items: { name: string; quantity: number; note: string | null }[];
+  items: PabiliItem[];
   notes: string | null;
   budget: string;
   deliveryAddress: string;
@@ -29,6 +30,17 @@ export type Errand = {
   acceptedAt: string | null;
   boughtAt: string | null;
   finishedAt: string | null;
+  shopCategory: ShopCategory | null;
+  /** Alcohol or cigarettes on the list: the rider checks the ID at the door */
+  adultCheck: boolean;
+  /** For the rider: "CHEMICAL", "LPG", "BULKY" */
+  handling: string[];
+  estimateTotal: string | null;
+  itemsPhotoUrl: string | null;
+  priceFlag: string | null;
+  idCheckedAt: string | null;
+  confirmedAt: string | null;
+  hasPrescription: boolean;
 };
 
 export const ERRAND_STATUS: Record<ErrandStatus, { label: string; tone: BadgeTone }> = {

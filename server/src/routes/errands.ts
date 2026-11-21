@@ -1,4 +1,13 @@
-import { Router } from "express";
+import { randomBytes } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import express, { Router } from "express";
+import { config } from "../config.js";
+import type { ShopCategory } from "../generated/prisma/enums.js";
+import { CATEGORY_LABEL, estimateOf, IF_MISSING, NOT_BOUGHT, NOT_BOUGHT_LABEL, ageOn, priceFlagFor, restrictedTerms, screen, SHOP_CATEGORIES, UNITS, type PabiliItem } from "../lib/pabili.js";
+import { notifyAdmin } from "../lib/activity.js";
+import { removeDocument } from "../lib/renewals.js";
+import { CONTENT_TYPE, detectDocumentType, MAX_BYTES, sendDocument } from "./documents.js";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
 import { priceDelivery, quoteDelivery } from "../lib/deliveryFee.js";
@@ -40,16 +49,34 @@ availableRidersRouter.get("/available", async (req, res) => {
 export const errandsRouter = Router();
 errandsRouter.use(requireAuth, requireRole("RESIDENT"));
 
-const itemSchema = z.object({
-  name: z.string().trim().min(2, "Write what to buy.").max(80),
-  quantity: z.number().int().min(1, "At least 1.").max(50, "50 at most."),
-  note: z.string().trim().max(120).optional().transform((v) => v || null),
-});
+/** One line of the list: how much, in what unit, the details, a guess at the price, and what to do if it's not there */
+const itemSchema = z
+  .object({
+    name: z.string("Write what to buy.").trim().min(2, "Write what to buy.").max(80),
+    quantity: z
+      .number("Enter how many.")
+      .positive("Enter more than 0.")
+      .max(500, "500 at most.")
+      .refine((v) => Math.abs(v * 100 - Math.round(v * 100)) < 1e-6, "Use at most two decimal places, like 1.5 or 0.25."),
+    unit: z.enum(UNITS, "Choose a unit from the list.").optional().default("pc"),
+    note: z.string().trim().max(120).optional().transform((v) => v || null),
+    estimate: z.number("Enter the price in pesos.").min(0).max(100000).nullish().transform((v) => v || null),
+    ifMissing: z.enum(IF_MISSING).optional().default("CALL"),
+    replacement: z.string().trim().max(80).nullish().transform((v) => v || null),
+    prescription: z.boolean().optional().default(false),
+  })
+  .refine((i) => i.ifMissing !== "REPLACE" || Boolean(i.replacement), { message: "Say what to get instead.", path: ["replacement"] });
 
 const errandSchema = z.object({
-  /** The shop, by name and where it is, the way you'd tell a friend: no map pin (the rider's phone sets its spot when they buy) */
-  shopName: z.string().trim().min(2, "Enter the shop's name.").max(80),
-  shopAddress: z.string().trim().min(3, "Say where the shop is, like the street or a landmark.").max(200),
+  /** A shop from the list (by kind). Or one that isn't listed: its name, where it is and its kind, which also asks the admin to add it. */
+  shopId: z.string().min(1).optional(),
+  shopName: z.string().trim().max(80).optional().default(""),
+  shopAddress: z.string().trim().max(200).optional().default(""),
+  shopCategory: z.enum(SHOP_CATEGORIES, "Choose what kind of shop it is.").optional(),
+  /** The prescription's photo, uploaded first (PUT /errands/prescription) */
+  prescriptionFile: z.string().regex(/^[a-f0-9]{32}\.(jpg|png|webp|pdf)$/).optional(),
+  /** As on the ID, the first time alcohol or cigarettes are on a list */
+  birthDate: z.iso.date("Enter your birth date.").optional(),
   items: z.array(itemSchema).min(1, "Add at least one thing to buy.").max(20, "20 things at most in one Pabili."),
   notes: z.string().trim().max(200).optional().transform((v) => v || null),
   /** The most is the admin's setting, checked by withinBudgetLimit */
@@ -115,6 +142,138 @@ errandsRouter.get("/on-feasto", async (req, res) => {
   res.json({ stores });
 });
 
+/** The shop: one from the list, or a typed one (the admin is asked to add it) */
+async function shopFor(input: { shopId?: string; shopName: string; shopAddress: string; shopCategory?: ShopCategory }, userId: string) {
+  if (input.shopId) {
+    const listed = await prisma.pabiliShop.findFirst({ where: { id: input.shopId, isActive: true } });
+    if (!listed) throw new ValidationError({ shopId: ["That shop isn't on the list anymore. Choose another one."] });
+    return { id: listed.id, name: listed.name, address: [listed.landmark, listed.barangay].filter(Boolean).join(", "), category: listed.category };
+  }
+  const problems = {
+    ...(input.shopName.length < 2 && { shopName: ["Enter the shop's name."] }),
+    ...(input.shopAddress.length < 3 && { shopAddress: ["Say where the shop is, like the street or a landmark."] }),
+    ...(!input.shopCategory && { shopCategory: ["Choose what kind of shop it is."] }),
+  };
+  if (Object.keys(problems).length) throw new ValidationError(problems);
+  await suggestShop(userId, input.shopName, input.shopCategory!, input.shopAddress);
+  return { id: null, name: input.shopName, address: input.shopAddress, category: input.shopCategory! };
+}
+
+/** A shop someone used that isn't listed: once per name while the admin hasn't looked */
+async function suggestShop(userId: string, name: string, category: ShopCategory, location: string) {
+  const known = await prisma.pabiliShopSuggestion.findFirst({ where: { status: "OPEN", name: { equals: name, mode: "insensitive" } }, select: { id: true } });
+  const listed = await prisma.pabiliShop.findFirst({ where: { name: { equals: name, mode: "insensitive" } }, select: { id: true } });
+  if (known || listed) return false;
+  await prisma.pabiliShopSuggestion.create({ data: { userId, name, category, location } });
+  await notifyAdmin({ title: `Add ${name} to Pabili?`, body: `A resident asked for it (${CATEGORY_LABEL[category]}, ${location}).`, link: "/admin/pabili" });
+  return true;
+}
+
+const prescriptionKey = (userId: string, file: string) => `rx:${userId}:${file}`;
+
+/**
+ * The list checked against the rules: nothing banned, medicine with a prescription from a botika,
+ * alcohol and cigarettes only for a verified adult. Returns the list as kept (with each item's flags).
+ */
+async function checkList(
+  input: { items: z.infer<typeof itemSchema>[]; notes: string | null; prescriptionFile?: string; birthDate?: string; budget: number },
+  category: ShopCategory,
+  userId: string,
+) {
+  const { liquorBan } = await getSettings();
+  const result = screen(input.items, input.notes, await restrictedTerms(), { liquorBan });
+  if (result.blocked.length) {
+    throw new ValidationError(Object.fromEntries(result.blocked.map((b) => [b.index < 0 ? "notes" : `items.${b.index}`, [b.message]])));
+  }
+  let prescriptionFile: string | null = null;
+  if (result.needsPrescription) {
+    if (category !== "PHARMACY") throw new ValidationError({ shopCategory: ["Medicine that needs a prescription is bought only at a botika. Choose a botika, or take it off this list."] });
+    if (!input.prescriptionFile || !(await redis.exists(prescriptionKey(userId, input.prescriptionFile)))) {
+      throw new ValidationError({ prescription: ["Add a photo of the prescription: the doctor's name and PRC number, the date and your name. The pharmacist still decides."] });
+    }
+    prescriptionFile = input.prescriptionFile;
+  }
+  if (result.adult) {
+    const me = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { idStatus: true, birthDate: true } });
+    if (me.idStatus !== "VERIFIED") throw new HttpError(403, "Alcohol and cigarettes need a verified ID. The admin hasn't verified yours yet: take them off this list for now.");
+    const typed = !me.birthDate && input.birthDate ? new Date(`${input.birthDate}T00:00:00Z`) : null;
+    if (typed && (ageOn(typed) > 110 || typed > new Date())) throw new ValidationError({ birthDate: ["Enter your birth date as on your ID."] });
+    const birth = me.birthDate ?? typed;
+    if (!birth) throw new ValidationError({ birthDate: ["Alcohol and cigarettes are for 18 and older. Enter your birth date, as on your ID."] });
+    if (ageOn(birth) < 18) throw new HttpError(403, "Alcohol and cigarettes are for 18 and older, so they can't be on your Pabili.");
+    // Kept once it's an adult's (a typo that makes someone a child isn't kept, so it can be fixed); the rider still checks the ID
+    if (typed) await prisma.user.update({ where: { id: userId }, data: { birthDate: typed } });
+  }
+  const items: PabiliItem[] = input.items.map((item, i) => ({ ...item, flags: result.flags[i], notBought: null }) as PabiliItem);
+  const estimate = estimateOf(items);
+  if (estimate && estimate > input.budget + 0.001) {
+    throw new ValidationError({ budget: [`Your estimates add up to ₱${estimate.toFixed(2)}, more than the budget. Raise the budget, or lower the estimates.`] });
+  }
+  return { items, estimate, prescriptionFile, adult: result.adult, handling: result.handling };
+}
+
+/** The photo of a prescription, kept private like an ID. Used on the Pabili sent within two hours. */
+errandsRouter.put(
+  "/prescription",
+  perAccount("upload", 30, 600, "You've uploaded a lot of files just now."),
+  express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES }),
+  async (req, res) => {
+    const data = req.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new HttpError(400, "Choose a photo or PDF of the prescription.");
+    const extension = detectDocumentType(data);
+    if (!extension) throw new HttpError(400, "That file isn't a JPG, PNG, WebP or PDF.");
+    const name = `${randomBytes(16).toString("hex")}.${extension}`;
+    await mkdir(config.documentDir, { recursive: true });
+    await writeFile(path.join(config.documentDir, name), data);
+    await redis.set(prescriptionKey(req.session!.userId, name), "1", "EX", 7200);
+    res.json({ file: name });
+  },
+);
+
+/** The rules the form checks as the resident types (the server checks again on sending) */
+errandsRouter.get("/rules", async (req, res) => {
+  const { liquorBan } = await getSettings();
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { idStatus: true, birthDate: true } });
+  res.json({
+    terms: await restrictedTerms(),
+    liquorBan,
+    categories: CATEGORY_LABEL,
+    units: UNITS,
+    // Alcohol and cigarettes: whether a birth date is still needed, and whether the ID is verified
+    me: { idVerified: me.idStatus === "VERIFIED", hasBirthDate: Boolean(me.birthDate), adult: me.birthDate ? ageOn(me.birthDate) >= 18 : null },
+  });
+});
+
+/** The listed shops of one kind (or all), with the ones on Feasto pointing to their menu */
+errandsRouter.get("/shops", async (req, res) => {
+  const { category, q } = z.object({ category: z.enum(SHOP_CATEGORIES).optional(), q: z.string().trim().max(60).optional() }).parse(req.query);
+  const shops = await prisma.pabiliShop.findMany({
+    where: { isActive: true, ...(category && { category }), ...(q && { name: { contains: q, mode: "insensitive" } }) },
+    orderBy: { name: "asc" },
+    take: 100,
+    select: { id: true, name: true, category: true, barangay: true, landmark: true, hours: true, vendor: { select: { id: true, name: true, status: true } } },
+  });
+  const counts = await prisma.pabiliShop.groupBy({ by: ["category"], where: { isActive: true }, _count: { _all: true } });
+  res.json({
+    shops: shops.map(({ vendor, ...s }) => ({ ...s, onFeasto: vendor?.status === "APPROVED" ? { id: vendor.id, name: vendor.name } : null })),
+    counts: Object.fromEntries(counts.map((c) => [c.category, c._count._all])),
+  });
+});
+
+/** "Not on the list? Ask to add it", without sending a Pabili */
+errandsRouter.post("/shops/suggest", perAccount("shop-suggest", 10, 3600, "You've suggested a lot of shops just now."), async (req, res) => {
+  const input = parseBody(
+    z.object({
+      name: z.string().trim().min(2, "Enter the shop's name.").max(80),
+      category: z.enum(SHOP_CATEGORIES, "Choose what kind of shop it is."),
+      location: z.string().trim().min(3, "Say where it is, like the street or a landmark.").max(200),
+    }),
+    req.body,
+  );
+  const added = await suggestShop(req.session!.userId, input.name, input.category, input.location);
+  res.status(added ? 201 : 200).json({ ok: true, alreadyAsked: !added });
+});
+
 errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of Pabili just now."), async (req, res) => {
   const input = parseBody(errandSchema, req.body);
   await withinBudgetLimit(input.budget);
@@ -124,6 +283,8 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });
   if (open >= 2) throw new HttpError(409, "You already have two Pabili on the way. Wait for one to arrive first.");
   const address = await addressOf(userId, input.addressId);
+  const shop = await shopFor(input, userId);
+  const checked = await checkList(input, shop.category, userId);
   const fee = await feeRange(userId);
   const extraFee = addOnTotal(fee.addOns);
   if (input.expectedFee !== undefined && Math.abs(input.expectedFee - fee.min) > 0.001) {
@@ -136,10 +297,16 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
       residentId: userId,
       preferredRiderId: rider?.id ?? null,
       exclusiveUntil: rider ? new Date(Date.now() + PREFERRED_RIDER_SECONDS * 1000) : null,
-      shopName: input.shopName,
-      shopAddress: input.shopAddress,
-      items: input.items,
+      shopId: shop.id,
+      shopName: shop.name,
+      shopAddress: shop.address,
+      shopCategory: shop.category,
+      items: checked.items,
       notes: input.notes,
+      prescriptionFile: checked.prescriptionFile,
+      adultCheck: checked.adult,
+      handling: checked.handling,
+      estimateTotal: checked.estimate,
       budget: input.budget,
       deliveryAddress: [address.details, address.landmark].filter(Boolean).join(" · "),
       deliveryLat: address.latitude,
@@ -157,7 +324,7 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   if (rider) {
     await notify(rider.id, {
       title: `${resident} asked you for a Pabili`,
-      body: `Buy at ${input.shopName} (up to ₱${input.budget}). It's yours for ${PREFERRED_RIDER_SECONDS} seconds, then it goes to other riders.`,
+      body: `Buy at ${shop.name} (up to ₱${input.budget}). It's yours for ${PREFERRED_RIDER_SECONDS} seconds, then it goes to other riders.`,
       link: "/rider",
     });
   } else {
@@ -187,6 +354,14 @@ const errandView = {
   deliveryPhotoUrl: true,
   cancelReason: true,
   exclusiveUntil: true,
+  shopCategory: true,
+  adultCheck: true,
+  handling: true,
+  estimateTotal: true,
+  itemsPhotoUrl: true,
+  priceFlag: true,
+  idCheckedAt: true,
+  confirmedAt: true,
   createdAt: true,
   acceptedAt: true,
   boughtAt: true,
@@ -213,6 +388,7 @@ errandsRouter.get("/:id", async (req, res) => {
     },
   });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
+  const hasPrescription = Boolean((await prisma.errand.findUnique({ where: { id: errand.id }, select: { prescriptionFile: true } }))?.prescriptionFile);
   const raw = await redis.get(locationKey(errand.id));
   const { rider, ...rest } = errand;
   res.json({
@@ -225,6 +401,7 @@ errandsRouter.get("/:id", async (req, res) => {
         rating: rider.riderProfile ? averageOf(rider.riderProfile.ratingSum, rider.riderProfile.ratingCount) : null,
       },
       riderLocation: raw ? (JSON.parse(raw) as { lat: number; lng: number; at: string }) : null,
+      hasPrescription,
       total: errand.receiptTotal === null ? null : peso(Number(errand.receiptTotal) + Number(errand.deliveryFee)),
     },
     budgetMax: await budgetMax(),
@@ -257,6 +434,22 @@ errandsRouter.post("/:id/budget", async (req, res) => {
   if (count === 0) throw new HttpError(409, "The rider already bought everything, so the budget can't change.");
   if (errand.riderId) await notify(errand.riderId, { title: `The budget is now ₱${budget}`, body: "The customer raised what you may spend on this Pabili.", link: "/rider/active" });
   await broadcastErrand({ id, residentId: req.session!.userId, status: "ACCEPTED" });
+  res.json({ ok: true });
+});
+
+errandsRouter.get("/:id/prescription", async (req, res) => {
+  const errand = await prisma.errand.findFirst({ where: { id: String(req.params.id), residentId: req.session!.userId }, select: { prescriptionFile: true } });
+  if (!errand?.prescriptionFile) throw new HttpError(404, "There's no prescription on this Pabili.");
+  await sendDocument(res, errand.prescriptionFile);
+});
+
+/** "I got everything": the resident's word at the door, after the rider's photo */
+errandsRouter.post("/:id/confirm", async (req, res) => {
+  const { count } = await prisma.errand.updateMany({
+    where: { id: String(req.params.id), residentId: req.session!.userId, status: "DELIVERED", confirmedAt: null },
+    data: { confirmedAt: new Date() },
+  });
+  if (count === 0) throw new HttpError(409, "This Pabili isn't waiting for your confirmation.");
   res.json({ ok: true });
 });
 
@@ -300,6 +493,10 @@ riderErrandsRouter.get("/errands", async (req, res) => {
       preferredRiderId: true,
       exclusiveUntil: true,
       createdAt: true,
+      shopCategory: true,
+      adultCheck: true,
+      handling: true,
+      prescriptionFile: true,
       resident: { select: { name: true } },
     },
   });
@@ -308,8 +505,9 @@ riderErrandsRouter.get("/errands", async (req, res) => {
     errands.map((e) => (e.deliveryLat != null && e.deliveryLng != null ? riderDistances({ lat: e.deliveryLat, lng: e.deliveryLng }, new Set([userId])) : new Map<string, number>())),
   );
   res.json({
-    errands: errands.map(({ resident, preferredRiderId, items, deliveryLat: _lat, deliveryLng: _lng, ...e }, i) => ({
+    errands: errands.map(({ resident, preferredRiderId, items, deliveryLat: _lat, deliveryLng: _lng, prescriptionFile, ...e }, i) => ({
       ...e,
+      needsPrescription: Boolean(prescriptionFile),
       distanceKm: away[i]!.has(userId) ? Math.round(away[i]!.get(userId)! * 10) / 10 : null,
       itemCount: (items as unknown[]).length,
       customer: shortName(resident.name),
@@ -352,13 +550,59 @@ riderErrandsRouter.post("/errands/:id/accept", async (req, res) => {
 riderErrandsRouter.get("/errands/active", async (req, res) => {
   const errand = await prisma.errand.findFirst({
     where: { riderId: req.session!.userId, status: { in: ["ACCEPTED", "BOUGHT"] } },
-    select: { ...errandView, resident: { select: { name: true, phone: true } } },
+    select: { ...errandView, prescriptionFile: true, resident: { select: { name: true, phone: true } } },
   });
-  res.json({ errand });
+  if (!errand) return void res.json({ errand: null });
+  const { prescriptionFile, ...rest } = errand;
+  res.json({ errand: { ...rest, hasPrescription: Boolean(prescriptionFile) } });
+});
+
+riderErrandsRouter.get("/errands/:id/prescription", async (req, res) => {
+  const errand = await prisma.errand.findFirst({ where: { id: String(req.params.id), riderId: req.session!.userId }, select: { prescriptionFile: true } });
+  if (!errand?.prescriptionFile) throw new HttpError(404, "There's no prescription on this Pabili.");
+  await sendDocument(res, errand.prescriptionFile);
+});
+
+/** At the shop: an item that couldn't be bought, and why (or null to undo). The customer is told at once. */
+riderErrandsRouter.post("/errands/:id/items/:index/not-bought", async (req, res) => {
+  const id = String(req.params.id);
+  const index = Number(req.params.index);
+  const { reason } = parseBody(z.object({ reason: z.enum(NOT_BOUGHT).nullable() }), req.body);
+  const errand = await prisma.errand.findFirst({ where: { id, riderId: req.session!.userId, status: "ACCEPTED" }, select: { items: true, residentId: true } });
+  if (!errand) throw new HttpError(409, "This Pabili isn't being bought now.");
+  const items = errand.items as PabiliItem[];
+  if (!Number.isInteger(index) || !items[index]) throw new HttpError(404, "That item isn't on the list.");
+  items[index] = { ...items[index]!, notBought: reason ? { reason, at: new Date().toISOString() } : null };
+  if (items.every((i) => i.notBought)) throw new HttpError(409, "Nothing would be left to buy. If nothing on the list can be bought, tap “Nothing could be bought”.");
+  const { count } = await prisma.errand.updateMany({ where: { id, riderId: req.session!.userId, status: "ACCEPTED" }, data: { items } });
+  if (count === 0) throw new HttpError(409, "This Pabili isn't being bought now.");
+  if (reason) {
+    await notify(errand.residentId, { title: `${items[index]!.name} wasn't bought`, body: `The rider says: ${NOT_BOUGHT_LABEL[reason]}. The rest of your list is still being bought.`, link: `/resident/pabili/${id}` });
+  }
+  await broadcastErrand({ id, residentId: errand.residentId, status: "ACCEPTED" });
+  res.json({ ok: true, items });
+});
+
+/** Nothing on the list could be bought: the Pabili ends, and nobody pays anything */
+riderErrandsRouter.post("/errands/:id/nothing-bought", async (req, res) => {
+  const id = String(req.params.id);
+  const { reason } = parseBody(z.object({ reason: z.enum(NOT_BOUGHT) }), req.body);
+  const errand = await prisma.errand.findFirst({ where: { id, riderId: req.session!.userId }, select: { residentId: true, shopName: true } });
+  if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
+  const { count } = await prisma.errand.updateMany({
+    where: { id, riderId: req.session!.userId, status: "ACCEPTED" },
+    data: { status: "CANCELLED", cancelReason: `Nothing could be bought: ${NOT_BOUGHT_LABEL[reason]}`, finishedAt: new Date() },
+  });
+  if (count === 0) throw new HttpError(409, "This Pabili isn't being bought now.");
+  await redis.del(locationKey(id));
+  await notify(errand.residentId, { title: "Your Pabili couldn't be bought", body: `Nothing on your list could be bought at ${errand.shopName} (${NOT_BOUGHT_LABEL[reason]}). You pay nothing.`, link: `/resident/pabili/${id}` });
+  await broadcastErrand({ id, residentId: errand.residentId, status: "CANCELLED" });
+  res.json({ ok: true });
 });
 
 const boughtSchema = z.object({
-  receiptPhotoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the receipt first."),
+  receiptPhotoUrl: z.string("Take a photo of the receipt first.").regex(UPLOADED_PHOTO, "Take a photo of the receipt first."),
+  itemsPhotoUrl: z.string("Take a photo of what you bought, at the shop.").regex(UPLOADED_PHOTO, "Take a photo of what you bought, at the shop."),
   // Never more than the budget (checked below), which the admin's limit already caps
   receiptTotal: z.number("Enter the receipt's total.").positive("Enter the receipt's total.").max(100000),
 });
@@ -380,7 +624,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const input = parseBody(boughtSchema, req.body);
   const errand = await prisma.errand.findFirst({
     where: { id, riderId: userId },
-    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true, extraFee: true, feastoCutRate: true },
+    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true, extraFee: true, feastoCutRate: true, items: true },
   });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   if (input.receiptTotal > Number(errand.budget) + 0.001) {
@@ -397,6 +641,8 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
     fee = Math.min(withExtra, Number(errand.feeMax ?? withExtra));
   }
 
+  // A receipt well above what the resident expected (for what was bought) is pointed out to them
+  const priceFlag = priceFlagFor(input.receiptTotal, estimateOf(errand.items as PabiliItem[]));
   const { count } = await prisma.errand.updateMany({
     where: { id, riderId: userId, status: "ACCEPTED" },
     data: {
@@ -404,6 +650,8 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
       boughtAt: new Date(),
       receiptTotal: input.receiptTotal,
       receiptPhotoUrl: input.receiptPhotoUrl,
+      itemsPhotoUrl: input.itemsPhotoUrl,
+      priceFlag,
       deliveryFee: fee,
       feastoCut: pabiliCut(fee, Number(errand.extraFee), Number(errand.feastoCutRate)),
       ...(at && { shopLat: at.lat, shopLng: at.lng }),
@@ -413,7 +661,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const total = peso(input.receiptTotal + fee);
   await notify(errand.residentId, {
     title: "Your Pabili was bought",
-    body: `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.`,
+    body: `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.${priceFlag ? ` ${priceFlag}` : ""}`,
     link: `/resident/pabili/${id}`,
   });
   await broadcastErrand({ id, residentId: errand.residentId, status: "BOUGHT" });
@@ -423,10 +671,19 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
 riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
   const userId = req.session!.userId;
-  const { photoUrl } = parseBody(z.object({ photoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the handed-over items first.") }), req.body);
-  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true, feastoCut: true } });
+  const { photoUrl, idChecked } = parseBody(
+    z.object({ photoUrl: z.string("Take a photo of the handed-over items first.").regex(UPLOADED_PHOTO, "Take a photo of the handed-over items first."), idChecked: z.boolean().optional() }),
+    req.body,
+  );
+  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true, feastoCut: true, adultCheck: true, items: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
-  const { count } = await prisma.errand.updateMany({ where: { id, riderId: userId, status: "BOUGHT" }, data: { status: "DELIVERED", finishedAt: new Date(), deliveryPhotoUrl: photoUrl } });
+  // Alcohol or cigarettes bought: the rider looks at the ID at the door, as the law asks
+  const adultBought = errand.adultCheck && (errand.items as (PabiliItem & { flags?: string[] })[]).some((i) => !i.notBought && (i.flags ?? []).some((f) => f === "ALCOHOL" || f === "TOBACCO"));
+  if (adultBought && !idChecked) throw new HttpError(400, "Check the customer's ID first: alcohol and cigarettes are only for 18 and older.");
+  const { count } = await prisma.errand.updateMany({
+    where: { id, riderId: userId, status: "BOUGHT" },
+    data: { status: "DELIVERED", finishedAt: new Date(), deliveryPhotoUrl: photoUrl, ...(adultBought && { idCheckedAt: new Date() }) },
+  });
   if (count === 0) throw new HttpError(409, "Upload the receipt first, then finish the delivery.");
   await redis.del(locationKey(id));
   await notify(errand.residentId, { title: "Your Pabili arrived", body: "Thanks for using Feasto Pabili!", link: `/resident/pabili/${id}` });

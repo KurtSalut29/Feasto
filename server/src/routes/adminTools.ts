@@ -370,6 +370,7 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   noShowStrikes: { label: "Orders not received before cash is off", show: (value) => `${value}` },
   doorWaitMinutes: { label: "Rider waits at the door", show: (value) => `${value} min` },
   require2fa: { label: "Two-step login for admins and stores", show: (value) => (value ? "required" : "optional") },
+  liquorBan: { label: "Liquor ban", show: (value) => (value ? "on" : "off") },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);
@@ -377,7 +378,7 @@ const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_W
 adminToolsRouter.put("/settings", async (req, res) => {
   const next = parseBody(settingsSchema, req.body);
   const previous = await getSettings();
-  const changes = (Object.keys(next) as (keyof Settings)[]).filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]));
+  const changes = (Object.keys(next) as (keyof typeof next)[]).filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]));
   if (changes.length > 0) {
     await prisma.$transaction(async (tx) => {
       await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, ...next }, update: next });

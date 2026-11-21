@@ -1,4 +1,4 @@
-import { Accessibility, BarChart3, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Accessibility, BarChart3, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, ShoppingBasket, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { Role } from "./types";
 
 /**
@@ -39,6 +39,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/admin/documents", label: "Documents", Icon: FileClock, group: "Manage" },
     { href: "/admin/resident-ids", label: "Resident IDs", short: "IDs", Icon: IdCard, group: "Manage" },
     { href: "/admin/transfers", label: "Transfers", Icon: Send, group: "Manage" },
+    { href: "/admin/pabili", label: "Pabili", Icon: ShoppingBasket, group: "Manage" },
     { href: "/admin/stuck", label: "Stuck orders", short: "Stuck", Icon: Hourglass, group: "Manage" },
     { href: "/admin/orders", label: "Orders", Icon: ClipboardList, group: "Manage" },
     { href: "/admin/users", label: "Users", Icon: Users, group: "Manage" },

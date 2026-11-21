@@ -24,7 +24,20 @@ type Request = {
   askedForYou: boolean;
   exclusiveUntil: string | null;
   distanceKm: number | null;
+  needsPrescription: boolean;
+  adultCheck: boolean;
+  handling: string[];
 };
+
+/** What the rider should know before taking it */
+const careOf = (r: Request) =>
+  [
+    r.needsPrescription && "Prescription medicine",
+    r.adultCheck && "18+: check ID at the door",
+    r.handling.includes("LPG") && "Gas tank",
+    r.handling.includes("CHEMICAL") && "Chemical (sealed)",
+    r.handling.includes("BULKY") && "Heavy or long item",
+  ].filter(Boolean) as string[];
 
 /**
  * Pabili requests a free rider can take: ones a customer asked them for (first, for a moment),
@@ -78,6 +91,15 @@ export function PabiliRequests({ busy }: { busy: boolean }) {
             <p className="mt-2 text-sm text-ink">
               {r.itemCount} {r.itemCount === 1 ? "thing" : "things"} to buy, up to <span className="font-semibold">{formatPeso(r.budget)}</span>
             </p>
+            {careOf(r).length > 0 && (
+              <p className="mt-1.5 flex flex-wrap gap-1">
+                {careOf(r).map((c) => (
+                  <span key={c} className="rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-900">
+                    {c}
+                  </span>
+                ))}
+              </p>
+            )}
             <p className="mt-1 flex items-start gap-1.5 text-sm text-muted">
               <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
               <span>

@@ -1,4 +1,4 @@
-import { Banknote, Bike, Clock, ReceiptText, ShoppingBasket } from "lucide-react";
+import { Banknote, Bike, Clock, IdCard, PackageCheck, Pill, ReceiptText, ShoppingBasket, TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
@@ -12,6 +12,8 @@ import { pinOf } from "@/lib/geo";
 import { serverApi } from "@/lib/server-api";
 import { ERRAND_STATUS, type Errand } from "../errand";
 import { ErrandActions } from "./errand-actions";
+import { ConfirmReceived } from "./confirm-received";
+import { PabiliList } from "../pabili-list";
 import { ReportProblem } from "@/components/app/report-problem";
 
 export const metadata: Metadata = { title: "Pabili" };
@@ -88,6 +90,21 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
             </p>
           )}
           <ErrandActions id={errand.id} status={errand.status} budget={Number(errand.budget)} budgetMax={budgetMax} />
+          {errand.status === "DELIVERED" && !errand.confirmedAt && <ConfirmReceived id={errand.id} riderName={errand.rider?.name ?? null} />}
+          {live && errand.adultCheck && (
+            <p className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-900">
+              <IdCard className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
+              Have your ID ready: the rider checks it at the door before handing over alcohol or cigarettes.
+            </p>
+          )}
+          {errand.priceFlag && (
+            <p role="status" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden />
+              <span>
+                {errand.priceFlag} If something&apos;s wrong, use &ldquo;Report a problem&rdquo; below.
+              </span>
+            </p>
+          )}
           {!live && errand.rider && (
             <section aria-label="Your rider" className="flex items-center gap-3 rounded-2xl border border-line p-4">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
@@ -111,6 +128,17 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
               </a>
             </section>
           )}
+          {errand.itemsPhotoUrl && (
+            <section aria-labelledby="pabili-bought" className="rounded-2xl border border-line p-4">
+              <h2 id="pabili-bought" className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                <PackageCheck className="size-4 text-brand-600" aria-hidden />
+                What was bought, at the shop
+              </h2>
+              <a href={errand.itemsPhotoUrl} target="_blank" rel="noreferrer" className="relative block aspect-[4/3] overflow-hidden rounded-xl bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500">
+                <Image src={errand.itemsPhotoUrl} alt={`What the rider bought at ${errand.shopName}`} fill unoptimized className="object-cover" />
+              </a>
+            </section>
+          )}
           {errand.deliveryPhotoUrl && (
             <section aria-labelledby="pabili-proof" className="rounded-2xl border border-line p-4">
               <h2 id="pabili-proof" className="mb-3 text-xs font-semibold tracking-wider text-gray-500 uppercase">
@@ -130,18 +158,21 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
               <ShoppingBasket className="size-4 text-brand-600" aria-hidden />
               To buy · up to {formatPeso(errand.budget)}
             </h2>
-            <ul className="space-y-2 text-[0.9375rem] text-ink">
-              {errand.items.map((item, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="w-8 shrink-0 font-semibold text-brand-700 tabular-nums">{item.quantity}×</span>
-                  <span className="min-w-0 flex-1">
-                    {item.name}
-                    {item.note && <span className="block text-[0.8125rem] text-amber-800">“{item.note}”</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <PabiliList items={errand.items} />
+            {errand.estimateTotal && <p className="mt-3 text-sm text-muted">Your estimates: {formatPeso(errand.estimateTotal)}</p>}
             {errand.notes && <p className="mt-3 rounded-xl bg-canvas px-3 py-2 text-sm text-ink">{errand.notes}</p>}
+            {errand.hasPrescription && (
+              <a
+                href={`/api/errands/${errand.id}/prescription`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500"
+              >
+                <Pill className="size-4 text-brand-600" aria-hidden />
+                Your prescription
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            )}
           </section>
 
           <section aria-labelledby="pabili-pay" className="rounded-2xl border border-line p-4">
