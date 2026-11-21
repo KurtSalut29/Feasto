@@ -84,7 +84,8 @@ export function LocationSharer({ orderId, heading, store, home }: { orderId: str
         setDemoPosition(point);
         if (Date.now() - sentAt >= DEMO_SEND_MS || done === 1) {
           sentAt = Date.now();
-          void apiRequest("/rider/location", { method: "POST", body: { orderId, ...point } }).then((result) =>
+          // Marked as a demo, so Daloy keeps it apart from real rides on real roads
+          void apiRequest("/rider/location", { method: "POST", body: { orderId, ...point, demo: true } }).then((result) =>
             setSent(
               !result.ok
                 ? result.error

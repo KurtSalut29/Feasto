@@ -652,6 +652,7 @@ model Order {
   /// The Senior Citizen or PWD discount was given (by law, the store's)
   seniorDiscount   Boolean     @default(false)
   promoUses        PromoUse[]
+  tripLegs         TripLeg[]
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
   scheduledFor     DateTime?
   /// When the store said it would be ready, set when it accepts and moved when it runs late
@@ -1052,6 +1053,7 @@ model Errand {
   confirmedAt      DateTime?
 
   reports Report[]
+  tripLegs TripLeg[]
 
   @@index([status, createdAt])
   @@index([riderId, status])
@@ -1385,4 +1387,64 @@ model PromoUse {
   @@unique([promoId, orderId])
   @@index([userId, promoId])
   @@index([orderId])
+}
+
+/// Daloy, step 1: which part of a job a ride was
+enum TripLegKind {
+  /// From taking a delivery to reaching the store
+  TO_STORE
+  /// From the store (or the Pabili shop) to the customer's door
+  TO_DOOR
+  /// A Pabili: from taking it to buying the items
+  TO_SHOP
+}
+
+/// Daloy, step 1: one ride of a job, measured from the rider's phone as it happened. Logged when
+/// the ride ends (the rider reaches the spot, picks up, or is at the door), with Feasto's estimate
+/// at the time, so later steps can learn how far off the estimates are.
+model TripLeg {
+  id              String      @id @default(cuid())
+  orderId         String?
+  order           Order?      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  errandId        String?
+  errand          Errand?     @relation(fields: [errandId], references: [id], onDelete: Cascade)
+  riderId         String
+  kind            TripLegKind
+  startedAt       DateTime
+  endedAt         DateTime
+  /// Along the GPS positions
+  riddenKm        Decimal     @db.Decimal(6, 2)
+  /// Straight line from where the ride began to where it ended
+  straightKm      Decimal     @db.Decimal(6, 2)
+  movingSeconds   Int
+  /// Stopped: traffic, a light, waiting to cross
+  stoppedSeconds  Int
+  /// Feasto's estimate for this ride at the time (3 minutes a km), when it could make one
+  expectedMinutes Int?
+  points          Int
+  /// From the demo ride on a laptop, not a real phone on a real road
+  demo            Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+
+  @@unique([orderId, kind])
+  @@unique([errandId, kind])
+  @@index([endedAt])
+}
+
+/// Daloy, step 1: how fast riders really move through one square of the map (about 440 m a side)
+/// in one 15 minutes, added up from their phones' positions while on a job. No rider or order is
+/// kept here, only metres and seconds, so it can be kept for comparing with the usual.
+model TravelSample {
+  id      String   @id @default(cuid())
+  /// "row:col" of the square on a 0.004 degree grid
+  cell    String
+  /// Start of the 15 minutes
+  bucket  DateTime
+  demo    Boolean  @default(false)
+  meters  Float    @default(0)
+  seconds Float    @default(0)
+  samples Int      @default(0)
+
+  @@unique([cell, bucket, demo])
+  @@index([bucket])
 }

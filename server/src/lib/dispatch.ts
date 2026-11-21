@@ -43,6 +43,20 @@ export async function forgetRiderPosition(userId: string) {
   await redis.pipeline().zrem(POSITIONS, userId).hdel(POSITION_TIMES, userId).exec();
 }
 
+/** Every rider with a recent position, for the admin's live map */
+export async function riderPositions(): Promise<{ userId: string; lat: number; lng: number; at: number }[]> {
+  const ids = await redis.zrange(POSITIONS, "0", "-1");
+  if (ids.length === 0) return [];
+  const [spots, times] = await Promise.all([redis.geopos(POSITIONS, ...ids), redis.hmget(POSITION_TIMES, ...ids)]);
+  const oldest = Date.now() - POSITION_FRESH_MS;
+  return ids.flatMap((userId, i) => {
+    const spot = spots[i];
+    const at = Number(times[i] ?? 0);
+    if (!spot || at < oldest) return [];
+    return [{ userId, lng: Number(spot[0]), lat: Number(spot[1]), at }];
+  });
+}
+
 /**
  * The `count` riders nearest the spot, out of `candidates`. Riders with no recent position
  * aren't included: they get the job in the last step, when it opens to every free rider.

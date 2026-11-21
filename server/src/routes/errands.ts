@@ -13,7 +13,8 @@ import { prisma } from "../lib/db.js";
 import { priceDelivery, quoteDelivery } from "../lib/deliveryFee.js";
 import { pabiliCut } from "../lib/earnings.js";
 import { addOnNote, addOnsFor, addOnTotal } from "../lib/feeAddOns.js";
-import { PREFERRED_RIDER_SECONDS, riderIsBusy, riderDistances } from "../lib/dispatch.js";
+import { PREFERRED_RIDER_SECONDS, riderIsBusy, riderDistances, saveRiderPosition } from "../lib/dispatch.js";
+import { endRide, recordPosition } from "../lib/daloy.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
 import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, tellNearbyRiders } from "../lib/errands.js";
 import { HttpError, parseBody, ValidationError } from "../lib/http.js";
@@ -664,6 +665,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
     body: `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.${priceFlag ? ` ${priceFlag}` : ""}`,
     link: `/resident/pabili/${id}`,
   });
+  await endRide(id);
   await broadcastErrand({ id, residentId: errand.residentId, status: "BOUGHT" });
   res.json({ ok: true, fee: peso(fee), collect: total, fromGps: Boolean(at) });
 });
@@ -686,6 +688,7 @@ riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
   });
   if (count === 0) throw new HttpError(409, "Upload the receipt first, then finish the delivery.");
   await redis.del(locationKey(id));
+  await endRide(id, { forget: true });
   await notify(errand.residentId, { title: "Your Pabili arrived", body: "Thanks for using Feasto Pabili!", link: `/resident/pabili/${id}` });
   await broadcastErrand({ id, residentId: errand.residentId, status: "DELIVERED" });
   res.json({ ok: true, earned: peso(Number(errand.deliveryFee) - Number(errand.feastoCut)), feastoCut: peso(errand.feastoCut), collect: peso(Number(errand.receiptTotal ?? 0) + Number(errand.deliveryFee)) });
@@ -695,9 +698,29 @@ riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
  * The rider's live position for a Pabili, sent like a delivery's (rider.ts /location hands Pabili
  * ids here): kept in Redis and pushed to the resident's open page through Redis pub/sub.
  */
-export async function shareErrandLocation(userId: string, errandId: string, lat: number, lng: number) {
-  const errand = await prisma.errand.findFirst({ where: { id: errandId, riderId: userId, status: { in: ["ACCEPTED", "BOUGHT"] } }, select: { residentId: true } });
+export async function shareErrandLocation(userId: string, errandId: string, lat: number, lng: number, demo = false) {
+  const errand = await prisma.errand.findFirst({
+    where: { id: errandId, riderId: userId, status: { in: ["ACCEPTED", "BOUGHT"] } },
+    select: { residentId: true, status: true, deliveryLat: true, deliveryLng: true },
+  });
   if (!errand) return false;
+  // Daloy: the ride to the shop (no pin, so it ends when the items are bought), then to the door
+  const toDoor = errand.status === "BOUGHT";
+  await Promise.all([
+    recordPosition(
+      {
+        id: errandId,
+        kind: "ERRAND",
+        leg: toDoor ? "TO_DOOR" : "TO_SHOP",
+        riderId: userId,
+        destination: toDoor && errand.deliveryLat != null && errand.deliveryLng != null ? { lat: errand.deliveryLat, lng: errand.deliveryLng } : null,
+        pricedKm: null,
+      },
+      { lat, lng },
+      demo,
+    ),
+    saveRiderPosition(userId, lat, lng),
+  ]);
   const at = new Date().toISOString();
   await redis.set(locationKey(errandId), marshal({ lat, lng, at }, { transport: "redis", channel: locationKey(errandId), kind: "rider location" }), "EX", 3600);
   await publish(CHANNELS.user(errand.residentId), { type: "rider.location", orderId: errandId, lat, lng, at });

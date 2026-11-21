@@ -23,10 +23,14 @@ export type MapPin = {
   selected?: boolean;
 };
 
+/** A shaded square or shape on the map (e.g. a road speed), drawn under the pins */
+export type MapArea = { id: string; ring: [number, number][]; color: string };
+
 /** The part of the map on screen: `west,south,east,north`, as the API's bbox expects. */
 export type MapView = { bbox: string; zoom: number };
 
 const ROUTE_SOURCE = "feasto-route";
+const AREA_SOURCE = "feasto-areas";
 
 /**
  * A Feasto map: pins for stores, homes, the rider and "you", plus an optional route line.
@@ -46,6 +50,7 @@ export function FeastoMap({
   expandable = true,
   styleButton = true,
   onView,
+  areas,
 }: {
   pins: MapPin[];
   /** Draws the way between two points (by road when Mapbox is available) */
@@ -66,6 +71,8 @@ export function FeastoMap({
   styleButton?: boolean;
   /** Called with the part of the map on screen once it loads and after every pan or zoom */
   onView?: (view: MapView) => void;
+  /** Shaded areas under the pins, each in its own color */
+  areas?: MapArea[];
 }) {
   const container = useRef<HTMLDivElement>(null);
   /** The map's frame: lifted onto the browser's top layer while full screen */
@@ -221,6 +228,25 @@ export function FeastoMap({
     // routeKey stands in for route
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, routeKey]);
+
+  // The shaded areas: one source for all of them, colored from each one's own color
+  const areasKey = areas ? areas.map((a) => `${a.id}:${a.color}`).join("|") : "";
+  useEffect(() => {
+    if (!engine) return;
+    const { map } = engine;
+    const data = {
+      type: "FeatureCollection" as const,
+      features: (areas ?? []).map((a) => ({ type: "Feature" as const, properties: { color: a.color }, geometry: { type: "Polygon" as const, coordinates: [a.ring] } })),
+    };
+    const source = map.getSource(AREA_SOURCE) as { setData?: (d: typeof data) => void } | undefined;
+    if (source?.setData) return void source.setData(data);
+    if (!areas?.length) return;
+    map.addSource(AREA_SOURCE, { type: "geojson", data });
+    map.addLayer({ id: AREA_SOURCE, type: "fill", source: AREA_SOURCE, paint: { "fill-color": ["get", "color"], "fill-opacity": 0.35 } });
+    map.addLayer({ id: `${AREA_SOURCE}-edge`, type: "line", source: AREA_SOURCE, paint: { "line-color": ["get", "color"], "line-width": 1.5, "line-opacity": 0.85 } });
+    // areasKey stands in for areas
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, areasKey]);
 
   // Move to the focused spot
   const focusKey = focus ? `${focus.lat},${focus.lng}` : "";

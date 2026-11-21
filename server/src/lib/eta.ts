@@ -10,7 +10,7 @@
  */
 
 /** Minutes per km by motorcycle in Naval, and to park and hand it over */
-const MINUTES_PER_KM = 3;
+export const MINUTES_PER_KM = 3;
 const HANDOVER_MINUTES = 4;
 /** Without a map pin */
 const UNKNOWN_RIDE_MINUTES = 12;

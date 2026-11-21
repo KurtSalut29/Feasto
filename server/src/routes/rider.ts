@@ -22,6 +22,7 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { shareErrandLocation } from "./errands.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
+import { endRide, recordPosition } from "../lib/daloy.js";
 
 export const riderRouter = Router();
 riderRouter.use(requireAuth, requireRole("RIDER"));
@@ -225,6 +226,8 @@ riderRouter.post("/active/:id/arrived", async (req, res) => {
   const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId, status: "PICKED_UP" }, select: { arrivedAt: true, checkout: { select: { residentId: true } } } });
   if (!order) throw new HttpError(409, "Only an order you picked up can be at the door. Refresh to see its status.");
   const arrivedAt = order.arrivedAt ?? new Date();
+  // At the door: the ride is over, the wait isn't traffic
+  await endRide(id);
   if (!order.arrivedAt) {
     await prisma.order.updateMany({ where: { id, arrivedAt: null }, data: { arrivedAt } });
     await notify(order.checkout.residentId, { title: "Your rider is at your door", body: `${req.session!.name.split(" ")[0]} is outside with ${orderCode(id)}. Please come out to get it.`, link: `/resident/orders/${id}` });
@@ -281,6 +284,7 @@ riderRouter.post("/active/:id/not-received", async (req, res) => {
     await settlePayment(tx, order.checkoutId);
   });
   await redis.del(locationKey(id));
+  await endRide(id, { forget: true });
   const strikes = (await prisma.user.findUniqueOrThrow({ where: { id: order.checkout.residentId }, select: { noShows: true } })).noShows;
   await notify(order.checkout.residentId, {
     title: `${orderCode(id)} wasn't received`,
@@ -296,6 +300,7 @@ riderRouter.post("/active/:id/not-received", async (req, res) => {
 riderRouter.post("/active/:id/picked-up", async (req, res) => {
   const id = String(req.params.id);
   await prisma.$transaction((tx) => transition(tx, id, ["READY"], "PICKED_UP", { pickedUpAt: new Date() }, { riderId: req.session!.userId }));
+  await endRide(id);
   await notifyResident(id);
   await broadcastOrder(id);
   res.json({ ok: true });
@@ -316,6 +321,7 @@ riderRouter.post("/active/:id/delivered", async (req, res) => {
     await settlePayment(tx, order.checkoutId); // cash collected by the rider
   });
   await redis.del(locationKey(id));
+  await endRide(id, { forget: true });
   await notifyResident(id);
   // Online payments are split now: the store's and the rider's parts go to them right away
   const payout = await payoutWords(id);
@@ -330,6 +336,8 @@ const locationSchema = z.object({
   orderId: z.string().min(1),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  /** From the "simulate the ride" demo, not the phone's GPS: Daloy keeps it apart from real rides */
+  demo: z.boolean().optional(),
 });
 
 /**
@@ -339,16 +347,41 @@ const locationSchema = z.object({
  * and pushed to the resident's open order page through Redis pub/sub.
  */
 riderRouter.post("/location", async (req, res) => {
-  const { orderId, lat, lng } = parseBody(locationSchema, req.body);
+  const { orderId, lat, lng, demo = false } = parseBody(locationSchema, req.body);
+  const riderId = req.session!.userId;
   const order = await prisma.order.findFirst({
-    where: { id: orderId, riderId: req.session!.userId, status: { in: BUSY } },
-    select: { checkout: { select: { residentId: true } }, vendor: { select: { ownerId: true } } },
+    where: { id: orderId, riderId, status: { in: BUSY } },
+    select: {
+      status: true,
+      deliveryKm: true,
+      checkout: { select: { residentId: true, deliveryLat: true, deliveryLng: true } },
+      vendor: { select: { ownerId: true, latitude: true, longitude: true } },
+    },
   });
   if (!order) {
     // Not a delivery: a Pabili this rider is running
-    if (await shareErrandLocation(req.session!.userId, orderId, lat, lng)) return void res.status(204).end();
+    if (await shareErrandLocation(riderId, orderId, lat, lng, demo)) return void res.status(204).end();
     throw new HttpError(409, "Location is only shared while you have a delivery.");
   }
+  // Daloy: how fast the ride really goes, to the store and then to the door
+  const toDoor = order.status === "PICKED_UP";
+  const pin = (a: number | null, b: number | null) => (a != null && b != null ? { lat: a, lng: b } : null);
+  await Promise.all([
+    recordPosition(
+      {
+        id: orderId,
+        kind: "ORDER",
+        leg: toDoor ? "TO_DOOR" : "TO_STORE",
+        riderId,
+        destination: toDoor ? pin(order.checkout.deliveryLat, order.checkout.deliveryLng) : pin(order.vendor.latitude, order.vendor.longitude),
+        pricedKm: order.deliveryKm == null ? null : Number(order.deliveryKm),
+      },
+      { lat, lng },
+      demo,
+    ),
+    // The admin's live map shows riders on a job too
+    saveRiderPosition(riderId, lat, lng),
+  ]);
   const at = new Date().toISOString();
   await redis.set(locationKey(orderId), marshal({ lat, lng, at }, { transport: "redis", channel: locationKey(orderId), kind: "rider location" }), "EX", 3600);
   // The customer follows the rider to their door; the store sees them coming for the pickup

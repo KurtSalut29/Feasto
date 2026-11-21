@@ -8,6 +8,7 @@ import { invalidateStore } from "./redisCache.js";
 import { daysFromToday, EXPIRING_SOON_DAYS, manilaToday, PERMIT_GRACE_DAYS } from "./renewals.js";
 import { getSettings } from "./settings.js";
 import { liftEndedSuspensions } from "./userReports.js";
+import { forgetOldTravel } from "./daloy.js";
 
 type Log = (...args: unknown[]) => void;
 
@@ -167,4 +168,6 @@ export async function runMonitors(log: Log) {
   await liftEndedSuspensions(log);
   const fresh = await announceStuckOrders();
   if (fresh) log(`${fresh} order(s) newly stuck, told the admin`);
+  const forgotten = await forgetOldTravel();
+  if (forgotten) log(`Daloy: forgot ${forgotten} travel square(s) older than 90 days`);
 }

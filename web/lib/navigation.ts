@@ -1,4 +1,4 @@
-import { Accessibility, BadgePercent, TicketPercent, BarChart3, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, ShoppingBasket, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Accessibility, BadgePercent, TicketPercent, BarChart3, Gauge, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, ShoppingBasket, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { Role } from "./types";
 
 /**
@@ -48,6 +48,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/admin/user-reports", label: "User reports", short: "Reports", Icon: Flag, group: "Manage" },
     { href: "/admin/reports", label: "Reports", Icon: BarChart3, group: "Insights" },
     { href: "/admin/earnings", label: "Earnings", Icon: HandCoins, group: "Insights" },
+    { href: "/admin/daloy", label: "Daloy: live roads", short: "Daloy", Icon: Gauge, group: "Insights" },
     { href: "/admin/activity", label: "Activity log", Icon: ScrollText, group: "Insights" },
     { href: "/admin/system", label: "System", Icon: Server, group: "Insights" },
     { href: "/admin/settings", label: "Settings", Icon: Settings, group: "Insights" },
