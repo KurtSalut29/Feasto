@@ -2,15 +2,6 @@ import { z } from "zod";
 import { CACHE_KEYS, cached, invalidate } from "./redisCache.js";
 import { prisma } from "./db.js";
 
-/** A rush hour: from and to are Manila time ("11:00"), days are 0 = Sunday to 6 = Saturday. */
-export type PeakWindow = { name: string; from: string; to: string; days: number[] };
-
-const EVERY_DAY = [0, 1, 2, 3, 4, 5, 6];
-export const DEFAULT_PEAK_HOURS: PeakWindow[] = [
-  { name: "Lunch rush", from: "11:00", to: "13:00", days: EVERY_DAY },
-  { name: "Dinner rush", from: "17:00", to: "20:00", days: EVERY_DAY },
-];
-
 /** Used until the admin saves their own, and for a freshly reset database. */
 export const DEFAULT_SETTINGS = {
   /** Base delivery fee, covering the first `deliveryBaseKm` km by road */
@@ -18,10 +9,10 @@ export const DEFAULT_SETTINGS = {
   deliveryBaseKm: 1,
   /** For each km (or part of one) after that */
   deliveryPerKm: 8,
-  /** Added during a rush hour */
-  deliveryPeakFee: 10,
-  /** When the rush-hour add-on applies; the system checks the time at each checkout */
-  peakHours: DEFAULT_PEAK_HOURS,
+  /** The most added when more orders are waiting than there are free riders (0 = off). All of it is the rider's. */
+  busyFeeMax: 20,
+  /** Added while it rains (0 = off). All of it is the rider's. */
+  rainFee: 10,
   storeRiderSeconds: 60,
   riderWaveSeconds: 30,
   stuckMinutes: 15,
@@ -33,12 +24,23 @@ export const DEFAULT_SETTINGS = {
   commissionPercent: 10,
   /** On a pickup order: lower, because no rider is needed */
   pickupCommissionPercent: 5,
-  /** Feasto's share of the delivery fee, in percent. Tips are never shared. */
-  riderFeePercent: 10,
+  /** Feasto's share of a Pabili fee, in percent. Food deliveries have none: the rider keeps the whole fee. */
+  pabiliFeePercent: 10,
   /** A newly approved store pays no commission for this many days */
   freeTrialDays: 30,
   /** The most a rider may spend on one Pabili: they pay at the shop with their own money */
   pabiliBudgetMax: 1000,
+  /** An order to one store is big from this many items or pesos: the resident is told it takes longer */
+  largeOrderItems: 20,
+  largeOrderAmount: 3000,
+  /** Cash on delivery is for checkouts up to this; bigger ones are paid online, so a store never cooks ₱5,000 of food for nobody */
+  codMaxAmount: 3000,
+  /** After this many orders not received at the door, the resident can only pay online */
+  noShowStrikes: 2,
+  /** How long the rider waits at the door before they may mark it not received */
+  doorWaitMinutes: 10,
+  /** Admins and store owners must log in with an authenticator app too */
+  require2fa: true,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -66,39 +68,6 @@ const percent = (max: number) => {
     .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 7.5.");
 };
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const clock = z.string("Use a time like 11:00.").regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 11:00.");
-export const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
-
-const peakWindow = z.object({
-  name: z.string("Name each rush hour, e.g. Lunch rush.").trim().min(1, "Name each rush hour, e.g. Lunch rush.").max(30, "Keep each name under 30 letters."),
-  from: clock,
-  to: clock,
-  days: z
-    .array(z.number().int().min(0).max(6), "Pick the days.")
-    .min(1, "Pick at least one day for each rush hour.")
-    .transform((days) => [...new Set(days)].sort((a, b) => a - b)),
-});
-
-const peakHours = z
-  .array(peakWindow, "Add the rush hours.")
-  .max(6, "Up to 6 rush hours.")
-  .superRefine((list, ctx) => {
-    list.forEach((w) => {
-      if (minutesOf(w.to) <= minutesOf(w.from)) ctx.addIssue({ code: "custom", message: `${w.name}: the end time must be later than the start, on the same day.` });
-    });
-    // Two rush hours on the same day can't cover the same minutes, or the add-on would be unclear
-    for (let i = 0; i < list.length; i++) {
-      for (let j = i + 1; j < list.length; j++) {
-        const [a, b] = [list[i]!, list[j]!];
-        const day = a.days.find((d) => b.days.includes(d));
-        if (day !== undefined && minutesOf(a.from) < minutesOf(b.to) && minutesOf(b.from) < minutesOf(a.to)) {
-          ctx.addIssue({ code: "custom", message: `${a.name} and ${b.name} overlap on ${DAY_NAMES[day]}. Change one of their times or days.` });
-        }
-      }
-    }
-  });
-
 export const settingsSchema = z.object({
   deliveryFee: peso(500),
   deliveryBaseKm: z
@@ -107,8 +76,8 @@ export const settingsSchema = z.object({
     .max(20, "Enter 0 to 20 km.")
     .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 2.5."),
   deliveryPerKm: peso(100),
-  deliveryPeakFee: peso(200),
-  peakHours,
+  busyFeeMax: peso(100),
+  rainFee: peso(100),
   storeRiderSeconds: whole(10, 600, "seconds"),
   riderWaveSeconds: whole(10, 300, "seconds"),
   stuckMinutes: whole(1, 240, "minutes"),
@@ -119,13 +88,19 @@ export const settingsSchema = z.object({
   signupsPerNetwork: whole(5, 1000, "sign-ups"),
   commissionPercent: percent(30),
   pickupCommissionPercent: percent(30),
-  riderFeePercent: percent(30),
+  pabiliFeePercent: percent(30),
   freeTrialDays: whole(0, 365, "days"),
   pabiliBudgetMax: z
     .number("Enter ₱100 to ₱20,000.")
     .int("Enter whole pesos, like 1500.")
     .min(100, "Enter ₱100 to ₱20,000.")
     .max(20000, "Enter ₱100 to ₱20,000."),
+  largeOrderItems: whole(5, 500, "items"),
+  largeOrderAmount: whole(500, 100000, "pesos"),
+  codMaxAmount: whole(500, 100000, "pesos"),
+  noShowStrikes: whole(1, 10, "orders"),
+  doorWaitMinutes: whole(3, 30, "minutes"),
+  require2fa: z.boolean(),
 });
 
 /**
@@ -136,14 +111,13 @@ export function getSettings(): Promise<Settings> {
   return cached(CACHE_KEYS.settings, 60, async () => {
     const row = await prisma.platformSettings.findUnique({ where: { id: 1 } });
     if (!row) return DEFAULT_SETTINGS;
-    const { deliveryFee, deliveryBaseKm, deliveryPerKm, deliveryPeakFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork, freeTrialDays, pabiliBudgetMax } = row;
-    const saved = peakHours.safeParse(row.peakHours);
+    const { deliveryFee, deliveryBaseKm, deliveryPerKm, busyFeeMax, rainFee, storeRiderSeconds, riderWaveSeconds, stuckMinutes, autoCancelMinutes, signupsPerNetwork, freeTrialDays, pabiliBudgetMax, largeOrderItems, largeOrderAmount, codMaxAmount, noShowStrikes, doorWaitMinutes, require2fa } = row;
     return {
       deliveryFee: Number(deliveryFee),
       deliveryBaseKm: Number(deliveryBaseKm),
       deliveryPerKm: Number(deliveryPerKm),
-      deliveryPeakFee: Number(deliveryPeakFee),
-      peakHours: saved.success ? saved.data : DEFAULT_PEAK_HOURS,
+      busyFeeMax: Number(busyFeeMax),
+      rainFee: Number(rainFee),
       storeRiderSeconds,
       riderWaveSeconds,
       stuckMinutes,
@@ -151,9 +125,15 @@ export function getSettings(): Promise<Settings> {
       signupsPerNetwork,
       commissionPercent: Number(row.commissionPercent),
       pickupCommissionPercent: Number(row.pickupCommissionPercent),
-      riderFeePercent: Number(row.riderFeePercent),
+      pabiliFeePercent: Number(row.pabiliFeePercent),
       freeTrialDays,
       pabiliBudgetMax,
+      largeOrderItems,
+      largeOrderAmount,
+      codMaxAmount,
+      noShowStrikes,
+      doorWaitMinutes,
+      require2fa,
     };
   });
 }

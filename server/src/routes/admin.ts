@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { checksFor } from "../lib/documentCheck.js";
 import { Router } from "express";
 import { z } from "zod";
 import { config } from "../config.js";
@@ -25,6 +26,9 @@ import { freeUntil } from "../lib/earnings.js";
 import { getSettings } from "../lib/settings.js";
 import { ALLOWED_FROM, decisionVerbs, decisionWords, documentKind, reviewRider, reviewSchema } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+
+const checkView = (c: { verdict: string; documentType: string | null; nameOnDocument: string | null; expiresOn: string | null; nameMatches: boolean | null; reasons: string[] } | undefined) =>
+  c ? { verdict: c.verdict, documentType: c.documentType, nameOnDocument: c.nameOnDocument, expiresOn: c.expiresOn, nameMatches: c.nameMatches, reasons: c.reasons } : null;
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole("ADMIN"));
@@ -144,10 +148,17 @@ adminRouter.get("/approvals", async (req, res) => {
           },
         });
 
-  // Pages only learn whether there's a document and what kind, never its file name
+  // Pages only learn whether there's a document and what kind, never its file name, and what the
+  // automatic check found in it
+  const fileOf = (item: (typeof items)[number]) => {
+    const { permitFile, licenseFile } = item as typeof item & { permitFile?: string | null; licenseFile?: string | null };
+    return permitFile ?? licenseFile ?? null;
+  };
+  const checks = await checksFor(items.map(fileOf));
   const withDocument = items.map((item) => {
-    const { permitFile, licenseFile, ...rest } = item as typeof item & { permitFile?: string | null; licenseFile?: string | null };
-    return { ...rest, document: documentKind(permitFile ?? licenseFile ?? null) };
+    const { permitFile: _p, licenseFile: _l, ...rest } = item as typeof item & { permitFile?: string | null; licenseFile?: string | null };
+    const file = fileOf(item);
+    return { ...rest, document: documentKind(file), check: checkView(file ? checks.get(file) : undefined) };
   });
   res.json({ kind, status, counts: { stores: toCounts(storeCounts), riders: toCounts(riderCounts) }, items: withDocument });
 });

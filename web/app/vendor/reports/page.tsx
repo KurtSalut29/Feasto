@@ -51,7 +51,7 @@ type StoreReport = {
 
 /** The store's side of Feasto's commission: its rates, and what it still owes Feasto from cash orders */
 type StoreEarnings = {
-  rates: { delivery: number; pickup: number };
+  rates: { delivery: number; pickup: number; agreed?: boolean; since?: string | null };
   freeUntil: string | null;
   balance: { owed: number; orders: number; lastSettledAt: string | null };
   settlements: { id: string; amount: string; orders: number; method: string | null; createdAt: string }[];
@@ -233,7 +233,7 @@ async function Reports({ searchParams }: Pick<PageProps<"/vendor/reports">, "sea
 function CommissionCard({ earnings, totals }: { earnings: StoreEarnings; totals: StoreReport["totals"] }) {
   const { rates, freeUntil, balance, settlements } = earnings;
   return (
-    <Card title="Your money and Feasto's commission" Icon={HandCoins} description={`${rates.delivery}% on delivery orders · ${rates.pickup}% on pickup · finished orders only`}>
+    <Card title="Your money and Feasto's commission" Icon={HandCoins} description={`${rates.delivery}% on delivery orders · ${rates.pickup}% on pickup${rates.agreed ? `, as agreed with Feasto${rates.since ? ` from ${formatDate(rates.since)}` : ""}` : ""} · finished orders only`}>
       {freeUntil && (
         <p className="flex items-start gap-2 border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-900">
           <CalendarHeart className="mt-0.5 size-4 shrink-0" aria-hidden />

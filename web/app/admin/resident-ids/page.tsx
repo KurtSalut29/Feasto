@@ -2,6 +2,7 @@ import { BadgeCheck, Clock, IdCard, Mail, Phone, XCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
+import { DocCheck, type DocCheckResult } from "@/components/app/doc-check";
 import { DocumentPreview } from "@/components/app/document-preview";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -32,6 +33,7 @@ type Resident = {
   idReviewedAt: string | null;
   disabledAt: string | null;
   document: "image" | "pdf" | null;
+  check?: DocCheckResult;
 };
 type Response = { status: Status; page: number; pageSize: number; total: number; counts: Record<Status, number>; notUploaded: number; residents: Resident[] };
 
@@ -118,6 +120,7 @@ async function ResidentIds({ searchParams }: { searchParams: Promise<Record<stri
                     <span className="font-semibold text-ink">{idTypeLabel(r.idType)}</span> · signed up {timeAgo(r.createdAt)}
                   </p>
                   <DocumentPreview href={`/api/documents/resident/${r.id}`} kind={r.document} label={idTypeLabel(r.idType)} />
+                  {r.document && <DocCheck check={r.check} />}
                 </div>
                 <footer className="border-t border-line bg-canvas/40 px-5 py-3">
                   {r.idStatus === "PENDING" ? (

@@ -1,4 +1,5 @@
-import { ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { ChefHat, ChevronRight, Plus, ShoppingCart } from "lucide-react";
+import { minutesWords } from "@/components/app/order-eta";
 import { DeliveryFeeLine } from "@/components/app/delivery-fee";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -156,6 +157,26 @@ async function ResidentCart() {
               <span className="text-muted">Subtotal</span>
               <span className="font-semibold text-ink tabular-nums">{formatPeso(group.subtotal)}</span>
             </div>
+            {group.timing && (
+              <div className="flex items-start gap-2 border-t border-line px-4 py-2.5 text-sm">
+                <ChefHat className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
+                <p className="text-muted">
+                  <span className="font-medium text-ink">About {minutesWords(group.timing.minutes)} to cook</span>
+                  {group.timing.busyMinutes > 0 ? `, with ${group.timing.busyMinutes} more because the kitchen is busy` : ""}. The store confirms the time when it accepts.
+                  {group.timing.large &&
+                    (group.timing.noticeMinutes > 0
+                      ? ` This is a big order: ${group.store.name} needs ${minutesWords(group.timing.noticeMinutes)}' notice, so choose a later time at checkout.`
+                      : " This is a big order, so it takes longer. You can also schedule it for later at checkout.")}
+                </p>
+              </div>
+            )}
+            {group.tooFar && (
+              <div className="px-4 pb-3">
+                <Alert tone="error">
+                  Too far to deliver: {group.store.name} delivers up to {group.tooFar.radiusKm} km, and {cart.delivery.addressLabel ?? "this address"} is {group.tooFar.km} km away by road. Choose pickup at checkout, or another address.
+                </Alert>
+              </div>
+            )}
             {group.delivery && (
               <div className="border-t border-dashed border-line bg-canvas/60 px-4 py-2.5">
                 <DeliveryFeeLine quote={group.delivery} />
@@ -188,7 +209,7 @@ async function ResidentCart() {
           </div>
         </dl>
         <p className="mt-2 text-xs text-muted">
-          The delivery fee depends on the distance by road{cart.groups.some((g) => g.delivery?.peak) ? " and the rush hour" : ""}. Pickup is free: choose it at checkout to pay{" "}
+          The delivery fee depends on the distance by road{cart.groups.some((g) => g.delivery && g.delivery.busyFee + g.delivery.rainFee > 0) ? ", plus a small add-on for the rider while riders are busy or it's raining" : ""}. Pickup is free: choose it at checkout to pay{" "}
           {formatPeso(cart.itemsTotal)} only.
         </p>
       </section>

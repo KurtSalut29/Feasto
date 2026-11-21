@@ -10,6 +10,11 @@ import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { hasExpired } from "../lib/renewals.js";
 import { marshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
+import { notifyAdmin } from "../lib/activity.js";
+import { etaOf } from "../lib/eta.js";
+import { rainNow, reportRain } from "../lib/feeAddOns.js";
+import { perAccount } from "../lib/rateLimit.js";
+import { getSettings } from "../lib/settings.js";
 import { averageOf, shortName } from "../lib/riderRatings.js";
 import { payoutWords } from "../lib/earnings.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
@@ -195,7 +200,7 @@ riderRouter.get("/active", async (req, res) => {
     where: { riderId: req.session!.userId, status: { in: BUSY } },
     include: {
       vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
-      items: { select: { id: true, name: true, quantity: true, unitPrice: true } },
+      items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true } },
       checkout: {
         select: {
           deliveryAddress: true,
@@ -210,7 +215,82 @@ riderRouter.get("/active", async (req, res) => {
       },
     },
   });
-  res.json({ order });
+  // How long to wait at the door before "Not received" opens
+  res.json({ order: order && { ...order, eta: etaOf(order) }, doorWaitMinutes: (await getSettings()).doorWaitMinutes });
+});
+
+/** The rider is at the door: the resident is told, and the wait before "Not received" starts */
+riderRouter.post("/active/:id/arrived", async (req, res) => {
+  const id = String(req.params.id);
+  const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId, status: "PICKED_UP" }, select: { arrivedAt: true, checkout: { select: { residentId: true } } } });
+  if (!order) throw new HttpError(409, "Only an order you picked up can be at the door. Refresh to see its status.");
+  const arrivedAt = order.arrivedAt ?? new Date();
+  if (!order.arrivedAt) {
+    await prisma.order.updateMany({ where: { id, arrivedAt: null }, data: { arrivedAt } });
+    await notify(order.checkout.residentId, { title: "Your rider is at your door", body: `${req.session!.name.split(" ")[0]} is outside with ${orderCode(id)}. Please come out to get it.`, link: `/resident/orders/${id}` });
+    await broadcastOrder(id);
+  }
+  res.json({ ok: true, arrivedAt });
+});
+
+const notReceivedSchema = z.object({
+  photoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo at the door first, to show you were there."),
+});
+
+/**
+ * Nobody came to the door after the wait (with calls and chat): the order ends as not received,
+ * the resident gets a strike (enough of them and they can only pay online), and nothing is refunded
+ * automatically: the admin sees it and decides.
+ */
+riderRouter.post("/active/:id/not-received", async (req, res) => {
+  const id = String(req.params.id);
+  const { photoUrl } = parseBody(notReceivedSchema, req.body);
+  const riderId = req.session!.userId;
+  const [order, settings] = await Promise.all([
+    prisma.order.findFirst({
+      where: { id, riderId, status: "PICKED_UP" },
+      select: { arrivedAt: true, checkoutId: true, checkout: { select: { residentId: true, paymentMethod: true } }, vendor: { select: { name: true, ownerId: true } } },
+    }),
+    getSettings(),
+  ]);
+  if (!order) throw new HttpError(409, "Only an order you picked up can be marked not received. Refresh to see its status.");
+  if (!order.arrivedAt) throw new HttpError(400, "Tap \"I'm at the door\" first, then call and chat with the customer.");
+  const opens = order.arrivedAt.getTime() + settings.doorWaitMinutes * 60_000;
+  if (Date.now() < opens) {
+    const left = Math.ceil((opens - Date.now()) / 60_000);
+    throw new HttpError(400, `Wait ${left} more minute${left === 1 ? "" : "s"} at the door, and call or chat with the customer meanwhile.`);
+  }
+  const online = order.checkout.paymentMethod === "ONLINE";
+  await prisma.$transaction(async (tx) => {
+    await transition(
+      tx,
+      id,
+      ["PICKED_UP"],
+      "CANCELLED",
+      {
+        finishedAt: new Date(),
+        noShow: true,
+        deliveryPhotoUrl: photoUrl,
+        rejectReason: "Not received: nobody came to the door",
+        // Paid online: not refunded by itself, the admin decides
+        ...(online && { refundedAt: new Date(), refundNote: "Not refunded: nobody came to the door to receive it. The admin can refund it by hand if that was wrong." }),
+      },
+      { riderId },
+    );
+    await tx.user.update({ where: { id: order.checkout.residentId }, data: { noShows: { increment: 1 } } });
+    await settlePayment(tx, order.checkoutId);
+  });
+  await redis.del(locationKey(id));
+  const strikes = (await prisma.user.findUniqueOrThrow({ where: { id: order.checkout.residentId }, select: { noShows: true } })).noShows;
+  await notify(order.checkout.residentId, {
+    title: `${orderCode(id)} wasn't received`,
+    body: `Your rider waited ${settings.doorWaitMinutes} minutes at your door and tried to reach you.${strikes >= settings.noShowStrikes ? " Cash on delivery is now off for your account: pay online for your next orders." : ""}`,
+    link: `/resident/orders/${id}`,
+  });
+  await notify(order.vendor.ownerId, { title: `${orderCode(id)} wasn't received`, body: "Nobody came to the door. The rider's photo is on the order.", link: "/vendor/orders?tab=done" });
+  await notifyAdmin({ title: `${orderCode(id)} wasn't received`, body: `From ${order.vendor.name}. The resident has ${strikes} order${strikes === 1 ? "" : "s"} not received.${online ? " It was paid online and not refunded." : ""}`, link: "/admin/orders" });
+  await broadcastOrder(id);
+  res.json({ ok: true });
 });
 
 riderRouter.post("/active/:id/picked-up", async (req, res) => {
@@ -358,4 +438,16 @@ riderRouter.get("/ratings", async (req, res) => {
       tip: Number(order.tip),
     })),
   });
+});
+
+/** "It's raining here": two riders within half an hour turn on the rain add-on, which is all theirs */
+riderRouter.get("/rain", async (req, res) => {
+  const rain = await rainNow();
+  const reported = (await redis.zscore("weather:rain-reports", req.session!.userId).catch(() => null)) !== null;
+  res.json({ rain, reported, fee: (await getSettings()).rainFee });
+});
+
+riderRouter.post("/rain", perAccount("rain", 4, 1800, "You already said it's raining. It counts for half an hour."), async (req, res) => {
+  const rain = await reportRain(req.session!.userId);
+  res.json({ rain, reported: true, fee: (await getSettings()).rainFee });
 });

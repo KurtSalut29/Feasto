@@ -116,7 +116,7 @@ export const getInvoice = (id: string) => call<Invoice>("GET", `/v2/invoices/${i
 export const expireInvoice = (id: string) => call<Invoice>("POST", `/invoices/${id}/expire!`);
 
 /** Gives back part or all of a paid invoice, e.g. one store's order that was declined. */
-export const refundInvoice = (input: { invoiceId: string; amount: number; referenceId: string; reason: "CANCELLATION" | "REQUESTED_BY_CUSTOMER" }) =>
+export const refundInvoice = (input: { invoiceId: string; amount: number; referenceId: string; reason: "CANCELLATION" | "REQUESTED_BY_CUSTOMER" | "OTHERS" }) =>
   call<{ id: string; status: string }>("POST", "/refunds", {
     invoice_id: input.invoiceId,
     amount: input.amount,

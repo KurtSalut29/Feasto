@@ -6,6 +6,7 @@ import { prisma } from "../lib/db.js";
 import { bboxQuery, distanceKm, inBbox, nearQuery, nextOffset, pageQuery, type LatLng } from "../lib/geo.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { quoteDelivery } from "../lib/deliveryFee.js";
+import { addOnsFor } from "../lib/feeAddOns.js";
 import { getSettings } from "../lib/settings.js";
 import { isStoreOpen } from "../lib/storeHours.js";
 import { STORE_TYPES } from "../lib/storeTypes.js";
@@ -270,7 +271,7 @@ storesRouter.get("/:id", async (req, res) => {
     }),
   ]);
   // What delivery from this store to the resident's address costs now
-  const delivery = home ? { ...(await quoteDelivery(store, home, settings)), addressLabel: home.label } : null;
+  const delivery = home ? { ...(await quoteDelivery(store, home, settings, await addOnsFor(req.session!.userId, settings))), addressLabel: home.label } : null;
   res.json({
     store: {
       ...withRating(rest),

@@ -21,6 +21,7 @@ import { canRateRider, riderAverage } from "@/lib/rider-ratings";
 import { clockOf, sendAtOf, whenOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
+import { EtaLine } from "@/components/app/order-eta";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
 import { RateRider } from "./rate-rider";
@@ -202,8 +203,9 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </section>
         )}
         {dropped ? (
-          <Alert tone="error" title={order.status === "REJECTED" ? "The store couldn't take this order" : "This order was cancelled"}>
+          <Alert tone="error" title={order.status === "REJECTED" ? "The store couldn't take this order" : order.noShow ? "This order wasn't received" : "This order was cancelled"}>
             {order.rejectReason ?? "No reason given."}
+            {order.noShow && " The rider waited at your door and tried to call. Too many of these turn cash on delivery off for your account."}
             {order.refundedAt
               ? order.refundNote?.startsWith("Refund failed")
                 ? " Your refund is being sorted out by Feasto. You'll get a notification once it's back."
@@ -214,6 +216,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </Alert>
         ) : scheduled ? null : (
           <Section title="Progress">
+            <EtaLine eta={order.eta} ready={order.status === "READY"} delays={order.delays} delayNote={order.delayNote} className="mb-3" />
+            {order.arrivedAt && order.status === "PICKED_UP" && (
+              <Alert tone="pending" title="Your rider is at your door">
+                Please come out to get your order.
+              </Alert>
+            )}
             <OrderProgress
               status={order.status}
               fulfillment={order.fulfillment}
@@ -292,11 +300,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           <ul className="space-y-2 text-[0.9375rem]">
             {order.items.map((item) => (
               <li key={item.id} className="flex justify-between gap-3">
-                <span className="min-w-0 text-ink">
+                <span className={`min-w-0 ${item.removedAt ? "text-muted line-through" : "text-ink"}`}>
                   {item.quantity}× {item.name}
-                  {item.note && <span className="block text-[0.8125rem] text-amber-800">“{item.note}”</span>}
+                  {item.removedAt && <span className="block text-[0.8125rem] text-amber-800 no-underline">Ran out: taken off, not charged</span>}
+                  {item.note && !item.removedAt && <span className="block text-[0.8125rem] text-amber-800">“{item.note}”</span>}
                 </span>
-                <span className="text-muted">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
+                <span className={`text-muted ${item.removedAt ? "line-through" : ""}`}>{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
               </li>
             ))}
           </ul>
@@ -356,6 +365,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </ButtonLink>
         )}
         {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT" || order.status === "SCHEDULED") && <CancelOrderButton orderId={order.id} />}
+        {/* After the store ran late twice, the resident may stop waiting */}
+        {(order.status === "ACCEPTED" || order.status === "PREPARING") && (order.delays ?? 0) >= 2 && <CancelOrderButton orderId={order.id} late />}
         {(received || dropped) && <ReorderButton orderId={order.id} />}
         {order.status !== "AWAITING_PAYMENT" && (
           <div className="flex justify-center">

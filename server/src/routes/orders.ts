@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { etaOf } from "../lib/eta.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
 import { invalidateStore } from "../lib/redisCache.js";
@@ -22,14 +23,17 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 export const ordersRouter = Router();
 ordersRouter.use(requireAuth, requireRole("RESIDENT"));
 
+/** After the store says this many times that it needs more time, the resident may cancel for free */
+export const LATE_DELAYS = 2;
+
 const orderInclude = {
   vendor: { select: { id: true, name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
-  items: { select: { id: true, name: true, unitPrice: true, quantity: true, note: true } },
+  items: { select: { id: true, name: true, unitPrice: true, quantity: true, note: true, removedAt: true } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true, ratingSum: true, ratingCount: true } } } },
   /** The rider the resident asked for, while it waits for them */
   preferredRider: { select: { name: true } },
   checkout: {
-    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, transferTo: true, transferFrom: true, transferSentAt: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true },
+    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, transferTo: true, transferFrom: true, transferSentAt: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true, ifUnavailable: true },
   },
   review: { select: { rating: true, comment: true, createdAt: true } },
   riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },
@@ -47,7 +51,7 @@ ordersRouter.get("/", async (req, res) => {
     prisma.order.findMany({ where: { ...mine, status: { in: ACTIVE_STATUSES } }, orderBy: { createdAt: "desc" }, include: orderInclude }),
     prisma.order.findMany({ where: { ...mine, status: { in: FINISHED_STATUSES } }, orderBy: { createdAt: "desc" }, take: limit + 1, include: orderInclude }),
   ]);
-  res.json({ orders: [...active, ...finished.slice(0, limit)], more: finished.length > limit });
+  res.json({ orders: [...active, ...finished.slice(0, limit)].map((o) => ({ ...o, eta: etaOf(o) })), more: finished.length > limit });
 });
 
 /**
@@ -79,20 +83,30 @@ ordersRouter.get("/:id", async (req, res) => {
   const location = order.riderId && ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) ? await redis.get(`rider-location:${order.id}`) : null;
   // When it will be cancelled by itself if nobody takes it, so the resident knows what to expect
   const autoCancel = autoCancelAt(order, (await getSettings()).autoCancelMinutes);
-  res.json({ order, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
+  res.json({ order: { ...order, eta: etaOf(order) }, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
 });
 
-/** Residents can cancel until the store accepts (a scheduled order, any time before then). If both happen at once, only one wins. */
+/**
+ * Residents can cancel until the store accepts (a scheduled order, any time before then), and for
+ * free after the store has said twice that it needs more time. If both happen at once, only one wins.
+ */
 ordersRouter.post("/:id/cancel", async (req, res) => {
   const id = String(req.params.id);
   const order = await prisma.order.findFirst({
     where: { id, checkout: { residentId: req.session!.userId } },
-    select: { checkoutId: true, status: true, scheduledFor: true, vendor: { select: { ownerId: true, name: true } } },
+    select: { checkoutId: true, status: true, scheduledFor: true, delays: true, vendor: { select: { ownerId: true, name: true } } },
   });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
 
   const vendorId = await prisma.$transaction(async (tx) => {
-    await transition(tx, id, ["PLACED", "AWAITING_PAYMENT", "SCHEDULED"], "CANCELLED", { finishedAt: new Date(), rejectReason: "Cancelled by the resident" });
+    const late = order.delays >= LATE_DELAYS;
+    await transition(
+      tx,
+      id,
+      late ? ["PLACED", "AWAITING_PAYMENT", "SCHEDULED", "ACCEPTED", "PREPARING"] : ["PLACED", "AWAITING_PAYMENT", "SCHEDULED"],
+      "CANCELLED",
+      { finishedAt: new Date(), rejectReason: late ? "Cancelled by the resident after the store ran late twice" : "Cancelled by the resident" },
+    );
     const restored = await restoreStock(tx, id);
     await settlePayment(tx, order.checkoutId);
     return restored;
@@ -111,7 +125,9 @@ ordersRouter.post("/:id/cancel", async (req, res) => {
     body:
       order.status === "SCHEDULED" && order.scheduledFor
         ? `The resident cancelled ${orderCode(id)} for ${whenWords(order.scheduledFor)}. You don't need to prepare it.`
-        : "The resident cancelled before you accepted it.",
+        : order.status === "ACCEPTED" || order.status === "PREPARING"
+          ? `The resident cancelled ${orderCode(id)} after it ran late twice. Stop preparing it.`
+          : "The resident cancelled before you accepted it.",
     link: "/vendor/orders",
   });
   await broadcastOrder(id);

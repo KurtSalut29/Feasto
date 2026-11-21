@@ -338,14 +338,14 @@ async function main() {
       store.latitude != null && store.longitude != null
         ? Math.round(distanceKm({ lat: store.latitude, lng: store.longitude }, { lat: resident.lat, lng: resident.lng }) * 1.3 * 10) / 10
         : null;
-    const deliveryFee = fulfillment === "DELIVERY" ? priceDelivery(km, DEFAULT_SETTINGS, createdAt).fee : 0;
+    const deliveryFee = fulfillment === "DELIVERY" ? priceDelivery(km, DEFAULT_SETTINGS).fee : 0;
     const rider = fulfillment === "DELIVERY" && !failed ? pick(riders) : null;
     const at = (m: number) => new Date(createdAt.getTime() + minutes(m));
     const ready = between(12, 25);
     // About half the deliveries get the rider rated, and some of those a tip (paid online)
     const riderStars = rider && chance(0.5) ? weightedRating() : null;
     const tip = riderStars !== null && riderStars >= 4 && chance(0.3) ? pick([10, 20, 20, 20, 30, 50, 50, 100]) : 0;
-    const share = feastoShare({ fulfillment, subtotal, deliveryFee, commissionFreeUntil: store.commissionFreeUntil }, DEFAULT_SETTINGS, createdAt);
+    const share = feastoShare({ fulfillment, subtotal, commissionFreeUntil: store.commissionFreeUntil }, DEFAULT_SETTINGS, store, createdAt);
     if (!failed && paymentMethod === "COD") {
       add(store.id, { vendorId: store.id }, share.commission);
       if (rider) add(rider.id, { riderId: rider.id }, share.riderCut);

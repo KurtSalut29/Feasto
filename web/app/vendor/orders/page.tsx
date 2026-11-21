@@ -15,6 +15,7 @@ import { itemsSummary, orderCode, statusLabel } from "@/lib/order-status";
 import { clockOf, dayOf, sendAtOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrder } from "@/lib/types";
+import { BusyKitchen } from "./busy-kitchen";
 import { HistoryTable } from "./history-table";
 import { paymentLine } from "./order-parts";
 import { OrderPanel } from "./order-panel";
@@ -24,7 +25,7 @@ import { WaitClock } from "./wait-clock";
 export const metadata: Metadata = { title: "Orders" };
 
 type Tab = "new" | "scheduled" | "preparing" | "ready" | "done";
-type OrdersResponse = { orders: VendorOrder[]; counts: Record<Tab, number> };
+type OrdersResponse = { orders: VendorOrder[]; counts: Record<Tab, number>; busy?: { minutes: number; until: string | null } };
 
 export default function VendorOrdersPage({ searchParams }: PageProps<"/vendor/orders">) {
   return (
@@ -67,7 +68,7 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
     );
   }
 
-  const [{ orders: queue, counts }, { orders: later }, { store }] = await Promise.all([
+  const [{ orders: queue, counts, busy }, { orders: later }, { store }] = await Promise.all([
     serverApi<OrdersResponse>("/vendor/orders?tab=active"),
     serverApi<OrdersResponse>("/vendor/orders?tab=scheduled"),
     serverApi<{ store: { latitude: number | null; longitude: number | null } }>("/vendor/store"),
@@ -102,6 +103,7 @@ async function VendorOrders({ searchParams }: Pick<PageProps<"/vendor/orders">, 
         actions={views(counts)}
       />
       <PushCard place="orders" className="mb-4 max-w-2xl" />
+      <BusyKitchen minutes={busy?.minutes ?? 0} until={busy?.until ?? null} />
 
       {/* Which stage to show, with how many orders are in each */}
       <nav aria-label="Stage" className="-mx-4 mb-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">

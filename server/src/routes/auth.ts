@@ -17,6 +17,10 @@ import { getSettings } from "../lib/settings.js";
 import { acceptsReservationsByDefault, STORE_TYPES } from "../lib/storeTypes.js";
 import { mobileNumber, newRiderCode, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth } from "../middleware/auth.js";
+import { requireHuman } from "../lib/turnstile.js";
+import { alreadyRead, checkingOn } from "../lib/documentCheck.js";
+import { answerPrecheck, chosenIdType, headerText, precheckBody, precheckOff } from "./documents.js";
+import { checkOwnCode, checkSecondStep, confirmSetup, deviceOf, emailSecondStep, finishLogin, mustUseApp, nextStep, renewBackupCodes, secondStep, setupUserOf, startSetup, warnLockedOut } from "../lib/twoStep.js";
 
 export const authRouter = Router();
 
@@ -176,8 +180,30 @@ authRouter.get("/email-code", (_req, res) => {
   res.json({ ready: mailReady() });
 });
 
+/**
+ * The photo of the ID, license or permit checked while the person is still on the sign-up form, so
+ * a selfie, a sample picture or a driver's license sent as "PhilSys ID" is caught before the account
+ * exists. Only after the email is confirmed (so it can't be used as a free document reader), and a
+ * few times an hour. Nothing is saved but the reading, which the upload after sign-up reuses.
+ */
+authRouter.post("/document-check", precheckBody, async (req, res) => {
+  if (!checkingOn()) return void res.json(precheckOff);
+  const address = headerText(req, "x-email").toLowerCase();
+  if (!address || !(await emailVerified(address))) throw new HttpError(403, "Confirm your email first: type the code we sent to it.");
+  const ip = clientIp(req);
+  const limits: [string, number][] = [[`rate:doc-check:email:${address}`, 12], ...(ip ? ([[`rate:doc-check:ip:${ip}`, 40]] as [string, number][]) : [])];
+  for (const [key, limit] of Buffer.isBuffer(req.body) && (await alreadyRead(req.body)) ? [] : limits) {
+    const { over, retryAfter } = await hit(key, limit, 3600);
+    if (over) tooMany(res, retryAfter, "You've checked a lot of photos just now.");
+  }
+  const kind = String(req.get("x-document-kind") ?? "");
+  if (kind !== "RESIDENT_ID" && kind !== "LICENSE" && kind !== "PERMIT") throw new HttpError(400, "Say which document this is.");
+  await answerPrecheck(req, res, kind, kind === "RESIDENT_ID" ? chosenIdType(req) : null, headerText(req, "x-expected-name"));
+});
+
 authRouter.post("/register", async (req, res) => {
   const input = parseBody(registerSchema, req.body);
+  await requireHuman(req);
   // Beyond the format: a domain that can't receive mail, a throwaway inbox, or a typo
   const problem = await emailProblem(input.email);
   if (problem) throw new ValidationError({ email: [problem.message] });
@@ -256,7 +282,8 @@ authRouter.post("/register", async (req, res) => {
     if (riderStore) await notifyStoreOfRider(riderStore.ownerId, user.name);
     await Promise.all([hit("rate:signup:all", SIGNUPS_OVERALL, SIGNUP_WINDOW), networkKey && hit(networkKey, signupsPerNetwork, SIGNUP_WINDOW)]);
 
-    res.cookie(SESSION_COOKIE, await signSession({ userId: user.id, role: user.role, name: user.name }), sessionCookieOptions);
+    // Signs them in and remembers this browser as theirs, so it never counts as a new sign-in
+    await finishLogin(req, res, { id: user.id, email: input.email, name: user.name, role: user.role, totpEnabledAt: null });
     res.status(201).json({ user });
   } catch (error) {
     // The unique index on email also stops two simultaneous sign-ups with the same
@@ -274,6 +301,7 @@ authRouter.post("/register", async (req, res) => {
 
 authRouter.post("/login", async (req, res) => {
   const { email, password } = parseBody(loginSchema, req.body);
+  await requireHuman(req);
 
   const lockSeconds = await loginLockSeconds(email);
   if (lockSeconds > 0) {
@@ -284,7 +312,7 @@ authRouter.post("/login", async (req, res) => {
   // Hash even when the email is unknown so both cases take the same time to answer
   const valid = user ? await verifyPassword(password, user.passwordHash) : (await hashPassword(password), false);
   if (!user || !valid) {
-    await recordFailedLogin(email);
+    if (await recordFailedLogin(email)) await warnLockedOut(email);
     // Same message for both cases so nobody can probe which emails have accounts
     throw new HttpError(401, "Incorrect email or password.");
   }
@@ -292,10 +320,90 @@ authRouter.post("/login", async (req, res) => {
   await clearFailedLogins(email);
   // Only someone with the right password learns the account is disabled
   if (user.disabledAt) throw new HttpError(403, "This account has been disabled. Please contact Feasto support.");
-  res.cookie(SESSION_COOKIE, await signSession({ userId: user.id, role: user.role, name: user.name }), sessionCookieOptions);
+  // The second step, when the account uses an authenticator app (or must set one up)
+  const step = await nextStep(user, deviceOf(req, res));
+  if (step !== "done") return void res.json(await secondStep(user, step));
+  await finishLogin(req, res, user);
 
   const profile = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });
   res.json({ user: profile });
+});
+
+// ---------- Two-step login ----------
+
+const secondStepSchema = z.object({
+  token: z.string().min(10),
+  method: z.enum(["app", "backup", "email"]).default("app"),
+  code: z.string("Type the code.").trim().min(6, "Type the code.").max(20),
+  /** Skip the code on this browser for 30 days */
+  remember: z.boolean().optional().default(false),
+});
+
+authRouter.post("/two-step", async (req, res) => {
+  const input = parseBody(secondStepSchema, req.body);
+  const { user, backupLeft } = await checkSecondStep(input.token, input.method, input.code);
+  await finishLogin(req, res, user, { remember: input.remember });
+  const profile = await prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: publicUser });
+  res.json({ user: profile, backupLeft });
+});
+
+authRouter.post("/two-step/email", async (req, res) => {
+  const { token } = parseBody(z.object({ token: z.string().min(10) }), req.body);
+  if ((await hit(`rate:two-step-email:${clientIp(req) ?? "all"}`, 10, 3600)).over) throw new HttpError(429, "Too many codes. Try again in an hour.");
+  res.json(await emailSecondStep(token));
+});
+
+/** A required setup during login: the QR code, before there's a session */
+authRouter.post("/two-step/setup", async (req, res) => {
+  const { token } = parseBody(z.object({ token: z.string().min(10) }), req.body);
+  res.json(await startSetup(await setupUserOf(token)));
+});
+
+authRouter.post("/two-step/setup/confirm", async (req, res) => {
+  const { token, code } = parseBody(z.object({ token: z.string().min(10), code: z.string("Type the code.").trim().min(6, "Type the 6 digits.").max(8) }), req.body);
+  const userId = await setupUserOf(token);
+  const backupCodes = await confirmSetup(userId, code);
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { id: true, email: true, name: true, role: true, totpEnabledAt: true } });
+  await finishLogin(req, res, user);
+  const profile = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: publicUser });
+  res.json({ user: profile, backupCodes });
+});
+
+/** For someone logged in: whether it's on, required, and how many backup codes are left */
+authRouter.get("/two-step/status", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { totpEnabledAt: true, backupCodes: true, role: true } });
+  const devices = await prisma.knownDevice.findMany({ where: { userId: req.session!.userId }, orderBy: { lastSeenAt: "desc" }, take: 10, select: { id: true, label: true, lastSeenAt: true, trustedUntil: true, createdAt: true } });
+  res.json({ enabled: Boolean(user.totpEnabledAt), since: user.totpEnabledAt, required: await mustUseApp(user.role), backupLeft: user.backupCodes.length, devices, mailReady: mailReady() });
+});
+
+authRouter.post("/two-step/start", requireAuth, async (req, res) => {
+  res.json(await startSetup(req.session!.userId));
+});
+
+authRouter.post("/two-step/confirm", requireAuth, async (req, res) => {
+  const { code } = parseBody(z.object({ code: z.string("Type the code.").trim().min(6, "Type the 6 digits.").max(8) }), req.body);
+  res.json({ backupCodes: await confirmSetup(req.session!.userId, code) });
+});
+
+authRouter.post("/two-step/backup-codes", requireAuth, async (req, res) => {
+  const { code } = parseBody(z.object({ code: z.string("Type the code.").trim().min(6).max(8) }), req.body);
+  await checkOwnCode(req.session!.userId, code);
+  res.json({ backupCodes: await renewBackupCodes(req.session!.userId) });
+});
+
+authRouter.post("/two-step/off", requireAuth, async (req, res) => {
+  const { code } = parseBody(z.object({ code: z.string("Type the code.").trim().min(6).max(8) }), req.body);
+  if (await mustUseApp(req.session!.role)) throw new HttpError(403, "Admins and store owners must keep two-step login on.");
+  await checkOwnCode(req.session!.userId, code);
+  await prisma.user.update({ where: { id: req.session!.userId }, data: { totpSecret: null, totpEnabledAt: null, backupCodes: [] } });
+  await prisma.knownDevice.updateMany({ where: { userId: req.session!.userId }, data: { trustedUntil: null } });
+  res.json({ ok: true });
+});
+
+/** Forget every remembered browser: the code is asked again everywhere */
+authRouter.post("/two-step/forget-devices", requireAuth, async (req, res) => {
+  await prisma.knownDevice.updateMany({ where: { userId: req.session!.userId }, data: { trustedUntil: null } });
+  res.json({ ok: true });
 });
 
 authRouter.post("/logout", (_req, res) => {

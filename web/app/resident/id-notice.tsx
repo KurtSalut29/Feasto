@@ -3,6 +3,7 @@
 import { Hourglass, IdCard, TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DocumentCheckNote, documentCheckProblem, useDocumentCheck } from "@/components/app/document-check";
 import { DocumentPicker, uploadDocument } from "@/components/app/document-upload";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/ui/select-field";
@@ -22,6 +23,8 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
   const [idType, setIdType] = useState(user.idType ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const check = useDocumentCheck(user.idStatus === "VERIFIED" || user.idStatus === "PENDING" ? null : file, { kind: "RESIDENT_ID", idType: idType || undefined });
+  const [flagged, setFlagged] = useState(false);
 
   if (user.idStatus === "VERIFIED") return null;
   if (user.idStatus === "PENDING") {
@@ -39,6 +42,8 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
   async function send() {
     if (!idType) return setError("Choose the kind of ID.");
     if (!file) return setError("Take or upload a photo of your ID.");
+    setFlagged(false);
+    if (documentCheckProblem(check)) return setFlagged(true);
     setBusy(true);
     setError(undefined);
     try {
@@ -72,8 +77,11 @@ export function IdNotice({ user }: { user: Pick<User, "idStatus" | "idReviewNote
           : `Pabili and cash on delivery need it, so riders and stores know who they're serving. The name on it must be ${user.name}. Only Feasto's admin sees it.`}
       </p>
       <div className="mt-3 space-y-3">
-        <SelectField label="Kind of ID" placeholder="Choose your ID" options={ID_TYPE_OPTIONS} value={idType} onChange={(e) => setIdType(e.target.value)} />
-        <DocumentPicker label="Photo of your ID" hint="The front, with your name and photo readable." file={file} camera onChange={setFile} />
+        <SelectField label="Kind of ID" placeholder="Choose your ID" options={ID_TYPE_OPTIONS} value={idType} onChange={(e) => (setIdType(e.target.value), setFlagged(false))} />
+        <div>
+          <DocumentPicker label="Photo of your ID" hint="The front, with your name and photo readable." file={file} camera onChange={(f) => (setFile(f), setFlagged(false))} />
+          <DocumentCheckNote check={check} what="ID" flagged={flagged} onUseIdType={(t) => (setIdType(t), setFlagged(false))} />
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Button className="w-full" loading={busy} onClick={send}>
           Send my ID

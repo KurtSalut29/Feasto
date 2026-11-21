@@ -16,6 +16,7 @@ import { pinOf } from "@/lib/geo";
 import { isFinished, orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { VendorOrderDetail } from "@/lib/types";
+import { EtaLine } from "@/components/app/order-eta";
 import { OrderActions } from "../order-actions";
 import { commissionLine, DishThumb, paymentLine } from "../order-parts";
 import { RiderLive } from "../rider-live";
@@ -177,6 +178,8 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                 {order.status === "SCHEDULED" && order.scheduledFor ? (
                   <p className="text-sm text-muted">Nothing to do yet. You&apos;ll get it to accept at {clockOf(sendAtOf(order.scheduledFor, order.fulfillment))}.</p>
                 ) : (
+                <>
+                <EtaLine eta={order.eta} ready={order.status === "READY"} delays={order.delays} delayNote={order.delayNote} className="mb-3" />
                 <OrderActions
                   orderId={order.id}
                   status={order.status}
@@ -184,7 +187,9 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
                   riderName={order.rider?.name}
                   dispatch={order.dispatch}
                   riderShown={Boolean(delivery && order.rider)}
+                  estimateMinutes={order.estimateMinutes}
                 />
+                </>
                 )}
               </div>
             </Card>

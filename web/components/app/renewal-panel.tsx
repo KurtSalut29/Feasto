@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { daysLeft, formatDate } from "@/lib/format";
 import type { RenewalInfo } from "@/lib/verification-fields";
 import { DocumentPreview } from "./document-preview";
+import { DocumentCheckNote, documentCheckProblem, useDocumentCheck } from "./document-check";
 import { DocumentPicker, uploadDocument } from "./document-upload";
 
 /** Below this many days the renewal form opens by itself, like the reminders that link here. */
@@ -39,6 +40,8 @@ export function RenewalPanel({ data }: { data: RenewalInfo }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [fileError, setFileError] = useState<string>();
   const panel = useRef<HTMLElement>(null);
+  const check = useDocumentCheck(file, { kind: isPermit ? "PERMIT" : "LICENSE", number: number.trim() || undefined });
+  const [flagged, setFlagged] = useState(false);
 
   // The reminders link straight here, but this part of the page arrives after the browser looks for it
   useEffect(() => {
@@ -56,6 +59,8 @@ export function RenewalPanel({ data }: { data: RenewalInfo }) {
       setFileError(`Choose a photo or PDF of your renewed ${lowerName}.`);
       return;
     }
+    setFlagged(false);
+    if (documentCheckProblem(check)) return setFlagged(true);
     setSaving(true);
     try {
       await uploadDocument(file, "/api/documents/renewal/file");
@@ -117,7 +122,8 @@ export function RenewalPanel({ data }: { data: RenewalInfo }) {
         <form onSubmit={submit} noValidate className="space-y-3 border-t border-line pt-3">
           <p className="text-sm font-medium text-ink">Send your renewed {lowerName}</p>
           {error && <Alert tone="error">{error}</Alert>}
-          <DocumentPicker label={`Renewed ${lowerName}`} hint="JPG, PNG or PDF, up to 5 MB. All the text must be readable." file={file} onChange={setFile} error={fileError} />
+          <DocumentPicker label={`Renewed ${lowerName}`} hint="JPG, PNG or PDF, up to 5 MB. All the text must be readable." file={file} onChange={(f) => (setFile(f), setFlagged(false))} error={fileError} />
+          <DocumentCheckNote check={check} what={lowerName} flagged={flagged} />
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField
               label={isPermit ? "Business permit number" : "Driver's license number"}

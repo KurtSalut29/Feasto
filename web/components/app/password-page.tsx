@@ -1,4 +1,5 @@
 import { KeyRound, LockKeyhole, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import { TwoStepCard } from "./two-step-card";
 import { PasswordForm } from "@/components/app/password-form";
 import { MobileHeading } from "@/components/app/mobile-shell";
 
@@ -31,7 +32,9 @@ export function PasswordPage({ email, backHref }: { email: string; backHref: str
           </div>
         </section>
 
-        <aside aria-label="Good to know" className="rounded-3xl md:sticky md:top-24 bg-brand-50/60 p-5 ring-1 ring-brand-100">
+        <TwoStepCard className="md:col-start-1" />
+
+        <aside aria-label="Good to know" className="rounded-3xl md:col-start-2 md:row-span-2 md:row-start-1 md:sticky md:top-24 bg-brand-50/60 p-5 ring-1 ring-brand-100">
           <h2 className="text-sm font-semibold text-ink">Good to know</h2>
           <ul className="mt-3 space-y-3 text-sm text-muted">
             {TIPS.map(({ Icon, text }) => (

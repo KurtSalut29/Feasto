@@ -7,7 +7,9 @@ import { clockOf } from "@/lib/schedule";
 import { pinOf, type LatLng } from "@/lib/geo";
 import { orderCode, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import type { VendorOrder } from "@/lib/types";
+import { EtaLine } from "@/components/app/order-eta";
 import { OrderActions } from "./order-actions";
+import { IF_UNAVAILABLE_WORDS, RanOutButton } from "./ran-out-button";
 import { commissionLine, DishThumb, paymentLine } from "./order-parts";
 import { RiderLive } from "./rider-live";
 import { WaitClock } from "./wait-clock";
@@ -97,6 +99,7 @@ export function OrderPanel({
             )}
           </p>
         )}
+        <EtaLine eta={order.eta} ready={order.status === "READY"} delays={order.delays} delayNote={order.delayNote} className="mb-2.5 bg-white" />
         <OrderActions
           orderId={order.id}
           status={order.status}
@@ -104,6 +107,7 @@ export function OrderPanel({
           riderName={order.rider?.name}
           dispatch={order.dispatch}
           riderShown={riderShown}
+          estimateMinutes={order.estimateMinutes}
         />
       </div>
 
@@ -131,13 +135,14 @@ export function OrderPanel({
         </p>
         <ul className="divide-y divide-line">
           {order.items.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+            <li key={item.id} className={`flex items-center gap-3 px-4 py-2.5 text-sm ${item.removedAt ? "opacity-60" : ""}`}>
               <DishThumb src={item.menuItem?.imageUrl} className="size-11" />
               <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink text-xs font-bold text-white tabular-nums">
                 {item.quantity}×
               </span>
-              <span className="min-w-0 flex-1 font-medium text-ink">
+              <span className={`min-w-0 flex-1 font-medium text-ink ${item.removedAt ? "line-through" : ""}`}>
                 {item.name}
+                {item.removedAt && <span className="block text-xs font-semibold text-amber-800 no-underline">Ran out: taken off the order</span>}
                 {item.note && (
                   <span className="mt-1 flex items-start gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[0.8125rem] font-semibold text-amber-900 ring-1 ring-amber-200">
                     <MessageSquareText className="mt-0.5 size-3.5 shrink-0" aria-hidden />
@@ -146,9 +151,15 @@ export function OrderPanel({
                 )}
               </span>
               <span className="shrink-0 text-muted tabular-nums">{formatPeso(Number(item.unitPrice) * item.quantity)}</span>
+              {!item.removedAt && ["PLACED", "ACCEPTED", "PREPARING"].includes(order.status) && (
+                <RanOutButton orderId={order.id} itemId={item.id} name={item.name} choice={order.checkout.ifUnavailable ?? "REMOVE"} phone={order.checkout.resident.phone} />
+              )}
             </li>
           ))}
         </ul>
+        {["PLACED", "ACCEPTED", "PREPARING"].includes(order.status) && (
+          <p className="border-t border-line px-4 py-2 text-xs text-muted">If something runs out, the customer asked: {IF_UNAVAILABLE_WORDS[order.checkout.ifUnavailable ?? "REMOVE"]}.</p>
+        )}
         <dl className="space-y-1 border-t border-dashed border-line px-4 py-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted">Food</dt>

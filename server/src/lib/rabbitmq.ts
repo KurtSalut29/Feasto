@@ -16,6 +16,8 @@ export const QUEUES = {
   reportRequested: "report.requested",
   /** One store's part of a report, computed by any worker in parallel */
   reportPart: "report.part",
+  /** An uploaded ID, license or permit to read before the admin reviews it (lib/documentCheck.ts) */
+  documentCheck: "document.check",
   /** A sample message from the admin's System page, to show marshalling end to end */
   systemSample: "system.sample",
 } as const;

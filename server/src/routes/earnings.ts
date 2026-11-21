@@ -5,7 +5,7 @@ import { config } from "../config.js";
 import { logActivity, notifyAdmin } from "../lib/activity.js";
 import { prisma } from "../lib/db.js";
 import { closeOpenPayments, paymentResult, startFeastoPayment, type Party } from "../lib/feastoPayments.js";
-import { EARNED, riderBalance, riderBalances, storeBalance, storeBalances, type Balance } from "../lib/earnings.js";
+import { EARNED, riderBalance, riderBalances, storeBalance, storeBalances, storeRates, type Balance } from "../lib/earnings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { notify } from "../lib/liveUpdates.js";
 import { ONLINE_LABEL, ONLINE_PAYMENTS } from "../lib/payments.js";
@@ -89,7 +89,8 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
   const { from, to } = parseBody(periodSchema, req.query);
   const range = manilaRange(from, to);
   const where = { createdAt: range, status: { in: [...EARNED] } };
-  const [sum, paidOut, daily, byStore, byRider, stores, riders, settlements, trials, settings] = await Promise.all([
+  const pabiliWhere = { createdAt: range, status: "DELIVERED" as const };
+  const [sum, paidOut, daily, byStore, byRider, stores, riders, settlements, trials, settings, pabili, pabiliByRider, pabiliDaily] = await Promise.all([
     prisma.order.aggregate({ where, _count: true, _sum: { subtotal: true, deliveryFee: true, commission: true, riderCut: true } }),
     // Online orders were split the moment they were delivered: what went to the stores and the riders
     prisma.$queryRaw<{ stores: string | null; riders: string | null; orders: bigint }[]>`
@@ -107,11 +108,18 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
     prisma.settlement.findMany({ orderBy: { createdAt: "desc" }, take: 12, select: settlementSelect }),
     prisma.vendor.findMany({ where: { commissionFreeUntil: { gt: new Date() } }, orderBy: { commissionFreeUntil: "asc" }, select: { id: true, name: true, commissionFreeUntil: true } }),
     getSettings(),
+    // Feasto's share of Pabili fees
+    prisma.errand.aggregate({ where: pabiliWhere, _count: true, _sum: { deliveryFee: true, feastoCut: true } }),
+    prisma.errand.groupBy({ by: ["riderId"], where: { ...pabiliWhere, riderId: { not: null } }, _count: true, _sum: { deliveryFee: true, feastoCut: true } }),
+    prisma.$queryRaw<{ day: string; earned: string }[]>`
+      SELECT to_char(("createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS day, sum("feastoCut")::text AS earned
+      FROM "Errand" WHERE "createdAt" >= ${range.gte} AND "createdAt" < ${range.lt} AND status = 'DELIVERED'
+      GROUP BY day`,
   ]);
 
   // Names for everyone in the lists
   const vendorIds = [...new Set([...byStore.map((s) => s.vendorId), ...stores.map((b) => b.id)])];
-  const riderIds = [...new Set([...byRider.map((r) => r.riderId!), ...riders.map((b) => b.id)])];
+  const riderIds = [...new Set([...byRider.map((r) => r.riderId!), ...pabiliByRider.map((r) => r.riderId!), ...riders.map((b) => b.id)])];
   const [vendorNames, riderNames] = await Promise.all([
     prisma.vendor.findMany({ where: { id: { in: vendorIds } }, select: { id: true, name: true, imageUrl: true } }),
     prisma.user.findMany({ where: { id: { in: riderIds } }, select: { id: true, name: true } }),
@@ -119,10 +127,23 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
   const store = new Map(vendorNames.map((v) => [v.id, v]));
   const rider = new Map(riderNames.map((u) => [u.id, u]));
   const byDay = new Map(daily.map((d) => [d.day, d]));
+  const pabiliOn = new Map(pabiliDaily.map((d) => [d.day, Number(d.earned)]));
   const commission = Number(sum._sum.commission ?? 0);
-  const riderShare = Number(sum._sum.riderCut ?? 0);
+  const pabiliShare = Number(pabili._sum.feastoCut ?? 0);
+  // From riders: the Pabili share, plus any share of food delivery fees from before riders kept all of it
+  const riderShare = Math.round((Number(sum._sum.riderCut ?? 0) + pabiliShare) * 100) / 100;
   const sales = Number(sum._sum.subtotal ?? 0);
-  const deliveryFees = Number(sum._sum.deliveryFee ?? 0);
+  const deliveryFees = Math.round((Number(sum._sum.deliveryFee ?? 0) + Number(pabili._sum.deliveryFee ?? 0)) * 100) / 100;
+  // Each rider's food deliveries and Pabili together
+  const riderRows = new Map<string, { deliveries: number; fees: number; riderShare: number; tips: number }>();
+  for (const r of byRider) riderRows.set(r.riderId!, { deliveries: r._count, fees: Number(r._sum.deliveryFee ?? 0), riderShare: Number(r._sum.riderCut ?? 0), tips: Number(r._sum.tip ?? 0) });
+  for (const r of pabiliByRider) {
+    const row = riderRows.get(r.riderId!) ?? { deliveries: 0, fees: 0, riderShare: 0, tips: 0 };
+    row.deliveries += r._count;
+    row.fees += Number(r._sum.deliveryFee ?? 0);
+    row.riderShare += Number(r._sum.feastoCut ?? 0);
+    riderRows.set(r.riderId!, row);
+  }
   // Only what's still owed, the biggest amounts first
   const open = (list: Balance[]) => list.filter((b) => b.owed > 0).sort((a, b) => b.owed - a.owed);
 
@@ -132,26 +153,28 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
     rates: {
       commissionPercent: settings.commissionPercent,
       pickupCommissionPercent: settings.pickupCommissionPercent,
-      riderFeePercent: settings.riderFeePercent,
+      pabiliFeePercent: settings.pabiliFeePercent,
       freeTrialDays: settings.freeTrialDays,
     },
     totals: {
       earned: Math.round((commission + riderShare) * 100) / 100,
       commission,
       riderShare,
+      pabiliShare,
+      pabili: pabili._count,
       orders: sum._count,
       sales,
       deliveryFees,
       /** Feasto's share of all the money that went through it */
       takeRate: sales + deliveryFees > 0 ? ((commission + riderShare) / (sales + deliveryFees)) * 100 : 0,
     },
-    daily: datesBetween(from, to).map((date) => ({ date, orders: Number(byDay.get(date)?.orders ?? 0), sales: Number(byDay.get(date)?.earned ?? 0) })),
+    daily: datesBetween(from, to).map((date) => ({ date, orders: Number(byDay.get(date)?.orders ?? 0), sales: Math.round((Number(byDay.get(date)?.earned ?? 0) + (pabiliOn.get(date) ?? 0)) * 100) / 100 })),
     stores: byStore
       .map((s) => ({ id: s.vendorId, name: store.get(s.vendorId)?.name ?? "Removed store", imageUrl: store.get(s.vendorId)?.imageUrl ?? null, orders: s._count, sales: Number(s._sum.subtotal ?? 0), commission: Number(s._sum.commission ?? 0) }))
       .sort((a, b) => b.commission - a.commission),
-    riders: byRider
-      .map((r) => ({ id: r.riderId!, name: rider.get(r.riderId!)?.name ?? "Removed rider", deliveries: r._count, fees: Number(r._sum.deliveryFee ?? 0), riderShare: Number(r._sum.riderCut ?? 0), tips: Number(r._sum.tip ?? 0) }))
-      .sort((a, b) => b.riderShare - a.riderShare),
+    riders: [...riderRows]
+      .map(([id, r]) => ({ id, name: rider.get(id)?.name ?? "Removed rider", ...r, fees: Math.round(r.fees * 100) / 100, riderShare: Math.round(r.riderShare * 100) / 100 }))
+      .sort((a, b) => b.riderShare - a.riderShare || b.deliveries - a.deliveries),
     balances: {
       stores: open(stores).map((b) => ({ ...b, name: store.get(b.id)?.name ?? "Removed store", imageUrl: store.get(b.id)?.imageUrl ?? null })),
       riders: open(riders).map((b) => ({ ...b, name: rider.get(b.id)?.name ?? "Removed rider" })),
@@ -192,12 +215,19 @@ vendorEarningsRouter.get("/earnings", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   const [settings, vendor, balance, settlements] = await Promise.all([
     getSettings(),
-    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { commissionFreeUntil: true } }),
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { commissionFreeUntil: true, commissionPercent: true, pickupCommissionPercent: true, commissionNote: true, commissionSetAt: true } }),
     storeBalance(vendorId),
     recent({ vendorId }),
   ]);
   const free = vendor.commissionFreeUntil && vendor.commissionFreeUntil > new Date() ? vendor.commissionFreeUntil : null;
-  res.json({ rates: { delivery: settings.commissionPercent, pickup: settings.pickupCommissionPercent }, freeUntil: free, balance, settlements, payments: config.payments });
+  const own = storeRates(vendor, settings);
+  res.json({
+    rates: { delivery: own.delivery, pickup: own.pickup, agreed: own.agreed, since: own.agreed ? vendor.commissionSetAt : null },
+    freeUntil: free,
+    balance,
+    settlements,
+    payments: config.payments,
+  });
 });
 
 /**
@@ -229,7 +259,7 @@ riderEarningsRouter.use(requireAuth, requireRole("RIDER"));
 riderEarningsRouter.get("/earnings", async (req, res) => {
   const riderId = req.session!.userId;
   const [settings, balance, settlements] = await Promise.all([getSettings(), riderBalance(riderId), recent({ riderId })]);
-  res.json({ rate: settings.riderFeePercent, balance, settlements, payments: config.payments });
+  res.json({ rate: settings.pabiliFeePercent, balance, settlements, payments: config.payments });
 });
 
 /** The rider pays what they owe Feasto from cash deliveries, with an e-wallet or card (like the store's) */

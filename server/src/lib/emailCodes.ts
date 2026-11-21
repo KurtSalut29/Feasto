@@ -94,3 +94,21 @@ export async function emailVerified(email: string) {
   return (await redis.get(verifiedKey(email))) === "1";
 }
 export const forgetVerified = (email: string) => redis.del(verifiedKey(email));
+
+/** Any other email from Feasto (login codes, sign-in alerts), in the same plain style. False when mail isn't set up or it failed. */
+export async function sendEmail(message: { to: string; subject: string; text: string; html: string }) {
+  if (!mailReady()) return false;
+  try {
+    await mailer().sendMail({ from: config.mail.from.includes("<") ? config.mail.from : `"Feasto" <${config.mail.from}>`, ...message });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The plain branded email body used by every Feasto email */
+export const emailHtml = (lines: string[], big?: string) => `<div style="font-family:Arial,sans-serif;max-width:420px;margin:0 auto;padding:24px;color:#1f2937">
+  <p style="font-size:20px;font-weight:700;color:#d24600;margin:0 0 16px">Feasto</p>
+  ${lines.map((l, i) => (i === 0 ? `<p style="margin:0 0 8px">${l}</p>` : `<p style="margin:8px 0 0;color:#6b7280">${l}</p>`)).join("\n  ")}
+  ${big ? `<p style="font-size:34px;font-weight:700;letter-spacing:8px;margin:16px 0">${big}</p>` : ""}
+</div>`;

@@ -133,6 +133,13 @@ enum PayoutStatus {
   FAILED
 }
 
+/// What the store does when an item ran out after the order was placed
+enum IfUnavailable {
+  REMOVE // take it off and refund it
+  CALL // call the resident first
+  CANCEL // cancel the whole order
+}
+
 enum Fulfillment {
   DELIVERY
   PICKUP
@@ -188,6 +195,13 @@ model User {
   idReviewedAt      DateTime?
   /// Sessions signed before this moment stop working, so a new password logs out other devices
   passwordChangedAt DateTime?
+  /// Orders the rider couldn't hand over because nobody came to the door
+  noShows           Int       @default(0)
+  /// Two-step login: the authenticator app's secret (encrypted, lib/totp.ts), when it was turned on,
+  /// and the hashes of the unused backup codes
+  totpSecret        String?
+  totpEnabledAt     DateTime?
+  backupCodes       String[]  @default([])
   /// Display & accessibility, chosen by the person and applied on every device they log in on
   textSize          TextSize  @default(NORMAL)
   highContrast      Boolean   @default(false)
@@ -230,6 +244,7 @@ model User {
   ratingsGiven  RiderRating[]  @relation("RatingsGiven")
 
   @@index([role, idStatus])
+  knownDevices      KnownDevice[]
 }
 
 /// A resident's saved delivery address.
@@ -292,6 +307,22 @@ model Vendor {
   /// A new store's first month is free: orders before this pay Feasto no commission.
   /// Set once, when the admin first approves the store.
   commissionFreeUntil DateTime?
+  /// The commission agreed with this store, in percent; empty uses the default in Settings
+  commissionPercent       Decimal?  @db.Decimal(4, 1)
+  pickupCommissionPercent Decimal?  @db.Decimal(4, 1)
+  /// The admin's note about the agreement, e.g. "Signed Nov 25"
+  commissionNote          String?
+  commissionSetAt         DateTime?
+  /// How long the kitchen usually takes, and how much more for every 5 items after the first 5
+  prepMinutes             Int       @default(15)
+  prepPer5Items           Int       @default(5)
+  /// Busy kitchen: minutes added to every new order until busyUntil
+  busyExtraMinutes        Int       @default(0)
+  busyUntil               DateTime?
+  /// The farthest it delivers, by road
+  deliveryRadiusKm        Decimal   @default(7) @db.Decimal(4, 1)
+  /// How far ahead a big order must be placed (0 = it can be ordered now)
+  largeOrderNoticeMinutes Int       @default(0)
   /// Where Feasto sends the store's money from online orders: an e-wallet or bank account
   payoutChannel       PayoutChannel?
   payoutName          String?
@@ -400,10 +431,10 @@ model PlatformSettings {
   deliveryBaseKm    Decimal  @default(2) @db.Decimal(4, 1)
   /// Added for every kilometre (or part of one) after that
   deliveryPerKm     Decimal  @default(8) @db.Decimal(10, 2)
-  /// Added during the rush hours below, when riders are busiest
-  deliveryPeakFee   Decimal  @default(10) @db.Decimal(10, 2)
-  /// The rush hours the admin set: [{ name, from: "11:00", to: "13:00", days: [0..6] }], Manila time, 0 = Sunday
-  peakHours         Json     @default("[{\"name\":\"Lunch rush\",\"from\":\"11:00\",\"to\":\"13:00\",\"days\":[0,1,2,3,4,5,6]},{\"name\":\"Dinner rush\",\"from\":\"17:00\",\"to\":\"20:00\",\"days\":[0,1,2,3,4,5,6]}]")
+  /// Added to the delivery fee when more orders are waiting than there are free riders (0 = off). All of it goes to the rider.
+  busyFeeMax        Decimal  @default(20) @db.Decimal(10, 2)
+  /// Added while it rains (the admin's switch, or two riders reporting rain). All of it goes to the rider.
+  rainFee           Decimal  @default(10) @db.Decimal(10, 2)
   /// How long a store's own riders have a job to themselves
   storeRiderSeconds Int      @default(60)
   /// The wait between waves of free riders
@@ -419,12 +450,23 @@ model PlatformSettings {
   commissionPercent       Decimal @default(10) @db.Decimal(4, 1)
   /// The same for pickup orders: lower, because no rider is needed
   pickupCommissionPercent Decimal @default(5) @db.Decimal(4, 1)
-  /// Feasto's share of the delivery fee, in percent. Tips are never shared: they all go to the rider.
-  riderFeePercent         Decimal @default(10) @db.Decimal(4, 1)
+  /// Feasto's share of a Pabili fee, in percent. Food deliveries have none: the rider keeps the whole fee.
+  pabiliFeePercent        Decimal @default(10) @db.Decimal(4, 1)
   /// How many days a newly approved store pays no commission
   freeTrialDays           Int     @default(30)
   /// The most a rider may spend on one Pabili. They pay with their own money and are paid back in cash.
   pabiliBudgetMax         Int     @default(1000)
+  /// An order to one store is big from this many items, or this many pesos
+  largeOrderItems         Int     @default(20)
+  largeOrderAmount        Int     @default(3000)
+  /// Cash on delivery is for checkouts up to this; bigger ones are paid online
+  codMaxAmount            Int     @default(3000)
+  /// After this many orders not received at the door, the resident can only pay online
+  noShowStrikes           Int     @default(2)
+  /// How long the rider waits at the door before they may mark it not received
+  doorWaitMinutes         Int     @default(10)
+  /// Admins and store owners must use an authenticator app to log in
+  require2fa              Boolean @default(true)
   updatedAt         DateTime @updatedAt
 }
 
@@ -467,6 +509,8 @@ model Checkout {
   paidChannel     String?
   /// Sent by the client; a retried or double-clicked checkout reuses the key and is not created twice.
   idempotencyKey  String        @unique
+  /// What the store does when an item ran out after the order was placed
+  ifUnavailable   IfUnavailable @default(REMOVE)
   deliveryAddress String? // empty for pickup
   /// The address pin, copied at order time like the address text
   deliveryLat     Float?
@@ -580,8 +624,20 @@ model Order {
   /// Feasto's share of the delivery fee, the same way. The rider keeps the rest, and every tip.
   riderCutRate     Decimal     @default(0) @db.Decimal(4, 1)
   riderCut         Decimal     @default(0) @db.Decimal(10, 2)
+  /// The part of the delivery fee added because riders were busy or it rained, and why. Already in deliveryFee; all of it is the rider's.
+  extraFee         Decimal     @default(0) @db.Decimal(10, 2)
+  extraFeeNote     String?
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
   scheduledFor     DateTime?
+  /// When the store said it would be ready, set when it accepts and moved when it runs late
+  readyBy          DateTime?
+  /// How many times the store said it needs more time, and its last reason
+  delays           Int         @default(0)
+  delayNote        String?
+  /// The rider said they're at the door
+  arrivedAt        DateTime?
+  /// Cancelled because nobody came to the door: counts against the resident
+  noShow           Boolean     @default(false)
   /// When it reached the store to accept: at checkout, after the online payment, or when a scheduled order was sent.
   /// The store's time to accept (and the auto-cancel) counts from here, not from when it was ordered.
   placedAt         DateTime    @default(now())
@@ -778,6 +834,8 @@ model OrderItem {
   quantity   Int
   /// The resident's note for this dish only, e.g. "No onions"
   note       String?
+  /// The store ran out after the order was placed: taken off the order and not charged
+  removedAt  DateTime?
 }
 
 model DiningTable {
@@ -928,6 +986,12 @@ model Errand {
   deliveryFee      Decimal      @db.Decimal(10, 2)
   /// The most the fee can be (a shop within PABILI_MAX_KM), set when it's sent
   feeMax           Decimal?     @db.Decimal(10, 2)
+  /// Added because riders were busy or it rained when it was sent (in deliveryFee and feeMax); all of it is the rider's
+  extraFee         Decimal      @default(0) @db.Decimal(10, 2)
+  extraFeeNote     String?
+  /// Feasto's share of the fee, without the extra: the percent, copied when it's sent, and what it came to
+  feastoCutRate    Decimal      @default(0) @db.Decimal(4, 1)
+  feastoCut        Decimal      @default(0) @db.Decimal(10, 2)
   /// What the shop's receipt says, and its photo; the resident pays this plus the fee
   receiptTotal     Decimal?     @db.Decimal(10, 2)
   receiptPhotoUrl  String?
@@ -1008,4 +1072,56 @@ enum IdCheck {
   PENDING
   VERIFIED
   REJECTED
+}
+
+/// A browser or phone an account has logged in from (a random id in a long-lived cookie, kept as a
+/// hash). A new one sends a "new sign-in" alert; with two-step login, "remember this device" skips
+/// the code on it until trustedUntil.
+model KnownDevice {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceHash   String
+  /// e.g. "Chrome on Android"
+  label        String
+  trustedUntil DateTime?
+  lastSeenAt   DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+
+  @@unique([userId, deviceHash])
+}
+
+enum DocVerdict {
+  LOOKS_REAL
+  REVIEW
+  NOT_A_DOCUMENT
+  /// The automatic check isn't set up, or couldn't run: the admin checks it by hand
+  NOT_CHECKED
+}
+
+/// What the automatic check found in an uploaded ID, license or permit (lib/documentCheck.ts). The
+/// admin still decides; this only says which ones need a closer look. The ID number itself is never
+/// kept: only a keyed hash, to spot the same ID on two accounts (and none for a PhilSys ID).
+model DocumentCheck {
+  id             String     @id @default(cuid())
+  /// The private file name in the documents folder
+  file           String     @unique
+  /// RESIDENT_ID, LICENSE, OR_CR or PERMIT
+  kind           String
+  userId         String?
+  verdict        DocVerdict
+  /// What it looked like, e.g. "Driver's license"
+  documentType   String?
+  nameOnDocument String?
+  birthDate      String?
+  expiresOn      String?
+  nameMatches    Boolean?
+  /// Why it needs a look, in plain words
+  reasons        String[]   @default([])
+  numberHash     String?
+  model          String?
+  createdAt      DateTime   @default(now())
+
+  @@index([numberHash])
+  @@index([userId])
 }

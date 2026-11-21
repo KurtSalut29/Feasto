@@ -14,6 +14,7 @@ import { clockOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { RiderDelivery } from "@/lib/types";
 import { OrderChat } from "@/components/app/order-chat";
+import { EtaLine } from "@/components/app/order-eta";
 import { DeliveryActions } from "./delivery-actions";
 import { LocationSharer } from "./location-sharer";
 import { RiderTripMap } from "./rider-trip-map";
@@ -121,8 +122,8 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
  */
 async function RiderActive() {
   await requireRole("RIDER");
-  const [{ order }, { errand }] = await Promise.all([
-    serverApi<{ order: RiderDelivery | null }>("/rider/active"),
+  const [{ order, doorWaitMinutes }, { errand }] = await Promise.all([
+    serverApi<{ order: RiderDelivery | null; doorWaitMinutes?: number }>("/rider/active"),
     serverApi<{ errand: RiderErrand | null }>("/rider/errands/active"),
   ]);
 
@@ -190,6 +191,7 @@ async function RiderActive() {
         <div className="mt-2">
           <StepBar steps={steps} done={done} />
         </div>
+        <EtaLine eta={order.eta} ready={order.status === "READY"} className="mt-3 bg-white" />
       </section>
 
       <TripDirections
@@ -201,7 +203,7 @@ async function RiderActive() {
       {/* Laptops up: the map stays on the left while the steps, payment and route sit beside it */}
       <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={store} home={home} homeAddress={order.checkout.deliveryAddress} status={order.status} />
-        <DeliveryActions orderId={order.id} status={order.status} />
+        <DeliveryActions orderId={order.id} status={order.status} arrivedAt={order.arrivedAt ?? null} doorWaitMinutes={doorWaitMinutes} />
         <LocationSharer orderId={order.id} heading={pickedUp ? "home" : "store"} store={store} home={home} />
 
         {payment.cash ? (

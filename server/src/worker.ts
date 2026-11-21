@@ -1,4 +1,5 @@
 import type { ConsumeMessage } from "amqplib";
+import { checkDocument, type DocumentKind } from "./lib/documentCheck.js";
 import { availableParallelism } from "node:os";
 import { config } from "./config.js";
 import { runDueDispatches } from "./lib/dispatch.js";
@@ -124,26 +125,29 @@ await consume<{ checkoutId: string; simulateFailure: boolean }>(QUEUES.paymentRe
 });
 
 /**
- * Gives back one order's part of an online payment, after it was cancelled or declined. With
- * Xendit the money really goes back to the card or e-wallet (in Test Mode, test money).
+ * Gives back one order's part of an online payment, after it was cancelled or declined, or one
+ * item's price when the store ran out of it (itemId and amount). With Xendit the money really goes
+ * back to the card or e-wallet (in Test Mode, test money).
  */
-await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) => {
-  if (!(await firstTime(`refund:${orderId}`))) return;
+await consume<{ orderId: string; itemId?: string; amount?: number }>(QUEUES.refundRequested, async ({ orderId, itemId, amount: itemAmount }) => {
+  if (!(await firstTime(itemId ? `refund:${orderId}:${itemId}` : `refund:${orderId}`))) return;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     select: { subtotal: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true, transferAccountId: true, transferFrom: true } } },
   });
   if (!order) return;
-  const amount = Math.round((Number(order.subtotal) + Number(order.deliveryFee)) * 100) / 100;
+  const amount = itemAmount ?? Math.round((Number(order.subtotal) + Number(order.deliveryFee)) * 100) / 100;
+  const why = itemId ? "An item ran out" : "Cancelled";
+  const what = itemId ? `An item on your order ${orderCode(orderId)} from ${order.vendor.name} ran out` : `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled`;
   let note = "Simulated refund";
   if (order.checkout.transferAccountId) {
     // Paid by transfer to Feasto's account: the admin sends it back to where it came from
     note = `Refund by hand: send ₱${amount.toFixed(2)} back to ${order.checkout.transferFrom ?? "the resident"}`.slice(0, 300);
-    await notifyAdmin({ title: "A transfer to refund", body: `${orderCode(orderId)} from ${order.vendor.name} was cancelled. ${note}.`, link: "/admin/transfers?status=CHECKED" });
+    await notifyAdmin({ title: "A transfer to refund", body: `${orderCode(orderId)} from ${order.vendor.name}: ${why.toLowerCase()}. ${note}.`, link: "/admin/transfers?status=CHECKED" });
     await prisma.order.update({ where: { id: orderId }, data: { refundNote: note } });
     await notify(order.checkout.residentId, {
       title: `₱${amount.toFixed(2)} to be refunded`,
-      body: `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled. Feasto will send the money back to ${order.checkout.transferFrom ?? "the account you paid from"}.`,
+      body: `${what}. Feasto will send the money back to ${order.checkout.transferFrom ?? "the account you paid from"}.`,
       link: `/resident/orders/${orderId}`,
     });
     log(`refund for ${orderCode(orderId)}: ${note}`);
@@ -151,7 +155,7 @@ await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) =
   }
   if (order.checkout.paymentRef && config.payments === "xendit") {
     try {
-      const refund = await refundInvoice({ invoiceId: order.checkout.paymentRef, amount, referenceId: orderId, reason: "CANCELLATION" });
+      const refund = await refundInvoice({ invoiceId: order.checkout.paymentRef, amount, referenceId: itemId ? `${orderId}-${itemId}` : orderId, reason: itemId ? "OTHERS" : "CANCELLATION" });
       note = `Refunded through Xendit (${refund.id}, ${refund.status.toLowerCase()})`;
     } catch (error) {
       // Not retried automatically: the admin sees why on the order and can refund it by hand
@@ -162,9 +166,15 @@ await consume<{ orderId: string }>(QUEUES.refundRequested, async ({ orderId }) =
   await prisma.order.update({ where: { id: orderId }, data: { refundNote: note } });
   if (!note.startsWith("Refund failed")) {
     const to = order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet";
-    await notify(order.checkout.residentId, { title: `₱${amount.toFixed(2)} refunded`, body: `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled, so the money went back to ${to}.`, link: `/resident/orders/${orderId}` });
+    await notify(order.checkout.residentId, { title: `₱${amount.toFixed(2)} refunded`, body: `${what}, so the money went back to ${to}.`, link: `/resident/orders/${orderId}` });
   }
   log(`refund for ${orderCode(orderId)}: ${note}`);
+});
+
+/** Reads a newly uploaded ID, license or permit, so the admin sees which ones need a closer look */
+await consume<{ file: string; kind: DocumentKind; userId: string | null }>(QUEUES.documentCheck, async (job) => {
+  await checkDocument(job);
+  log(`document check for ${job.kind.toLowerCase()} done`);
 });
 
 /**

@@ -10,6 +10,8 @@ import { serverApi } from "@/lib/server-api";
 import type { ApprovalStatus } from "@/lib/types";
 import type { RenewalInfo } from "@/lib/verification-fields";
 import { StoreForm, type StoreSettings } from "./store-form";
+import { TimingCard } from "./timing-card";
+import { TwoStepCard } from "@/components/app/two-step-card";
 
 export const metadata: Metadata = { title: "Store settings" };
 
@@ -54,6 +56,10 @@ async function VendorStore() {
         permit={permit ? <RenewalPanel data={permit} /> : undefined}
         account={<AccountSecurityCard name={user.name} email={user.email} roleLabel="store" />}
       />
+      <div className="mt-5 space-y-5">
+        <TimingCard />
+        <TwoStepCard />
+      </div>
     </>
   );
 }

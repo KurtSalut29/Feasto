@@ -16,8 +16,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { addTransitionType, startTransition, useEffect, useState, ViewTransition, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { DocumentCheckNote, documentCheckProblem, useDocumentCheck, type DocumentCheckRequest } from "@/components/app/document-check";
 import { DocumentPicker, uploadDocument } from "@/components/app/document-upload";
 import { LocationPicker } from "@/components/map/location-picker";
+import { Turnstile } from "@/components/app/turnstile";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { passwordProblem, PasswordRules, PasswordStrength } from "@/components/ui/password-strength";
@@ -191,6 +193,8 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  /** Cloudflare's token that this is a person (only when Feasto was built with a site key) */
+  const [human, setHuman] = useState<string | null>(null);
   /** A likely fix for a mistyped email ("gmial.com"), from the server's check */
   const [emailFix, setEmailFix] = useState<string | null>(null);
   /** The email a code was sent to, and the one whose code was typed right */
@@ -213,6 +217,18 @@ export function RegisterForm() {
   const stepIndex = steps.indexOf(step);
   const isLastStep = stepIndex === steps.length - 1;
 
+  // The photo is checked as soon as it's picked, once the email is confirmed: is it really the
+  // document asked for (and the kind of ID chosen), readable, with the name and number typed?
+  const typedName = [values.firstName, values.middleName, values.lastName, values.suffix].map((x) => x.trim()).filter(Boolean).join(" ");
+  const checkRequest: DocumentCheckRequest | null = !verified
+    ? null
+    : role === "RESIDENT"
+      ? { kind: "RESIDENT_ID", idType: values.idType || undefined, email: verified, name: typedName }
+      : role === "RIDER"
+        ? { kind: "LICENSE", email: verified, name: typedName, number: values.licenseNumber?.trim() || undefined }
+        : { kind: "PERMIT", email: verified, name: values.businessName?.trim() || values.storeName.trim(), number: values.permitNumber?.trim() || undefined };
+  const documentCheck = useDocumentCheck(documentFile, checkRequest);
+
   /** Moves to another step: the card's content slides that way while the card changes size */
   function goTo(next: Step, direction: "auth-forward" | "auth-back") {
     startTransition(() => {
@@ -231,6 +247,8 @@ export function RegisterForm() {
     const value = event.target.name === "emailCode" ? event.target.value.replace(/\D/g, "").slice(0, 6) : event.target.value;
     setValues((current) => ({ ...current, [event.target.name]: value }));
     clearError(event.target.name);
+    // A new kind of ID, name or number is checked against the photo again
+    clearError("documentCheck");
     if (event.target.name === "email") setEmailFix(null);
   }
 
@@ -286,15 +304,18 @@ export function RegisterForm() {
     const documentMissing = documentFile
       ? {}
       : { document: [step === "identity" ? "Take or upload a photo of your valid ID." : `Upload a photo or PDF of your ${step === "permit" ? "business permit" : "driver's license"}.`] };
-    if (step === "identity") return { ...(!values.idType && { idType: ["Choose the kind of ID."] }), ...documentMissing };
-    if (step === "permit") return { ...blank(PERMIT_FIELDS), ...documentMissing };
     if (step === "personal") return blank(RIDER_PERSONAL_FIELDS);
-    return { ...blank(RIDER_LICENSE_FIELDS), ...documentMissing };
+    // A photo the check turned back (not the document asked for, unreadable…) or still checking
+    const photoProblem = documentFile ? documentCheckProblem(documentCheck) : null;
+    const photo = photoProblem ? { documentCheck: [photoProblem] } : {};
+    if (step === "identity") return { ...(!values.idType && { idType: ["Choose the kind of ID."] }), ...documentMissing, ...photo };
+    if (step === "permit") return { ...blank(PERMIT_FIELDS), ...documentMissing, ...photo };
+    return { ...blank(RIDER_LICENSE_FIELDS), ...documentMissing, ...photo };
   }
 
   function requestBody() {
     const { firstName, middleName, lastName, suffix, email, phone, password } = values;
-    const account = { role, firstName, middleName, lastName, suffix, email, phone, password, acceptTerms: agreed };
+    const account = { role, firstName, middleName, lastName, suffix, email, phone, password, acceptTerms: agreed, turnstileToken: human ?? undefined };
     const pick = (fields: VerificationField[]) => Object.fromEntries(fields.map((f) => [f.name, values[f.name] ?? ""]));
     if (role === "VENDOR") {
       return {
@@ -425,7 +446,14 @@ export function RegisterForm() {
         error={error}
         submitting={submitting}
         isLast={isLastStep}
-        beforeSubmit={isLastStep ? terms : null}
+        beforeSubmit={
+          isLastStep ? (
+            <>
+              {terms}
+              <Turnstile onToken={setHuman} />
+            </>
+          ) : null
+        }
         onBack={() => {
           setError(undefined);
           setFieldErrors({});
@@ -498,9 +526,11 @@ export function RegisterForm() {
               onChange={(file) => {
                 setDocumentFile(file);
                 clearError("document");
+                clearError("documentCheck");
               }}
               error={fieldError("document")}
             />
+            <DocumentCheckNote check={documentCheck} what="business permit" flagged={Boolean(fieldError("documentCheck"))} />
           </>
         )}
         {step === "verify" && (
@@ -565,8 +595,19 @@ export function RegisterForm() {
               onChange={(file) => {
                 setDocumentFile(file);
                 clearError("document");
+                clearError("documentCheck");
               }}
               error={fieldError("document")}
+            />
+            <DocumentCheckNote
+              check={documentCheck}
+              what="ID"
+              flagged={Boolean(fieldError("documentCheck"))}
+              onUseIdType={(idType) => {
+                setValues((current) => ({ ...current, idType }));
+                clearError("idType");
+                clearError("documentCheck");
+              }}
             />
             <p className="flex items-start gap-2 rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted">
               <IdCard className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden />
@@ -587,9 +628,11 @@ export function RegisterForm() {
               onChange={(file) => {
                 setDocumentFile(file);
                 clearError("document");
+                clearError("documentCheck");
               }}
               error={fieldError("document")}
             />
+            <DocumentCheckNote check={documentCheck} what="driver's license" flagged={Boolean(fieldError("documentCheck"))} />
             {fieldBoxes([STORE_CODE_FIELD], false)}
           </>
         )}
@@ -710,6 +753,7 @@ export function RegisterForm() {
         </div>
 
         {isLastStep && terms}
+        {isLastStep && <Turnstile onToken={setHuman} />}
 
         <div className="pt-1">
           <Button type="submit" loading={submitting} className={`group w-full ${AUTH_BUTTON}`}>

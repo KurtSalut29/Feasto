@@ -570,7 +570,7 @@ async function main() {
       store.vendor.latitude != null && store.vendor.longitude != null
         ? Math.round(distanceKm({ lat: store.vendor.latitude, lng: store.vendor.longitude }, { lat: resident.latitude, lng: resident.longitude }) * 1.3 * 10) / 10
         : null;
-    const deliveryFee = fulfillment === "DELIVERY" ? priceDelivery(km, DEFAULT_SETTINGS, createdAt).fee : 0;
+    const deliveryFee = fulfillment === "DELIVERY" ? priceDelivery(km, DEFAULT_SETTINGS).fee : 0;
     const deliveryKm = fulfillment === "DELIVERY" ? km : null;
     const finished = ["DELIVERED", "COMPLETED", "REJECTED", "CANCELLED"].includes(status);
     const failed = status === "REJECTED" || status === "CANCELLED";
@@ -605,7 +605,7 @@ async function main() {
         subtotal,
         deliveryFee,
         deliveryKm,
-        ...feastoShare({ fulfillment, subtotal, deliveryFee, commissionFreeUntil: null }, DEFAULT_SETTINGS, createdAt),
+        ...feastoShare({ fulfillment, subtotal, commissionFreeUntil: null }, DEFAULT_SETTINGS, null, createdAt),
         rejectReason: status === "REJECTED" ? pick(["Sold out for today.", "Kitchen is closing early."]) : status === "CANCELLED" ? "Cancelled by the resident" : null,
         acceptedAt: !failed && status !== "PLACED" ? at(3) : null,
         readyAt: reached(["READY", "PICKED_UP", "DELIVERED", "COMPLETED"]) ? at(between(15, 25)) : null,

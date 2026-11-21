@@ -2,6 +2,10 @@ import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import express, { Router } from "express";
+import { alreadyRead, checkingOn, precheckDocument, type DocumentKind, type IdType } from "../lib/documentCheck.js";
+import { ID_TYPES } from "../lib/identity.js";
+import { enqueue } from "../lib/outbox.js";
+import { QUEUES } from "../lib/rabbitmq.js";
 import { z } from "zod";
 import { config } from "../config.js";
 import { Prisma } from "../generated/prisma/client.js";
@@ -12,7 +16,7 @@ import { notify } from "../lib/liveUpdates.js";
 import { hasExpired, removeDocument } from "../lib/renewals.js";
 import { documentKind, notifyStoreOfRider, permitFields, riderFields, storeForCode } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { perAccount } from "../lib/rateLimit.js";
+import { hit, perAccount, tooMany } from "../lib/rateLimit.js";
 import { detectImageType } from "./uploads.js";
 
 /**
@@ -39,6 +43,57 @@ export async function sendDocument(res: express.Response, name: string) {
   });
   res.set({ "Content-Type": CONTENT_TYPE[extension], "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }).send(data);
 }
+
+/** The automatic first look at a new document, done by a worker so the upload answers at once */
+const queueCheck = (file: string, kind: DocumentKind, userId: string) =>
+  prisma.$transaction((tx) => enqueue(tx, QUEUES.documentCheck, { file, kind, userId })).catch(() => undefined);
+
+/** The file to check, read like an upload but not saved */
+export const precheckBody = express.raw({ type: Object.values(CONTENT_TYPE), limit: MAX_BYTES });
+
+/** The kind of ID chosen on the form, sent as a header with the file */
+export const chosenIdType = (req: express.Request): IdType | null => {
+  const value = String(req.get("x-id-type") ?? "");
+  return (ID_TYPES as readonly string[]).includes(value) ? (value as IdType) : null;
+};
+/** A name typed on the form (URI-encoded, since headers are ASCII) */
+export const headerText = (req: express.Request, name: string) => {
+  try {
+    return decodeURIComponent(String(req.get(name) ?? "")).trim().slice(0, 120);
+  } catch {
+    return "";
+  }
+};
+
+/** Reads the file and says at once whether it's the document asked for. Nothing is saved. */
+export async function answerPrecheck(req: express.Request, res: express.Response, kind: DocumentKind, idType: IdType | null, expectedName: string) {
+  const typedNumber = kind === "RESIDENT_ID" ? null : headerText(req, "x-document-number");
+  const data = req.body;
+  if (!Buffer.isBuffer(data) || data.length === 0) throw new HttpError(400, "Choose a photo or PDF of the document.");
+  const extension = detectDocumentType(data);
+  if (!extension) throw new HttpError(400, "That file isn't a JPG, PNG, WebP or PDF.");
+  res.json(await precheckDocument(data, extension, kind, idType, expectedName, typedNumber));
+}
+
+/** Off (no key): answered at once, without counting against the limit */
+export const precheckOff = { verdict: "NOT_CHECKED", block: null, warnings: [], seenAs: null, suggestIdType: null } as const;
+
+/** The same check for a signed-in store, rider or resident, before they send a new document */
+documentsRouter.post("/check", requireRole("VENDOR", "RIDER", "RESIDENT"), precheckBody, async (req, res) => {
+  if (!checkingOn()) return void res.json(precheckOff);
+  if (Buffer.isBuffer(req.body) && !(await alreadyRead(req.body))) {
+    const { over, retryAfter } = await hit(`rate:doc-check:${req.session!.userId}`, 12, 3600);
+    if (over) tooMany(res, retryAfter, "You've checked a lot of photos just now.");
+  }
+  const role = req.session!.role;
+  const me = await prisma.user.findUniqueOrThrow({ where: { id: req.session!.userId }, select: { name: true, idType: true, vendor: { select: { name: true, businessName: true } } } });
+  if (role === "RESIDENT") {
+    const idType = chosenIdType(req) ?? ((ID_TYPES as readonly string[]).includes(me.idType ?? "") ? (me.idType as IdType) : null);
+    return answerPrecheck(req, res, "RESIDENT_ID", idType, me.name);
+  }
+  if (role === "VENDOR") return answerPrecheck(req, res, "PERMIT", null, headerText(req, "x-expected-name") || me.vendor?.businessName || me.vendor?.name || me.name);
+  return answerPrecheck(req, res, "LICENSE", null, me.name);
+});
 
 /** Documents can only change before approval; a reviewed one stays what was checked. */
 const EDITABLE = ["PENDING", "REJECTED"] as const;
@@ -73,6 +128,7 @@ documentsRouter.put(
         throw new HttpError(409, "Your ID is already verified, so it can't be changed.");
       }
       await removeDocument(me.idFile);
+      await queueCheck(name, "RESIDENT_ID", userId);
       return void res.json({ document: documentKind(name) });
     }
     const previous =
@@ -88,6 +144,7 @@ documentsRouter.put(
       throw new HttpError(409, "This document was already reviewed, so it can't be changed now.");
     }
     await removeDocument(previous);
+    await queueCheck(name, req.session!.role === "VENDOR" ? "PERMIT" : "LICENSE", userId);
     res.json({ document: documentKind(name) });
   },
 );

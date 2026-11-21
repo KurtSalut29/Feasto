@@ -8,13 +8,29 @@ const MAX_BYTES = 5 * 1024 * 1024;
 // Bigger than menu photos, because the small print on a permit has to stay readable
 const MAX_SIDE = 2000;
 
+const prepared = new WeakMap<File, Promise<Blob>>();
+
+/**
+ * The bytes sent for a file: a photo shrunk once, a PDF as it is. The check on the form and the
+ * upload after it send exactly the same bytes, so the server reads the photo only once.
+ */
+export function documentBody(file: File): Promise<Blob> {
+  let body = prepared.get(file);
+  if (!body) {
+    body =
+      file.type === "application/pdf"
+        ? Promise.resolve(file)
+        : file.type.startsWith("image/")
+          ? resizePhoto(file, MAX_SIDE)
+          : Promise.reject(new Error("Choose a photo or a PDF of the document."));
+    prepared.set(file, body);
+  }
+  return body;
+}
+
 /** Uploads the signed-in store's permit or rider's license. Throws with a message to show on failure. */
 export async function uploadDocument(file: File, url = "/api/documents/mine") {
-  let body: Blob = file;
-  if (file.type !== "application/pdf") {
-    if (!file.type.startsWith("image/")) throw new Error("Choose a photo or a PDF of the document.");
-    body = await resizePhoto(file, MAX_SIDE);
-  }
+  const body = await documentBody(file);
   if (body.size > MAX_BYTES) throw new Error("That file is over 5 MB. Try a smaller one.");
   const response = await fetch(url, {
     method: "PUT",

@@ -1,25 +1,27 @@
 "use client";
 
-import { BadgePercent, Bike, CalendarHeart, Clock, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, Sun, TimerOff, UserPlus, Wallet } from "lucide-react";
+import { BadgePercent, Banknote, Bike, DoorOpen, PackageCheck, UserX, CalendarHeart, Clock, CloudRain, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, TimerOff, TrafficCone, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import { formatPeso } from "@/lib/format";
-import { RushHoursEditor, type PeakWindow } from "./rush-hours-editor";
+import { LiveAddOns } from "./live-add-ons";
 
 export type PlatformSettings = {
   /** Base delivery fee, for the first `deliveryBaseKm` km */
   deliveryFee: number;
   deliveryBaseKm: number;
   deliveryPerKm: number;
-  deliveryPeakFee: number;
-  /** When the add-on applies; the system checks the time at each checkout */
-  peakHours: PeakWindow[];
+  /** The most added when more orders wait than there are free riders (0 = off); all of it is the rider's */
+  busyFeeMax: number;
+  /** Added while it rains (0 = off); all of it is the rider's */
+  rainFee: number;
   storeRiderSeconds: number;
   riderWaveSeconds: number;
   stuckMinutes: number;
@@ -30,19 +32,30 @@ export type PlatformSettings = {
   /** Feasto's commission on a delivery order's food, in percent */
   commissionPercent: number;
   pickupCommissionPercent: number;
-  /** Feasto's share of the delivery fee, in percent; tips are never shared */
-  riderFeePercent: number;
+  /** Feasto's share of a Pabili fee, in percent; food deliveries have none */
+  pabiliFeePercent: number;
   /** A newly approved store pays no commission for this many days */
   freeTrialDays: number;
   /** The most a rider may spend on one Pabili */
   pabiliBudgetMax: number;
+  /** An order to one store is big from this many items or pesos */
+  largeOrderItems: number;
+  largeOrderAmount: number;
+  /** Cash on delivery is for checkouts up to this */
+  codMaxAmount: number;
+  /** Orders not received at the door before cash is off for a resident */
+  noShowStrikes: number;
+  /** How long the rider waits at the door before "Not received" */
+  doorWaitMinutes: number;
+  /** Admins and store owners must log in with an authenticator app too */
+  require2fa: boolean;
 };
-type Key = Exclude<keyof PlatformSettings, "peakHours">;
+type Key = Exclude<keyof PlatformSettings, "require2fa">;
 
 const whenInWords = (seconds: number) => (seconds < 60 ? `${seconds} s` : seconds % 60 === 0 ? `${seconds / 60} min` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`);
 
 /** What a few distances would cost with the prices being typed, so the admin sees the effect. */
-function FeeExamples({ base, baseKm, perKm, peak }: { base: number; baseKm: number; perKm: number; peak: number }) {
+function FeeExamples({ base, baseKm, perKm, extra }: { base: number; baseKm: number; perKm: number; extra: number }) {
   const fee = (km: number) => base + Math.max(0, Math.ceil(Math.round((km - baseKm) * 10) / 10)) * perKm;
   return (
     <div className="overflow-hidden rounded-xl border border-line">
@@ -50,8 +63,8 @@ function FeeExamples({ base, baseKm, perKm, peak }: { base: number; baseKm: numb
         <thead className="bg-canvas text-left text-xs font-semibold tracking-wide text-muted uppercase">
           <tr>
             <th className="px-3 py-2">Distance by road</th>
-            <th className="px-3 py-2 text-right">Normal hours</th>
-            <th className="px-3 py-2 text-right">In a rush hour</th>
+            <th className="px-3 py-2 text-right">Normal</th>
+            <th className="px-3 py-2 text-right">Busy and raining</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-line">
@@ -59,7 +72,7 @@ function FeeExamples({ base, baseKm, perKm, peak }: { base: number; baseKm: numb
             <tr key={km}>
               <td className="px-3 py-2 text-ink">{km} km</td>
               <td className="px-3 py-2 text-right font-semibold text-ink tabular-nums">{formatPeso(fee(km))}</td>
-              <td className="px-3 py-2 text-right text-ink tabular-nums">{formatPeso(fee(km) + peak)}</td>
+              <td className="px-3 py-2 text-right text-ink tabular-nums">{formatPeso(fee(km) + extra)}</td>
             </tr>
           ))}
         </tbody>
@@ -88,13 +101,14 @@ function WaveTimeline({ storeSeconds, waveSeconds }: { storeSeconds: number; wav
   );
 }
 
-/** One order worked out with the rates being typed, so the admin sees who gets what. */
-function EarningsExample({ commission, pickup, riderFee, deliveryFee }: { commission: number; pickup: number; riderFee: number; deliveryFee: number }) {
+/** One order of each kind worked out with the rates being typed, so the admin sees who gets what. */
+function EarningsExample({ commission, pickup, pabili, deliveryFee }: { commission: number; pickup: number; pabili: number; deliveryFee: number }) {
   const food = 300;
   const cut = (amount: number, percent: number) => Math.round(amount * percent) / 100;
   const rows = [
-    { what: "Delivery order", food, fee: deliveryFee, commission: cut(food, commission), riderCut: cut(deliveryFee, riderFee) },
-    { what: "Pickup order", food, fee: 0, commission: cut(food, pickup), riderCut: 0 },
+    { what: "Delivery order", store: food - cut(food, commission), rider: `${formatPeso(deliveryFee)} + tips`, feasto: cut(food, commission) },
+    { what: "Pickup order", store: food - cut(food, pickup), rider: "—", feasto: cut(food, pickup) },
+    { what: "Pabili (fee only)", store: null, rider: `${formatPeso(deliveryFee - cut(deliveryFee, pabili))} + tips`, feasto: cut(deliveryFee, pabili) },
   ];
   return (
     // Focusable so it can be scrolled sideways with the keyboard on a small screen
@@ -112,9 +126,9 @@ function EarningsExample({ commission, pickup, riderFee, deliveryFee }: { commis
           {rows.map((r) => (
             <tr key={r.what}>
               <td className="px-3 py-2 text-ink">{r.what}</td>
-              <td className="px-3 py-2 text-right text-ink tabular-nums">{formatPeso(r.food - r.commission)}</td>
-              <td className="px-3 py-2 text-right text-ink tabular-nums">{r.fee ? `${formatPeso(r.fee - r.riderCut)} + tips` : "—"}</td>
-              <td className="px-3 py-2 text-right font-semibold text-ink tabular-nums">{formatPeso(r.commission + r.riderCut)}</td>
+              <td className="px-3 py-2 text-right text-ink tabular-nums">{r.store === null ? "—" : formatPeso(r.store)}</td>
+              <td className="px-3 py-2 text-right text-ink tabular-nums">{r.rider}</td>
+              <td className="px-3 py-2 text-right font-semibold text-ink tabular-nums">{formatPeso(r.feasto)}</td>
             </tr>
           ))}
         </tbody>
@@ -129,7 +143,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     deliveryFee: String(initial.deliveryFee),
     deliveryBaseKm: String(initial.deliveryBaseKm),
     deliveryPerKm: String(initial.deliveryPerKm),
-    deliveryPeakFee: String(initial.deliveryPeakFee),
+    busyFeeMax: String(initial.busyFeeMax),
+    rainFee: String(initial.rainFee),
     storeRiderSeconds: String(initial.storeRiderSeconds),
     riderWaveSeconds: String(initial.riderWaveSeconds),
     stuckMinutes: String(initial.stuckMinutes),
@@ -137,11 +152,16 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     signupsPerNetwork: String(initial.signupsPerNetwork),
     commissionPercent: String(initial.commissionPercent),
     pickupCommissionPercent: String(initial.pickupCommissionPercent),
-    riderFeePercent: String(initial.riderFeePercent),
+    pabiliFeePercent: String(initial.pabiliFeePercent),
     freeTrialDays: String(initial.freeTrialDays),
     pabiliBudgetMax: String(initial.pabiliBudgetMax),
+    largeOrderItems: String(initial.largeOrderItems),
+    largeOrderAmount: String(initial.largeOrderAmount),
+    codMaxAmount: String(initial.codMaxAmount),
+    noShowStrikes: String(initial.noShowStrikes),
+    doorWaitMinutes: String(initial.doorWaitMinutes),
   });
-  const [peakHours, setPeakHours] = useState<PeakWindow[]>(initial.peakHours);
+  const [require2fa, setRequire2fa] = useState(initial.require2fa);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string>();
@@ -173,8 +193,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         deliveryFee: number("deliveryFee"),
         deliveryBaseKm: number("deliveryBaseKm"),
         deliveryPerKm: number("deliveryPerKm"),
-        deliveryPeakFee: number("deliveryPeakFee"),
-        peakHours: peakHours.map((w) => ({ ...w, name: w.name.trim() })),
+        busyFeeMax: number("busyFeeMax"),
+        rainFee: number("rainFee"),
         storeRiderSeconds: number("storeRiderSeconds"),
         riderWaveSeconds: number("riderWaveSeconds"),
         stuckMinutes: number("stuckMinutes"),
@@ -182,9 +202,15 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         signupsPerNetwork: number("signupsPerNetwork"),
         commissionPercent: number("commissionPercent"),
         pickupCommissionPercent: number("pickupCommissionPercent"),
-        riderFeePercent: number("riderFeePercent"),
+        pabiliFeePercent: number("pabiliFeePercent"),
         freeTrialDays: number("freeTrialDays"),
         pabiliBudgetMax: number("pabiliBudgetMax"),
+        largeOrderItems: number("largeOrderItems"),
+        largeOrderAmount: number("largeOrderAmount"),
+        codMaxAmount: number("codMaxAmount"),
+        noShowStrikes: number("noShowStrikes"),
+        doorWaitMinutes: number("doorWaitMinutes"),
+        require2fa,
       },
     });
     setSaving(false);
@@ -209,35 +235,43 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
       <Card
         title="Delivery fee"
         Icon={Wallet}
-        description="Follows the distance by road from the store to the resident, like other food apps. Charged per store; pickup stays free. The rider earns the whole fee."
+        description="Follows the distance by road from the store to the resident, like other food apps. Charged per store; pickup stays free. The rider earns the whole fee, add-ons included."
       >
-        {/* Big screens: the prices and what they cost on the left, the rush hours on the right */}
+        {/* Big screens: the prices on the left, the add-ons from what's really happening on the right */}
         <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <div className="min-w-0 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Base fee (₱)" step="0.01" min="0" icon={Wallet} hint="₱0 to ₱500. Covers the first kilometres." {...field("deliveryFee")} />
-            <TextField label="Kilometres the base fee covers" step="0.5" min="0" icon={Route} hint="0 to 20 km, e.g. 2." {...field("deliveryBaseKm")} />
-            <TextField label="Each extra km (₱)" step="0.01" min="0" icon={Route} hint="₱0 to ₱100. A started kilometre counts as one." {...field("deliveryPerKm")} />
-            <TextField label="Rush-hour add-on (₱)" step="0.01" min="0" icon={Sun} hint="₱0 to ₱200. Added in the rush hours below, when riders are busiest. 0 turns it off." {...field("deliveryPeakFee")} />
-          </div>
-          <FeeExamples
-            base={Number(values.deliveryFee) || 0}
-            baseKm={Number(values.deliveryBaseKm) || 0}
-            perKm={Number(values.deliveryPerKm) || 0}
-            peak={Number(values.deliveryPeakFee) || 0}
-          />
-          <p className="text-sm text-muted">New checkouts use these prices. Orders already placed keep the fee they were placed with.</p>
-          </div>
-          <div className="min-w-0 xl:border-l xl:border-line xl:pl-6">
-            <RushHoursEditor
-              value={peakHours}
-              onChange={(next) => {
-                setSaved(false);
-                setPeakHours(next);
-              }}
-              peakFee={Number(values.deliveryPeakFee) || 0}
-              errors={fieldErrors.peakHours}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField label="Base fee (₱)" step="0.01" min="0" icon={Wallet} hint="₱0 to ₱500. Covers the first kilometres." {...field("deliveryFee")} />
+              <TextField label="Kilometres the base fee covers" step="0.5" min="0" icon={Route} hint="0 to 20 km, e.g. 2." {...field("deliveryBaseKm")} />
+              <TextField label="Each extra km (₱)" step="0.01" min="0" icon={Route} hint="₱0 to ₱100. A started kilometre counts as one." {...field("deliveryPerKm")} />
+            </div>
+            <FeeExamples
+              base={Number(values.deliveryFee) || 0}
+              baseKm={Number(values.deliveryBaseKm) || 0}
+              perKm={Number(values.deliveryPerKm) || 0}
+              extra={(Number(values.busyFeeMax) || 0) + (Number(values.rainFee) || 0)}
             />
+            <p className="text-sm text-muted">New checkouts use these prices. Orders already placed keep the fee they were placed with.</p>
+          </div>
+          <div className="min-w-0 space-y-4 xl:border-l xl:border-line xl:pl-6">
+            <div>
+              <h3 className="font-semibold text-ink">Add-ons from what&apos;s really happening</h3>
+              <p className="mt-1 text-sm text-muted">
+                No fixed rush hours. Feasto adds these only when riders are really busy or it&apos;s raining, shows the reason before the resident orders, and gives all of it to the rider.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextField
+                label="Most added when riders are busy (₱)"
+                step="1"
+                min="0"
+                icon={TrafficCone}
+                hint="₱0 to ₱100. Half when more orders wait than there are free riders, all of it at twice as many. 0 turns it off."
+                {...field("busyFeeMax")}
+              />
+              <TextField label="Added while it rains (₱)" step="1" min="0" icon={CloudRain} hint="₱0 to ₱100. On by your switch below, or when two riders report rain. 0 turns it off." {...field("rainFee")} />
+            </div>
+            <LiveAddOns />
           </div>
         </div>
       </Card>
@@ -245,20 +279,20 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
       <Card
         title="Feasto's earnings"
         Icon={BadgePercent}
-        description="What Feasto keeps from each finished order. Residents pay nothing extra, and every tip goes to the rider."
+        description="What Feasto keeps from each finished order. Residents pay nothing extra, riders keep every food delivery fee, and every tip goes to the rider."
       >
         <div className="grid gap-6 p-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <div className="grid content-start gap-4 sm:grid-cols-2">
-            <TextField label="Commission on delivery orders (%)" step="0.5" min="0" icon={Percent} hint="0 to 30. Taken from the store's food sales." {...field("commissionPercent")} />
-            <TextField label="Commission on pickup orders (%)" step="0.5" min="0" icon={Store} hint="0 to 30. Lower, because no rider is needed." {...field("pickupCommissionPercent")} />
-            <TextField label="Share of the delivery fee (%)" step="0.5" min="0" icon={Bike} hint="0 to 30. Taken from the rider's fee, never from tips." {...field("riderFeePercent")} />
+            <TextField label="Default commission, delivery (%)" step="0.5" min="0" icon={Percent} hint="0 to 30. For stores without their own rate in Store commissions." {...field("commissionPercent")} />
+            <TextField label="Default commission, pickup (%)" step="0.5" min="0" icon={Store} hint="0 to 30. Lower, because no rider is needed." {...field("pickupCommissionPercent")} />
+            <TextField label="Share of a Pabili fee (%)" step="0.5" min="0" icon={ShoppingBag} hint="0 to 30. Only for Pabili: riders keep the whole fee of a food delivery. Never from tips or add-ons." {...field("pabiliFeePercent")} />
             <TextField label="Free days for new stores" min="0" icon={CalendarHeart} hint="0 to 365. A newly approved store pays no commission for this long." {...field("freeTrialDays")} />
           </div>
           <div className="min-w-0 space-y-3 xl:border-l xl:border-line xl:pl-6">
             <EarningsExample
               commission={Number(values.commissionPercent) || 0}
               pickup={Number(values.pickupCommissionPercent) || 0}
-              riderFee={Number(values.riderFeePercent) || 0}
+              pabili={Number(values.pabiliFeePercent) || 0}
               deliveryFee={Number(values.deliveryFee) || 0}
             />
             <p className="text-sm text-muted">
@@ -320,6 +354,22 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
       </Card>
 
       <Card
+        title="Big orders and cash"
+        Icon={PackageCheck}
+        description="So a store never cooks a big order for nobody, and a rider never waits forever at a door."
+      >
+        <div className="space-y-4 p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="A big order has (items)" min="5" icon={PackageCheck} hint="5 to 500. Residents are told it takes longer; stores may ask for notice." {...field("largeOrderItems")} />
+            <TextField label="…or costs (₱)" min="500" step="100" icon={PackageCheck} hint="₱500 to ₱100,000, for one store's part." {...field("largeOrderAmount")} />
+            <TextField label="Most paid in cash (₱)" min="500" step="100" icon={Banknote} hint="₱500 to ₱100,000 per checkout. Bigger orders are paid online." {...field("codMaxAmount")} />
+            <TextField label="Rider waits at the door (minutes)" min="3" icon={DoorOpen} hint="3 to 30. Then the rider may mark it not received, with a photo." {...field("doorWaitMinutes")} />
+            <TextField label="Not received before cash is off" min="1" icon={UserX} hint="1 to 10 orders. After that, the resident can only pay online." {...field("noShowStrikes")} />
+          </div>
+        </div>
+      </Card>
+
+      <Card
         title="Pabili budget"
         Icon={ShoppingBag}
         description="The rider pays at the shop with their own money and is paid back in cash at the door, so keep this to what a rider can usually lend."
@@ -336,6 +386,21 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
           <p className="text-sm text-muted">
             A Pabili already sent keeps its budget. A resident can still raise theirs up to this limit until the rider has bought everything.
           </p>
+        </div>
+      </Card>
+
+      <Card title="Two-step login" Icon={ShieldCheck} description="A code from an authenticator app after the password, so a stolen password isn't enough.">
+        <div className="space-y-3 p-5">
+          <SwitchField
+            label="Required for admins and store owners"
+            description="They set up the app at their next login. Residents and riders can turn it on for themselves."
+            checked={require2fa}
+            onChange={(v) => {
+              setSaved(false);
+              setRequire2fa(v);
+            }}
+          />
+          <p className="text-sm text-muted">Turn it off only for a demo where store accounts are shared. Each new device still sends its owner a sign-in alert.</p>
         </div>
       </Card>
 

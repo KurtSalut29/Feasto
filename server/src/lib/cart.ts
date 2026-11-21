@@ -1,6 +1,8 @@
 import type { OnlinePayment } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
 import { quoteDelivery, type DeliveryQuote } from "./deliveryFee.js";
+import { addOnsFor, NO_ADD_ONS } from "./feeAddOns.js";
+import { busyMinutes, prepEstimate } from "./eta.js";
 import { redis } from "./redis.js";
 import { getSettings } from "./settings.js";
 import { isStoreOpen } from "./storeHours.js";
@@ -60,7 +62,7 @@ async function deliveryAddress(userId: string, addressId?: string) {
  * Each store's delivery fee is priced for the distance from it to `addressId` (or the
  * resident's default address).
  */
-export async function buildCart(userId: string, addressId?: string, /** A scheduled time: the rush-hour add-on is judged then */ at?: Date) {
+export async function buildCart(userId: string, addressId?: string, /** A scheduled time: no busy or rain add-on, nobody knows yet */ at?: Date) {
   const [lines, notes] = await Promise.all([readCartQuantities(userId), readCartNotes(userId)]);
   const settings = await getSettings();
   const empty = { addressId: null, addressLabel: null, total: 0, baseFee: settings.deliveryFee, pricedFor: null };
@@ -84,6 +86,12 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
           permitPausedAt: true,
           acceptsCash: true,
           onlinePayments: true,
+          prepMinutes: true,
+          prepPer5Items: true,
+          busyExtraMinutes: true,
+          busyUntil: true,
+          deliveryRadiusKm: true,
+          largeOrderNoticeMinutes: true,
           owner: { select: { disabledAt: true, suspendedUntil: true } },
         },
       },
@@ -102,6 +110,11 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
     /** This store's delivery fee to the address, with how it was worked out; null without an address */
     delivery: DeliveryQuote | null;
     pin: { latitude: number | null; longitude: number | null };
+    /** How long the kitchen should take, and whether it's a big order (with the notice the store needs) */
+    timing: { minutes: number; busyMinutes: number; large: boolean; noticeMinutes: number };
+    /** Set when the address is farther than the store delivers */
+    tooFar: { km: number; radiusKm: number } | null;
+    prep: { prepMinutes: number; prepPer5Items: number; busyExtraMinutes: number; busyUntil: Date | null; radiusKm: number; noticeMinutes: number };
   }>();
 
   for (const item of items) {
@@ -117,6 +130,16 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
         problem: item.vendor.status !== "APPROVED" || item.vendor.owner.disabledAt || item.vendor.owner.suspendedUntil || item.vendor.permitPausedAt ? "STORE_UNAVAILABLE" : open ? null : "STORE_CLOSED",
         delivery: null,
         pin: { latitude: item.vendor.latitude, longitude: item.vendor.longitude },
+        timing: { minutes: 0, busyMinutes: 0, large: false, noticeMinutes: 0 },
+        tooFar: null,
+        prep: {
+          prepMinutes: item.vendor.prepMinutes,
+          prepPer5Items: item.vendor.prepPer5Items,
+          busyExtraMinutes: item.vendor.busyExtraMinutes,
+          busyUntil: item.vendor.busyUntil,
+          radiusKm: Number(item.vendor.deliveryRadiusKm),
+          noticeMinutes: item.vendor.largeOrderNoticeMinutes,
+        },
       };
       groups.set(item.vendorId, group);
     }
@@ -134,17 +157,27 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
 
   const list = [...groups.values()].sort((a, b) => a.store.name.localeCompare(b.store.name));
   for (const group of list) group.items.sort((a, b) => a.name.localeCompare(b.name));
+  // How long each kitchen should take; a big order is told so before it's placed
+  for (const group of list) {
+    const count = group.items.reduce((n, i) => n + i.quantity, 0);
+    const large = count >= settings.largeOrderItems || group.subtotal >= settings.largeOrderAmount;
+    group.timing = { minutes: prepEstimate(group.prep, count), busyMinutes: busyMinutes(group.prep), large, noticeMinutes: large ? group.prep.noticeMinutes : 0 };
+  }
 
   // Price each store's delivery for the distance to the address (looked up in parallel)
   const address = await deliveryAddress(userId, addressId);
   if (address) {
-    const now = at ?? new Date();
-    const quotes = await Promise.all(list.map((g) => quoteDelivery(g.pin, address, settings, now)));
-    list.forEach((g, i) => (g.delivery = quotes[i]!));
+    const addOns = at ? NO_ADD_ONS : await addOnsFor(userId, settings);
+    const quotes = await Promise.all(list.map((g) => quoteDelivery(g.pin, address, settings, addOns)));
+    list.forEach((g, i) => {
+      g.delivery = quotes[i]!;
+      const km = quotes[i]!.km;
+      g.tooFar = km !== null && km > g.prep.radiusKm ? { km, radiusKm: g.prep.radiusKm } : null;
+    });
   }
 
   return {
-    groups: list.map(({ pin: _pin, ...group }) => group),
+    groups: list.map(({ pin: _pin, prep: _prep, ...group }) => group),
     itemCount: list.reduce((n, g) => n + g.items.reduce((m, i) => m + i.quantity, 0), 0),
     itemsTotal: list.reduce((n, g) => n + g.subtotal, 0),
     delivery: {

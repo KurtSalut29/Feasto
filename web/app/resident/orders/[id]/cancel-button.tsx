@@ -7,7 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 
-export function CancelOrderButton({ orderId }: { orderId: string }) {
+export function CancelOrderButton({ orderId, late = false }: { orderId: string; late?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -16,9 +16,14 @@ export function CancelOrderButton({ orderId }: { orderId: string }) {
   return (
     <>
       <Button variant="secondary" className="w-full text-red-600" onClick={() => setOpen(true)}>
-        Cancel order
+        {late ? "Cancel for free: it's running late" : "Cancel order"}
       </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} title="Cancel this order?" description="You can cancel until the store accepts it.">
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Cancel this order?"
+        description={late ? "The store needed more time twice, so you can cancel for free. If you paid online, the money goes back to you." : "You can cancel until the store accepts it."}
+      >
         {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={() => setOpen(false)}>

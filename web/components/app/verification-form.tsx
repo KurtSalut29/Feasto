@@ -9,6 +9,7 @@ import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
 import { PERMIT_FIELDS, RIDER_LICENSE_FIELDS, RIDER_PERSONAL_FIELDS, STORE_CODE_FIELD, type Verification } from "@/lib/verification-fields";
 import { DocumentPreview } from "./document-preview";
+import { DocumentCheckNote, documentCheckProblem, useDocumentCheck } from "./document-check";
 import { DocumentPicker, uploadDocument } from "./document-upload";
 
 /**
@@ -26,9 +27,16 @@ export function VerificationForm({ role, data }: { role: "VENDOR" | "RIDER"; dat
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saved, setSaved] = useState(false);
+  const check = useDocumentCheck(
+    file,
+    isStore ? { kind: "PERMIT", name: values.businessName?.trim() || undefined, number: values.permitNumber?.trim() || undefined } : { kind: "LICENSE", number: values.licenseNumber?.trim() || undefined },
+  );
+  const [flagged, setFlagged] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFlagged(false);
+    if (file && documentCheckProblem(check)) return setFlagged(true);
     setSaving(true);
     setError(undefined);
     setSaved(false);
@@ -70,8 +78,9 @@ export function VerificationForm({ role, data }: { role: "VENDOR" | "RIDER"; dat
         label={data.document ? `Replace ${documentName.toLowerCase()}` : `Upload ${documentName.toLowerCase()}`}
         hint="JPG, PNG or PDF, up to 5 MB. All the text must be readable."
         file={file}
-        onChange={setFile}
+        onChange={(f) => (setFile(f), setFlagged(false))}
       />
+      <DocumentCheckNote check={check} what={documentName.toLowerCase()} flagged={flagged} />
       <div className="grid gap-3 sm:grid-cols-2">
         {fields.map(({ name, label, type, placeholder, Icon, hint, uppercase }) => (
           <TextField

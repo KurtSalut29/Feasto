@@ -34,8 +34,8 @@ type Settlement = {
 type Earnings = {
   from: string;
   to: string;
-  rates: { commissionPercent: number; pickupCommissionPercent: number; riderFeePercent: number; freeTrialDays: number };
-  totals: { earned: number; commission: number; riderShare: number; orders: number; sales: number; deliveryFees: number; takeRate: number };
+  rates: { commissionPercent: number; pickupCommissionPercent: number; pabiliFeePercent: number; freeTrialDays: number };
+  totals: { earned: number; commission: number; riderShare: number; pabiliShare: number; pabili: number; orders: number; sales: number; deliveryFees: number; takeRate: number };
   daily: SalesDay[];
   stores: { id: string; name: string; orders: number; sales: number; commission: number }[];
   riders: { id: string; name: string; deliveries: number; fees: number; riderShare: number; tips: number }[];
@@ -84,11 +84,11 @@ async function EarningsPage({ searchParams }: Pick<PageProps<"/admin/earnings">,
         <StatCard
           label="From store commissions"
           value={formatPeso(totals.commission)}
-          hint={`${rates.commissionPercent}% on delivery · ${rates.pickupCommissionPercent}% on pickup`}
+          hint={`Default ${rates.commissionPercent}% · ${rates.pickupCommissionPercent}% pickup, or each store's own`}
           Icon={Store}
           accent="sky"
         />
-        <StatCard label="From delivery fees" value={formatPeso(totals.riderShare)} hint={`${rates.riderFeePercent}% of each fee · tips untouched`} Icon={Bike} accent="violet" />
+        <StatCard label="From Pabili fees" value={formatPeso(totals.riderShare)} hint={`${rates.pabiliFeePercent}% of ${totals.pabili.toLocaleString("en-PH")} Pabili · food fees all to riders`} Icon={Bike} accent="violet" />
         <StatCard
           label="Take rate"
           value={`${totals.takeRate.toFixed(1)}%`}

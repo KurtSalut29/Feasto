@@ -20,7 +20,7 @@ import { apiRequest } from "@/lib/browser-api";
 import { celebrate } from "@/components/app/celebrate";
 import { formatPeso } from "@/lib/format";
 import { clockOf, scheduleDays, sendAtOf, whenInSentence, whenOf } from "@/lib/schedule";
-import type { Address, Cart, Fulfillment, PaymentMethod, ReceivingAccount, SavedPayMethod } from "@/lib/types";
+import type { Address, Cart, Fulfillment, PaymentMethod, ReceivingAccount, SavedPayMethod, IfUnavailable } from "@/lib/types";
 import { WhenPicker } from "./when-picker";
 
 function Choice({
@@ -72,6 +72,13 @@ function Step({ n, title, action, children }: { n: number; title: string; action
   );
 }
 
+/** What the store does if an item runs out after the order is placed */
+const IF_UNAVAILABLE: { value: IfUnavailable; label: string; hint: string }[] = [
+  { value: "REMOVE", label: "Remove it", hint: "Send the rest. You don't pay for it, or it's refunded." },
+  { value: "CALL", label: "Call me first", hint: "The store calls you before taking it off." },
+  { value: "CANCEL", label: "Cancel the order", hint: "Only if everything is there. Paid online, it's refunded." },
+];
+
 export function CheckoutForm({
   cart,
   addresses,
@@ -112,6 +119,7 @@ export function CheckoutForm({
   const paymentMethod: PaymentMethod = pay === "COD" ? "COD" : "ONLINE";
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
+  const [ifUnavailable, setIfUnavailable] = useState<IfUnavailable>("REMOVE");
   // A rider the resident asked for (delivery from one store only)
   const [rider, setRider] = useState<ChoosableRider | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -173,6 +181,7 @@ export function CheckoutForm({
         notes,
         scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
+        ifUnavailable,
         preferredRiderId: fulfillment === "DELIVERY" && stores === 1 ? rider?.id : undefined,
         simulatePaymentFailure: paymentMethod === "ONLINE" && !realPayments && simulateFailure,
       },
@@ -385,6 +394,21 @@ export function CheckoutForm({
             rows={2}
           />
         </div>
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-sm font-medium text-ink">If an item runs out after you order</legend>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {IF_UNAVAILABLE.map((o) => (
+              <label
+                key={o.value}
+                className={`cursor-pointer rounded-xl border px-3 py-2.5 transition-colors has-focus-visible:ring-4 has-focus-visible:ring-brand-500/20 ${ifUnavailable === o.value ? "border-brand-500 bg-brand-50" : "border-line bg-white hover:bg-canvas"}`}
+              >
+                <input type="radio" name="ifUnavailable" value={o.value} checked={ifUnavailable === o.value} onChange={() => setIfUnavailable(o.value)} className="sr-only" />
+                <span className="block text-sm font-semibold text-ink">{o.label}</span>
+                <span className="block text-xs text-muted">{o.hint}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </Step>
 
     </div>

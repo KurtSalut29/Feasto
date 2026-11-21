@@ -1,23 +1,22 @@
 import { config } from "../config.js";
 import { distanceKm, type LatLng } from "./geo.js";
 import { redis } from "./redis.js";
-import { minutesOf, type PeakWindow, type Settings } from "./settings.js";
+import { NO_ADD_ONS, type AddOns } from "./feeAddOns.js";
+import type { Settings } from "./settings.js";
 
 /**
  * The delivery fee follows the distance, the way food apps in the Philippines price it:
  *
  *   fee = base fee (covers the first few km)
  *       + a price for every km after that (a started km counts as one)
- *       + a small add-on during the lunch and dinner rush
+ *       + an add-on when riders are busy or it rains (lib/feeAddOns.ts), never fixed hours
  *
  * The distance is by road, from the store to the resident's pin, as a motorcycle would go
  * (Mapbox Directions). If the map service can't be reached, it's estimated from the straight
  * line times 1.3, the usual gap between straight-line and road distance in a town.
  *
- * The admin sets the prices and the rush hours (Admin → Settings). Nobody turns the rush on or
- * off by hand: at each checkout the system checks the Philippine time against those hours.
- *
- * The rider earns the whole fee, so a longer ride pays the rider more.
+ * The admin sets the prices (Admin → Settings). The rider earns the whole fee, add-ons included,
+ * so a longer or harder ride pays the rider more.
  */
 
 /** Road distance is about 1.3× the straight line in a town grid */
@@ -37,21 +36,10 @@ export type DeliveryQuote = {
   extraKm: number;
   perKm: number;
   distanceFee: number;
-  peakFee: number;
-  /** The name of the admin's rush hour while it applies, e.g. "Lunch rush" */
-  peak: string | null;
-};
+} & AddOns;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const money = (n: number) => Math.round(n * 100) / 100;
-
-/** The admin's rush hour that the time falls in, if any (Philippine time, UTC+8, no daylight saving) */
-export function peakAt(now: Date, windows: PeakWindow[]) {
-  const manila = new Date(now.getTime() + 8 * 3600_000);
-  const day = manila.getUTCDay();
-  const minute = manila.getUTCHours() * 60 + manila.getUTCMinutes();
-  return windows.find((w) => w.days.includes(day) && minute >= minutesOf(w.from) && minute < minutesOf(w.to))?.name ?? null;
-}
 
 /** Road distance in km from the store to the address, cached in Redis so every API copy shares it. */
 export async function roadKm(from: LatLng, to: LatLng): Promise<{ km: number; byRoad: boolean }> {
@@ -82,22 +70,20 @@ export async function roadKm(from: LatLng, to: LatLng): Promise<{ km: number; by
 }
 
 /** The fee for a distance, with each part shown to the resident. */
-export function priceDelivery(km: number | null, settings: Settings, now = new Date()): Omit<DeliveryQuote, "byRoad"> {
-  const { deliveryFee: base, deliveryBaseKm: baseKm, deliveryPerKm: perKm, deliveryPeakFee } = settings;
+export function priceDelivery(km: number | null, settings: Pick<Settings, "deliveryFee" | "deliveryBaseKm" | "deliveryPerKm">, addOns: AddOns = NO_ADD_ONS): Omit<DeliveryQuote, "byRoad"> {
+  const { deliveryFee: base, deliveryBaseKm: baseKm, deliveryPerKm: perKm } = settings;
   const extraKm = km === null ? 0 : Math.max(0, Math.ceil(round1(km - baseKm)));
   const distanceFee = money(extraKm * perKm);
-  const peak = deliveryPeakFee > 0 ? peakAt(now, settings.peakHours) : null;
-  const peakFee = peak ? deliveryPeakFee : 0;
-  return { fee: money(base + distanceFee + peakFee), km, base, baseKm, extraKm, perKm, distanceFee, peakFee, peak };
+  return { fee: money(base + distanceFee + addOns.busyFee + addOns.rainFee), km, base, baseKm, extraKm, perKm, distanceFee, ...addOns };
 }
 
 type Pin = { latitude: number | null; longitude: number | null };
 const pinOf = (p: Pin): LatLng | null => (p.latitude != null && p.longitude != null ? { lat: p.latitude, lng: p.longitude } : null);
 
-/** The fee from a store to an address. Without both pins, it's the base fee (plus the rush add-on). */
-export async function quoteDelivery(store: Pin, address: Pin, settings: Settings, now = new Date()): Promise<DeliveryQuote> {
+/** The fee from a store to an address. Without both pins, it's the base fee (plus any add-on). */
+export async function quoteDelivery(store: Pin, address: Pin, settings: Settings, addOns: AddOns = NO_ADD_ONS): Promise<DeliveryQuote> {
   const from = pinOf(store);
   const to = pinOf(address);
   const route = from && to ? await roadKm(from, to) : null;
-  return { ...priceDelivery(route?.km ?? null, settings, now), byRoad: route?.byRoad ?? false };
+  return { ...priceDelivery(route?.km ?? null, settings, addOns), byRoad: route?.byRoad ?? false };
 }

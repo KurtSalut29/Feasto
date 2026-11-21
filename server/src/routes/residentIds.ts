@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { checksFor } from "../lib/documentCheck.js";
 import { z } from "zod";
 import type { IdCheck } from "../generated/prisma/client.js";
 import { logActivity, type Actor } from "../lib/activity.js";
@@ -7,6 +8,9 @@ import { HttpError, parseBody } from "../lib/http.js";
 import { notify } from "../lib/liveUpdates.js";
 import { documentKind } from "../lib/verification.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+
+const checkView = (c: { verdict: string; documentType: string | null; nameOnDocument: string | null; expiresOn: string | null; nameMatches: boolean | null; reasons: string[] } | undefined) =>
+  c ? { verdict: c.verdict, documentType: c.documentType, nameOnDocument: c.nameOnDocument, expiresOn: c.expiresOn, nameMatches: c.nameMatches, reasons: c.reasons } : null;
 
 /**
  * The admin checks each resident's valid ID: does the photo show a real ID, and does its name match
@@ -51,6 +55,7 @@ adminResidentIdsRouter.get("/resident-ids", async (req, res) => {
     prisma.user.count({ where: { role: "RESIDENT", idStatus: null } }),
   ]);
   const counts = Object.fromEntries(STATUSES.map((s) => [s, grouped.find((g) => g.idStatus === s)?._count ?? 0]));
+  const checks = await checksFor(rows.map((r) => r.idFile));
   res.json({
     status,
     page,
@@ -58,7 +63,7 @@ adminResidentIdsRouter.get("/resident-ids", async (req, res) => {
     total,
     counts,
     notUploaded: missing,
-    residents: rows.map(({ idFile, ...r }) => ({ ...r, document: documentKind(idFile) })),
+    residents: rows.map(({ idFile, ...r }) => ({ ...r, document: documentKind(idFile), check: checkView(idFile ? checks.get(idFile) : undefined) })),
   });
 });
 

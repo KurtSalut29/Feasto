@@ -40,7 +40,7 @@ type HistoryResponse = {
   rating: { average: number | null; count: number };
 };
 
-/** The rider's side of Feasto's share: what they still owe Feasto from fees collected in cash */
+/** The rider's side of Feasto's share: what they still owe Feasto from Pabili fees collected in cash */
 type RiderEarnings = {
   rate: number;
   balance: { owed: number; orders: number; lastSettledAt: string | null };
@@ -256,7 +256,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
           <HandCoins className="size-5" aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[0.8125rem] text-muted">From cash deliveries, you owe Feasto</p>
+          <p className="text-[0.8125rem] text-muted">From cash Pabili, you owe Feasto</p>
           <p className={`text-lg leading-tight font-bold tabular-nums ${balance.owed > 0 ? "text-amber-800" : "text-ink"}`}>
             {balance.owed > 0 ? formatPeso(balance.owed) : "Nothing"}
           </p>
@@ -269,19 +269,19 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
       )}
       <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[0.8125rem]">
         <div>
-          <dt className="font-semibold text-ink">Paid online</dt>
-          <dd className="text-muted">Your part of the fee is sent to your GCash, Maya or bank as soon as you deliver. See it below.</dd>
+          <dt className="font-semibold text-ink">Food deliveries</dt>
+          <dd className="text-muted">The whole delivery fee is yours, busy and rain add-ons included, and every tip. Paid online, it&apos;s sent to your GCash, Maya or bank as soon as you deliver.</dd>
         </div>
         <div>
-          <dt className="font-semibold text-ink">Paid in cash</dt>
+          <dt className="font-semibold text-ink">Pabili</dt>
           <dd className="text-muted">
-            You keep the cash, so you pay Feasto its {rate}% of those fees: here in the app, or in person to the admin.
+            Feasto keeps {rate}% of a Pabili fee (never the add-ons or tips). You collect it in cash, so you pay it here in the app, or in person to the admin.
             {balance.orders > 0 &&
-              ` ${balance.orders} cash ${balance.orders === 1 ? "delivery" : "deliveries"} ${balance.lastSettledAt ? `since you last paid, ${formatDate(balance.lastSettledAt)}` : "so far"}.`}
+              ` ${balance.orders} ${balance.orders === 1 ? "job" : "jobs"} ${balance.lastSettledAt ? `since you last paid, ${formatDate(balance.lastSettledAt)}` : "so far"}.`}
           </dd>
         </div>
       </dl>
-      <p className="bg-canvas/40 px-4 pb-3 text-xs text-muted">Feasto&apos;s share of all your deliveries so far: {formatPeso(feastoShare)}.</p>
+      <p className="bg-canvas/40 px-4 pb-3 text-xs text-muted">Feasto&apos;s share of your food deliveries so far: {feastoShare > 0 ? `${formatPeso(feastoShare)}, all from before riders kept the whole fee` : "nothing, the whole fee is yours"}.</p>
     </section>
   );
 }

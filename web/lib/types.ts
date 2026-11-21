@@ -162,9 +162,13 @@ export type DeliveryQuote = {
   extraKm: number;
   perKm: number;
   distanceFee: number;
-  peakFee: number;
-  /** "Lunch rush" or "Dinner rush" while it applies */
-  peak: string | null;
+  /** Added because more orders are waiting than there are free riders; all of it is the rider's */
+  busyFee: number;
+  /** Why, e.g. "6 orders waiting for 2 free riders" */
+  busy: string | null;
+  /** Added while it rains; all of it is the rider's */
+  rainFee: number;
+  rain: boolean;
 };
 
 export type Cart = {
@@ -175,6 +179,10 @@ export type Cart = {
     problem: CartProblem | null;
     /** This store's delivery to the address below; null when the resident has no address yet */
     delivery: DeliveryQuote | null;
+    /** How long the kitchen should take, and whether it's a big order (with the notice the store needs) */
+    timing?: { minutes: number; busyMinutes: number; large: boolean; noticeMinutes: number };
+    /** Set when the address is farther than the store delivers */
+    tooFar?: { km: number; radiusKm: number } | null;
   }[];
   itemCount: number;
   itemsTotal: number;
@@ -226,9 +234,25 @@ type OrderBase = {
   pickedUpAt: string | null;
   finishedAt: string | null;
   createdAt: string;
-  /** `note` is the resident's note for that one dish */
-  items: { id: string; name: string; unitPrice: string; quantity: number; note?: string | null }[];
+  /** `note` is the resident's note for that one dish; `removedAt` when the store ran out of it */
+  items: { id: string; name: string; unitPrice: string; quantity: number; note?: string | null; removedAt?: string | null }[];
+  /** When the store said it would be ready, and how often it said it needs more time */
+  readyBy?: string | null;
+  delays?: number;
+  delayNote?: string | null;
+  /** The rider said they're at the door */
+  arrivedAt?: string | null;
+  /** Ended because nobody came to the door */
+  noShow?: boolean;
+  /** Worked out by the server from the store's time and the ride (lib/eta.ts) */
+  eta?: OrderEta;
 };
+
+/** "Ready by 12:40 PM · arrives about 12:55"; null before the store accepts */
+export type OrderEta = { readyBy: string; arriveBy: string | null; late: boolean } | null;
+
+/** What the store does when an item runs out after the order is placed */
+export type IfUnavailable = "REMOVE" | "CALL" | "CANCEL";
 
 /** An order as the resident sees it. */
 export type ResidentOrder = OrderBase & {
@@ -266,6 +290,7 @@ export type ResidentOrder = OrderBase & {
     notes: string | null;
     total: string;
     createdAt: string;
+    ifUnavailable?: IfUnavailable;
   };
   /** The resident's rating, once they've given one */
   review: { rating: number; comment: string | null; createdAt: string } | null;
@@ -299,6 +324,8 @@ export type VendorOrder = Omit<OrderBase, "items"> & {
   rider: { name: string; phone: string | null; riderProfile?: { vehicleModel: string | null; plateNumber: string | null } | null } | null;
   /** Where the rider is now, while they're on this order */
   riderLocation?: { lat: number; lng: number; at: string } | null;
+  /** Feasto's estimate of the kitchen time, picked for the store when it accepts */
+  estimateMinutes?: number;
   checkout: {
     paymentMethod: PaymentMethod;
     onlineMethod?: OnlinePayment | null;
@@ -307,6 +334,7 @@ export type VendorOrder = Omit<OrderBase, "items"> & {
     deliveryLat?: number | null;
     deliveryLng?: number | null;
     notes: string | null;
+    ifUnavailable?: IfUnavailable;
     resident: { name: string; phone: string | null };
   };
 };
@@ -378,8 +406,10 @@ export type RiderDelivery = {
   /** Feasto's share of the fee; the rider keeps the rest */
   riderCut?: string;
   readyAt: string | null;
+  arrivedAt?: string | null;
+  eta?: OrderEta;
   vendor: Pin & { name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
-  items: { id: string; name: string; quantity: number; unitPrice: string }[];
+  items: { id: string; name: string; quantity: number; unitPrice: string; removedAt?: string | null }[];
   checkout: {
     deliveryAddress: string | null;
     deliveryLat: number | null;

@@ -19,10 +19,12 @@ export async function loginLockSeconds(email: string) {
   return Math.max(await redis.ttl(key(email)), 1);
 }
 
+/** Counts a wrong password; true the moment it locks the account (to warn the owner once) */
 export async function recordFailedLogin(email: string) {
   // INCR is atomic, so simultaneous failures on different API copies are all counted
   const failures = await redis.incr(key(email));
   if (failures === 1) await redis.expire(key(email), WINDOW_SECONDS);
+  return failures === MAX_FAILED_LOGINS;
 }
 
 export async function clearFailedLogins(email: string) {

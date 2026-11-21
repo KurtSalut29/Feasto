@@ -9,6 +9,11 @@ import { getSettings } from "../lib/settings.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { broadcastOrder, notifyResident, restoreStock, settlePayment, transition } from "../lib/orders.js";
 import { BUSY } from "../lib/dispatch.js";
+import { enqueue } from "../lib/outbox.js";
+import { QUEUES } from "../lib/rabbitmq.js";
+import { busyMinutes, etaOf, prepEstimate, rideMinutes } from "../lib/eta.js";
+import { notify } from "../lib/liveUpdates.js";
+import { orderCode } from "../lib/orders.js";
 import { ONLINE_PAYMENTS } from "../lib/payments.js";
 import { unmarshal } from "../lib/marshalling.js";
 import { redis } from "../lib/redis.js";
@@ -174,7 +179,7 @@ const HISTORY_PAGE_SIZE = 20;
 
 /** What the store sees of an order: the dishes (with photos), the rider and the customer */
 const vendorOrderInclude = {
-  items: { select: { id: true, name: true, quantity: true, unitPrice: true, note: true, menuItem: { select: { imageUrl: true } } } },
+  items: { select: { id: true, name: true, quantity: true, unitPrice: true, note: true, removedAt: true, menuItem: { select: { imageUrl: true } } } },
   rider: { select: { name: true, phone: true, riderProfile: { select: { vehicleModel: true, plateNumber: true } } } },
   checkout: {
     select: {
@@ -185,6 +190,7 @@ const vendorOrderInclude = {
       deliveryLat: true,
       deliveryLng: true,
       notes: true,
+      ifUnavailable: true,
       resident: { select: { name: true, phone: true } },
     },
   },
@@ -212,7 +218,9 @@ vendorRouter.get("/orders/:id", async (req, res) => {
   });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   const [withLocation] = await withRiderLocations([order]);
-  res.json({ order: withLocation });
+  const prep = await prisma.vendor.findUniqueOrThrow({ where: { id: order.vendorId }, select: { prepMinutes: true, prepPer5Items: true, busyExtraMinutes: true, busyUntil: true } });
+  const count = order.items.filter((i) => !i.removedAt).reduce((n, i) => n + i.quantity, 0);
+  res.json({ order: { ...withLocation!, eta: etaOf(order), estimateMinutes: prepEstimate(prep, count) } });
 });
 
 vendorRouter.get("/orders", async (req, res) => {
@@ -237,10 +245,16 @@ vendorRouter.get("/orders", async (req, res) => {
     counts.filter((c) => statuses.includes(c.status)).reduce((n, c) => n + c._count, 0);
 
   // When each waiting order will be cancelled by itself, so the store sees the deadline
-  const { autoCancelMinutes } = await getSettings();
+  const [{ autoCancelMinutes }, prep] = await Promise.all([
+    getSettings(),
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { prepMinutes: true, prepPer5Items: true, busyExtraMinutes: true, busyUntil: true } }),
+  ]);
+  // Feasto's estimate, picked for the store when it accepts
+  const estimate = (o: { items: { quantity: number; removedAt: Date | null }[] }) => prepEstimate(prep, o.items.filter((i) => !i.removedAt).reduce((n, i) => n + i.quantity, 0));
   res.json({
     tab,
-    orders: (await withRiderLocations(orders)).map((o) => ({ ...o, autoCancel: autoCancelAt(o, autoCancelMinutes) })),
+    busy: { minutes: busyMinutes(prep), until: prep.busyUntil && busyMinutes(prep) ? prep.busyUntil : null },
+    orders: (await withRiderLocations(orders)).map((o) => ({ ...o, autoCancel: autoCancelAt(o, autoCancelMinutes), eta: etaOf(o), estimateMinutes: estimate(o) })),
     counts: { new: count(ORDER_TABS.new), scheduled: count(ORDER_TABS.scheduled), preparing: count(ORDER_TABS.preparing), ready: count(ORDER_TABS.ready), done: count(ORDER_TABS.done) },
     ...(history && { page, pageSize: HISTORY_PAGE_SIZE, total: count(ORDER_TABS.done) }),
   });
@@ -274,9 +288,184 @@ async function vendorStep(
   await broadcastOrder(orderId);
 }
 
+const acceptSchema = z.object({
+  /** How long until it's ready, picked by the store; Feasto's estimate when left out */
+  minutes: z.number("Choose how long it will take.").int().min(5, "At least 5 minutes.").max(600, "At most 10 hours.").optional(),
+});
+
+/** Accepting says when it will be ready, so the resident sees "Ready by 12:40 PM" right away */
 vendorRouter.post("/orders/:id/accept", async (req, res) => {
-  await vendorStep(req.session!.userId, String(req.params.id), ["PLACED"], "ACCEPTED", { acceptedAt: new Date() }, { startDispatch: true });
+  const { minutes } = parseBody(acceptSchema, req.body ?? {});
+  const id = String(req.params.id);
+  const order = await prisma.order.findFirst({
+    where: { id, vendor: { ownerId: req.session!.userId } },
+    select: { scheduledFor: true, deliveryKm: true, fulfillment: true, items: { select: { quantity: true } }, vendor: { select: { prepMinutes: true, prepPer5Items: true, busyExtraMinutes: true, busyUntil: true } } },
+  });
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  const now = new Date();
+  const cook = minutes ?? prepEstimate(order.vendor, order.items.reduce((n, i) => n + i.quantity, 0), now);
+  let readyBy = new Date(now.getTime() + cook * 60_000);
+  // A scheduled order is ready in time for the time asked for, not before it's needed
+  if (order.scheduledFor) {
+    const ride = order.fulfillment === "DELIVERY" ? rideMinutes(order.deliveryKm == null ? null : Number(order.deliveryKm)) : 0;
+    const needed = new Date(order.scheduledFor.getTime() - ride * 60_000);
+    if (needed > readyBy) readyBy = needed;
+  }
+  await vendorStep(req.session!.userId, id, ["PLACED"], "ACCEPTED", { acceptedAt: now, readyBy }, { startDispatch: true });
+  res.json({ ok: true, readyBy });
+});
+
+const delaySchema = z.object({
+  minutes: z.number("Choose how much more time.").int().min(5, "At least 5 minutes.").max(120, "At most 2 hours."),
+  reason: z.string("Tell the resident why.").trim().min(3, "Tell the resident why, e.g. Many orders right now.").max(120, "Keep it under 120 letters."),
+});
+
+/**
+ * The store needs more time: the resident is told the new time and why. After the second delay
+ * the resident may cancel for free (orders.ts).
+ */
+vendorRouter.post("/orders/:id/delay", async (req, res) => {
+  const { minutes, reason } = parseBody(delaySchema, req.body);
+  const id = String(req.params.id);
+  const vendorId = await myVendorId(req.session!.userId);
+  const order = await prisma.order.findFirst({ where: { id, vendorId }, select: { readyBy: true, status: true, checkout: { select: { residentId: true } }, vendor: { select: { name: true } } } });
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  const from = new Date(Math.max(order.readyBy?.getTime() ?? 0, Date.now()));
+  const readyBy = new Date(from.getTime() + minutes * 60_000);
+  const { count } = await prisma.order.updateMany({
+    where: { id, vendorId, status: { in: ["ACCEPTED", "PREPARING"] } },
+    data: { readyBy, delays: { increment: 1 }, delayNote: reason },
+  });
+  if (count === 0) throw new HttpError(409, "Only an order being prepared can get more time. Refresh to see its status.");
+  const delays = (await prisma.order.findUniqueOrThrow({ where: { id }, select: { delays: true } })).delays;
+  const time = readyBy.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Manila" });
+  await notify(order.checkout.residentId, {
+    title: `${order.vendor.name} needs ${minutes} more minutes`,
+    body: `${reason}. Now ready by ${time}.${delays >= 2 ? " You can cancel it for free if you'd rather not wait." : ""}`,
+    link: `/resident/orders/${id}`,
+  });
+  await broadcastOrder(id);
+  res.json({ ok: true, readyBy, delays });
+});
+
+/**
+ * An item ran out after the order was placed. What happens is what the resident chose at checkout:
+ * take it off (refunded if paid online), or cancel the whole order. "Call me first" needs the store
+ * to call, then take it off, so it's the same button after the call.
+ */
+vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
+  const id = String(req.params.id);
+  const itemId = String(req.params.itemId);
+  const vendorId = await myVendorId(req.session!.userId);
+  const order = await prisma.order.findFirst({
+    where: { id, vendorId },
+    select: {
+      status: true,
+      checkoutId: true,
+      commissionRate: true,
+      checkout: { select: { ifUnavailable: true, residentId: true, paymentMethod: true, paymentStatus: true } },
+      items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true } },
+      vendor: { select: { name: true } },
+    },
+  });
+  if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  if (!["PLACED", "ACCEPTED", "PREPARING"].includes(order.status)) throw new HttpError(409, "Items can be taken off only before the order is ready.");
+  const item = order.items.find((i) => i.id === itemId);
+  if (!item || item.removedAt) throw new HttpError(404, "That item isn't on the order anymore.");
+  const left = order.items.filter((i) => !i.removedAt && i.id !== itemId);
+
+  // The resident asked to cancel everything if something is missing, or nothing would be left
+  if (order.checkout.ifUnavailable === "CANCEL" || left.length === 0) {
+    const reason = left.length === 0 ? `${item.name} ran out, and it was the only item left` : `${item.name} ran out. You asked to cancel the whole order if something is missing`;
+    await prisma.$transaction(async (tx) => {
+      await transition(tx, id, ["PLACED", "ACCEPTED", "PREPARING"], "CANCELLED", { finishedAt: new Date(), rejectReason: reason }, { vendorId });
+      await restoreStock(tx, id);
+      await settlePayment(tx, order.checkoutId);
+    });
+    await invalidateStore(vendorId);
+    await notify(order.checkout.residentId, { title: `${order.vendor.name} cancelled ${orderCode(id)}`, body: `${reason}.${order.checkout.paymentMethod === "ONLINE" ? " Your payment is being refunded." : ""}`, link: `/resident/orders/${id}` });
+    await broadcastOrder(id);
+    return void res.json({ ok: true, cancelled: true });
+  }
+
+  const line = Math.round(Number(item.unitPrice) * item.quantity * 100) / 100;
+  const subtotal = Math.round(left.reduce((n, i) => n + Number(i.unitPrice) * i.quantity, 0) * 100) / 100;
+  const commission = Math.round(subtotal * Number(order.commissionRate)) / 100;
+  const paidOnline = order.checkout.paymentMethod === "ONLINE" && order.checkout.paymentStatus === "PAID";
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.orderItem.updateMany({ where: { id: itemId, orderId: id, removedAt: null }, data: { removedAt: new Date() } });
+    if (count === 0) throw new HttpError(409, "That item was already taken off.");
+    await tx.order.update({ where: { id }, data: { subtotal, commission } });
+    await tx.checkout.update({ where: { id: order.checkoutId }, data: { total: { decrement: line } } });
+    if (paidOnline) await enqueue(tx, QUEUES.refundRequested, { orderId: id, itemId, amount: line });
+  });
+  await notify(order.checkout.residentId, {
+    title: `${item.name} ran out`,
+    body: `${order.vendor.name} took it off ${orderCode(id)}. ${paidOnline ? `₱${line.toFixed(2)} is being refunded.` : `You pay ₱${line.toFixed(2)} less.`} The rest is on its way.`,
+    link: `/resident/orders/${id}`,
+  });
+  await broadcastOrder(id);
+  res.json({ ok: true, removed: line, subtotal });
+});
+
+// ---------- Timing, distance and the busy kitchen ----------
+
+const timingSchema = z.object({
+  prepMinutes: z.number("Enter 5 to 180 minutes.").int("Whole minutes.").min(5, "Enter 5 to 180 minutes.").max(180, "Enter 5 to 180 minutes."),
+  prepPer5Items: z.number("Enter 0 to 60 minutes.").int("Whole minutes.").min(0, "Enter 0 to 60 minutes.").max(60, "Enter 0 to 60 minutes."),
+  deliveryRadiusKm: z
+    .number("Enter 1 to 25 km.")
+    .min(1, "Enter 1 to 25 km.")
+    .max(25, "Enter 1 to 25 km.")
+    .refine((v) => Number.isInteger(Math.round(v * 1e4) / 1e3), "Use at most one decimal place, e.g. 7.5."),
+  largeOrderNoticeMinutes: z.number("Enter 0 to 2880 minutes.").int().min(0, "Enter 0 to 2880 minutes.").max(2880, "At most 2 days."),
+});
+
+vendorRouter.get("/store/timing", async (req, res) => {
+  const vendorId = await myVendorId(req.session!.userId);
+  const [store, actual] = await Promise.all([
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { prepMinutes: true, prepPer5Items: true, deliveryRadiusKm: true, largeOrderNoticeMinutes: true, busyExtraMinutes: true, busyUntil: true } }),
+    // What the kitchen really took in the last 30 days, from accepting to "ready"
+    prisma.$queryRaw<{ minutes: number | null; orders: bigint; onTime: bigint; timed: bigint }[]>`
+      SELECT round(percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM ("readyAt" - "acceptedAt")) / 60))::int AS minutes,
+             count(*) AS orders,
+             count(*) FILTER (WHERE "readyBy" IS NOT NULL AND "readyAt" <= "readyBy" + interval '2 minutes') AS "onTime",
+             count(*) FILTER (WHERE "readyBy" IS NOT NULL) AS timed
+      FROM "Order"
+      WHERE "vendorId" = ${vendorId} AND "readyAt" IS NOT NULL AND "acceptedAt" IS NOT NULL AND "scheduledFor" IS NULL
+        AND "readyAt" > "acceptedAt" AND "readyAt" - "acceptedAt" < interval '4 hours' AND "createdAt" > now() - interval '30 days'`,
+  ]);
+  const a = actual[0];
+  const settings = await getSettings();
+  res.json({
+    timing: { ...store, deliveryRadiusKm: Number(store.deliveryRadiusKm), busyNow: busyMinutes(store) },
+    actual: { medianMinutes: a?.minutes ?? null, orders: Number(a?.orders ?? 0), onTime: Number(a?.onTime ?? 0), timed: Number(a?.timed ?? 0) },
+    largeOrder: { items: settings.largeOrderItems, amount: settings.largeOrderAmount },
+  });
+});
+
+vendorRouter.put("/store/timing", async (req, res) => {
+  const input = parseBody(timingSchema, req.body);
+  const vendorId = await myVendorId(req.session!.userId);
+  await prisma.vendor.update({ where: { id: vendorId }, data: input });
+  await invalidateStore(vendorId);
   res.json({ ok: true });
+});
+
+const busySchema = z.object({
+  /** 0 turns the busy kitchen off */
+  minutes: z.union([z.literal(0), z.literal(15), z.literal(30), z.literal(45), z.literal(60)], "Choose 15, 30, 45 or 60 minutes."),
+  hours: z.number().int().min(1).max(6).optional().default(2),
+});
+
+/** Busy kitchen: every new order takes this much longer, for a while, instead of being declined */
+vendorRouter.put("/store/busy", async (req, res) => {
+  const { minutes, hours } = parseBody(busySchema, req.body);
+  const vendorId = await myVendorId(req.session!.userId);
+  const busyUntil = minutes ? new Date(Date.now() + hours * 3600_000) : null;
+  await prisma.vendor.update({ where: { id: vendorId }, data: { busyExtraMinutes: minutes, busyUntil } });
+  await invalidateStore(vendorId);
+  res.json({ ok: true, busyExtraMinutes: minutes, busyUntil });
 });
 
 vendorRouter.post("/orders/:id/reject", async (req, res) => {

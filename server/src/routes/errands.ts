@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
 import { priceDelivery, quoteDelivery } from "../lib/deliveryFee.js";
+import { pabiliCut } from "../lib/earnings.js";
+import { addOnNote, addOnsFor, addOnTotal } from "../lib/feeAddOns.js";
 import { PREFERRED_RIDER_SECONDS, riderIsBusy, riderDistances } from "../lib/dispatch.js";
 import { ACTIVE_STORE } from "../lib/accounts.js";
 import { broadcastErrand, chosenRider, ERRAND_WAIT_MINUTES, PABILI_BUDGET_MIN, PABILI_MAX_KM, ridersToChoose, tellNearbyRiders } from "../lib/errands.js";
@@ -85,13 +87,16 @@ const feeFor = async (shop: { lat: number; lng: number }, address: { latitude: n
  * The fee before anyone knows where the shop is: from the lowest (a shop close to the customer)
  * to a shop PABILI_MAX_KM away. The rider's phone sets the real one when they buy.
  */
-async function feeRange() {
+async function feeRange(userId: string) {
   const settings = await getSettings();
-  return { min: priceDelivery(null, settings).fee, max: priceDelivery(PABILI_MAX_KM, settings).fee };
+  // Busy or rain right now: added to both ends, and all of it is the rider's
+  const addOns = await addOnsFor(userId, settings);
+  return { min: priceDelivery(null, settings, addOns).fee, max: priceDelivery(PABILI_MAX_KM, settings, addOns).fee, addOns, cutPercent: settings.pabiliFeePercent };
 }
 
-errandsRouter.get("/quote", async (_req, res) => {
-  res.json({ ...(await feeRange()), maxKm: PABILI_MAX_KM, budgetMax: await budgetMax() });
+errandsRouter.get("/quote", async (req, res) => {
+  const { addOns, cutPercent: _cut, ...range } = await feeRange(req.session!.userId);
+  res.json({ ...range, ...addOns, maxKm: PABILI_MAX_KM, budgetMax: await budgetMax() });
 });
 
 /**
@@ -119,7 +124,8 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });
   if (open >= 2) throw new HttpError(409, "You already have two Pabili on the way. Wait for one to arrive first.");
   const address = await addressOf(userId, input.addressId);
-  const fee = await feeRange();
+  const fee = await feeRange(userId);
+  const extraFee = addOnTotal(fee.addOns);
   if (input.expectedFee !== undefined && Math.abs(input.expectedFee - fee.min) > 0.001) {
     throw new HttpError(409, `The delivery fee changed to ₱${fee.min} to ₱${fee.max}. Check it, then send your Pabili again.`);
   }
@@ -140,6 +146,10 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
       deliveryLng: address.longitude,
       deliveryFee: fee.min,
       feeMax: fee.max,
+      extraFee,
+      extraFeeNote: addOnNote(fee.addOns),
+      feastoCutRate: fee.cutPercent,
+      feastoCut: pabiliCut(fee.min, extraFee, fee.cutPercent),
     },
     select: { id: true, residentId: true, status: true, shopName: true, deliveryLat: true, deliveryLng: true },
   });
@@ -370,7 +380,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const input = parseBody(boughtSchema, req.body);
   const errand = await prisma.errand.findFirst({
     where: { id, riderId: userId },
-    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true },
+    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true, extraFee: true, feastoCutRate: true },
   });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   if (input.receiptTotal > Number(errand.budget) + 0.001) {
@@ -383,7 +393,8 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   let fee = Number(errand.deliveryFee);
   if (at) {
     const quote = await feeFor(at, { latitude: errand.deliveryLat, longitude: errand.deliveryLng });
-    fee = Math.min(quote.fee, Number(errand.feeMax ?? quote.fee));
+    const withExtra = quote.fee + Number(errand.extraFee);
+    fee = Math.min(withExtra, Number(errand.feeMax ?? withExtra));
   }
 
   const { count } = await prisma.errand.updateMany({
@@ -394,6 +405,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
       receiptTotal: input.receiptTotal,
       receiptPhotoUrl: input.receiptPhotoUrl,
       deliveryFee: fee,
+      feastoCut: pabiliCut(fee, Number(errand.extraFee), Number(errand.feastoCutRate)),
       ...(at && { shopLat: at.lat, shopLng: at.lng }),
     },
   });
@@ -412,14 +424,14 @@ riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
   const userId = req.session!.userId;
   const { photoUrl } = parseBody(z.object({ photoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the handed-over items first.") }), req.body);
-  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true } });
+  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true, feastoCut: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   const { count } = await prisma.errand.updateMany({ where: { id, riderId: userId, status: "BOUGHT" }, data: { status: "DELIVERED", finishedAt: new Date(), deliveryPhotoUrl: photoUrl } });
   if (count === 0) throw new HttpError(409, "Upload the receipt first, then finish the delivery.");
   await redis.del(locationKey(id));
   await notify(errand.residentId, { title: "Your Pabili arrived", body: "Thanks for using Feasto Pabili!", link: `/resident/pabili/${id}` });
   await broadcastErrand({ id, residentId: errand.residentId, status: "DELIVERED" });
-  res.json({ ok: true, earned: peso(errand.deliveryFee), collect: peso(Number(errand.receiptTotal ?? 0) + Number(errand.deliveryFee)) });
+  res.json({ ok: true, earned: peso(Number(errand.deliveryFee) - Number(errand.feastoCut)), feastoCut: peso(errand.feastoCut), collect: peso(Number(errand.receiptTotal ?? 0) + Number(errand.deliveryFee)) });
 });
 
 /**

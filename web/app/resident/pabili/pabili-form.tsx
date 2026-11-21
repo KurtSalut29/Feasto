@@ -56,7 +56,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const home = addresses.find((a) => a.id === addressId);
   const near = home?.latitude != null && home.longitude != null ? { lat: home.latitude, lng: home.longitude } : null;
   // The shop has no pin, so the fee is a range until the rider buys: their phone sets the real one
-  const { data: quote } = useApiData<{ min: number; max: number; maxKm: number }>("/errands/quote");
+  const { data: quote } = useApiData<{ min: number; max: number; maxKm: number; busyFee: number; busy: string | null; rainFee: number }>("/errands/quote");
   const spend = Number(budget) || 0;
   const most = `₱${budgetMax.toLocaleString("en-PH")}`;
   // Said as soon as it's typed, with why and what to do instead
@@ -266,6 +266,11 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           </div>
         </dl>
         <p className="mt-2 text-muted">
+          {quote && quote.busyFee + quote.rainFee > 0 && (
+            <>
+              It includes {formatPeso(quote.busyFee + quote.rainFee)} for the rider {quote.busyFee > 0 && quote.rainFee > 0 ? "because riders are busy and it's raining" : quote.busyFee > 0 ? `because riders are busy (${quote.busy})` : "because it's raining"}.{" "}
+            </>
+          )}
           The delivery fee is set when the rider buys, from where the shop is to you, and never more than {quote ? formatPeso(quote.max) : "the most shown"}. You pay what the receipt says, not the whole budget. If no rider takes it in {waitMinutes} minutes, it&apos;s cancelled and you pay nothing.
         </p>
       </div>

@@ -4,8 +4,10 @@ import type { Settings } from "./settings.js";
 import { prisma } from "./db.js";
 
 /**
- * How Feasto earns: a commission on each order's food (paid by the store), and a share of the
- * delivery fee (paid by the rider). Residents pay nothing extra, and tips all go to the rider.
+ * How Feasto earns: a commission on each order's food (paid by the store), at the rate agreed with
+ * that store or the default in Settings, and a share of each Pabili fee (paid by the rider). Riders
+ * keep the whole fee of a food delivery, add-ons included. Residents pay nothing extra, and tips all
+ * go to the rider. (Orders from before Nov 2026 may still show a share of the delivery fee: riderCut.)
  *
  * Both are worked out at checkout and copied onto the order, like the delivery fee, so changing
  * the rates never changes an order already placed. Feasto only earns them once the order is
@@ -17,24 +19,41 @@ export const EARNED = ["DELIVERED", "COMPLETED"] as const;
 
 const centavos = (value: number) => Math.round(value * 100) / 100;
 
-type Rates = Pick<Settings, "commissionPercent" | "pickupCommissionPercent" | "riderFeePercent">;
+type Rates = Pick<Settings, "commissionPercent" | "pickupCommissionPercent">;
+/** A store's own agreed rates; empty uses the default */
+export type StoreRates = { commissionPercent: number | null | { toString(): string }; pickupCommissionPercent: number | null | { toString(): string } };
 
-/** Feasto's share of one store's part of a checkout. */
+const rateOf = (own: StoreRates[keyof StoreRates] | undefined, fallback: number) => (own === null || own === undefined ? fallback : Number(own));
+
+/** The rates one store pays: its own agreement, or the default in Settings */
+export function storeRates(store: StoreRates | null | undefined, rates: Rates) {
+  return {
+    delivery: rateOf(store?.commissionPercent, rates.commissionPercent),
+    pickup: rateOf(store?.pickupCommissionPercent, rates.pickupCommissionPercent),
+    agreed: store?.commissionPercent != null || store?.pickupCommissionPercent != null,
+  };
+}
+
+/** Feasto's share of one store's part of a checkout. The rider's fee is never shared. */
 export function feastoShare(
-  order: { fulfillment: Fulfillment; subtotal: number; deliveryFee: number; commissionFreeUntil: Date | null },
+  order: { fulfillment: Fulfillment; subtotal: number; commissionFreeUntil: Date | null },
   rates: Rates,
+  store?: StoreRates | null,
   at = new Date(),
 ) {
   const free = order.commissionFreeUntil !== null && order.commissionFreeUntil > at;
-  const commissionRate = free ? 0 : order.fulfillment === "DELIVERY" ? rates.commissionPercent : rates.pickupCommissionPercent;
-  const riderCutRate = order.fulfillment === "DELIVERY" ? rates.riderFeePercent : 0;
+  const own = storeRates(store, rates);
+  const commissionRate = free ? 0 : order.fulfillment === "DELIVERY" ? own.delivery : own.pickup;
   return {
     commissionRate,
     commission: centavos((order.subtotal * commissionRate) / 100),
-    riderCutRate,
-    riderCut: centavos((order.deliveryFee * riderCutRate) / 100),
+    riderCutRate: 0,
+    riderCut: 0,
   };
 }
+
+/** Feasto's share of a Pabili fee. The busy or rain add-on is all the rider's. */
+export const pabiliCut = (fee: number, extraFee: number, rate: number) => centavos((Math.max(0, fee - extraFee) * rate) / 100);
 
 /** When a newly approved store's free days end; null when there are none. */
 export const freeUntil = (days: number, from = new Date()) => (days > 0 ? new Date(from.getTime() + days * 86400_000) : null);
@@ -158,13 +177,22 @@ export async function storeBalances(db: Prisma.TransactionClient = prisma, vendo
   return combine(earned, settled);
 }
 
-/** Every rider's cash balance, or one rider's: Feasto's share of the fees they collected in cash. */
+/**
+ * Every rider's cash balance, or one rider's: Feasto's share of the Pabili fees they collected in
+ * cash (and of food delivery fees, from before riders kept all of them).
+ */
 export async function riderBalances(db: Prisma.TransactionClient = prisma, riderId?: string): Promise<Balance[]> {
   const [earned, settled] = await Promise.all([
     db.$queryRaw<Row[]>`
-      SELECT o."riderId" AS id, sum(o."riderCut")::text AS owed, count(*) AS orders
-      FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
-      WHERE o.status = 'DELIVERED' AND o."riderId" IS NOT NULL AND c."paymentMethod" = 'COD' ${only(Prisma.sql`o."riderId"`, riderId)}
+      SELECT id, sum(owed)::text AS owed, sum(n)::bigint AS orders FROM (
+        SELECT o."riderId" AS id, o."riderCut" AS owed, 1 AS n
+        FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
+        WHERE o.status = 'DELIVERED' AND o."riderId" IS NOT NULL AND c."paymentMethod" = 'COD' AND o."riderCut" > 0 ${only(Prisma.sql`o."riderId"`, riderId)}
+        UNION ALL
+        SELECT e."riderId", e."feastoCut", 1
+        FROM "Errand" e
+        WHERE e.status = 'DELIVERED' AND e."riderId" IS NOT NULL AND e."feastoCut" > 0 ${only(Prisma.sql`e."riderId"`, riderId)}
+      ) owed
       GROUP BY 1`,
     db.$queryRaw<Settled[]>(settledBy(Prisma.sql`"riderId"`, riderId)),
   ]);

@@ -2,6 +2,7 @@ import { Bike, Building2, Cake, CalendarCheck, CalendarClock, FileBadge, HeartPu
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Avatar } from "@/components/app/avatar";
+import { DocCheck, type DocCheckResult } from "@/components/app/doc-check";
 import { DocumentPreview } from "@/components/app/document-preview";
 import { ReviewActions } from "@/components/app/review-actions";
 import { DashboardSkeleton, PageHeader } from "@/components/app/dashboard-shell";
@@ -29,7 +30,7 @@ const STATUS: Record<ApprovalStatus, { label: string; tone: BadgeTone }> = {
 };
 
 type Contact = { name: string; email: string; phone: string | null };
-type Review = { id: string; status: ApprovalStatus; reviewNote: string | null; reviewedAt: string | null; createdAt: string; document: "image" | "pdf" | null };
+type Review = { id: string; status: ApprovalStatus; reviewNote: string | null; reviewedAt: string | null; createdAt: string; document: "image" | "pdf" | null; check?: DocCheckResult };
 type StoreItem = Review & {
   name: string;
   storeType: StoreType;
@@ -208,7 +209,12 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
           </Detail>
         </>
       }
-      document={<DocumentPreview href={`/api/documents/store/${store.id}`} kind={store.document} label="Business permit" />}
+      document={
+        <>
+          <DocumentPreview href={`/api/documents/store/${store.id}`} kind={store.document} label="Business permit" />
+          {store.document && <DocCheck check={store.check} />}
+        </>
+      }
       actions={<ReviewActions kind="stores" id={store.id} name={store.name} status={store.status} />}
     />
   );
@@ -255,7 +261,12 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
           </Detail>
         </>
       }
-      document={<DocumentPreview href={`/api/documents/rider/${rider.id}`} kind={rider.document} label="Driver's license" />}
+      document={
+        <>
+          <DocumentPreview href={`/api/documents/rider/${rider.id}`} kind={rider.document} label="Driver's license" />
+          {rider.document && <DocCheck check={rider.check} />}
+        </>
+      }
       actions={
         // A store lifts the suspensions it made itself
         rider.vendor && rider.status === "SUSPENDED" && !rider.suspendedByAdmin ? (

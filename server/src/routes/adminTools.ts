@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import type { ActivityCategory, Prisma } from "../generated/prisma/client.js";
 import { logActivity, type Actor } from "../lib/activity.js";
+import { busyFeeFor, demandNow, rainNow, setRain } from "../lib/feeAddOns.js";
 import { prisma } from "../lib/db.js";
 import { availableRider, forgetRiderPosition, OPEN_JOB } from "../lib/dispatch.js";
 import { HttpError, parseBody } from "../lib/http.js";
@@ -347,19 +348,12 @@ adminToolsRouter.get("/settings", async (_req, res) => {
   res.json({ settings: await getSettings() });
 });
 
-const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const daysInWords = (days: number[]) =>
-  days.length === 7 ? "every day" : days.join() === "1,2,3,4,5" ? "weekdays" : days.join() === "0,6" ? "weekends" : days.map((d) => DAY_SHORT[d]).join(", ");
-
 const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Settings[K]) => string } } = {
   deliveryFee: { label: "Base delivery fee", show: (value) => `₱${value}` },
   deliveryBaseKm: { label: "Km the base fee covers", show: (value) => `${value} km` },
   deliveryPerKm: { label: "Price per extra km", show: (value) => `₱${value}` },
-  deliveryPeakFee: { label: "Rush-hour add-on", show: (value) => `₱${value}` },
-  peakHours: {
-    label: "Rush hours",
-    show: (list) => (list.length ? list.map((w) => `${w.name} ${w.from}–${w.to} (${daysInWords(w.days)})`).join(", ") : "none"),
-  },
+  busyFeeMax: { label: "Most added when riders are busy", show: (value) => (value ? `₱${value}` : "off") },
+  rainFee: { label: "Added while it rains", show: (value) => (value ? `₱${value}` : "off") },
   storeRiderSeconds: { label: "Store riders' turn", show: (value) => `${value} s` },
   riderWaveSeconds: { label: "Time between waves", show: (value) => `${value} s` },
   stuckMinutes: { label: "Stuck after", show: (value) => `${value} min` },
@@ -367,9 +361,15 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   signupsPerNetwork: { label: "Sign-ups per network", show: (value) => `${value} per 10 min` },
   commissionPercent: { label: "Commission on delivery orders", show: (value) => `${value}%` },
   pickupCommissionPercent: { label: "Commission on pickup orders", show: (value) => `${value}%` },
-  riderFeePercent: { label: "Feasto's share of the delivery fee", show: (value) => `${value}%` },
+  pabiliFeePercent: { label: "Feasto's share of a Pabili fee", show: (value) => `${value}%` },
   freeTrialDays: { label: "Free days for new stores", show: (value) => (value ? `${value} days` : "none") },
   pabiliBudgetMax: { label: "Most a rider may spend on a Pabili", show: (value) => `₱${value.toLocaleString("en-PH")}` },
+  largeOrderItems: { label: "A big order has", show: (value) => `${value} items` },
+  largeOrderAmount: { label: "A big order costs", show: (value) => `₱${value.toLocaleString("en-PH")}` },
+  codMaxAmount: { label: "Most paid in cash", show: (value) => `₱${value.toLocaleString("en-PH")}` },
+  noShowStrikes: { label: "Orders not received before cash is off", show: (value) => `${value}` },
+  doorWaitMinutes: { label: "Rider waits at the door", show: (value) => `${value} min` },
+  require2fa: { label: "Two-step login for admins and stores", show: (value) => (value ? "required" : "optional") },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);
@@ -380,8 +380,7 @@ adminToolsRouter.put("/settings", async (req, res) => {
   const changes = (Object.keys(next) as (keyof Settings)[]).filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key]));
   if (changes.length > 0) {
     await prisma.$transaction(async (tx) => {
-      const row = { ...next, peakHours: next.peakHours as Prisma.InputJsonValue };
-      await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, ...row }, update: row });
+      await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, ...next }, update: next });
       await logActivity(tx, actorOf(req), {
         category: "SETTINGS",
         action: "Changed settings",
@@ -392,4 +391,122 @@ adminToolsRouter.put("/settings", async (req, res) => {
     await clearSettingsCache();
   }
   res.json({ settings: next });
+});
+
+// ---------- Commission agreed with each store ----------
+
+/** Ready-made rates for the usual kinds of agreement; the admin can also type their own */
+export const COMMISSION_TEMPLATES = [
+  { name: "Local partner", delivery: 8, pickup: 4 },
+  { name: "Standard", delivery: 15, pickup: 8 },
+  { name: "Big chain", delivery: 25, pickup: 12 },
+] as const;
+
+const agreedRate = z
+  .number("Enter 0 to 40%.")
+  .min(0, "Enter 0 to 40%.")
+  .max(40, "Enter 0 to 40%.")
+  .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 7.5.")
+  .nullable();
+
+const commissionSchema = z.object({
+  vendorIds: z.array(z.string().min(1)).min(1, "Choose at least one store.").max(500),
+  /** Null goes back to the default in Settings */
+  commissionPercent: agreedRate,
+  pickupCommissionPercent: agreedRate,
+  note: z.string().trim().max(120, "Keep the note under 120 letters.").optional().default(""),
+});
+
+adminToolsRouter.get("/store-commissions", async (_req, res) => {
+  const [settings, stores, timed] = await Promise.all([
+    getSettings(),
+    prisma.vendor.findMany({
+      where: { status: { in: ["APPROVED", "SUSPENDED", "PENDING"] } },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        storeType: true,
+        status: true,
+        imageUrl: true,
+        commissionPercent: true,
+        pickupCommissionPercent: true,
+        commissionNote: true,
+        commissionSetAt: true,
+        commissionFreeUntil: true,
+      },
+    }),
+    // How often each kitchen was ready by the time it said, in the last 30 days
+    prisma.$queryRaw<{ id: string; timed: bigint; onTime: bigint }[]>`
+      SELECT "vendorId" AS id, count(*) AS timed, count(*) FILTER (WHERE "readyAt" <= "readyBy" + interval '2 minutes') AS "onTime"
+      FROM "Order" WHERE "readyBy" IS NOT NULL AND "readyAt" IS NOT NULL AND "createdAt" > now() - interval '30 days'
+      GROUP BY 1`,
+  ]);
+  const onTime = new Map(timed.map((t) => [t.id, { orders: Number(t.timed), percent: Math.round((Number(t.onTime) / Number(t.timed)) * 100) }]));
+  res.json({
+    defaults: { delivery: settings.commissionPercent, pickup: settings.pickupCommissionPercent },
+    templates: COMMISSION_TEMPLATES,
+    stores: stores.map((s) => ({
+      ...s,
+      onTime: onTime.get(s.id) ?? null,
+      commissionPercent: s.commissionPercent === null ? null : Number(s.commissionPercent),
+      pickupCommissionPercent: s.pickupCommissionPercent === null ? null : Number(s.pickupCommissionPercent),
+      freeUntil: s.commissionFreeUntil && s.commissionFreeUntil > new Date() ? s.commissionFreeUntil : null,
+    })),
+  });
+});
+
+adminToolsRouter.put("/store-commissions", async (req, res) => {
+  const input = parseBody(commissionSchema, req.body);
+  const settings = await getSettings();
+  const stores = await prisma.vendor.findMany({ where: { id: { in: input.vendorIds } }, select: { id: true, name: true, commissionPercent: true, pickupCommissionPercent: true } });
+  if (stores.length !== new Set(input.vendorIds).size) throw new HttpError(404, "One of those stores isn't on Feasto anymore. Refresh and try again.");
+  const words = (own: unknown, fallback: number) => (own === null || own === undefined ? `default ${fallback}%` : `${Number(own)}%`);
+  const reset = input.commissionPercent === null && input.pickupCommissionPercent === null;
+  await prisma.$transaction(async (tx) => {
+    await tx.vendor.updateMany({
+      where: { id: { in: input.vendorIds } },
+      data: {
+        commissionPercent: input.commissionPercent,
+        pickupCommissionPercent: input.pickupCommissionPercent,
+        commissionNote: reset ? null : input.note || null,
+        commissionSetAt: reset ? null : new Date(),
+      },
+    });
+    await logActivity(tx, actorOf(req), {
+      category: "EARNINGS",
+      action: reset ? "Put stores back on the default commission" : "Set a store's commission",
+      target: stores.length === 1 ? stores[0]!.name : `${stores.length} stores`,
+      detail: [
+        ...stores.slice(0, 10).map(
+          (s) =>
+            `${s.name}: delivery ${words(s.commissionPercent, settings.commissionPercent)} → ${words(input.commissionPercent, settings.commissionPercent)}, pickup ${words(s.pickupCommissionPercent, settings.pickupCommissionPercent)} → ${words(input.pickupCommissionPercent, settings.pickupCommissionPercent)}`,
+        ),
+        ...(stores.length > 10 ? [`and ${stores.length - 10} more`] : []),
+        ...(input.note ? [`Note: ${input.note}`] : []),
+      ].join("; "),
+    });
+  });
+  res.json({ ok: true, updated: stores.length });
+});
+
+// ---------- Rain ----------
+
+adminToolsRouter.get("/rain", async (_req, res) => {
+  const [rain, demand, settings] = await Promise.all([rainNow(), demandNow(), getSettings()]);
+  res.json({ rain, demand, busy: busyFeeFor(demand, settings.busyFeeMax), rainFee: settings.rainFee });
+});
+
+adminToolsRouter.put("/rain", async (req, res) => {
+  const input = parseBody(z.object({ on: z.boolean(), hours: z.number().int().min(1).max(12).optional().default(3) }), req.body);
+  const rain = await setRain(input.on, input.hours);
+  await prisma.$transaction((tx) =>
+    logActivity(tx, actorOf(req), {
+      category: "SETTINGS",
+      action: input.on ? "Turned on the rain add-on" : "Turned off the rain add-on",
+      target: "Delivery fee",
+      detail: input.on ? `For ${input.hours} hour${input.hours === 1 ? "" : "s"}` : undefined,
+    }),
+  );
+  res.json({ rain });
 });

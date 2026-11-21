@@ -9,6 +9,7 @@ import { buildCart, clearCart } from "../lib/cart.js";
 import { chosenRider } from "../lib/errands.js";
 import { prisma } from "../lib/db.js";
 import { feastoShare } from "../lib/earnings.js";
+import { addOnNote } from "../lib/feeAddOns.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
 import { startOnlinePayment, syncPayment } from "../lib/paymentFlow.js";
@@ -50,6 +51,8 @@ const checkoutSchema = z
     preferredRiderId: z.string().min(1).optional(),
     /** Demo switch: make the simulated online payment fail to show the saga undoing the order */
     simulatePaymentFailure: z.boolean().optional(),
+    /** What the store does if an item runs out after the order is placed */
+    ifUnavailable: z.enum(["REMOVE", "CALL", "CANCEL"]).optional().default("REMOVE"),
   })
   .refine((v) => v.fulfillment === "PICKUP" || v.addressId, { path: ["addressId"], message: "Choose where to deliver." });
 
@@ -90,6 +93,18 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   if (scheduledFor) {
     const problem = scheduleProblem(scheduledFor, input.fulfillment, cart.groups.map((g) => g.store));
     if (problem) throw new HttpError(400, problem);
+  }
+  // Each store delivers only as far as it set
+  const far = input.fulfillment === "DELIVERY" ? cart.groups.find((g) => g.tooFar) : null;
+  if (far?.tooFar) {
+    throw new HttpError(400, `${far.store.name} delivers up to ${far.tooFar.radiusKm} km, and this address is ${far.tooFar.km} km away by road. Choose pickup, another address, or a nearer store.`);
+  }
+  // A big order some stores need to know about ahead of time
+  const rush = cart.groups.find((g) => g.timing.noticeMinutes > 0 && (!scheduledFor || scheduledFor.getTime() < Date.now() + g.timing.noticeMinutes * 60_000));
+  if (rush) {
+    const earliest = new Date(Date.now() + rush.timing.noticeMinutes * 60_000).toLocaleString("en-PH", { hour: "numeric", minute: "2-digit", month: "short", day: "numeric", timeZone: "Asia/Manila" });
+    const notice = rush.timing.noticeMinutes >= 60 ? `${Math.round((rush.timing.noticeMinutes / 60) * 10) / 10} hours'` : `${rush.timing.noticeMinutes} minutes'`;
+    throw new HttpError(400, `This is a big order, and ${rush.store.name} needs ${notice} notice for it. Schedule it for ${earliest} or later.`);
   }
 
   // A transfer goes to one of the admin's accounts, never to one the request names
@@ -135,19 +150,35 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   const feeOf = (group: (typeof cart.groups)[number]) => (delivery ? (group.delivery?.fee ?? cart.delivery.baseFee) : 0);
   const deliveryTotal = Math.round(cart.groups.reduce((n, g) => n + feeOf(g), 0) * 100) / 100;
   if (delivery && input.expectedDeliveryFee !== undefined && Math.abs(input.expectedDeliveryFee - deliveryTotal) > 0.001) {
-    const why = cart.groups.some((g) => g.delivery?.peak) ? " The rush-hour add-on now applies." : "";
+    const why = cart.groups.some((g) => g.delivery?.busyFee || g.delivery?.rainFee) ? " Riders are busy or it's raining, so an add-on for the rider applies." : "";
     throw new HttpError(409, `The delivery fee changed to ₱${deliveryTotal}.${why} Check the new total, then place your order again.`);
   }
   const total = cart.itemsTotal + deliveryTotal;
 
+  // Cash has limits, so a store never cooks a big order for someone who never pays
+  if (input.paymentMethod === "COD") {
+    const [limits, me] = await Promise.all([getSettings(), prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { noShows: true } })]);
+    if (me.noShows >= limits.noShowStrikes) {
+      throw new HttpError(400, `Cash on delivery is off for your account: ${me.noShows} orders weren't received at the door. Pay online instead.`);
+    }
+    if (total > limits.codMaxAmount) {
+      throw new HttpError(400, `Cash on delivery is for orders up to ₱${limits.codMaxAmount.toLocaleString("en-PH")}. Pay online for this one, so the store can cook a big order safely.`);
+    }
+  }
+
   // Feasto's share, copied onto each order like its fee. A store in its free first month pays no commission.
   const [rates, freeUntil] = await Promise.all([
     getSettings(),
-    prisma.vendor.findMany({ where: { id: { in: cart.groups.map((g) => g.store.id) } }, select: { id: true, commissionFreeUntil: true } }),
+    prisma.vendor.findMany({ where: { id: { in: cart.groups.map((g) => g.store.id) } }, select: { id: true, commissionFreeUntil: true, commissionPercent: true, pickupCommissionPercent: true } }),
   ]);
-  const freeOf = new Map(freeUntil.map((v) => [v.id, v.commissionFreeUntil]));
-  const shareOf = (group: (typeof cart.groups)[number]) =>
-    feastoShare({ fulfillment: input.fulfillment, subtotal: group.subtotal, deliveryFee: feeOf(group), commissionFreeUntil: freeOf.get(group.store.id) ?? null }, rates);
+  const storeOf = new Map(freeUntil.map((v) => [v.id, v]));
+  const shareOf = (group: (typeof cart.groups)[number]) => {
+    const store = storeOf.get(group.store.id);
+    return feastoShare({ fulfillment: input.fulfillment, subtotal: group.subtotal, commissionFreeUntil: store?.commissionFreeUntil ?? null }, rates, store);
+  };
+  // The busy or rain add-on in each store's fee, kept on the order with the reason
+  const addOnOf = (group: (typeof cart.groups)[number]) =>
+    delivery && group.delivery ? { extraFee: group.delivery.busyFee + group.delivery.rainFee, extraFeeNote: addOnNote(group.delivery) } : {};
 
   try {
     const checkout = await prisma.$transaction(async (tx) => {
@@ -168,6 +199,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
         data: {
           residentId: userId,
           idempotencyKey: input.idempotencyKey,
+          ifUnavailable: input.ifUnavailable,
           fulfillment: input.fulfillment,
           paymentMethod: input.paymentMethod,
           onlineMethod: input.paymentMethod === "ONLINE" ? (transferAccount ? transferWallet : (input.onlineMethod ?? null)) : null,
@@ -189,6 +221,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
               deliveryFee: feeOf(group),
               deliveryKm: delivery ? (group.delivery?.km ?? null) : null,
               ...shareOf(group),
+              ...addOnOf(group),
               items: {
                 create: group.items.map((item) => ({
                   menuItemId: item.menuItemId,

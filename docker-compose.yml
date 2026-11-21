@@ -34,6 +34,12 @@ x-server-env: &server-env
   SMTP_USER: ${SMTP_USER:-}
   SMTP_PASS: ${SMTP_PASS:-}
   MAIL_FROM: ${MAIL_FROM:-}
+  # The automatic first check of uploaded IDs, licenses and permits (optional: without the key,
+  # the admin checks every one by hand, as before). DOCUMENT_CHECK_MODEL picks the Claude model.
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  DOCUMENT_CHECK_MODEL: ${DOCUMENT_CHECK_MODEL:-}
+  # Cloudflare Turnstile on sign-up and login (optional: without the secret, it's off)
+  TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
 
 # Settings shared by the three API copies.
 x-api: &api
@@ -202,9 +208,10 @@ services:
       <<: *server-env
       INSTANCE_ID: workers
       WORKER_COUNT: ${WORKER_COUNT:-}
-    # Workers never read permits or licenses
+    # Workers only read permits, licenses and IDs (the automatic document check), never change them
     volumes:
       - uploads:/app/uploads
+      - documents:/app/documents:ro
 
   nginx:
     image: nginx:1.29-alpine
