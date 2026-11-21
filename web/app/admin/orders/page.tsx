@@ -13,6 +13,7 @@ import { formatDateTime, formatPeso, timeAgo } from "@/lib/format";
 import { orderCode, paymentName, paymentStatusLabel, STATUS_TONE, statusLabel } from "@/lib/order-status";
 import { serverApi } from "@/lib/server-api";
 import type { Fulfillment, OrderStatus, PaymentMethod, PaymentStatus } from "@/lib/types";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -129,7 +130,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
                     <p className="truncate text-sm font-medium text-ink">{o.vendor.name}</p>
                     <p className="truncate text-sm text-muted">for {o.checkout.resident.name}</p>
                   </div>
-                  <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(Number(o.subtotal) + Number(o.deliveryFee))}</p>
+                  <p className="shrink-0 font-semibold text-ink tabular-nums">{formatPeso(orderTotal(o))}</p>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
                   <Badge tone={STATUS_TONE[o.status]} dot>
@@ -188,7 +189,7 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
                           : paymentStatusLabel(o.checkout.paymentMethod, o.checkout.paymentStatus)}
                       </p>
                     </td>
-                    <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(Number(o.subtotal) + Number(o.deliveryFee))}</td>
+                    <td className={`${TD} text-right font-semibold text-ink tabular-nums`}>{formatPeso(orderTotal(o))}</td>
                     <td className={TD}>
                       <Badge tone={STATUS_TONE[o.status]} dot>
                         {statusLabel(o.status, o.fulfillment)}

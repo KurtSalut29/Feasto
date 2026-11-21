@@ -182,7 +182,7 @@ adminToolsRouter.get("/stuck", async (req, res) => {
         fulfillment: true,
         riderId: true,
         dispatch: true,
-        subtotal: true,
+        subtotal: true, storeDiscount: true, feastoDiscount: true,
         deliveryFee: true,
         createdAt: true,
         placedAt: true,

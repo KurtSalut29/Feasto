@@ -69,15 +69,17 @@ export const freeUntil = (days: number, from = new Date()) => (days > 0 ? new Da
  * - Cash: the resident pays the rider or the store directly, so Feasto never holds it. The store
  *   and the rider then owe Feasto its share, which the admin collects every week.
  */
-export function payoutOf(order: { paymentMethod: "COD" | "ONLINE"; subtotal: number; commission: number; deliveryFee: number; riderCut: number }) {
+export function payoutOf(order: { paymentMethod: "COD" | "ONLINE"; subtotal: number; commission: number; deliveryFee: number; riderCut: number; storeDiscount?: number; feastoDiscount?: number }) {
   const online = order.paymentMethod === "ONLINE";
+  const storeDiscount = order.storeDiscount ?? 0;
+  const feastoDiscount = order.feastoDiscount ?? 0;
   return {
     online,
-    /** Sent to the store when it's delivered (online), or what the store keeps from the cash */
-    store: centavos(order.subtotal - order.commission),
+    /** Sent to the store when it's delivered (online), or what the store keeps: the food, minus its own discounts and the commission */
+    store: centavos(order.subtotal - storeDiscount - order.commission),
     rider: centavos(order.deliveryFee - order.riderCut),
-    /** For cash, what the store and the rider owe Feasto */
-    storeOwes: online ? 0 : order.commission,
+    /** For cash, what the store owes Feasto: the commission, less Feasto's discounts it collected less cash for (negative: Feasto owes the store) */
+    storeOwes: online ? 0 : centavos(order.commission - feastoDiscount),
     riderOwes: online ? 0 : order.riderCut,
   };
 }
@@ -96,6 +98,8 @@ export async function payoutWords(orderId: string) {
       commission: true,
       deliveryFee: true,
       riderCut: true,
+      storeDiscount: true,
+      feastoDiscount: true,
       checkout: { select: { paymentMethod: true } },
       vendor: { select: { payoutChannel: true, payoutNumber: true } },
       rider: { select: { riderProfile: { select: { payoutChannel: true, payoutNumber: true } } } },
@@ -107,8 +111,11 @@ export async function payoutWords(orderId: string) {
     commission: Number(o.commission),
     deliveryFee: Number(o.deliveryFee),
     riderCut: Number(o.riderCut),
+    storeDiscount: Number(o.storeDiscount),
+    feastoDiscount: Number(o.feastoDiscount),
   });
   const commission = Number(o.commission);
+  const feastoDiscount = Number(o.feastoDiscount);
   const riderCut = Number(o.riderCut);
   // Where the online share goes: their e-wallet or bank, or held until they add one
   const sending = (account: { payoutChannel: PayoutChannel | null; payoutNumber: string | null } | null | undefined, settings: string) =>
@@ -116,7 +123,11 @@ export async function payoutWords(orderId: string) {
   return {
     store: p.online
       ? `${peso(p.store)} for the food ${sending(o.vendor, "Reports")}${commission ? `, after Feasto's ${peso(commission)} commission` : ""}.`
-      : commission
+      : feastoDiscount > 0
+        ? p.storeOwes >= 0
+          ? `Paid in cash, ${peso(feastoDiscount)} less because of Feasto's voucher, which Feasto pays: you owe Feasto ${peso(p.storeOwes)} (the ${peso(commission)} commission less that).`
+          : `Paid in cash, ${peso(feastoDiscount)} less because of Feasto's voucher: Feasto owes you ${peso(-p.storeOwes)}, taken off what you pay Feasto.`
+        : commission
         ? `Paid in cash. Feasto's ${peso(commission)} commission is added to what you pay Feasto each week.`
         : "Paid in cash. No commission: it's your free month.",
     rider: p.online
@@ -168,7 +179,7 @@ const settledBy = (column: Prisma.Sql, id?: string) => Prisma.sql`
 export async function storeBalances(db: Prisma.TransactionClient = prisma, vendorId?: string): Promise<Balance[]> {
   const [earned, settled] = await Promise.all([
     db.$queryRaw<Row[]>`
-      SELECT o."vendorId" AS id, sum(o.commission)::text AS owed, count(*) AS orders
+      SELECT o."vendorId" AS id, sum(o.commission - o."feastoDiscount")::text AS owed, count(*) AS orders
       FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
       WHERE o.status IN ('DELIVERED', 'COMPLETED') AND c."paymentMethod" = 'COD' ${only(Prisma.sql`o."vendorId"`, vendorId)}
       GROUP BY 1`,

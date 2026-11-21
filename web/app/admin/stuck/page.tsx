@@ -13,6 +13,7 @@ import { formatPeso, renderTime } from "@/lib/format";
 import { serverApi } from "@/lib/server-api";
 import type { Fulfillment } from "@/lib/types";
 import { StuckActions } from "./stuck-actions";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Stuck orders" };
 
@@ -134,7 +135,7 @@ async function Stuck({ searchParams }: Pick<PageProps<"/admin/stuck">, "searchPa
                 {order.fulfillment === "DELIVERY" ? <Bike className="size-3.5" aria-hidden /> : <ShoppingBag className="size-3.5" aria-hidden />}
                 {order.fulfillment === "DELIVERY" ? "Delivery" : "Pickup"}
               </span>
-              · {formatPeso(Number(order.subtotal) + Number(order.deliveryFee))}
+              · {formatPeso(orderTotal(order))}
             </p>
           </div>
           <p className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-sm font-semibold text-red-700 ring-1 ring-red-200 tabular-nums">
@@ -240,7 +241,7 @@ async function Stuck({ searchParams }: Pick<PageProps<"/admin/stuck">, "searchPa
                         <span aria-hidden className={`size-1.5 rounded-full ${why.dot}`} />
                         {why.label}
                       </span>
-                      <span className="rounded-md bg-canvas px-1.5 py-0.5 text-muted tabular-nums">{formatPeso(Number(order.subtotal) + Number(order.deliveryFee))}</span>
+                      <span className="rounded-md bg-canvas px-1.5 py-0.5 text-muted tabular-nums">{formatPeso(orderTotal(order))}</span>
                     </span>
                   </>
                 ),

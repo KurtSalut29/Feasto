@@ -17,6 +17,7 @@ import { serverApi } from "@/lib/server-api";
 import { STORE_TYPE_LABEL } from "@/lib/store-types";
 import type { Fulfillment, OrderStatus, SalesDay, StoreSummary, StoreType, WeekTrend } from "@/lib/types";
 import { AdminHero, type Attention } from "./admin-hero";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -219,7 +220,7 @@ async function AdminOverview() {
                     </p>
                   </div>
                   <p className="hidden text-right text-sm font-semibold text-ink tabular-nums sm:block">
-                    {formatPeso(Number(order.subtotal) + Number(order.deliveryFee))}
+                    {formatPeso(orderTotal(order))}
                   </p>
                   <div className="text-right sm:text-left">
                     <Badge tone={STATUS_TONE[order.status]} dot>

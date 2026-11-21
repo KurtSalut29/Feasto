@@ -235,7 +235,13 @@ type OrderBase = {
   finishedAt: string | null;
   createdAt: string;
   /** `note` is the resident's note for that one dish; `removedAt` when the store ran out of it */
-  items: { id: string; name: string; unitPrice: string; quantity: number; note?: string | null; removedAt?: string | null }[];
+  items: { id: string; name: string; unitPrice: string; quantity: number; note?: string | null; removedAt?: string | null; /** Taken off this line (a deal, or the Senior/PWD discount) */ discount?: string }[];
+  /** Discounts, by who pays: the resident pays subtotal + deliveryFee minus both */
+  storeDiscount?: string;
+  feastoDiscount?: string;
+  /** The lines on the receipt */
+  discounts?: import("./promos").DiscountLine[];
+  seniorDiscount?: boolean;
   /** When the store said it would be ready, and how often it said it needs more time */
   readyBy?: string | null;
   delays?: number;

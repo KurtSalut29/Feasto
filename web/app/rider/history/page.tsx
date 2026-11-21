@@ -16,6 +16,7 @@ import { serverApi } from "@/lib/server-api";
 import type { PaymentMethod, PayoutsData, SalesDay } from "@/lib/types";
 import type { Totals } from "../rider-hero";
 import { ReportProblem } from "@/components/app/report-problem";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "History" };
 
@@ -205,7 +206,7 @@ async function RiderHistory() {
                     </p>
                     {d.subtotal !== undefined && (
                       <p className="truncate text-xs text-muted">
-                        {itemCount(d)} {itemCount(d) === 1 ? "item" : "items"} · {formatPeso(Number(d.subtotal) + Number(d.deliveryFee))} order ·{" "}
+                        {itemCount(d)} {itemCount(d) === 1 ? "item" : "items"} · {formatPeso(orderTotal(d))} order ·{" "}
                         {d.checkout.paymentMethod === "COD" ? "cash collected" : "paid online"}
                       </p>
                     )}

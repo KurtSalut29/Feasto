@@ -21,6 +21,8 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { refuseWithoutId } from "../lib/identity.js";
 import { accountLine, walletOfChannel } from "../lib/transfers.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
+import { orderDiscountData, pricePromos, type PromoGroup } from "../lib/promos.js";
+import { deviceOf } from "../lib/twoStep.js";
 
 export const checkoutRouter = Router();
 checkoutRouter.use(requireAuth, requireRole("RESIDENT"));
@@ -53,6 +55,12 @@ const checkoutSchema = z
     simulatePaymentFailure: z.boolean().optional(),
     /** What the store does if an item runs out after the order is placed */
     ifUnavailable: z.enum(["REMOVE", "CALL", "CANCEL"]).optional().default("REMOVE"),
+    /** One voucher for the food, one for the delivery, and the Senior Citizen or PWD discount */
+    voucherCode: z.string().trim().max(30).optional().transform((v) => v || null),
+    deliveryCode: z.string().trim().max(30).optional().transform((v) => v || null),
+    senior: z.boolean().optional().default(false),
+    /** The discount the page showed; if it changed (a voucher ran out), the resident sees the new total first */
+    expectedDiscount: z.number().optional(),
   })
   .refine((v) => v.fulfillment === "PICKUP" || v.addressId, { path: ["addressId"], message: "Choose where to deliver." });
 
@@ -153,7 +161,22 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     const why = cart.groups.some((g) => g.delivery?.busyFee || g.delivery?.rainFee) ? " Riders are busy or it's raining, so an add-on for the rider applies." : "";
     throw new HttpError(409, `The delivery fee changed to ₱${deliveryTotal}.${why} Check the new total, then place your order again.`);
   }
-  const total = cart.itemsTotal + deliveryTotal;
+  // The promos, worked out the same way as the checkout page did (and again, held, when saving)
+  const promoGroups: PromoGroup[] = cart.groups.map((g) => ({
+    storeId: g.store.id,
+    storeName: g.store.name,
+    items: g.items.map((i) => ({ menuItemId: i.menuItemId, name: i.name, price: i.price, quantity: i.quantity })),
+    subtotal: g.subtotal,
+    deliveryFee: feeOf(g),
+  }));
+  const promoInput = { userId, groups: promoGroups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, deviceHash: deviceOf(req, res) };
+  const pricing = await pricePromos(prisma, promoInput);
+  const refused = [pricing.voucher, pricing.deliveryVoucher].find((v) => v && !v.applied && v.message && !v.message.startsWith("Not used"));
+  if (refused) throw new HttpError(409, `${refused.code}: ${refused.message}`);
+  if (input.expectedDiscount !== undefined && Math.abs(input.expectedDiscount - pricing.discount) > 0.001) {
+    throw new HttpError(409, `Your discount changed to ₱${pricing.discount}. Check the new total, then place your order again.`);
+  }
+  const total = Math.round((cart.itemsTotal + deliveryTotal - pricing.discount) * 100) / 100;
 
   // Cash has limits, so a store never cooks a big order for someone who never pays
   if (input.paymentMethod === "COD") {
@@ -172,9 +195,10 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     prisma.vendor.findMany({ where: { id: { in: cart.groups.map((g) => g.store.id) } }, select: { id: true, commissionFreeUntil: true, commissionPercent: true, pickupCommissionPercent: true } }),
   ]);
   const storeOf = new Map(freeUntil.map((v) => [v.id, v]));
-  const shareOf = (group: (typeof cart.groups)[number]) => {
+  // The commission is on the food money the store keeps: after the discounts the store pays for
+  const shareOf = (group: (typeof cart.groups)[number], storeDiscount: number) => {
     const store = storeOf.get(group.store.id);
-    return feastoShare({ fulfillment: input.fulfillment, subtotal: group.subtotal, commissionFreeUntil: store?.commissionFreeUntil ?? null }, rates, store);
+    return feastoShare({ fulfillment: input.fulfillment, subtotal: Math.max(0, group.subtotal - storeDiscount), commissionFreeUntil: store?.commissionFreeUntil ?? null }, rates, store);
   };
   // The busy or rain add-on in each store's fee, kept on the order with the reason
   const addOnOf = (group: (typeof cart.groups)[number]) =>
@@ -182,6 +206,10 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
 
   try {
     const checkout = await prisma.$transaction(async (tx) => {
+      // Each voucher held while its uses are counted, so two checkouts can't share its last use
+      const held = await pricePromos(tx, { ...promoInput, lock: true });
+      if (Math.abs(held.discount - pricing.discount) > 0.001) throw new HttpError(409, "A voucher just ran out. Check your total, then place your order again.");
+      const priceOf = new Map(held.groups.map((g) => [g.storeId, g]));
       // Reserve stock with a conditional update: it only succeeds while enough is left,
       // so two residents can't both buy the last plate, even through different API copies.
       for (const group of cart.groups) {
@@ -208,6 +236,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
           ...deliveryPin,
           notes: input.notes,
           total,
+          discount: held.discount,
           // One order per store; online orders wait for the payment first
           orders: {
             create: cart.groups.map((group) => ({
@@ -220,8 +249,9 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
               subtotal: group.subtotal,
               deliveryFee: feeOf(group),
               deliveryKm: delivery ? (group.delivery?.km ?? null) : null,
-              ...shareOf(group),
+              ...shareOf(group, priceOf.get(group.store.id)?.storeDiscount ?? 0),
               ...addOnOf(group),
+              ...orderDiscountData(priceOf.get(group.store.id)),
               items: {
                 create: group.items.map((item) => ({
                   menuItemId: item.menuItemId,
@@ -229,13 +259,22 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
                   unitPrice: item.price,
                   quantity: item.quantity,
                   note: item.note,
+                  discount: priceOf.get(group.store.id)?.itemDiscounts[item.menuItemId] ?? 0,
                 })),
               },
             })),
           },
         },
-        select: checkoutSummary,
+        select: { ...checkoutSummary, orders: { select: { id: true, vendorId: true } } },
       });
+
+      // Each promo used, on each order: counts its uses and Feasto's spending, live
+      const uses = created.orders.flatMap((o) =>
+        (priceOf.get(o.vendorId)?.lines ?? [])
+          .filter((l) => l.promoId)
+          .map((l) => ({ promoId: l.promoId!, userId, orderId: o.id, amount: l.amount, feastoAmount: l.feasto, storeAmount: l.store })),
+      );
+      if (uses.length) await tx.promoUse.createMany({ data: uses });
 
       if (input.paymentMethod === "ONLINE") {
         // Real payments open Xendit's payment page after this commits; the simulation is a queued job
@@ -272,6 +311,40 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     }
     throw error;
   }
+});
+
+/** What the checkout page shows before ordering: each store's discounts, the vouchers' answers, and the total */
+checkoutRouter.post("/quote", async (req, res) => {
+  const input = parseBody(
+    z.object({
+      fulfillment: z.enum(["DELIVERY", "PICKUP"]),
+      addressId: z.string().optional(),
+      scheduledFor: z.iso.datetime({ offset: true }).optional(),
+      voucherCode: z.string().trim().max(30).optional().transform((v) => v || null),
+      deliveryCode: z.string().trim().max(30).optional().transform((v) => v || null),
+      senior: z.boolean().optional().default(false),
+    }),
+    req.body,
+  );
+  const userId = req.session!.userId;
+  const cart = await buildCart(userId, input.fulfillment === "DELIVERY" ? input.addressId : undefined, input.scheduledFor ? new Date(input.scheduledFor) : undefined);
+  const delivery = input.fulfillment === "DELIVERY";
+  const groups: PromoGroup[] = cart.groups.map((g) => ({
+    storeId: g.store.id,
+    storeName: g.store.name,
+    items: g.items.map((i) => ({ menuItemId: i.menuItemId, name: i.name, price: i.price, quantity: i.quantity })),
+    subtotal: g.subtotal,
+    deliveryFee: delivery ? (g.delivery?.fee ?? cart.delivery.baseFee) : 0,
+  }));
+  const pricing = await pricePromos(prisma, { userId, groups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, deviceHash: deviceOf(req, res) });
+  const deliveryTotal = Math.round(groups.reduce((n, g) => n + g.deliveryFee, 0) * 100) / 100;
+  res.json({
+    ...pricing,
+    stores: groups.map((g) => ({ id: g.storeId, name: g.storeName })),
+    itemsTotal: cart.itemsTotal,
+    deliveryTotal,
+    total: Math.round((cart.itemsTotal + deliveryTotal - pricing.discount) * 100) / 100,
+  });
 });
 
 /**

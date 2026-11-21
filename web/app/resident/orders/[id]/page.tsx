@@ -26,6 +26,8 @@ import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
 import { RateRider } from "./rate-rider";
 import { ReportProblem } from "@/components/app/report-problem";
+import { orderTotal } from "@/lib/promos";
+import { DiscountRows } from "@/components/app/discount-rows";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -55,7 +57,7 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
   await requireRole("RESIDENT");
   const { id } = await params;
   const { order, riderLocation, autoCancel } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation; autoCancel: AutoCancel }>(`/orders/${id}`);
-  const total = Number(order.subtotal) + Number(order.deliveryFee);
+  const total = orderTotal(order);
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
   const received = order.status === "DELIVERED" || order.status === "COMPLETED";
   const onTheWay = order.fulfillment === "DELIVERY" && ON_THE_WAY.includes(order.status);
@@ -210,8 +212,8 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               ? order.refundNote?.startsWith("Refund failed")
                 ? " Your refund is being sorted out by Feasto. You'll get a notification once it's back."
                 : order.checkout.transferAccountId
-                  ? ` Feasto will send ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} back to ${order.checkout.transferFrom ?? "the account you paid from"}.`
-                  : ` ${formatPeso(Number(order.subtotal) + Number(order.deliveryFee))} went back to ${order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet"}.`
+                  ? ` Feasto will send ${formatPeso(orderTotal(order))} back to ${order.checkout.transferFrom ?? "the account you paid from"}.`
+                  : ` ${formatPeso(orderTotal(order))} went back to ${order.checkout.onlineMethod ? ONLINE_LABEL[order.checkout.onlineMethod] : "your card or e-wallet"}.`
               : order.checkout.paymentStatus === "REFUNDED" && " Your online payment was refunded."}
           </Alert>
         ) : scheduled ? null : (
@@ -314,6 +316,9 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               <span className="text-muted">Delivery fee{order.deliveryKm ? ` (${Number(order.deliveryKm).toFixed(1)} km)` : ""}</span>
               <span className="text-ink">{Number(order.deliveryFee) ? formatPeso(order.deliveryFee) : "Free"}</span>
             </div>
+            <dl className="space-y-1">
+              <DiscountRows lines={order.discounts} />
+            </dl>
             <div className="flex justify-between font-bold text-ink">
               <span>Total</span>
               <span>{formatPeso(total)}</span>

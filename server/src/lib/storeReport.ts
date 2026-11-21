@@ -71,10 +71,11 @@ export async function storeReport(vendorId: string, from: string, to: string): P
   const [store, sold, earned, cancelled, declined, daily, dishes, payments, fulfillment, hours, orders] = await Promise.all([
     prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { id: true, name: true, address: true, storeType: true } }),
     prisma.order.aggregate({ where: { vendorId, createdAt: range, status: { in: [...SOLD] } }, _count: true, _sum: { subtotal: true, deliveryFee: true } }),
-    prisma.$queryRaw<{ commission: string | null; sent_online: string | null; cash_commission: string | null }[]>`
+    prisma.$queryRaw<{ commission: string | null; sent_online: string | null; cash_commission: string | null; store_discount: string | null }[]>`
       SELECT sum(o.commission)::text AS commission,
-        sum(CASE WHEN c."paymentMethod" = 'ONLINE' THEN o.subtotal - o.commission ELSE 0 END)::text AS sent_online,
-        sum(CASE WHEN c."paymentMethod" = 'COD' THEN o.commission ELSE 0 END)::text AS cash_commission
+        sum(CASE WHEN c."paymentMethod" = 'ONLINE' THEN o.subtotal - o."storeDiscount" - o.commission ELSE 0 END)::text AS sent_online,
+        sum(CASE WHEN c."paymentMethod" = 'COD' THEN o.commission - o."feastoDiscount" ELSE 0 END)::text AS cash_commission,
+        sum(o."storeDiscount")::text AS store_discount
       FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
       WHERE o."vendorId" = ${vendorId} AND o."createdAt" >= ${gte} AND o."createdAt" < ${lt} AND o.status IN ('DELIVERED', 'COMPLETED')`,
     prisma.order.count({ where: { vendorId, createdAt: range, status: "CANCELLED" } }),

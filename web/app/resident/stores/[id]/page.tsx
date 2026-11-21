@@ -145,6 +145,7 @@ async function StoreView({ params }: Pick<PageProps<"/resident/stores/[id]">, "p
         <EmptyState Icon={UtensilsCrossed} title="No dishes yet" text="This store hasn't added its menu yet. Save it with the heart to find it again later." />
       ) : (
         <StoreMenu
+          storeId={store.id}
           storeName={store.name}
           otherStores={cart.groups.filter((g) => g.store.id !== store.id).length}
           items={store.menuItems} quantities={quantities} ordering={{ canOrder: open, closedText }} />

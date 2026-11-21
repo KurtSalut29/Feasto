@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { orderTotal, type DiscountLine } from "../lib/promos.js";
 import { z } from "zod";
 import { PIN_MESSAGE, pinFields, pinIsWhole } from "../lib/geo.js";
 import type { OrderStatus, Prisma } from "../generated/prisma/client.js";
@@ -363,8 +364,13 @@ vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
       status: true,
       checkoutId: true,
       commissionRate: true,
+      subtotal: true,
+      deliveryFee: true,
+      storeDiscount: true,
+      feastoDiscount: true,
+      discounts: true,
       checkout: { select: { ifUnavailable: true, residentId: true, paymentMethod: true, paymentStatus: true } },
-      items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true } },
+      items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true, discount: true } },
       vendor: { select: { name: true } },
     },
   });
@@ -388,15 +394,18 @@ vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
     return void res.json({ ok: true, cancelled: true });
   }
 
-  const line = Math.round(Number(item.unitPrice) * item.quantity * 100) / 100;
   const subtotal = Math.round(left.reduce((n, i) => n + Number(i.unitPrice) * i.quantity, 0) * 100) / 100;
-  const commission = Math.round(subtotal * Number(order.commissionRate)) / 100;
+  // The discounts shrink with it: the dish's own deal goes, and a voucher shrinks in proportion (fairly, to the centavo)
+  const money = withoutLine(order, item);
+  const commission = Math.round(Math.max(0, subtotal - money.storeDiscount) * Number(order.commissionRate)) / 100;
+  const line = Math.round((orderTotal(order) - orderTotal({ subtotal, deliveryFee: order.deliveryFee, ...money })) * 100) / 100;
   const paidOnline = order.checkout.paymentMethod === "ONLINE" && order.checkout.paymentStatus === "PAID";
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.orderItem.updateMany({ where: { id: itemId, orderId: id, removedAt: null }, data: { removedAt: new Date() } });
     if (count === 0) throw new HttpError(409, "That item was already taken off.");
-    await tx.order.update({ where: { id }, data: { subtotal, commission } });
-    await tx.checkout.update({ where: { id: order.checkoutId }, data: { total: { decrement: line } } });
+    await tx.order.update({ where: { id }, data: { subtotal, commission, storeDiscount: money.storeDiscount, feastoDiscount: money.feastoDiscount, discounts: money.lines as unknown as Prisma.InputJsonValue } });
+    for (const l of money.lines) if (l.promoId) await tx.promoUse.updateMany({ where: { orderId: id, promoId: l.promoId }, data: { amount: l.amount, feastoAmount: l.feasto, storeAmount: l.store } });
+    await tx.checkout.update({ where: { id: order.checkoutId }, data: { total: { decrement: line }, discount: { decrement: Math.round((Number(order.storeDiscount) + Number(order.feastoDiscount) - money.storeDiscount - money.feastoDiscount) * 100) / 100 } } });
     if (paidOnline) await enqueue(tx, QUEUES.refundRequested, { orderId: id, itemId, amount: line });
   });
   await notify(order.checkout.residentId, {
@@ -407,6 +416,35 @@ vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
   await broadcastOrder(id);
   res.json({ ok: true, removed: line, subtotal });
 });
+
+
+/**
+ * An order's discounts once one dish is taken off: that dish's deal (or Senior/PWD discount)
+ * goes with it, and a voucher on the order shrinks by the dish's share of what it was on.
+ */
+function withoutLine(
+  order: { discounts: unknown; items: { id: string; quantity: number; unitPrice: unknown; removedAt: Date | null; discount: unknown }[] },
+  item: { id: string; quantity: number; unitPrice: unknown; discount: unknown },
+) {
+  const c = (n: number) => Math.round(n * 100) / 100;
+  const lines = ((order.discounts as DiscountLine[]) ?? []).map((l) => ({ ...l }));
+  const own = Number(item.discount);
+  const live = order.items.filter((i) => !i.removedAt);
+  const netBefore = live.reduce((n, i) => n + Number(i.unitPrice) * i.quantity - Number(i.discount), 0);
+  const lineNet = Number(item.unitPrice) * item.quantity - own;
+  const share = netBefore > 0 ? lineNet / netBefore : 0;
+  const dishLines = lines.filter((l) => l.kind === "DEAL" || l.kind === "SENIOR");
+  const dishTotal = dishLines.reduce((n, l) => n + l.amount, 0);
+  for (const l of lines) {
+    const cut = l.kind === "DEAL" || l.kind === "SENIOR" ? (dishTotal > 0 ? (own * l.amount) / dishTotal : 0) : l.kind === "DELIVERY" ? 0 : l.amount * share;
+    const next = c(Math.max(0, l.amount - cut));
+    const ratio = l.amount > 0 ? next / l.amount : 0;
+    const store = c(l.store * ratio);
+    Object.assign(l, { amount: next, store, feasto: c(next - store) });
+  }
+  const kept = lines.filter((l) => l.amount > 0);
+  return { lines: kept, storeDiscount: c(kept.reduce((n, l) => n + l.store, 0)), feastoDiscount: c(kept.reduce((n, l) => n + l.feasto, 0)) };
+}
 
 // ---------- Timing, distance and the busy kitchen ----------
 

@@ -13,6 +13,7 @@ import { IF_UNAVAILABLE_WORDS, RanOutButton } from "./ran-out-button";
 import { commissionLine, DishThumb, paymentLine } from "./order-parts";
 import { RiderLive } from "./rider-live";
 import { WaitClock } from "./wait-clock";
+import { DiscountRows } from "@/components/app/discount-rows";
 
 /**
  * Everything about one order in the queue: the next step first, then the dishes with their
@@ -171,6 +172,7 @@ export function OrderPanel({
               <dd className="text-ink tabular-nums">{fee ? formatPeso(fee) : "Free"}</dd>
             </div>
           )}
+          <DiscountRows lines={order.discounts} forStore />
           <div className="flex justify-between text-base font-semibold text-ink">
             <dt>Customer pays</dt>
             <dd className="tabular-nums">{formatPeso(payment.total)}</dd>
@@ -181,6 +183,12 @@ export function OrderPanel({
                 <dt className="text-muted">{cut.label}</dt>
                 <dd className="text-muted tabular-nums">{cut.commission ? `−${formatPeso(cut.commission)}` : formatPeso(0)}</dd>
               </div>
+              {cut.storeDiscount > 0 && (
+                <div className="flex justify-between pt-1 text-[0.8125rem]">
+                  <dt className="text-muted">Your discounts</dt>
+                  <dd className="text-muted tabular-nums">−{formatPeso(cut.storeDiscount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between text-[0.8125rem] font-semibold text-ink">
                 <dt>You receive for the food</dt>
                 <dd className="tabular-nums">{formatPeso(cut.youReceive)}</dd>

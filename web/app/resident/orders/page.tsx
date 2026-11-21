@@ -15,6 +15,7 @@ import { clockOf, sendAtOf, whenInSentence } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
 import type { OrderStatus, OrdersSummary, ResidentOrder } from "@/lib/types";
 import { ReorderButton } from "./[id]/order-feedback";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -29,7 +30,7 @@ export default function ResidentOrdersPage({ searchParams }: PageProps<"/residen
 /** Past orders shown at first; "Show older orders" loads up to 50 */
 const FIRST_PAST = 15;
 
-const totalOf = (order: ResidentOrder) => Number(order.subtotal) + Number(order.deliveryFee);
+const totalOf = (order: ResidentOrder) => orderTotal(order);
 const isReceived = (status: OrderStatus) => status === "DELIVERED" || status === "COMPLETED";
 
 /** How far along a live order is, as steps of a short bar. */

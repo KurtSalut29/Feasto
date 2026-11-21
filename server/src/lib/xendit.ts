@@ -99,7 +99,8 @@ export async function createInvoice(input: {
     failure_redirect_url: `${input.returnUrl}&result=failed`,
     should_send_email: false,
     ...(input.email && { payer_email: input.email }),
-    items: input.items,
+    // An empty list (a discounted checkout) is left out: Xendit then shows the total alone
+    ...(input.items.length > 0 && { items: input.items }),
   };
   const channels = input.method ? CHANNEL[input.method] : null;
   try {

@@ -1,4 +1,5 @@
 import type { ConsumeMessage } from "amqplib";
+import { orderTotal } from "./lib/promos.js";
 import { checkDocument, type DocumentKind } from "./lib/documentCheck.js";
 import { availableParallelism } from "node:os";
 import { config } from "./config.js";
@@ -133,10 +134,11 @@ await consume<{ orderId: string; itemId?: string; amount?: number }>(QUEUES.refu
   if (!(await firstTime(itemId ? `refund:${orderId}:${itemId}` : `refund:${orderId}`))) return;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { subtotal: true, deliveryFee: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true, transferAccountId: true, transferFrom: true } } },
+    select: { subtotal: true, deliveryFee: true, storeDiscount: true, feastoDiscount: true, vendor: { select: { name: true } }, checkout: { select: { residentId: true, paymentRef: true, paidChannel: true, onlineMethod: true, transferAccountId: true, transferFrom: true } } },
   });
   if (!order) return;
-  const amount = itemAmount ?? Math.round((Number(order.subtotal) + Number(order.deliveryFee)) * 100) / 100;
+  // What the resident paid for this order: after its discounts
+  const amount = itemAmount ?? orderTotal(order);
   const why = itemId ? "An item ran out" : "Cancelled";
   const what = itemId ? `An item on your order ${orderCode(orderId)} from ${order.vendor.name} ran out` : `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled`;
   let note = "Simulated refund";

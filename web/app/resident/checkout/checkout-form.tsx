@@ -17,6 +17,8 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { apiRequest } from "@/lib/browser-api";
+import { DiscountRows } from "@/components/app/discount-rows";
+import { VoucherPicker, type PromoQuote } from "./voucher-picker";
 import { celebrate } from "@/components/app/celebrate";
 import { formatPeso } from "@/lib/format";
 import { clockOf, scheduleDays, sendAtOf, whenInSentence, whenOf } from "@/lib/schedule";
@@ -164,7 +166,30 @@ export function CheckoutForm({
       : null;
   const quoteOf = (storeId: string) => priced?.groups.find((g) => g.store.id === storeId)?.delivery ?? null;
   const deliveryTotal = fulfillment === "DELIVERY" ? (priced?.delivery.total ?? 0) : 0;
-  const total = cart.itemsTotal + deliveryTotal;
+
+  // Vouchers and the Senior/PWD discount: the server works out what comes off, again whenever a choice changes
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
+  const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
+  const [senior, setSenior] = useState(false);
+  const promoKey = JSON.stringify([fulfillment, fulfillment === "DELIVERY" ? addressId : null, scheduledFor, voucherCode, deliveryCode, senior, quoteKey]);
+  const [promo, setPromo] = useState<{ key: string; quote: PromoQuote } | null>(null);
+  useEffect(() => {
+    let gone = false;
+    const [f, a, at, v, d, sr] = JSON.parse(promoKey) as [Fulfillment, string | null, string | null, string | null, string | null, boolean];
+    void apiRequest<PromoQuote>("/checkout/quote", {
+      method: "POST",
+      body: { fulfillment: f, addressId: a ?? undefined, scheduledFor: at ?? undefined, voucherCode: v ?? undefined, deliveryCode: d ?? undefined, senior: sr },
+    }).then((r) => {
+      if (!gone && r.ok) setPromo({ key: promoKey, quote: r.data });
+    });
+    return () => {
+      gone = true;
+    };
+  }, [promoKey]);
+  const quote = promo?.key === promoKey ? promo.quote : null;
+  const discount = quote?.discount ?? 0;
+  const linesOf = (storeId: string) => quote?.groups.find((g) => g.storeId === storeId)?.lines ?? [];
+  const total = Math.round((cart.itemsTotal + deliveryTotal - discount) * 100) / 100;
 
   async function placeOrder() {
     setPlacing(true);
@@ -181,6 +206,10 @@ export function CheckoutForm({
         notes,
         scheduledFor: scheduledFor ?? undefined,
         expectedDeliveryFee: deliveryTotal,
+        voucherCode: voucherCode ?? undefined,
+        deliveryCode: fulfillment === "DELIVERY" ? (deliveryCode ?? undefined) : undefined,
+        senior,
+        expectedDiscount: discount,
         ifUnavailable,
         preferredRiderId: fulfillment === "DELIVERY" && stores === 1 ? rider?.id : undefined,
         simulatePaymentFailure: paymentMethod === "ONLINE" && !realPayments && simulateFailure,
@@ -328,7 +357,20 @@ export function CheckoutForm({
         />
       </Step>
 
-      <Step n={4} title="Payment">
+      <Step n={4} title="Vouchers and discounts">
+        <VoucherPicker
+          quote={quote}
+          voucherCode={voucherCode}
+          deliveryCode={deliveryCode}
+          senior={senior}
+          delivery={fulfillment === "DELIVERY"}
+          onVoucher={setVoucherCode}
+          onDelivery={setDeliveryCode}
+          onSenior={setSenior}
+        />
+      </Step>
+
+      <Step n={5} title="Payment">
         <PaymentPicker
           realPayments={realPayments}
           value={pay}
@@ -341,7 +383,7 @@ export function CheckoutForm({
           holder={holder}
           phone={phone}
           delivery={fulfillment === "DELIVERY"}
-          parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? (quoteOf(g.store.id)?.fee ?? 0) : 0) }))}
+          parts={cart.groups.map((g) => ({ store: g.store.name, amount: g.subtotal + (fulfillment === "DELIVERY" ? (quoteOf(g.store.id)?.fee ?? 0) : 0) - (quote?.groups.find((q) => q.storeId === g.store.id)?.discount ?? 0) }))}
         />
         {paymentMethod === "ONLINE" && !realPayments && (
           <div className="mt-3">
@@ -439,10 +481,23 @@ export function CheckoutForm({
             </li>
           )}
         </ul>
+        {discount > 0 && (
+          <dl className="mt-2 space-y-1.5 text-[0.9375rem]">
+            {cart.groups.map((g) =>
+              linesOf(g.store.id).length ? (
+                <div key={g.store.id} className="space-y-1">
+                  {stores > 1 && <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">{g.store.name}</p>}
+                  <DiscountRows lines={linesOf(g.store.id)} />
+                </div>
+              ) : null,
+            )}
+          </dl>
+        )}
         <div className="mt-3 flex justify-between border-t border-line pt-3 text-lg font-bold text-ink">
           <span>Total</span>
           <span>{formatPeso(total)}</span>
         </div>
+        {discount > 0 && <p className="mt-1 text-right text-sm font-semibold text-emerald-700">You save {formatPeso(discount)}</p>}
       </section>
 
       {error && <Alert tone="error">{error}</Alert>}

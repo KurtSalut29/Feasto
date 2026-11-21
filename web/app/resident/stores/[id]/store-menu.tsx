@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronRight, Flame, LoaderCircle, Minus, Plus, Search, SearchX, ShoppingBag, X } from "lucide-react";
+import { BadgePercent, ChevronRight, Flame, LoaderCircle, Minus, Plus, Search, SearchX, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useApiData } from "@/components/app/use-api-data";
 import { DishPhoto } from "@/components/app/dish-photo";
 import { apiRequest } from "@/lib/browser-api";
 import { toast } from "@/components/ui/toast";
@@ -29,13 +30,34 @@ type Ordering = { canOrder: boolean; closedText: string };
  * the whole description, how many) and the round + adds one straight away. Search looks
  * through every section. The cart bar at the bottom follows every change.
  */
+type Deals = { deals: { id: string; title: string; hours: string | null }[]; items: Record<string, { label: string; price: number }> };
+/** The store's deals on now, by dish (the price after the deal) */
+const DealsContext = createContext<Deals["items"]>({});
+
+/** The price, or the deal's price with the old one struck through */
+function Price({ item, className }: { item: MenuItem; className: string }) {
+  const deal = useContext(DealsContext)[item.id];
+  if (!deal) return <p className={className}>{formatPeso(item.price)}</p>;
+  return (
+    <p className={className}>
+      <span className="text-brand-700">{formatPeso(deal.price)}</span> <s className="text-sm font-medium text-muted">{formatPeso(item.price)}</s>
+      <span className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-emerald-700">
+        <BadgePercent className="size-3.5 shrink-0" aria-hidden />
+        <span className="line-clamp-1">{deal.label}</span>
+      </span>
+    </p>
+  );
+}
+
 export function StoreMenu({
+  storeId,
   storeName,
   otherStores,
   items,
   quantities: initial,
   ordering,
 }: {
+  storeId: string;
   storeName: string;
   /** Other stores already in the cart, so the bar can say so */
   otherStores: number;
@@ -125,7 +147,20 @@ export function StoreMenu({
   const add = { quantities, busy, ordering, onOpen: setOpenId, onAdd: (item: MenuItem) => setQuantity(item, (quantities[item.id] ?? 0) + 1) };
 
   // One box around the menu, so its tabs stop sticking where the menu ends
+  const { data: deals } = useApiData<Deals>(`/promos/stores/${storeId}/deals`);
   return (
+    <DealsContext.Provider value={deals?.items ?? {}}>
+      {deals && deals.deals.length > 0 && (
+        <ul aria-label="Deals now" className="mb-4 flex flex-wrap gap-2">
+          {deals.deals.map((d) => (
+            <li key={d.id} className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800">
+              <BadgePercent className="size-4" aria-hidden />
+              {d.title}
+              {d.hours ? <span className="font-normal text-emerald-700">· {d.hours}</span> : null}
+            </li>
+          ))}
+        </ul>
+      )}
     <div>
       <p className="sr-only" aria-live="polite">
         {said}
@@ -262,6 +297,7 @@ export function StoreMenu({
         )}
       </div>
     </div>
+    </DealsContext.Provider>
   );
 }
 
@@ -326,7 +362,7 @@ function DishCard({ item, showSection, ...add }: AddProps & { item: MenuItem; sh
       {showSection && <p className="mt-2 text-xs font-medium text-muted">{item.category}</p>}
       <h4 className={`${showSection ? "mt-0.5" : "mt-2"} line-clamp-2 text-[0.9375rem] leading-snug font-semibold ${soldOut ? "text-muted" : "text-ink"}`}>{item.name}</h4>
       {item.description && <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">{item.description}</p>}
-      <p className="mt-auto pt-1.5 font-bold text-ink">{formatPeso(item.price)}</p>
+      <Price item={item} className="mt-auto pt-1.5 font-bold text-ink" />
       <StockNote item={item} quantity={quantity} />
       {/* The whole card opens the dish; the + sits above it */}
       <button
@@ -486,7 +522,7 @@ function DishSheet({
             <h2 id="dish-name" className="mt-0.5 text-xl leading-tight font-bold text-ink">
               {item.name}
             </h2>
-            <p className="mt-1 text-lg font-bold text-ink">{formatPeso(item.price)}</p>
+            <Price item={item} className="mt-1 text-lg font-bold text-ink" />
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-semibold">
               {popular && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-brand-700">

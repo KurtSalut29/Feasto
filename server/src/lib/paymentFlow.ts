@@ -92,6 +92,7 @@ export async function startOnlinePayment(checkoutId: string, origin: string) {
     where: { id: checkoutId },
     select: {
       total: true,
+      discount: true,
       onlineMethod: true,
       resident: { select: { email: true } },
       orders: { select: { id: true, deliveryFee: true, vendor: { select: { name: true } }, items: { select: { name: true, quantity: true, unitPrice: true } } } },
@@ -108,10 +109,14 @@ export async function startOnlinePayment(checkoutId: string, origin: string) {
       returnUrl: `${origin}/resident/checkout/paying?checkout=${checkoutId}`,
       // Sample accounts' made-up addresses would bounce, so they're left out
       email: checkout.resident.email.endsWith("@sample.feasto.com") ? undefined : checkout.resident.email,
-      items: [
-        ...checkout.orders.flatMap((o) => o.items.map((i) => ({ name: i.name, quantity: i.quantity, price: Number(i.unitPrice) }))),
-        ...(fees > 0 ? [{ name: "Delivery fee", quantity: 1, price: fees }] : []),
-      ],
+      // The page lists the dishes; with a discount the lines wouldn't add up to the total, so it shows the total alone
+      items:
+        Number(checkout.discount) > 0
+          ? []
+          : [
+              ...checkout.orders.flatMap((o) => o.items.map((i) => ({ name: i.name, quantity: i.quantity, price: Number(i.unitPrice) }))),
+              ...(fees > 0 ? [{ name: "Delivery fee", quantity: 1, price: fees }] : []),
+            ],
     });
     await prisma.checkout.update({ where: { id: checkoutId }, data: { paymentRef: invoice.id, paymentUrl: invoice.invoice_url } });
     return invoice.invoice_url;

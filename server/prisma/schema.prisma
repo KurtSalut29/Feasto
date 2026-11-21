@@ -226,6 +226,7 @@ model User {
   birthDate     DateTime?      @db.Date
   shopSuggestions PabiliShopSuggestion[]
   passkeys      Passkey[]
+  promoUses     PromoUse[]
   errandRuns    Errand[]       @relation("RiderErrands")
   errandAsks    Errand[]       @relation("PreferredErrandRider")
   /// Reports this person sent, and reports about them
@@ -344,6 +345,7 @@ model Vendor {
   riders    RiderProfile[]
   renewals  DocumentRenewal[]
   pabiliShops PabiliShop[]
+  promos      Promo[]
 }
 
 /// A motorcycle rider's details. Riders can't go online or take jobs until they're approved:
@@ -544,6 +546,8 @@ model Checkout {
   transferCheckedAt DateTime?
   /// Why the admin couldn't confirm it
   transferNote      String?
+  /// Taken off the whole checkout (every order's discounts added up); total is already after it
+  discount          Decimal       @default(0) @db.Decimal(10, 2)
 
   orders Order[]
 
@@ -638,6 +642,16 @@ model Order {
   /// The part of the delivery fee added because riders were busy or it rained, and why. Already in deliveryFee; all of it is the rider's.
   extraFee         Decimal     @default(0) @db.Decimal(10, 2)
   extraFeeNote     String?
+  /// Discounts on this order, by who pays for them. The resident pays subtotal + deliveryFee - both.
+  /// The store's part comes off its food money (and the commission is on what's left); Feasto's comes
+  /// off Feasto's commission. The rider always gets the whole delivery fee.
+  storeDiscount    Decimal     @default(0) @db.Decimal(10, 2)
+  feastoDiscount   Decimal     @default(0) @db.Decimal(10, 2)
+  /// The lines on the receipt: [{ kind, label, amount, store, feasto, promoId? }]
+  discounts        Json        @default("[]")
+  /// The Senior Citizen or PWD discount was given (by law, the store's)
+  seniorDiscount   Boolean     @default(false)
+  promoUses        PromoUse[]
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
   scheduledFor     DateTime?
   /// When the store said it would be ready, set when it accepts and moved when it runs late
@@ -847,6 +861,8 @@ model OrderItem {
   note       String?
   /// The store ran out after the order was placed: taken off the order and not charged
   removedAt  DateTime?
+  /// Taken off this line by a store's deal or the Senior/PWD discount (the whole line, not each)
+  discount   Decimal  @default(0) @db.Decimal(10, 2)
 }
 
 model DiningTable {
@@ -1264,4 +1280,109 @@ model Passkey {
   lastUsedAt   DateTime?
 
   @@index([userId])
+}
+
+enum PromoKind {
+  /// Used by its code, or picked from "My vouchers"
+  VOUCHER
+  /// A store's own price cut on some dishes, applied by itself
+  DEAL
+}
+
+enum PromoBenefit {
+  PERCENT_OFF
+  AMOUNT_OFF
+  FREE_DELIVERY
+  DELIVERY_OFF
+}
+
+/// Who pays for a discount. The rider never does: they get the whole delivery fee.
+enum PromoFunder {
+  FEASTO
+  STORE
+  /// Shared: the store pays storeShare percent
+  SPLIT
+}
+
+enum PromoAudience {
+  EVERYONE
+  /// A verified account's first order (one per account, phone and device)
+  FIRST_ORDER
+}
+
+/// A sale day or season (11.11, 12.12, payday): a banner on Home, with its own vouchers
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  tagline   String?
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+  promos    Promo[]
+
+  @@index([endsAt])
+}
+
+/// A voucher or a store's deal. Its uses are counted live: a cancelled order gives the voucher back.
+model Promo {
+  id           String        @id @default(cuid())
+  kind         PromoKind
+  /// For vouchers: what's typed, e.g. "PASKO50"
+  code         String?       @unique
+  title        String
+  /// A store's own voucher or deal; empty for Feasto's
+  vendorId     String?
+  vendor       Vendor?       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  benefit      PromoBenefit
+  /// Percent or pesos (for a deal's AMOUNT_OFF: off each piece)
+  value        Decimal       @db.Decimal(10, 2)
+  /// The most a percent can take off
+  maxDiscount  Decimal?      @db.Decimal(10, 2)
+  minSpend     Decimal       @default(0) @db.Decimal(10, 2)
+  funder       PromoFunder   @default(FEASTO)
+  /// For SPLIT: the store's percent of it
+  storeShare   Int           @default(0)
+  audience     PromoAudience @default(EVERYONE)
+  /// For a deal: the dishes it's on (empty: all of the store's)
+  menuItemIds  String[]      @default([])
+  /// A daily window in minutes after midnight in Manila (happy hour), or always
+  dailyFrom    Int?
+  dailyTo      Int?
+  startsAt     DateTime      @default(now())
+  endsAt       DateTime?
+  perUserLimit Int           @default(1)
+  /// Uses in all; empty for no limit
+  totalLimit   Int?
+  /// The most Feasto spends on it; empty for no limit
+  budget       Decimal?      @db.Decimal(10, 2)
+  /// Shown in "My vouchers" (a hidden one works only by its code)
+  isPublic     Boolean       @default(true)
+  isActive     Boolean       @default(true)
+  campaignId   String?
+  campaign     Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdById  String?
+  createdAt    DateTime      @default(now())
+  uses         PromoUse[]
+
+  @@index([vendorId, kind, isActive])
+  @@index([kind, isActive])
+}
+
+/// A promo used on one order, with what it took off and who paid
+model PromoUse {
+  id           String   @id @default(cuid())
+  promoId      String
+  promo        Promo    @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount       Decimal  @db.Decimal(10, 2)
+  feastoAmount Decimal  @default(0) @db.Decimal(10, 2)
+  storeAmount  Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt    DateTime @default(now())
+
+  @@unique([promoId, orderId])
+  @@index([userId, promoId])
+  @@index([orderId])
 }

@@ -21,6 +21,7 @@ import { RiderTripMap } from "./rider-trip-map";
 import { TripDirections, TripDirectionsButton } from "./trip-directions";
 import { ErrandActive, type RiderErrand } from "./errand-active";
 import { ReportProblem } from "@/components/app/report-problem";
+import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Active delivery" };
 
@@ -154,7 +155,7 @@ async function RiderActive() {
 
   const store = pinOf(order.vendor.latitude, order.vendor.longitude);
   const home = pinOf(order.checkout.deliveryLat, order.checkout.deliveryLng);
-  const total = Number(order.subtotal) + Number(order.deliveryFee);
+  const total = orderTotal(order);
   const payment = riderPayment(order.checkout);
   const pickedUp = order.status === "PICKED_UP";
   const itemCount = order.items.reduce((n, i) => n + i.quantity, 0);

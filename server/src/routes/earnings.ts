@@ -91,14 +91,14 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
   const where = { createdAt: range, status: { in: [...EARNED] } };
   const pabiliWhere = { createdAt: range, status: "DELIVERED" as const };
   const [sum, paidOut, daily, byStore, byRider, stores, riders, settlements, trials, settings, pabili, pabiliByRider, pabiliDaily] = await Promise.all([
-    prisma.order.aggregate({ where, _count: true, _sum: { subtotal: true, deliveryFee: true, commission: true, riderCut: true } }),
+    prisma.order.aggregate({ where, _count: true, _sum: { subtotal: true, deliveryFee: true, commission: true, riderCut: true, storeDiscount: true, feastoDiscount: true } }),
     // Online orders were split the moment they were delivered: what went to the stores and the riders
     prisma.$queryRaw<{ stores: string | null; riders: string | null; orders: bigint }[]>`
-      SELECT sum(o.subtotal - o.commission)::text AS stores, sum(o."deliveryFee" - o."riderCut" + o.tip)::text AS riders, count(*) AS orders
+      SELECT sum(o.subtotal - o."storeDiscount" - o.commission)::text AS stores, sum(o."deliveryFee" - o."riderCut" + o.tip)::text AS riders, count(*) AS orders
       FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
       WHERE o."createdAt" >= ${range.gte} AND o."createdAt" < ${range.lt} AND o.status IN ('DELIVERED', 'COMPLETED') AND c."paymentMethod" = 'ONLINE'`,
     prisma.$queryRaw<{ day: string; orders: bigint; earned: string }[]>`
-      SELECT to_char(("createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS day, count(*) AS orders, sum(commission + "riderCut")::text AS earned
+      SELECT to_char(("createdAt" AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Manila')::date, 'YYYY-MM-DD') AS day, count(*) AS orders, sum(commission + "riderCut" - "feastoDiscount")::text AS earned
       FROM "Order" WHERE "createdAt" >= ${range.gte} AND "createdAt" < ${range.lt} AND status IN ('DELIVERED', 'COMPLETED')
       GROUP BY day`,
     prisma.order.groupBy({ by: ["vendorId"], where, _count: true, _sum: { subtotal: true, commission: true } }),
@@ -129,6 +129,9 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
   const byDay = new Map(daily.map((d) => [d.day, d]));
   const pabiliOn = new Map(pabiliDaily.map((d) => [d.day, Number(d.earned)]));
   const commission = Number(sum._sum.commission ?? 0);
+  // What Feasto's vouchers and free deliveries cost (on delivered and collected orders)
+  const promoCost = Number(sum._sum.feastoDiscount ?? 0);
+  const storeDiscounts = Number(sum._sum.storeDiscount ?? 0);
   const pabiliShare = Number(pabili._sum.feastoCut ?? 0);
   // From riders: the Pabili share, plus any share of food delivery fees from before riders kept all of it
   const riderShare = Math.round((Number(sum._sum.riderCut ?? 0) + pabiliShare) * 100) / 100;
@@ -157,8 +160,10 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
       freeTrialDays: settings.freeTrialDays,
     },
     totals: {
-      earned: Math.round((commission + riderShare) * 100) / 100,
+      earned: Math.round((commission + riderShare - promoCost) * 100) / 100,
       commission,
+      promoCost,
+      storeDiscounts,
       riderShare,
       pabiliShare,
       pabili: pabili._count,
@@ -166,7 +171,7 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
       sales,
       deliveryFees,
       /** Feasto's share of all the money that went through it */
-      takeRate: sales + deliveryFees > 0 ? ((commission + riderShare) / (sales + deliveryFees)) * 100 : 0,
+      takeRate: sales + deliveryFees > 0 ? ((commission + riderShare - promoCost) / (sales + deliveryFees)) * 100 : 0,
     },
     daily: datesBetween(from, to).map((date) => ({ date, orders: Number(byDay.get(date)?.orders ?? 0), sales: Math.round((Number(byDay.get(date)?.earned ?? 0) + (pabiliOn.get(date) ?? 0)) * 100) / 100 })),
     stores: byStore

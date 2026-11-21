@@ -20,15 +20,17 @@ export function DishThumb({ src, className = "size-9" }: { src: string | null | 
  * Feasto's commission on this order and what the store receives, or null when there's none.
  * Cancelled and declined orders pay nothing, so they show no commission either.
  */
-export function commissionLine(order: Pick<VendorOrder, "status" | "subtotal" | "commission" | "commissionRate" | "checkout">) {
+export function commissionLine(order: Pick<VendorOrder, "status" | "subtotal" | "commission" | "commissionRate" | "checkout" | "storeDiscount" | "feastoDiscount">) {
   const commission = Number(order.commission ?? 0);
   if (order.status === "CANCELLED" || order.status === "REJECTED" || order.status === "AWAITING_PAYMENT") return null;
   const finished = order.status === "DELIVERED" || order.status === "COMPLETED";
   const online = order.checkout.paymentMethod === "ONLINE";
   return {
-    label: commission ? `Feasto commission (${Number(order.commissionRate)}%)` : "Feasto commission (free month)",
+    label: commission ? `Feasto commission (${Number(order.commissionRate)}%${Number(order.storeDiscount ?? 0) > 0 ? ", on the food after your discount" : ""})` : "Feasto commission (free month)",
     commission,
-    youReceive: Math.round((Number(order.subtotal) - commission) * 100) / 100,
+    /** Your discounts come off your food money; Feasto's never do */
+    storeDiscount: Number(order.storeDiscount ?? 0),
+    youReceive: Math.round((Number(order.subtotal) - Number(order.storeDiscount ?? 0) - commission) * 100) / 100,
     /** How the store gets its money: online it's sent once the order is finished; with cash it keeps it and pays the commission weekly */
     how: online
       ? finished
@@ -40,9 +42,9 @@ export function commissionLine(order: Pick<VendorOrder, "status" | "subtotal" | 
   };
 }
 
-export function paymentLine(order: Pick<VendorOrder, "fulfillment" | "subtotal" | "deliveryFee" | "checkout">) {
+export function paymentLine(order: Pick<VendorOrder, "fulfillment" | "subtotal" | "deliveryFee" | "checkout" | "storeDiscount" | "feastoDiscount">) {
   const delivery = order.fulfillment === "DELIVERY";
-  const total = Number(order.subtotal) + (delivery ? Number(order.deliveryFee) : 0);
+  const total = Math.round((Number(order.subtotal) + (delivery ? Number(order.deliveryFee) : 0) - Number(order.storeDiscount ?? 0) - Number(order.feastoDiscount ?? 0)) * 100) / 100;
   if (order.checkout.paymentStatus === "PAID") return { tone: "paid" as const, text: `Paid · ${paymentName(order.checkout)}`, total };
   if (order.checkout.paymentStatus === "REFUNDED") return { tone: "cash" as const, text: `Refunded · ${paymentName(order.checkout)}`, total };
   if (order.checkout.paymentMethod === "COD")

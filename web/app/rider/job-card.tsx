@@ -10,6 +10,7 @@ import { itemsSummary, riderEarns, riderPayment } from "@/lib/order-status";
 import { clockOf } from "@/lib/schedule";
 import type { RiderJob } from "@/lib/types";
 import { AcceptJobButton } from "./accept-job-button";
+import { orderTotal } from "@/lib/promos";
 
 /**
  * One open job: the pay, the store (with its photo) and the customer, how far, what's in the
@@ -22,7 +23,7 @@ export function JobCard({ job, me, busy, arrivals }: { job: RiderJob; me: LatLng
   const toPickup = me && store ? distanceKm(me, store) : null;
   const trip = store && home ? distanceKm(store, home) : null;
   const items = job.items.reduce((n, i) => n + i.quantity, 0);
-  const total = Number(job.subtotal) + Number(job.deliveryFee);
+  const total = orderTotal(job);
   const payment = riderPayment(job.checkout);
 
   return (

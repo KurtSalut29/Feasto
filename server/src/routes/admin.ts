@@ -314,7 +314,7 @@ adminRouter.get("/orders", async (req, res) => {
         id: true,
         status: true,
         fulfillment: true,
-        subtotal: true,
+        subtotal: true, storeDiscount: true, feastoDiscount: true,
         deliveryFee: true,
         createdAt: true,
         vendor: { select: { name: true } },

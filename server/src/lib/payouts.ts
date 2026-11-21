@@ -57,11 +57,12 @@ const centavos = (n: number) => Math.round(n * 100) / 100;
 export async function queuePayouts(tx: Tx, checkoutId: string) {
   const orders = await tx.order.findMany({
     where: { checkoutId, status: { in: ["DELIVERED", "COMPLETED"] }, checkout: { paymentMethod: "ONLINE", paymentStatus: "PAID" } },
-    select: { id: true, vendorId: true, riderId: true, subtotal: true, commission: true, deliveryFee: true, riderCut: true, fulfillment: true },
+    select: { id: true, vendorId: true, riderId: true, subtotal: true, commission: true, deliveryFee: true, riderCut: true, fulfillment: true, storeDiscount: true },
   });
   const data: Prisma.PayoutCreateManyInput[] = [];
   for (const o of orders) {
-    const store = centavos(Number(o.subtotal) - Number(o.commission));
+    // The food minus the discounts the store gave and the commission; Feasto's discounts are Feasto's cost
+    const store = centavos(Number(o.subtotal) - Number(o.storeDiscount) - Number(o.commission));
     const rider = centavos(Number(o.deliveryFee) - Number(o.riderCut));
     if (store > 0) data.push({ orderId: o.id, party: "STORE", vendorId: o.vendorId, amount: store });
     if (o.fulfillment === "DELIVERY" && o.riderId && rider > 0) data.push({ orderId: o.id, party: "RIDER", riderId: o.riderId, amount: rider });
