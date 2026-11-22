@@ -550,7 +550,7 @@ export function RegisterForm() {
               inputMode="numeric"
               autoComplete="one-time-code"
               maxLength={6}
-              placeholder="123456"
+              placeholder="------"
               autoFocus
               required
               className="[&_input]:text-center [&_input]:text-xl [&_input]:font-semibold [&_input]:tracking-[0.4em]"

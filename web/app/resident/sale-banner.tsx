@@ -4,7 +4,8 @@ import { ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
-import { benefitWords, type VoucherCard } from "@/lib/promos";
+import { VoucherTicket } from "@/components/app/voucher-ticket";
+import { type VoucherCard } from "@/lib/promos";
 
 type Campaign = { id: string; name: string; tagline: string | null; startsAt: string; endsAt: string; live: boolean; vouchers: VoucherCard[] };
 
@@ -36,39 +37,42 @@ export function SaleBanner() {
   const until = live ? new Date(c.endsAt).getTime() - now : new Date(c.startsAt).getTime() - now;
   if (live && until <= 0) return null;
   return (
-    <section aria-label={c.name} className="mt-4 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-rose-600 p-4 text-white shadow-[0_8px_24px_-12px_rgba(220,38,38,0.55)] md:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section aria-label={c.name} className="mt-7 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-50 via-white to-rose-50 p-4 ring-1 ring-brand-100 md:grid md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] md:items-center md:gap-x-6 md:p-5">
+      <div className="flex items-start justify-between gap-3 md:col-start-1 md:row-start-1 md:flex-col md:items-start">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-xs font-bold tracking-[0.14em] text-white/80 uppercase">
+          <p className="flex items-center gap-1.5 text-[0.6875rem] font-bold tracking-[0.14em] text-brand-700 uppercase">
             <Sparkles className="size-3.5" aria-hidden />
             {live ? "Sale on now" : "Coming soon"}
           </p>
-          <h2 className="mt-0.5 text-2xl leading-tight font-extrabold tracking-tight">{c.name}</h2>
-          {c.tagline && <p className="mt-0.5 text-sm text-white/90">{c.tagline}</p>}
+          <h2 className="text-lg leading-tight font-extrabold tracking-tight text-ink">{c.name}</h2>
+          {c.tagline && <p className="truncate text-[0.8125rem] text-muted">{c.tagline}</p>}
         </div>
-        <p className="shrink-0 rounded-2xl bg-white/15 px-3 py-2 text-center">
-          <span className="block text-[0.6875rem] font-semibold tracking-wide text-white/80 uppercase">{live ? "Ends in" : "Starts in"}</span>
-          <span className="block font-mono text-lg font-bold tabular-nums" aria-live="off">
+        <p className="shrink-0 rounded-xl bg-gradient-to-br from-brand-600 to-rose-600 px-2.5 py-1.5 text-center text-white shadow-sm">
+          <span className="block text-[0.5625rem] font-semibold tracking-wider text-white/85 uppercase">{live ? "Ends in" : "Starts in"}</span>
+          <span className="block font-mono text-sm leading-tight font-bold tabular-nums" aria-live="off">
             {left(until)}
           </span>
         </p>
       </div>
-      {c.vouchers.length > 0 && (
-        <ul className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-          {c.vouchers.map((v) => (
-            <li key={v.id} className="shrink-0 rounded-xl border border-dashed border-white/60 bg-white/10 px-3 py-2">
-              <span className="block text-sm font-bold">{benefitWords(v)}</span>
-              <span className="block text-xs text-white/85">
-                {v.code}
-                {v.minSpend ? ` · min. ₱${v.minSpend}` : ""}
-                {v.problem ? ` · ${v.problem}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {c.vouchers.length === 1 ? (
+        // One voucher: as wide as the card (no sideways scroll to clip its shadow)
+        <div className="mt-3 mb-3 md:col-start-2 md:row-span-2 md:row-start-1 md:my-0 md:max-w-md">
+          <VoucherTicket voucher={c.vouchers[0]!} compact fill />
+        </div>
+      ) : (
+        c.vouchers.length > 1 && (
+          // Several: they slide sideways, edge to edge of the card, with room for their shadow
+          <ul className="-mx-4 mt-1 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-3 pb-5 [scrollbar-width:none] md:col-start-2 md:row-span-2 md:row-start-1 md:mx-0 md:my-0 md:px-1">
+            {c.vouchers.map((v) => (
+              <li key={v.id} className="snap-start">
+                <VoucherTicket voucher={v} compact />
+              </li>
+            ))}
+          </ul>
+        )
       )}
-      <Link href="/resident/vouchers" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white underline-offset-2 hover:underline">
-        {live ? "Use them at checkout" : "See your vouchers"}
+      <Link href="/resident/vouchers" className="tap inline-flex items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline md:col-start-1 md:row-start-2 md:self-start">
+        {live ? "Use them at checkout" : "See all your vouchers"}
         <ChevronRight className="size-4" aria-hidden />
       </Link>
     </section>

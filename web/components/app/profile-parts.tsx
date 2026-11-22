@@ -72,13 +72,19 @@ export function Row({
   href?: string;
   onClick?: () => void;
 }) {
+  // A short value ("1 saved") stays on the right; a longer one goes under the name, so neither is cut
+  // to "Suki…" on a phone (or with bigger text in Display settings)
+  const below = typeof value === "string" && value.length > 12;
   const content = (
     <>
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas text-muted">
         <Icon className="size-[18px]" aria-hidden />
       </span>
-      <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium text-ink">{label}</span>
-      {value && <span className="shrink-0 text-sm text-muted">{value}</span>}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[0.9375rem] font-medium break-words text-ink">{label}</span>
+        {below && <span className="block text-[0.8125rem] text-muted">{value}</span>}
+      </span>
+      {value && !below && <span className="shrink-0 text-sm text-muted">{value}</span>}
       {(href || onClick) && <ChevronRight className="size-5 shrink-0 text-gray-500" aria-hidden />}
     </>
   );

@@ -3,6 +3,7 @@
 import { BadgePercent, Bike, CalendarDays, Check, CircleAlert, Crown, LoaderCircle, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { celebrate } from "@/components/app/celebrate";
 import { useApiData } from "@/components/app/use-api-data";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -40,7 +41,7 @@ export function PlusView({ payment, result }: { payment: string | null; result: 
       const r = await apiRequest<{ status: string }>(`/plus/payment/${payment}`);
       if (stop) return;
       if (r.ok && r.data.status === "ACTIVE") {
-        toast.success("Welcome to Feasto Plus!", "Your free deliveries are on.");
+        celebrate({ title: "Welcome to Feasto Plus!", message: "Your free deliveries are on. Enjoy!", duration: 5000 });
         setChecking(false);
         setReload((n) => n + 1);
         router.replace("/resident/plus");
@@ -68,7 +69,7 @@ export function PlusView({ payment, result }: { payment: string | null; result: 
     if (r.data.paymentUrl) window.location.href = r.data.paymentUrl;
     else {
       setBusy(false);
-      toast.success("Feasto Plus is on", "Your free deliveries start now.");
+      celebrate({ title: "Welcome to Feasto Plus!", message: "Your free deliveries start now. Enjoy!", duration: 5000 });
       setReload((n) => n + 1);
     }
   }
@@ -88,21 +89,28 @@ export function PlusView({ payment, result }: { payment: string | null; result: 
         </p>
       )}
 
-      <section aria-labelledby="plus-card" className="overflow-hidden rounded-3xl bg-gradient-to-br from-ink to-gray-800 p-5 text-white">
+      <section
+        aria-labelledby="plus-card"
+        className={`relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink to-gray-800 p-5 text-white ${data.member ? "plus-sheen plus-rise ring-1 ring-amber-300/40" : ""}`}
+      >
         <p id="plus-card" className="flex items-center gap-2 text-sm font-semibold text-amber-300">
           <Crown className="size-4" aria-hidden />
           Feasto Plus
         </p>
         {data.member ? (
           <>
-            <p className="mt-1 text-2xl font-extrabold">You&apos;re a member</p>
+            {/* A member's card: a slow gold glint passes over it, and the crown floats */}
+            <span aria-hidden className="plus-crown absolute top-4 right-4 flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-amber-500 text-ink shadow-[0_0_24px_rgba(252,211,77,0.45)]">
+              <Crown className="size-7" />
+            </span>
+            <p className="mt-1 pr-16 text-2xl font-extrabold">You&apos;re a member</p>
             <p className="text-sm text-white/85">Until {day(data.member.endsAt)}</p>
             <div className="mt-3 rounded-2xl bg-white/10 p-3">
               <p className="text-sm text-white/90">
                 {data.member.left} of {data.freeDeliveries} free deliveries left this month
               </p>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label="Free deliveries used" aria-valuemin={0} aria-valuemax={data.freeDeliveries} aria-valuenow={data.member.used}>
-                <div className="h-full rounded-full bg-amber-300" style={{ width: `${data.freeDeliveries ? (data.member.used / data.freeDeliveries) * 100 : 0}%` }} />
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-label="Free deliveries left" aria-valuemin={0} aria-valuemax={data.freeDeliveries} aria-valuenow={data.member.left}>
+                <div className="plus-fill h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-400" style={{ width: `${data.freeDeliveries ? (data.member.left / data.freeDeliveries) * 100 : 0}%` }} />
               </div>
             </div>
             {data.nextMonth && <p className="mt-2 text-sm text-white/85">Next month paid: {day(data.nextMonth.startsAt)} to {day(data.nextMonth.endsAt)}</p>}

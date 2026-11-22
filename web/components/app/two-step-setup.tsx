@@ -94,7 +94,7 @@ export function CodeField({ value, onChange, error, label = "6-digit code from y
       name="code"
       inputMode="numeric"
       autoComplete="one-time-code"
-      placeholder="123 456"
+      placeholder="--- ---"
       icon={Smartphone}
       value={value}
       onChange={(e) => onChange(e.target.value.replace(/[^\d ]/g, "").slice(0, 7))}

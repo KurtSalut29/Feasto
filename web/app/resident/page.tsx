@@ -55,7 +55,6 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
           </Alert>
         </div>
       )}
-      <SaleBanner />
 
       {/* Big screens search from the top bar */}
       <div className="mt-4 lg:hidden">
@@ -78,6 +77,9 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
               <Shortcut href="/resident/pabili" Icon={ShoppingBasket} label="Pabili" />
             </div>
           </section>
+
+          {/* The sale day comes after the categories, so "what can I get?" stays first on a phone */}
+          <SaleBanner />
 
           <StoreRow title="Order again" subtitle="Stores you've ordered from" stores={sections.orderAgain} />
           <StoreRow
