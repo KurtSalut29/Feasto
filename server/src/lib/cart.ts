@@ -65,7 +65,8 @@ async function deliveryAddress(userId: string, addressId?: string) {
 export async function buildCart(userId: string, addressId?: string, /** A scheduled time: no busy or rain add-on, nobody knows yet */ at?: Date) {
   const [lines, notes] = await Promise.all([readCartQuantities(userId), readCartNotes(userId)]);
   const settings = await getSettings();
-  const empty = { addressId: null, addressLabel: null, total: 0, baseFee: settings.deliveryFee, pricedFor: null };
+  const paused = settings.deliveryPausedUntil ? { until: settings.deliveryPausedUntil, reason: settings.deliveryPauseReason } : null;
+  const empty = { addressId: null, addressLabel: null, total: 0, baseFee: settings.deliveryFee, pricedFor: null, paused };
   if (lines.length === 0) return { groups: [], itemCount: 0, itemsTotal: 0, delivery: empty, hasProblems: false, canSchedule: false };
 
   const items = await prisma.menuItem.findMany({
@@ -92,6 +93,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
           busyUntil: true,
           deliveryRadiusKm: true,
           largeOrderNoticeMinutes: true,
+          minOrderAmount: true,
           owner: { select: { disabledAt: true, suspendedUntil: true } },
         },
       },
@@ -114,6 +116,8 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
     timing: { minutes: number; busyMinutes: number; large: boolean; noticeMinutes: number };
     /** Set when the address is farther than the store delivers */
     tooFar: { km: number; radiusKm: number } | null;
+    /** The store's minimum order for delivery, and how much more food is needed (0 when it's met) */
+    minOrder: { amount: number; short: number } | null;
     prep: { prepMinutes: number; prepPer5Items: number; busyExtraMinutes: number; busyUntil: Date | null; radiusKm: number; noticeMinutes: number };
   }>();
 
@@ -132,6 +136,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
         pin: { latitude: item.vendor.latitude, longitude: item.vendor.longitude },
         timing: { minutes: 0, busyMinutes: 0, large: false, noticeMinutes: 0 },
         tooFar: null,
+        minOrder: Number(item.vendor.minOrderAmount) > 0 ? { amount: Number(item.vendor.minOrderAmount), short: 0 } : null,
         prep: {
           prepMinutes: item.vendor.prepMinutes,
           prepPer5Items: item.vendor.prepPer5Items,
@@ -159,6 +164,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
   for (const group of list) group.items.sort((a, b) => a.name.localeCompare(b.name));
   // How long each kitchen should take; a big order is told so before it's placed
   for (const group of list) {
+    if (group.minOrder) group.minOrder.short = Math.max(0, Math.round((group.minOrder.amount - group.subtotal) * 100) / 100);
     const count = group.items.reduce((n, i) => n + i.quantity, 0);
     const large = count >= settings.largeOrderItems || group.subtotal >= settings.largeOrderAmount;
     group.timing = { minutes: prepEstimate(group.prep, count), busyMinutes: busyMinutes(group.prep), large, noticeMinutes: large ? group.prep.noticeMinutes : 0 };
@@ -187,6 +193,8 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
       baseFee: settings.deliveryFee,
       /** The scheduled time the fees were priced for; null for now */
       pricedFor: at?.toISOString() ?? null,
+      /** Deliveries paused for the whole town (a storm, a flood): pickup still works */
+      paused,
     },
     hasProblems: list.some((g) => g.problem || g.items.some((i) => i.problem)),
     /** Nothing's wrong except that a store is closed right now, so it can still be ordered for later */

@@ -115,6 +115,8 @@ export type StorePage = {
 export type StoreCategory = { type: StoreType; count: number; imageUrl: string | null };
 
 export type StoreSections = {
+  /** Deliveries paused for the whole town (a storm, a flood) */
+  paused?: { until: string; reason: string | null } | null;
   categories: StoreCategory[];
   orderAgain: StoreSummary[];
   nearby: StoreSummary[];
@@ -187,11 +189,21 @@ export type Cart = {
     timing?: { minutes: number; busyMinutes: number; large: boolean; noticeMinutes: number };
     /** Set when the address is farther than the store delivers */
     tooFar?: { km: number; radiusKm: number } | null;
+    /** The store's minimum for delivery, and how much more food it needs (0 when it's met) */
+    minOrder?: { amount: number; short: number } | null;
   }[];
   itemCount: number;
   itemsTotal: number;
   /** The address the fees were priced for, and all stores' fees together */
-  delivery: { addressId: string | null; addressLabel: string | null; total: number; baseFee: number; pricedFor?: string | null };
+  delivery: {
+    addressId: string | null;
+    addressLabel: string | null;
+    total: number;
+    baseFee: number;
+    pricedFor?: string | null;
+    /** Deliveries paused for the whole town (a storm, a flood); pickup still works */
+    paused?: { until: string; reason: string | null } | null;
+  };
   hasProblems: boolean;
   /** Nothing's wrong except that a store is closed right now, so it can still be ordered for later */
   canSchedule: boolean;
@@ -268,7 +280,35 @@ export type OrderEta = { readyBy: string; arriveBy: string | null; late: boolean
 export type IfUnavailable = "REMOVE" | "CALL" | "CANCEL";
 
 /** An order as the resident sees it. */
+/** "Something's wrong with my order", reported after delivery */
+export type OrderIssue = {
+  id: string;
+  kind: "MISSING_ITEM" | "WRONG_ITEM" | "DAMAGED" | "COLD_OR_LATE" | "OTHER";
+  itemIds: string[];
+  note: string;
+  photoUrl: string;
+  status: "OPEN" | "RESOLVED" | "REJECTED";
+  amount: string;
+  paidBy?: "STORE" | "FEASTO" | null;
+  /** "refund" (online) or "credit" (Suki points, for cash) */
+  given: string | null;
+  answer: string | null;
+  escalatedAt: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+};
+
+/** What the resident's order page can do now (GET /orders/:id) */
+export type OrderExtras = { needsPin: boolean; canEdit: boolean; issueUntil: string | null };
+
 export type ResidentOrder = OrderBase & {
+  /** The 4-digit PIN for the rider at the door: only while a big delivery is on its way */
+  handoverPin?: string | null;
+  /** Said at the counter when picking it up */
+  pickupCode?: string | null;
+  /** Changed by the resident before the store accepted it */
+  editedAt?: string | null;
+  issues?: OrderIssue[];
   /** When this order's part of an online payment went back, and how (cancelled or declined after paying) */
   refundedAt?: string | null;
   refundNote?: string | null;
@@ -304,6 +344,8 @@ export type ResidentOrder = OrderBase & {
     total: string;
     createdAt: string;
     ifUnavailable?: IfUnavailable;
+    noCutlery?: boolean;
+    leaveAtGate?: boolean;
   };
   /** The resident's rating, once they've given one */
   review: { rating: number; comment: string | null; createdAt: string } | null;
@@ -348,8 +390,14 @@ export type VendorOrder = Omit<OrderBase, "items"> & {
     deliveryLng?: number | null;
     notes: string | null;
     ifUnavailable?: IfUnavailable;
+    noCutlery?: boolean;
+    leaveAtGate?: boolean;
     resident: { name: string; phone: string | null };
   };
+  /** Read out by the rider at the counter */
+  pickupCode?: string | null;
+  editedAt?: string | null;
+  issues?: OrderIssue[];
 };
 
 /** One order in full, for the store's order page and printed slip */
@@ -421,9 +469,15 @@ export type RiderDelivery = {
   readyAt: string | null;
   arrivedAt?: string | null;
   eta?: OrderEta;
+  /** Said at the store's counter, so the right rider gets the right bag */
+  pickupCode?: string | null;
+  /** A big order: the customer's PIN is needed to finish it */
+  needsPin?: boolean;
   vendor: Pin & { name: string; address: string; imageUrl: string | null; owner: { phone: string | null } };
   items: { id: string; name: string; quantity: number; unitPrice: string; removedAt?: string | null }[];
   checkout: {
+    noCutlery?: boolean;
+    leaveAtGate?: boolean;
     deliveryAddress: string | null;
     deliveryLat: number | null;
     deliveryLng: number | null;

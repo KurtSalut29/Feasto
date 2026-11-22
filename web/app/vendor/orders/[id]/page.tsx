@@ -21,6 +21,8 @@ import { OrderActions } from "../order-actions";
 import { commissionLine, DishThumb, paymentLine } from "../order-parts";
 import { RiderLive } from "../rider-live";
 import { ReportProblem } from "@/components/app/report-problem";
+import { IssueAnswers } from "../issue-answers";
+import { OrderFlags } from "../order-flags";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -87,6 +89,14 @@ async function VendorOrder({ params }: Pick<PageProps<"/vendor/orders/[id]">, "p
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
+          <IssueAnswers
+            orderId={order.id}
+            issues={order.issues ?? []}
+            items={order.items}
+            food={Number(order.subtotal) - Number(order.storeDiscount ?? 0) - Number(order.feastoDiscount ?? 0)}
+            cash={order.checkout.paymentMethod === "COD"}
+          />
+          <OrderFlags order={order} />
           {dropped ? (
             <Alert tone="error" title={order.status === "REJECTED" ? "You declined this order" : "The resident cancelled this order"}>
               {order.rejectReason ?? "No reason given."}

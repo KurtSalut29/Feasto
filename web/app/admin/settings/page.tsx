@@ -8,6 +8,7 @@ import { serverApi } from "@/lib/server-api";
 import { ReceivingAccounts, type AdminAccount } from "./receiving-accounts";
 import { SettingsForm, type PlatformSettings } from "./settings-form";
 import { StoreCommissions } from "./store-commissions";
+import { DeliveryPause } from "./delivery-pause";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -32,6 +33,7 @@ async function Settings() {
         <AccountSecurityCard name={user.name} email={user.email} roleLabel="admin" />
         <TwoStepCard />
         <ReceivingAccounts accounts={accounts} />
+        <DeliveryPause pausedUntil={settings.deliveryPausedUntil ?? null} reason={settings.deliveryPauseReason ?? null} />
         <StoreCommissions />
         <SettingsForm initial={settings} />
       </div>

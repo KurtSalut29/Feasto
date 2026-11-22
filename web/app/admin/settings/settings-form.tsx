@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, Banknote, Bike, Coins, DoorOpen, PackageCheck, UserX, CalendarHeart, Clock, CloudRain, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, TimerOff, TrafficCone, UserPlus, Wallet } from "lucide-react";
+import { BadgePercent, Banknote, KeyRound, MessageSquareWarning, Bike, Coins, DoorOpen, PackageCheck, UserX, CalendarHeart, Clock, CloudRain, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, TimerOff, TrafficCone, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -47,6 +47,13 @@ export type PlatformSettings = {
   noShowStrikes: number;
   /** How long the rider waits at the door before "Not received" */
   doorWaitMinutes: number;
+  /** Deliveries of this much or more need the resident's PIN at the door (0 = every delivery) */
+  pinFromAmount: number;
+  /** How long after delivery a resident can report a problem */
+  issueHours: number;
+  /** Deliveries paused for the whole town until then (set from its own card) */
+  deliveryPausedUntil?: string | null;
+  deliveryPauseReason?: string | null;
   /** Admins and store owners must log in with an authenticator app too */
   require2fa: boolean;
   /** Riders must use two-step login too (a passkey or the app) */
@@ -77,7 +84,7 @@ export type PlatformSettings = {
   batchDropKm: number;
 };
 type Switches = "require2fa" | "require2faRiders" | "require3faAdmin" | "loyaltyOn" | "daloyFeeOn" | "delayBonusOn" | "plusOn" | "batchingOn";
-type Key = Exclude<keyof PlatformSettings, Switches>;
+type Key = Exclude<keyof PlatformSettings, Switches | "deliveryPausedUntil" | "deliveryPauseReason">;
 
 const whenInWords = (seconds: number) => (seconds < 60 ? `${seconds} s` : seconds % 60 === 0 ? `${seconds / 60} min` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`);
 
@@ -187,6 +194,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     codMaxAmount: String(initial.codMaxAmount),
     noShowStrikes: String(initial.noShowStrikes),
     doorWaitMinutes: String(initial.doorWaitMinutes),
+    pinFromAmount: String(initial.pinFromAmount),
+    issueHours: String(initial.issueHours),
     pointsEarnPer: String(initial.pointsEarnPer),
     pointValue: String(initial.pointValue),
     pointsMinRedeem: String(initial.pointsMinRedeem),
@@ -261,6 +270,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         codMaxAmount: number("codMaxAmount"),
         noShowStrikes: number("noShowStrikes"),
         doorWaitMinutes: number("doorWaitMinutes"),
+        pinFromAmount: number("pinFromAmount"),
+        issueHours: number("issueHours"),
         require2fa,
         require2faRiders,
         require3faAdmin,
@@ -436,6 +447,8 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
             <TextField label="Most paid in cash (₱)" min="500" step="100" icon={Banknote} hint="₱500 to ₱100,000 per checkout. Bigger orders are paid online." {...field("codMaxAmount")} />
             <TextField label="Rider waits at the door (minutes)" min="3" icon={DoorOpen} hint="3 to 30. Then the rider may mark it not received, with a photo." {...field("doorWaitMinutes")} />
             <TextField label="Not received before cash is off" min="1" icon={UserX} hint="1 to 10 orders. After that, the resident can only pay online." {...field("noShowStrikes")} />
+            <TextField label="PIN at the door from (₱)" min="0" step="100" icon={KeyRound} hint="Deliveries this big need the resident's 4-digit PIN to finish. 0 for every delivery." {...field("pinFromAmount")} />
+            <TextField label="Report a problem within (hours)" min="1" icon={MessageSquareWarning} hint="1 to 168. After delivery, for a missing, wrong or spilled order." {...field("issueHours")} />
           </div>
         </div>
       </Card>

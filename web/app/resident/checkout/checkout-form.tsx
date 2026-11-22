@@ -122,6 +122,8 @@ export function CheckoutForm({
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [notes, setNotes] = useState("");
   const [ifUnavailable, setIfUnavailable] = useState<IfUnavailable>("REMOVE");
+  const [noCutlery, setNoCutlery] = useState(false);
+  const [leaveAtGateChosen, setLeaveAtGate] = useState(false);
   // A rider the resident asked for (delivery from one store only)
   const [rider, setRider] = useState<ChoosableRider | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -166,6 +168,13 @@ export function CheckoutForm({
       : null;
   const quoteOf = (storeId: string) => priced?.groups.find((g) => g.store.id === storeId)?.delivery ?? null;
   const deliveryTotal = fulfillment === "DELIVERY" ? (priced?.delivery.total ?? 0) : 0;
+  // Deliveries paused in a storm: pickup, or a time after it's over
+  const paused = cart.delivery.paused ?? null;
+  const pausedNow = fulfillment === "DELIVERY" && paused !== null && (!scheduledFor || new Date(scheduledFor) < new Date(paused.until));
+  // A store's minimum for delivery
+  const shortOf = fulfillment === "DELIVERY" ? cart.groups.filter((g) => g.minOrder && g.minOrder.short > 0) : [];
+  // "Leave it at the gate" works when paid online (the rider can't collect cash from a gate)
+  const leaveAtGate = fulfillment === "DELIVERY" && paymentMethod === "ONLINE" && leaveAtGateChosen;
 
   // Vouchers and the Senior/PWD discount: the server works out what comes off, again whenever a choice changes
   const [voucherCode, setVoucherCode] = useState<string | null>(null);
@@ -213,6 +222,8 @@ export function CheckoutForm({
         usePoints,
         expectedDiscount: discount,
         ifUnavailable,
+        noCutlery,
+        leaveAtGate,
         preferredRiderId: fulfillment === "DELIVERY" && stores === 1 ? rider?.id : undefined,
         simulatePaymentFailure: paymentMethod === "ONLINE" && !realPayments && simulateFailure,
       },
@@ -278,6 +289,18 @@ export function CheckoutForm({
           ]}
         />
       </Step>
+
+      {paused && fulfillment === "DELIVERY" && (
+        <Alert tone={pausedNow ? "error" : "pending"}>
+          Deliveries are paused until {whenOf(paused.until)}
+          {paused.reason ? ` (${paused.reason})` : ""}, to keep riders safe. {pausedNow ? "Choose Pickup, or schedule it for after that." : "Your scheduled time is after that, so it can go ahead."}
+        </Alert>
+      )}
+      {shortOf.map((g) => (
+        <Alert key={g.store.id} tone="pending">
+          {g.store.name}&apos;s minimum for delivery is {formatPeso(g.minOrder!.amount)}. Add {formatPeso(g.minOrder!.short)} more in your cart, or choose Pickup.
+        </Alert>
+      ))}
 
       {fulfillment === "DELIVERY" ? (
         <Step
@@ -440,6 +463,12 @@ export function CheckoutForm({
             rows={2}
           />
         </div>
+        <div className="mt-4 space-y-2">
+          <SwitchField label="No spoon and fork" description="Good for the planet. The store won't pack any." checked={noCutlery} onChange={setNoCutlery} />
+          {fulfillment === "DELIVERY" && paymentMethod === "ONLINE" && (
+            <SwitchField label="Leave it at the gate" description="Paid online, so the rider leaves it at your gate or door and takes a photo. No waiting." checked={leaveAtGate} onChange={setLeaveAtGate} />
+          )}
+        </div>
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium text-ink">If an item runs out after you order</legend>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -510,7 +539,7 @@ export function CheckoutForm({
         <Button
           className="w-full shadow-lg"
           loading={placing}
-          disabled={(fulfillment === "DELIVERY" && (!addressId || !priced)) || (later && !scheduledFor)}
+          disabled={(fulfillment === "DELIVERY" && (!addressId || !priced || pausedNow || shortOf.length > 0)) || (later && !scheduledFor)}
           onClick={placeOrder}
         >
           {placing

@@ -18,6 +18,10 @@ import { RATE_RIDER_DAYS, riderRatingSchema, shortName } from "../lib/riderRatin
 import { ONLINE_LABEL } from "../lib/payments.js";
 import { closeUnpaidPage } from "../lib/paymentFlow.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { escalateIssue, reportIssue } from "../lib/orderIssues.js";
+import { needsPin } from "../lib/promos.js";
+import { editOrder } from "../lib/orderEdit.js";
+import { UPLOADED_PHOTO } from "./uploads.js";
 
 /** A resident's own orders. */
 export const ordersRouter = Router();
@@ -33,8 +37,9 @@ const orderInclude = {
   /** The rider the resident asked for, while it waits for them */
   preferredRider: { select: { name: true } },
   checkout: {
-    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, transferTo: true, transferFrom: true, transferSentAt: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true, ifUnavailable: true },
+    select: { id: true, paymentMethod: true, onlineMethod: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, transferTo: true, transferFrom: true, transferSentAt: true, deliveryAddress: true, deliveryLat: true, deliveryLng: true, notes: true, total: true, createdAt: true, ifUnavailable: true, noCutlery: true, leaveAtGate: true },
   },
+  issues: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, itemIds: true, note: true, photoUrl: true, status: true, amount: true, given: true, answer: true, escalatedAt: true, decidedAt: true, createdAt: true } },
   review: { select: { rating: true, comment: true, createdAt: true } },
   riderRating: { select: { rating: true, tags: true, comment: true, createdAt: true } },
 } as const;
@@ -82,8 +87,57 @@ ordersRouter.get("/:id", async (req, res) => {
   // The rider's last known position, kept in Redis from accepting the job until it's delivered
   const location = order.riderId && ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) ? await redis.get(`rider-location:${order.id}`) : null;
   // When it will be cancelled by itself if nobody takes it, so the resident knows what to expect
-  const autoCancel = autoCancelAt(order, (await getSettings()).autoCancelMinutes);
-  res.json({ order: { ...order, eta: etaOf(order) }, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
+  const settings = await getSettings();
+  const autoCancel = autoCancelAt(order, settings.autoCancelMinutes);
+  const received = ["DELIVERED", "COMPLETED"].includes(order.status) && order.finishedAt;
+  const extras = {
+    // The PIN is shown only for a big delivery, on its way
+    needsPin: ["ACCEPTED", "PREPARING", "READY", "PICKED_UP"].includes(order.status) && needsPin(order, order.checkout, settings),
+    // Changeable before the store accepts: cash, no discounts (lib/orderEdit.ts)
+    canEdit:
+      ["PLACED", "SCHEDULED"].includes(order.status) &&
+      !order.riderId &&
+      order.checkout.paymentMethod === "COD" &&
+      Number(order.storeDiscount) === 0 &&
+      Number(order.feastoDiscount) === 0 &&
+      order.pointsUsed === 0,
+    // Until when a problem can be reported
+    issueUntil: received ? new Date(order.finishedAt!.getTime() + settings.issueHours * 3600_000).toISOString() : null,
+  };
+  const { handoverPin, ...rest } = order;
+  res.json({ order: { ...rest, handoverPin: extras.needsPin ? handoverPin : null, eta: etaOf(order) }, extras, autoCancel, riderLocation: location ? unmarshal(location, { transport: "redis", channel: `rider-location:${order.id}`, kind: "rider location" }) : null });
+});
+
+const issueSchema = z.object({
+  kind: z.enum(["MISSING_ITEM", "WRONG_ITEM", "DAMAGED", "COLD_OR_LATE", "OTHER"], "Choose what went wrong."),
+  itemIds: z.array(z.string().min(1)).max(50).optional().default([]),
+  note: z.string("Say what happened.").trim().min(5, "Say what happened, in a few words.").max(500),
+  photoUrl: z.string("Add a photo of it.").regex(UPLOADED_PHOTO, "Add a photo of it."),
+});
+
+/** Something's wrong with an order that arrived: the store answers first */
+ordersRouter.post("/:id/issues", async (req, res) => {
+  const input = parseBody(issueSchema, req.body);
+  const issue = await reportIssue(req.session!.userId, String(req.params.id), input);
+  res.status(201).json({ issue: { id: issue.id } });
+});
+
+/** The store said no: ask Feasto to look (once) */
+ordersRouter.post("/:id/issues/:issueId/escalate", async (req, res) => {
+  await escalateIssue(req.session!.userId, String(req.params.id), String(req.params.issueId));
+  res.json({ ok: true });
+});
+
+/** Change it before the store accepts it: how many of each dish, or where it goes */
+ordersRouter.patch("/:id", async (req, res) => {
+  const input = parseBody(
+    z.object({
+      items: z.array(z.object({ id: z.string().min(1), quantity: z.number().int().min(0).max(50, "At most 50 of one dish.") })).max(50).optional(),
+      addressId: z.string().min(1).optional(),
+    }),
+    req.body,
+  );
+  res.json(await editOrder(req.session!.userId, String(req.params.id), input));
 });
 
 /**

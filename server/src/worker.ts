@@ -133,7 +133,7 @@ await consume<{ checkoutId: string; simulateFailure: boolean }>(QUEUES.paymentRe
  * item's price when the store ran out of it (itemId and amount). With Xendit the money really goes
  * back to the card or e-wallet (in Test Mode, test money).
  */
-await consume<{ orderId: string; itemId?: string; amount?: number }>(QUEUES.refundRequested, async ({ orderId, itemId, amount: itemAmount }) => {
+await consume<{ orderId: string; itemId?: string; amount?: number; reason?: string }>(QUEUES.refundRequested, async ({ orderId, itemId, amount: itemAmount, reason }) => {
   if (!(await firstTime(itemId ? `refund:${orderId}:${itemId}` : `refund:${orderId}`))) return;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -142,8 +142,12 @@ await consume<{ orderId: string; itemId?: string; amount?: number }>(QUEUES.refu
   if (!order) return;
   // What the resident paid for this order: after its discounts
   const amount = itemAmount ?? orderTotal(order);
-  const why = itemId ? "An item ran out" : "Cancelled";
-  const what = itemId ? `An item on your order ${orderCode(orderId)} from ${order.vendor.name} ran out` : `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled`;
+  const why = reason ?? (itemId ? "An item ran out" : "Cancelled");
+  const what = reason
+    ? `${reason} (${orderCode(orderId)} from ${order.vendor.name}) was made right`
+    : itemId
+      ? `An item on your order ${orderCode(orderId)} from ${order.vendor.name} ran out`
+      : `Your order ${orderCode(orderId)} from ${order.vendor.name} was cancelled`;
   let note = "Simulated refund";
   if (order.checkout.transferAccountId) {
     // Paid by transfer to Feasto's account: the admin sends it back to where it came from

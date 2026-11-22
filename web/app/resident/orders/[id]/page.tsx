@@ -20,7 +20,8 @@ import { hasReceipt, ONLINE_LABEL, orderCode, paymentName, paymentStatusLabel, S
 import { canRateRider, riderAverage } from "@/lib/rider-ratings";
 import { clockOf, sendAtOf, whenOf } from "@/lib/schedule";
 import { serverApi } from "@/lib/server-api";
-import type { AutoCancel, OrderStatus, ResidentOrder } from "@/lib/types";
+import type { AutoCancel, OrderExtras, OrderStatus, ResidentOrder } from "@/lib/types";
+import { DoorPin, EditOrder, OrderIssues } from "./order-extras";
 import { EtaLine } from "@/components/app/order-eta";
 import { CancelOrderButton } from "./cancel-button";
 import { RateOrder, ReorderButton } from "./order-feedback";
@@ -56,7 +57,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, "params">) {
   await requireRole("RESIDENT");
   const { id } = await params;
-  const { order, riderLocation, autoCancel } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation; autoCancel: AutoCancel }>(`/orders/${id}`);
+  const { order, riderLocation, autoCancel, extras } = await serverApi<{ order: ResidentOrder; riderLocation: RiderLocation; autoCancel: AutoCancel; extras: OrderExtras }>(`/orders/${id}`);
   const total = orderTotal(order);
   const dropped = order.status === "REJECTED" || order.status === "CANCELLED";
   const received = order.status === "DELIVERED" || order.status === "COMPLETED";
@@ -128,6 +129,14 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             pickedUp={order.status === "PICKED_UP"}
             askedFor={order.preferredRider?.name}
           />
+        )}
+        {extras.needsPin && order.handoverPin && <DoorPin pin={order.handoverPin} />}
+        {order.fulfillment === "PICKUP" && order.pickupCode && ["PLACED", "ACCEPTED", "PREPARING", "READY"].includes(order.status) && (
+          <section className="rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
+            <p className="text-sm font-semibold text-brand-800">Pickup code</p>
+            <p className="mt-1 font-mono text-[2rem] leading-none font-bold tracking-[0.3em] text-ink">{order.pickupCode}</p>
+            <p className="mt-2 text-[0.8125rem] text-muted">Say it at the counter, so the store hands you the right order.</p>
+          </section>
         )}
         {/* What happens if nobody takes it, so the resident isn't left wondering */}
         {autoCancel && (
@@ -238,6 +247,16 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
           </Section>
         )}
 
+        {received && (
+          <OrderIssues
+            orderId={order.id}
+            items={order.items}
+            issues={order.issues ?? []}
+            until={extras.issueUntil}
+            storeName={order.vendor.name}
+            cash={order.checkout.paymentMethod === "COD"}
+          />
+        )}
         {received && <RateOrder orderId={order.id} storeName={order.vendor.name} review={order.review} />}
         {/* The rider gets their own stars (and maybe a tip), apart from the store's */}
         {order.status === "DELIVERED" && order.rider && (
@@ -360,6 +379,10 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
               </p>
             )}
             {order.checkout.notes && <p className="text-muted">Note: {order.checkout.notes}</p>}
+            {(order.checkout.noCutlery || order.checkout.leaveAtGate) && (
+              <p className="text-muted">{[order.checkout.noCutlery && "No spoon and fork", order.checkout.leaveAtGate && "Leave it at the gate"].filter(Boolean).join(" · ")}</p>
+            )}
+            {order.editedAt && <p className="text-[0.8125rem] text-muted">You changed this order {formatDateTime(order.editedAt)}.</p>}
             {order.vendor.owner.phone && (
               <a href={`tel:${order.vendor.owner.phone}`} className="inline-flex items-center gap-2 font-semibold text-brand-700">
                 <Phone className="size-4" aria-hidden />
@@ -374,6 +397,14 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             <ReceiptText className="size-[18px]" aria-hidden />
             View receipt
           </ButtonLink>
+        )}
+        {extras.canEdit && (
+          <EditOrder
+            orderId={order.id}
+            items={order.items}
+            delivery={order.fulfillment === "DELIVERY"}
+            deliveryFee={Number(order.deliveryFee)}
+          />
         )}
         {(order.status === "PLACED" || order.status === "AWAITING_PAYMENT" || order.status === "SCHEDULED") && <CancelOrderButton orderId={order.id} />}
         {/* After the store ran late twice, the resident may stop waiting */}

@@ -4,7 +4,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/db.js";
 import { BUSY, forgetRiderPosition, jobVisibleTo, OPEN_JOB, riderIsBusy, saveRiderPosition } from "../lib/dispatch.js";
 import { bboxQuery, nearQuery, nextOffset, pageQuery } from "../lib/geo.js";
-import { HttpError, parseBody } from "../lib/http.js";
+import { HttpError, parseBody, ValidationError } from "../lib/http.js";
 import { broadcastOrder, notifyResident, orderCode, settlePayment, transition } from "../lib/orders.js";
 import { CHANNELS, notify, publish } from "../lib/liveUpdates.js";
 import { hasExpired } from "../lib/renewals.js";
@@ -25,6 +25,7 @@ import { UPLOADED_PHOTO } from "./uploads.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
 import { endRide, recordPosition } from "../lib/daloy.js";
 import { checkRewardsQuietly } from "../lib/loyalty.js";
+import { needsPin } from "../lib/promos.js";
 import { tripJobs, tripProblem } from "../lib/batching.js";
 
 export const riderRouter = Router();
@@ -234,16 +235,21 @@ riderRouter.get("/active", async (req, res) => {
           paymentMethod: true,
           onlineMethod: true,
           paymentStatus: true,
+          noCutlery: true,
+          leaveAtGate: true,
           resident: { select: { name: true, phone: true } },
         },
       },
     },
+    // The PIN is the resident's to give at the door; the rider only learns whether one is needed
+    omit: { handoverPin: true },
   });
+  const settings = await getSettings();
   // How long to wait at the door before "Not received" opens
   res.json({
-    order: order && { ...order, eta: etaOf(order) },
+    order: order && { ...order, eta: etaOf(order), needsPin: needsPin(order, order.checkout, settings) },
     trip: trip.length > 1 ? trip.map((t) => ({ id: t.id, code: orderCode(t.id), status: t.status, store: t.vendor.name, address: t.checkout.deliveryAddress })) : [],
-    doorWaitMinutes: (await getSettings()).doorWaitMinutes,
+    doorWaitMinutes: settings.doorWaitMinutes,
   });
 });
 
@@ -335,14 +341,28 @@ riderRouter.post("/active/:id/picked-up", async (req, res) => {
 
 const deliveredSchema = z.object({
   photoUrl: z.string().regex(UPLOADED_PHOTO, "Take a photo of the handed-over order first."),
+  /** The customer's 4-digit PIN, for big orders */
+  pin: z.string().trim().max(8).optional(),
 });
+
 
 /** Finishing a delivery needs a proof-of-delivery photo, which the resident and the store can see. */
 riderRouter.post("/active/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
-  const { photoUrl } = parseBody(deliveredSchema, req.body);
-  const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId }, select: { checkoutId: true, vendor: { select: { ownerId: true } }, checkout: { select: { residentId: true } } } });
+  const { photoUrl, pin } = parseBody(deliveredSchema, req.body);
+  const order = await prisma.order.findFirst({
+    where: { id, riderId: req.session!.userId },
+    select: { checkoutId: true, fulfillment: true, subtotal: true, deliveryFee: true, storeDiscount: true, feastoDiscount: true, handoverPin: true, vendor: { select: { ownerId: true } }, checkout: { select: { residentId: true, leaveAtGate: true } } },
+  });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  // A big order: the customer's PIN proves it reached them (tries are limited, so it can't be guessed)
+  if (order.handoverPin && needsPin(order, order.checkout, await getSettings())) {
+    if (!pin) throw new ValidationError({ pin: ["Ask the customer for the 4-digit PIN on their order page."] });
+    const tries = await redis.incr(`pin-tries:${id}`);
+    await redis.expire(`pin-tries:${id}`, 3600);
+    if (tries > 5) throw new HttpError(429, "Too many wrong PINs. Call the customer, or ask the admin for help.");
+    if (pin !== order.handoverPin) throw new ValidationError({ pin: [`That PIN isn't right. ${5 - tries} ${5 - tries === 1 ? "try" : "tries"} left.`] });
+  }
   // Daloy: the ride to the door ends here (if "at the door" wasn't tapped), so a delay bonus is on the order before the payout
   await endRide(id);
   await prisma.$transaction(async (tx) => {

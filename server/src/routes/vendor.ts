@@ -1,3 +1,4 @@
+import { rejectIssue, resolveIssue } from "../lib/orderIssues.js";
 import { checkRewardsQuietly } from "../lib/loyalty.js";
 import { Router } from "express";
 import { orderTotal, type DiscountLine } from "../lib/promos.js";
@@ -193,9 +194,12 @@ const vendorOrderInclude = {
       deliveryLng: true,
       notes: true,
       ifUnavailable: true,
+      noCutlery: true,
+      leaveAtGate: true,
       resident: { select: { name: true, phone: true } },
     },
   },
+  issues: { orderBy: { createdAt: "desc" }, select: { id: true, kind: true, itemIds: true, note: true, photoUrl: true, status: true, amount: true, paidBy: true, given: true, answer: true, escalatedAt: true, decidedAt: true, createdAt: true } },
 } satisfies Prisma.OrderInclude;
 
 /** Where each rider is right now, for orders a rider is on (kept in Redis while they deliver) */
@@ -217,6 +221,8 @@ vendorRouter.get("/orders/:id", async (req, res) => {
   const order = await prisma.order.findFirst({
     where: { id: String(req.params.id), vendorId },
     include: { ...vendorOrderInclude, vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } } },
+    // The PIN is the resident's to give the rider; the store never sees it
+    omit: { handoverPin: true },
   });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
   const [withLocation] = await withRiderLocations([order]);
@@ -240,6 +246,7 @@ vendorRouter.get("/orders", async (req, res) => {
       skip: history ? (page - 1) * HISTORY_PAGE_SIZE : 0,
       take: history ? HISTORY_PAGE_SIZE : 100,
       include: vendorOrderInclude,
+      omit: { handoverPin: true },
     }),
     prisma.order.groupBy({ by: ["status"], where: { vendorId, status: { not: "AWAITING_PAYMENT" } }, _count: true }),
   ]);
@@ -466,12 +473,13 @@ const timingSchema = z.object({
     .max(25, "Enter 1 to 25 km.")
     .refine((v) => Number.isInteger(Math.round(v * 1e4) / 1e3), "Use at most one decimal place, e.g. 7.5."),
   largeOrderNoticeMinutes: z.number("Enter 0 to 2880 minutes.").int().min(0, "Enter 0 to 2880 minutes.").max(2880, "At most 2 days."),
+  minOrderAmount: z.number("Enter ₱0 to ₱5,000.").min(0, "Enter ₱0 to ₱5,000.").max(5000, "Enter ₱0 to ₱5,000.").optional(),
 });
 
 vendorRouter.get("/store/timing", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   const [store, actual] = await Promise.all([
-    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { prepMinutes: true, prepPer5Items: true, deliveryRadiusKm: true, largeOrderNoticeMinutes: true, busyExtraMinutes: true, busyUntil: true } }),
+    prisma.vendor.findUniqueOrThrow({ where: { id: vendorId }, select: { prepMinutes: true, prepPer5Items: true, deliveryRadiusKm: true, largeOrderNoticeMinutes: true, minOrderAmount: true, busyExtraMinutes: true, busyUntil: true } }),
     // What the kitchen really took in the last 30 days, from accepting to "ready"
     prisma.$queryRaw<{ minutes: number | null; orders: bigint; onTime: bigint; timed: bigint }[]>`
       SELECT round(percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM ("readyAt" - "acceptedAt")) / 60))::int AS minutes,
@@ -532,6 +540,24 @@ vendorRouter.post("/orders/:id/ready", async (req, res) => {
 });
 
 /** Pickup orders: the resident collected it at the counter. */
+const answerSchema = z.discriminatedUnion("decision", [
+  z.object({ decision: z.literal("REFUND"), amount: z.number("Enter how much to give back.").positive("Enter how much to give back."), answer: z.string().trim().max(300).optional().transform((v) => v || null) }),
+  z.object({ decision: z.literal("REJECT"), answer: z.string("Say why.").trim().min(5, "Say why, so the customer understands (at least 5 letters).").max(300) }),
+]);
+
+/** The store answers a problem with one of its orders: give some or all of it back (the store pays), or say why not */
+vendorRouter.post("/orders/:id/issues/:issueId", async (req, res) => {
+  const input = parseBody(answerSchema, req.body);
+  const vendorId = await myVendorId(req.session!.userId);
+  const issue = await prisma.orderIssue.findFirst({ where: { id: String(req.params.issueId), orderId: String(req.params.id), order: { vendorId } }, select: { escalatedAt: true, status: true } });
+  if (!issue) throw new HttpError(404, "That problem isn't on your orders.");
+  if (issue.escalatedAt) throw new HttpError(409, "The customer asked Feasto to look at this one, so the admin decides it now.");
+  if (input.decision === "REFUND") await resolveIssue(String(req.params.issueId), { amount: input.amount, paidBy: "STORE", answer: input.answer, by: req.session!.userId });
+  else await rejectIssue(String(req.params.issueId), input.answer, req.session!.userId, false);
+  await broadcastOrder(String(req.params.id));
+  res.json({ ok: true });
+});
+
 vendorRouter.post("/orders/:id/complete", async (req, res) => {
   await vendorStep(req.session!.userId, String(req.params.id), ["READY"], "COMPLETED", { finishedAt: new Date() }, { pickupOnly: true });
   // Suki: points, missions and an inviter's reward can be due now

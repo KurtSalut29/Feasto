@@ -1,4 +1,4 @@
-import { Banknote, CalendarClock, Check, CreditCard, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, type LucideIcon } from "lucide-react";
+import { Banknote, CalendarClock, Check, CreditCard, DoorClosed, Hash, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -228,7 +228,23 @@ async function RiderActive({ searchParams }: { searchParams: Promise<{ id?: stri
       {/* Laptops up: the map stays on the left while the steps, payment and route sit beside it */}
       <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={store} home={home} homeAddress={order.checkout.deliveryAddress} status={order.status} />
-        <DeliveryActions orderId={order.id} status={order.status} arrivedAt={order.arrivedAt ?? null} doorWaitMinutes={doorWaitMinutes} />
+        {order.pickupCode && !pickedUp && (
+          <div className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
+            <Hash className="size-6 shrink-0 text-brand-600" aria-hidden />
+            <p className="text-sm text-ink">
+              Pickup code <span className="font-mono text-lg font-bold tracking-widest">{order.pickupCode}</span>
+              <span className="block text-[0.8125rem] text-muted">Say it at the counter, so the store hands you the right bag.</span>
+            </p>
+          </div>
+        )}
+        <DeliveryActions
+          orderId={order.id}
+          status={order.status}
+          arrivedAt={order.arrivedAt ?? null}
+          doorWaitMinutes={doorWaitMinutes}
+          needsPin={order.needsPin}
+          leaveAtGate={order.checkout.leaveAtGate}
+        />
         <LocationSharer orderId={order.id} heading={pickedUp ? "home" : "store"} store={store} home={home} />
 
         {payment.cash ? (
@@ -244,6 +260,23 @@ async function RiderActive({ searchParams }: { searchParams: Promise<{ id?: stri
             <p className="text-sm">
               <span className="font-bold">Already paid</span> with {paymentName(order.checkout)}. Collect nothing, just hand it over.
             </p>
+          </div>
+        )}
+
+        {(order.checkout.leaveAtGate || order.checkout.noCutlery) && (
+          <div className="flex flex-wrap gap-2">
+            {order.checkout.leaveAtGate && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-800">
+                <DoorClosed className="size-4" aria-hidden />
+                Leave it at the gate
+              </span>
+            )}
+            {order.checkout.noCutlery && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1 text-sm font-semibold text-ink">
+                <UtensilsCrossed className="size-4" aria-hidden />
+                No spoon and fork
+              </span>
+            )}
           </div>
         )}
 

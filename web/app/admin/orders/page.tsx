@@ -1,4 +1,6 @@
-import { Bike, CircleCheck, CircleX, ClipboardList, Clock, Store } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Bike, CircleCheck, CircleX, ClipboardList, Clock, Store } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
+import { IssuesPanel } from "./issues-panel";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -54,6 +56,24 @@ export default function AdminOrdersPage({ searchParams }: PageProps<"/admin/orde
 async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "searchParams">) {
   await requireRole("ADMIN");
   const params = await searchParams;
+  if (params.tab === "issues") {
+    return (
+      <>
+        <PageHeader
+          eyebrow="Manage"
+          title="Problems with orders"
+          description="Reported by residents after delivery, with a photo. The store answers first; you decide the ones a resident sends to Feasto, and who pays."
+          actions={
+            <ButtonLink href="/admin/orders" variant="secondary">
+              <ArrowLeft className="size-[18px]" aria-hidden />
+              All orders
+            </ButtonLink>
+          }
+        />
+        <IssuesPanel />
+      </>
+    );
+  }
   const group: Group = GROUPS.find((g) => g.key === params.group)?.key ?? "all";
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const page = Math.max(1, Number(params.page) || 1);
@@ -71,7 +91,17 @@ async function AdminOrders({ searchParams }: Pick<PageProps<"/admin/orders">, "s
 
   return (
     <>
-      <PageHeader eyebrow="Manage" title="Orders" description="Every order across all stores. This page updates live." />
+      <PageHeader
+        eyebrow="Manage"
+        title="Orders"
+        description="Every order across all stores. This page updates live."
+        actions={
+          <ButtonLink href="/admin/orders?tab=issues" variant="secondary">
+            <AlertTriangle className="size-[18px]" aria-hidden />
+            Problems
+          </ButtonLink>
+        }
+      />
 
       {/* The totals double as the filter */}
       <nav aria-label="Order status" className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">

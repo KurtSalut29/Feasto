@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import type { Request } from "express";
@@ -61,6 +62,9 @@ const checkoutSchema = z
     senior: z.boolean().optional().default(false),
     /** Spend Suki points too */
     usePoints: z.boolean().optional().default(false),
+    /** No spoon and fork; leave it at the gate (paid online only) */
+    noCutlery: z.boolean().optional().default(false),
+    leaveAtGate: z.boolean().optional().default(false),
     /** The discount the page showed; if it changed (a voucher ran out), the resident sees the new total first */
     expectedDiscount: z.number().optional(),
   })
@@ -69,6 +73,8 @@ const checkoutSchema = z
 const checkoutSummary = { id: true, paymentStatus: true, paymentUrl: true, transferAccountId: true, orders: { select: { id: true } } } as const;
 
 /** Where the resident's browser opened Feasto, so the payment page can send them back to it */
+const fourDigits = () => String(randomInt(10000)).padStart(4, "0");
+
 export function originOf(req: Request) {
   const origin = req.get("origin");
   if (origin && /^https?:\/\/[\w.:-]+$/.test(origin)) return origin;
@@ -104,6 +110,16 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     const problem = scheduleProblem(scheduledFor, input.fulfillment, cart.groups.map((g) => g.store));
     if (problem) throw new HttpError(400, problem);
   }
+  // Deliveries paused for the whole town (a storm, a flood): pickup, or later once it's over
+  const settingsNow = await getSettings();
+  if (input.fulfillment === "DELIVERY" && settingsNow.deliveryPausedUntil && (!scheduledFor || scheduledFor < new Date(settingsNow.deliveryPausedUntil))) {
+    const until = new Date(settingsNow.deliveryPausedUntil).toLocaleString("en-PH", { hour: "numeric", minute: "2-digit", month: "short", day: "numeric", timeZone: "Asia/Manila" });
+    throw new HttpError(409, `Deliveries are paused until ${until}${settingsNow.deliveryPauseReason ? ` (${settingsNow.deliveryPauseReason})` : ""}, to keep riders safe. Choose pickup, or schedule it for after that.`);
+  }
+  // A store's minimum order, for delivery
+  const short = input.fulfillment === "DELIVERY" ? cart.groups.find((g) => g.minOrder && g.minOrder.short > 0) : null;
+  if (short?.minOrder) throw new HttpError(400, `${short.store.name}'s minimum for delivery is ₱${short.minOrder.amount}. Add ₱${short.minOrder.short} more, or choose pickup.`);
+  if (input.leaveAtGate && input.paymentMethod !== "ONLINE") throw new HttpError(400, "\"Leave it at the gate\" is for orders paid online: the rider has to collect cash in person.");
   // Each store delivers only as far as it set
   const far = input.fulfillment === "DELIVERY" ? cart.groups.find((g) => g.tooFar) : null;
   if (far?.tooFar) {
@@ -237,6 +253,8 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
           deliveryAddress,
           ...deliveryPin,
           notes: input.notes,
+          noCutlery: input.noCutlery,
+          leaveAtGate: delivery && input.leaveAtGate,
           total,
           discount: held.discount,
           // One order per store; online orders wait for the payment first
@@ -251,6 +269,9 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
               subtotal: group.subtotal,
               deliveryFee: feeOf(group),
               deliveryKm: delivery ? (group.delivery?.km ?? null) : null,
+              // Read out by the rider at the store; given by the resident at the door (big orders)
+              pickupCode: fourDigits(),
+              handoverPin: delivery ? fourDigits() : null,
               ...shareOf(group, priceOf.get(group.store.id)?.storeDiscount ?? 0),
               ...addOnOf(group),
               ...orderDiscountData(priceOf.get(group.store.id)),

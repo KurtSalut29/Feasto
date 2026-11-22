@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, DoorOpen, LoaderCircle, RotateCcw, UserX } from "lucide-react";
+import { Camera, DoorOpen, KeyRound, LoaderCircle, RotateCcw, UserX } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +12,21 @@ import { celebrate } from "@/components/app/celebrate";
 import { toast } from "@/components/ui/toast";
 import type { OrderStatus } from "@/lib/types";
 
-export function DeliveryActions({ orderId, status, arrivedAt = null, doorWaitMinutes = 10 }: { orderId: string; status: OrderStatus; arrivedAt?: string | null; doorWaitMinutes?: number }) {
+export function DeliveryActions({
+  orderId,
+  status,
+  arrivedAt = null,
+  doorWaitMinutes = 10,
+  needsPin = false,
+  leaveAtGate = false,
+}: {
+  orderId: string;
+  status: OrderStatus;
+  arrivedAt?: string | null;
+  doorWaitMinutes?: number;
+  needsPin?: boolean;
+  leaveAtGate?: boolean;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -43,7 +57,7 @@ export function DeliveryActions({ orderId, status, arrivedAt = null, doorWaitMin
           I&apos;m at the door
         </Button>
       )}
-      {status === "PICKED_UP" && <ProofOfDelivery busy={busy} onDelivered={(photoUrl) => step("delivered", { photoUrl })} />}
+      {status === "PICKED_UP" && <ProofOfDelivery busy={busy} needsPin={needsPin} leaveAtGate={leaveAtGate} onDelivered={(photoUrl, pin) => step("delivered", { photoUrl, pin })} />}
       {status === "PICKED_UP" && arrivedAt && <NotReceived arrivedAt={arrivedAt} waitMinutes={doorWaitMinutes} busy={busy} onConfirm={(photoUrl) => step("not-received", { photoUrl })} />}
       {(status === "ACCEPTED" || status === "PREPARING") && (
         <p className="rounded-xl bg-canvas px-4 py-3 text-center text-sm text-muted">
@@ -56,9 +70,20 @@ export function DeliveryActions({ orderId, status, arrivedAt = null, doorWaitMin
 }
 
 /** Photo of the handed-over order, required before the delivery can be finished. Opens the back camera on phones. */
-export function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelivered: (photoUrl: string) => void }) {
+export function ProofOfDelivery({
+  busy,
+  onDelivered,
+  needsPin = false,
+  leaveAtGate = false,
+}: {
+  busy: boolean;
+  onDelivered: (photoUrl: string, pin?: string) => void;
+  needsPin?: boolean;
+  leaveAtGate?: boolean;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [pin, setPin] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -77,7 +102,11 @@ export function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelive
   return (
     <section id="proof" className="scroll-mt-20 rounded-2xl border border-line p-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Proof of delivery</p>
-      <p className="mt-1 text-sm text-muted">Hand the order over, then take a photo of it. The customer and the store will see it.</p>
+      <p className="mt-1 text-sm text-muted">
+        {leaveAtGate
+          ? "The customer asked you to leave it at the gate or door. Leave it there, then take a photo showing where."
+          : "Hand the order over, then take a photo of it. The customer and the store will see it."}
+      </p>
 
       <button
         type="button"
@@ -124,11 +153,30 @@ export function ProofOfDelivery({ busy, onDelivered }: { busy: boolean; onDelive
       />
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
 
+      {needsPin && (
+        <label className="mt-3 block">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+            <KeyRound className="size-4 text-brand-600" aria-hidden />
+            Customer&apos;s PIN
+          </span>
+          <span className="block text-[0.8125rem] text-muted">A big order: ask for the 4-digit PIN on their order page before you hand it over.</span>
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="[0-9]*"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            className="mt-1.5 w-full rounded-xl border border-line bg-white px-3 py-2.5 text-center font-mono text-xl tracking-[0.4em] text-ink focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20 focus:outline-none"
+          />
+        </label>
+      )}
+
       <Button
         className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700"
         loading={busy}
-        disabled={!photo || uploading}
-        onClick={() => photo && onDelivered(photo)}
+        disabled={!photo || uploading || (needsPin && pin.length !== 4)}
+        onClick={() => photo && onDelivered(photo, needsPin ? pin : undefined)}
       >
         Delivered to the customer
       </Button>

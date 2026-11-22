@@ -394,6 +394,10 @@ const SETTING_WORDS: { [K in keyof Settings]: { label: string; show: (value: Set
   batchingOn: { label: "Two orders per rider", show: (value) => (value ? "on" : "off") },
   batchPickupMeters: { label: "Stores within", show: (value) => `${value} m` },
   batchDropKm: { label: "Doors within", show: (value) => `${value} km` },
+  pinFromAmount: { label: "PIN at the door from", show: (value) => (value ? `₱${value.toLocaleString("en-PH")}` : "every delivery") },
+  issueHours: { label: "Problems can be reported for", show: (value) => `${value} hours` },
+  deliveryPausedUntil: { label: "Deliveries paused until", show: (value) => value ?? "not paused" },
+  deliveryPauseReason: { label: "Why deliveries are paused", show: (value) => value ?? "—" },
 };
 
 const show = <K extends keyof Settings>(key: K, value: Settings[K]) => SETTING_WORDS[key].show(value);
@@ -523,6 +527,42 @@ adminToolsRouter.put("/store-commissions", async (req, res) => {
 adminToolsRouter.get("/rain", async (_req, res) => {
   const [rain, demand, settings] = await Promise.all([rainNow(), demandNow(), getSettings()]);
   res.json({ rain, demand, busy: busyFeeFor(demand, settings.busyFeeMax), rainFee: settings.rainFee });
+});
+
+/**
+ * Pause deliveries for the whole town (a storm, a flood) for a few hours, with the reason residents see.
+ * Pickup keeps working, and deliveries already on the way finish. Riders and stores are told.
+ */
+adminToolsRouter.put("/delivery-pause", async (req, res) => {
+  const input = parseBody(
+    z.object({
+      on: z.boolean(),
+      hours: z.number("Choose how long.").int().min(1, "At least an hour.").max(48, "At most 48 hours.").optional().default(3),
+      reason: z.string().trim().max(120).optional().transform((v) => v || null),
+    }),
+    req.body,
+  );
+  const until = input.on ? new Date(Date.now() + input.hours * 3600_000) : null;
+  await prisma.$transaction(async (tx) => {
+    await tx.platformSettings.upsert({ where: { id: 1 }, create: { id: 1, deliveryPausedUntil: until, deliveryPauseReason: input.on ? input.reason : null }, update: { deliveryPausedUntil: until, deliveryPauseReason: input.on ? input.reason : null } });
+    await logActivity(tx, actorOf(req), {
+      category: "SETTINGS",
+      action: input.on ? "Paused deliveries" : "Resumed deliveries",
+      target: "All of Naval",
+      detail: input.on ? `For ${input.hours} hour${input.hours === 1 ? "" : "s"}${input.reason ? `: ${input.reason}` : ""}` : undefined,
+    });
+  });
+  await clearSettingsCache();
+  // Online riders and open stores hear it at once
+  const [riders, stores] = await Promise.all([
+    prisma.riderProfile.findMany({ where: { isOnline: true }, select: { userId: true } }),
+    prisma.vendor.findMany({ where: { status: "APPROVED", isTemporarilyClosed: false }, select: { ownerId: true } }),
+  ]);
+  const message = input.on
+    ? { title: "Deliveries are paused", body: `For ${input.hours} hour${input.hours === 1 ? "" : "s"}${input.reason ? ` (${input.reason})` : ""}. Finish the deliveries you have; pickup orders still come in.` }
+    : { title: "Deliveries are back on", body: "Residents can order deliveries again." };
+  for (const id of [...riders.map((r) => r.userId), ...stores.map((s) => s.ownerId)]) await notify(id, { ...message, link: "/" });
+  res.json({ pausedUntil: until?.toISOString() ?? null, reason: input.on ? input.reason : null });
 });
 
 adminToolsRouter.put("/rain", async (req, res) => {

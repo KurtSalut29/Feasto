@@ -178,10 +178,18 @@ const settledBy = (column: Prisma.Sql, id?: string) => Prisma.sql`
 /** Every store's cash balance, or one store's: its commission on cash orders. */
 export async function storeBalances(db: Prisma.TransactionClient = prisma, vendorId?: string): Promise<Balance[]> {
   const [earned, settled] = await Promise.all([
+    // Cash orders: Feasto's commission (less Feasto's own discounts). Plus problems the store paid for:
+    // Feasto gave the resident back (a refund or credit), so the store owes it
     db.$queryRaw<Row[]>`
-      SELECT o."vendorId" AS id, sum(o.commission - o."feastoDiscount")::text AS owed, count(*) AS orders
-      FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
-      WHERE o.status IN ('DELIVERED', 'COMPLETED') AND c."paymentMethod" = 'COD' ${only(Prisma.sql`o."vendorId"`, vendorId)}
+      SELECT id, sum(owed)::text AS owed, sum(n)::bigint AS orders FROM (
+        SELECT o."vendorId" AS id, (o.commission - o."feastoDiscount") AS owed, 1 AS n
+        FROM "Order" o JOIN "Checkout" c ON c.id = o."checkoutId"
+        WHERE o.status IN ('DELIVERED', 'COMPLETED') AND c."paymentMethod" = 'COD' ${only(Prisma.sql`o."vendorId"`, vendorId)}
+        UNION ALL
+        SELECT o."vendorId", i.amount, 0
+        FROM "OrderIssue" i JOIN "Order" o ON o.id = i."orderId"
+        WHERE i.status = 'RESOLVED' AND i."paidBy" = 'STORE' AND i.amount > 0 ${only(Prisma.sql`o."vendorId"`, vendorId)}
+      ) x
       GROUP BY 1`,
     db.$queryRaw<Settled[]>(settledBy(Prisma.sql`"vendorId"`, vendorId)),
   ]);

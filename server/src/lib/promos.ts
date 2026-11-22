@@ -484,3 +484,9 @@ export const orderDiscountData = (g: GroupPricing | undefined) =>
 /** What the resident pays for one order */
 export const orderTotal = (o: { subtotal: unknown; deliveryFee: unknown; storeDiscount?: unknown; feastoDiscount?: unknown; tip?: unknown }) =>
   c(Number(o.subtotal) + Number(o.deliveryFee) - Number(o.storeDiscount ?? 0) - Number(o.feastoDiscount ?? 0));
+
+/** Big orders (Settings › PIN from) are handed over only with the customer's PIN; "leave at the gate" never needs one */
+export function needsPin(order: Parameters<typeof orderTotal>[0] & { fulfillment: string }, checkout: { leaveAtGate: boolean }, settings: { pinFromAmount: number }) {
+  if (order.fulfillment !== "DELIVERY" || checkout.leaveAtGate) return false;
+  return settings.pinFromAmount === 0 || orderTotal(order) >= settings.pinFromAmount;
+}

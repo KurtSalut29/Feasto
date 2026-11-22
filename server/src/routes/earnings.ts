@@ -136,6 +136,8 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
   const riderBonuses = Number(sum._sum.riderBonus ?? 0);
   // Feasto Plus months paid in the period
   const plusIncome = Number((await prisma.plusMembership.aggregate({ where: { status: "ACTIVE", createdAt: range }, _sum: { amount: true } }))._sum.amount ?? 0);
+  // Refunds and credits for problems with orders that Feasto chose to pay (the ride was the problem)
+  const issueCost = Number((await prisma.orderIssue.aggregate({ where: { status: "RESOLVED", paidBy: "FEASTO", decidedAt: range }, _sum: { amount: true } }))._sum.amount ?? 0);
   const pabiliShare = Number(pabili._sum.feastoCut ?? 0);
   // From riders: the Pabili share, plus any share of food delivery fees from before riders kept all of it
   const riderShare = Math.round((Number(sum._sum.riderCut ?? 0) + pabiliShare) * 100) / 100;
@@ -164,11 +166,12 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
       freeTrialDays: settings.freeTrialDays,
     },
     totals: {
-      earned: Math.round((commission + riderShare + plusIncome - promoCost - riderBonuses) * 100) / 100,
+      earned: Math.round((commission + riderShare + plusIncome - promoCost - riderBonuses - issueCost) * 100) / 100,
       plusIncome,
       commission,
       promoCost,
       riderBonuses,
+      issueCost,
       storeDiscounts,
       riderShare,
       pabiliShare,
@@ -177,7 +180,7 @@ adminEarningsRouter.get("/earnings", async (req, res) => {
       sales,
       deliveryFees,
       /** Feasto's share of all the money that went through it */
-      takeRate: sales + deliveryFees > 0 ? ((commission + riderShare + plusIncome - promoCost - riderBonuses) / (sales + deliveryFees)) * 100 : 0,
+      takeRate: sales + deliveryFees > 0 ? ((commission + riderShare + plusIncome - promoCost - riderBonuses - issueCost) / (sales + deliveryFees)) * 100 : 0,
     },
     daily: datesBetween(from, to).map((date) => ({ date, orders: Number(byDay.get(date)?.orders ?? 0), sales: Math.round((Number(byDay.get(date)?.earned ?? 0) + (pabiliOn.get(date) ?? 0)) * 100) / 100 })),
     stores: byStore

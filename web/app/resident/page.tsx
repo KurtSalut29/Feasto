@@ -15,6 +15,8 @@ import { browseHref, filterQuery, NO_FILTERS, readFilters, StoreSearch } from ".
 import { StaggerOnce } from "@/components/app/stagger-once";
 import { IdNotice } from "./id-notice";
 import { SaleBanner } from "./sale-banner";
+import { formatDateTime } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -46,6 +48,13 @@ async function ResidentHome({ searchParams }: Pick<PageProps<"/resident">, "sear
     <>
       <HomeHero firstName={user.firstName ?? user.name.split(" ")[0]} addresses={addresses} />
       <IdNotice user={user} />
+      {sections.paused && (
+        <div className="mt-4">
+          <Alert tone="pending" title={`Deliveries are paused until ${formatDateTime(sections.paused.until)}`}>
+            {sections.paused.reason ? `${sections.paused.reason}. ` : ""}To keep riders safe, you can order for pickup now, or schedule a delivery for after that.
+          </Alert>
+        </div>
+      )}
       <SaleBanner />
 
       {/* Big screens search from the top bar */}

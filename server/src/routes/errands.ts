@@ -320,6 +320,8 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
   const input = parseBody(errandSchema, req.body);
   await withinBudgetLimit(input.budget, input.payOnline);
   const userId = req.session!.userId;
+  const pause = await getSettings();
+  if (pause.deliveryPausedUntil) throw new HttpError(409, `Deliveries and Pabili are paused${pause.deliveryPauseReason ? ` (${pause.deliveryPauseReason})` : ""}, to keep riders safe. Try again after ${new Date(pause.deliveryPausedUntil).toLocaleString("en-PH", { hour: "numeric", minute: "2-digit", month: "short", day: "numeric", timeZone: "Asia/Manila" })}.`);
   await refuseIfSuspended(userId, "pabili");
   await refuseWithoutId(userId, "pabili");
   const open = await prisma.errand.count({ where: { residentId: userId, status: { in: ["REQUESTED", "ACCEPTED", "BOUGHT"] } } });

@@ -208,6 +208,7 @@ storesRouter.get("/sections", requireRole("RESIDENT"), async (req, res) => {
     openCount: stores.filter((s) => s.isOpen).length,
     savedCount: saved.size,
     hasStartingPoint: from !== null,
+    paused: await getSettings().then((s) => (s.deliveryPausedUntil ? { until: s.deliveryPausedUntil, reason: s.deliveryPauseReason } : null)),
   });
 });
 

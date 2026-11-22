@@ -170,6 +170,13 @@ async function ResidentCart() {
                 </p>
               </div>
             )}
+            {group.minOrder && group.minOrder.short > 0 && (
+              <div className="px-4 pb-3">
+                <Alert tone="pending">
+                  {group.store.name}&apos;s minimum for delivery is {formatPeso(group.minOrder.amount)}. Add {formatPeso(group.minOrder.short)} more, or choose pickup at checkout.
+                </Alert>
+              </div>
+            )}
             {group.tooFar && (
               <div className="px-4 pb-3">
                 <Alert tone="error">

@@ -343,6 +343,8 @@ model Vendor {
   deliveryRadiusKm        Decimal   @default(7) @db.Decimal(4, 1)
   /// How far ahead a big order must be placed (0 = it can be ordered now)
   largeOrderNoticeMinutes Int       @default(0)
+  /// The least food (before discounts) an order from this store can be (0 = no minimum)
+  minOrderAmount          Decimal   @default(0) @db.Decimal(10, 2)
   /// Where Feasto sends the store's money from online orders: an e-wallet or bank account
   payoutChannel       PayoutChannel?
   payoutName          String?
@@ -514,6 +516,13 @@ model PlatformSettings {
   referralPoints          Int     @default(250)
   /// Points in the resident's birthday week
   birthdayPoints          Int     @default(250)
+  /// Deliveries paused for the whole town (a storm, a flood) until this time; pickup still works
+  deliveryPausedUntil     DateTime?
+  deliveryPauseReason     String?
+  /// Orders of this much or more need the resident's PIN at the door (0 = every delivery)
+  pinFromAmount           Int     @default(1000)
+  /// How long after delivery a resident can report a problem with an order
+  issueHours              Int     @default(24)
   /// Daloy: a slow-road add-on from the riders' own speeds (nothing without enough data); all of it is the rider's
   daloyFeeOn              Boolean @default(true)
   daloyPerMinute          Decimal @default(2) @db.Decimal(6, 2)
@@ -565,6 +574,10 @@ model Checkout {
   resident        User          @relation(fields: [residentId], references: [id])
   fulfillment     Fulfillment
   paymentMethod   PaymentMethod
+  /// No spoon and fork, please (the store sees it)
+  noCutlery       Boolean       @default(false)
+  /// Leave it at the gate or door without waiting (paid online only; the rider still takes a photo)
+  leaveAtGate     Boolean       @default(false)
   /// Set for online payments; empty for cash and for orders from before wallets were offered
   onlineMethod    OnlinePayment?
   total           Decimal       @db.Decimal(10, 2)
@@ -714,6 +727,13 @@ model Order {
   /// From Feasto when the ride took much longer than estimated on a slow road (paid with the rider's payouts)
   riderBonus       Decimal     @default(0) @db.Decimal(10, 2)
   riderBonusNote   String?
+  /// Read out by the rider at the store, so the right rider gets the right bag
+  pickupCode       String?
+  /// The resident gives this to the rider at the door; needed for big orders (Settings › PIN from)
+  handoverPin      String?
+  /// Changed by the resident before the store accepted it
+  editedAt         DateTime?
+  issues           OrderIssue[]
   promoUses        PromoUse[]
   tripLegs         TripLeg[]
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
@@ -1536,6 +1556,8 @@ enum PointsReason {
   REFERRAL
   BIRTHDAY
   ADMIN
+  /// Credit for a problem with a cash order (lib/orderIssues.ts)
+  REFUND
 }
 
 /// Points given once for one thing. The key makes it once: "mission:<id>:WEEK:2026-11-16",
@@ -1602,4 +1624,54 @@ model PlusMembership {
   createdAt  DateTime   @default(now())
 
   @@index([userId, status, endsAt])
+}
+
+enum IssueKind {
+  MISSING_ITEM
+  WRONG_ITEM
+  DAMAGED
+  COLD_OR_LATE
+  OTHER
+}
+
+enum IssueStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+/// Who pays a refund or credit for a problem: the store (its kitchen or packing) or Feasto (the ride)
+enum IssuePayer {
+  STORE
+  FEASTO
+}
+
+/// "Something's wrong with my order", reported after delivery with a photo. The store answers first
+/// (refund or credit, or not); the admin can decide instead. Money: paid online, a refund to how they
+/// paid; cash, Suki points worth the same. Whoever pays: the store's share is added to what it owes.
+model OrderIssue {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  residentId  String
+  kind        IssueKind
+  /// Order item ids the problem is about (empty: the whole order)
+  itemIds     String[]     @default([])
+  note        String
+  photoUrl    String
+  status      IssueStatus  @default(OPEN)
+  /// What was given back, and by whom it's paid
+  amount      Decimal      @default(0) @db.Decimal(10, 2)
+  paidBy      IssuePayer?
+  /// "refund" (online) or "credit" (Suki points for a cash order)
+  given       String?
+  answer      String?
+  decidedById String?
+  decidedAt   DateTime?
+  /// The resident asked the admin to look after the store said no
+  escalatedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([orderId])
+  @@index([status, createdAt])
 }

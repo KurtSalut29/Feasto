@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, Clock, Route, Timer } from "lucide-react";
+import { ChefHat, Clock, Route, ShoppingBasket, Timer } from "lucide-react";
 import { useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { apiRequest, type FieldErrors } from "@/lib/browser-api";
 import { formatPeso } from "@/lib/format";
 
 type Timing = {
-  timing: { prepMinutes: number; prepPer5Items: number; deliveryRadiusKm: number; largeOrderNoticeMinutes: number };
+  timing: { prepMinutes: number; prepPer5Items: number; deliveryRadiusKm: number; largeOrderNoticeMinutes: number; minOrderAmount?: number | string };
   actual: { medianMinutes: number | null; orders: number; onTime: number; timed: number };
   largeOrder: { items: number; amount: number };
 };
@@ -38,6 +38,7 @@ function TimingForm({ data }: { data: Timing }) {
     prepPer5Items: String(data.timing.prepPer5Items),
     deliveryRadiusKm: String(data.timing.deliveryRadiusKm),
     largeOrderNoticeMinutes: String(data.timing.largeOrderNoticeMinutes),
+    minOrderAmount: String(Number(data.timing.minOrderAmount ?? 0)),
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
@@ -57,7 +58,7 @@ function TimingForm({ data }: { data: Timing }) {
     const number = (k: Key) => (values[k].trim() === "" ? null : Number(values[k]));
     const result = await apiRequest("/vendor/store/timing", {
       method: "PUT",
-      body: { prepMinutes: number("prepMinutes"), prepPer5Items: number("prepPer5Items"), deliveryRadiusKm: number("deliveryRadiusKm"), largeOrderNoticeMinutes: number("largeOrderNoticeMinutes") },
+      body: { prepMinutes: number("prepMinutes"), prepPer5Items: number("prepPer5Items"), deliveryRadiusKm: number("deliveryRadiusKm"), largeOrderNoticeMinutes: number("largeOrderNoticeMinutes"), minOrderAmount: number("minOrderAmount") ?? 0 },
     });
     setSaving(false);
     if (!result.ok) {
@@ -91,6 +92,14 @@ function TimingForm({ data }: { data: Timing }) {
             icon={ChefHat}
             hint={`0 for none, up to 2880. A big order is ${data.largeOrder.items}+ items or ${formatPeso(data.largeOrder.amount)}+. With notice, it must be scheduled at least this far ahead.`}
             {...field("largeOrderNoticeMinutes")}
+          />
+          <TextField
+            label="Minimum order for delivery (₱)"
+            min="0"
+            step="10"
+            icon={ShoppingBasket}
+            hint="0 for none, up to ₱5,000. Smaller orders can still be picked up."
+            {...field("minOrderAmount")}
           />
         </div>
         <div className="space-y-3">

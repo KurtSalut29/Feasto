@@ -79,6 +79,13 @@ export const DEFAULT_SETTINGS = {
   batchingOn: true,
   batchPickupMeters: 300,
   batchDropKm: 1.5,
+  /** Orders of this much or more need the resident's PIN at the door (0 = every delivery) */
+  pinFromAmount: 1000,
+  /** How long after delivery a resident can report a problem with an order */
+  issueHours: 24,
+  /** Deliveries paused for the whole town (a storm, a flood) until this time; set from Admin › Settings, not the form */
+  deliveryPausedUntil: null as string | null,
+  deliveryPauseReason: null as string | null,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -166,6 +173,8 @@ export const settingsSchema = z.object({
     .min(0.2, "Enter 0.2 to 10 km.")
     .max(10, "Enter 0.2 to 10 km.")
     .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 1.5."),
+  pinFromAmount: whole(0, 100000, "pesos"),
+  issueHours: whole(1, 168, "hours"),
 });
 
 /**
@@ -223,6 +232,10 @@ export function getSettings(): Promise<Settings> {
       batchingOn: row.batchingOn,
       batchPickupMeters: row.batchPickupMeters,
       batchDropKm: Number(row.batchDropKm),
+      pinFromAmount: row.pinFromAmount,
+      issueHours: row.issueHours,
+      deliveryPausedUntil: row.deliveryPausedUntil && row.deliveryPausedUntil > new Date() ? row.deliveryPausedUntil.toISOString() : null,
+      deliveryPauseReason: row.deliveryPausedUntil && row.deliveryPausedUntil > new Date() ? row.deliveryPauseReason : null,
     };
   });
 }
