@@ -37,6 +37,10 @@ x-server-env: &server-env
   # The automatic first check of uploaded IDs, licenses and permits (optional: without the key,
   # the admin checks every one by hand, as before). DOCUMENT_CHECK_MODEL picks the Claude model.
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  # PhilSys eVerify, once eGov approves Feasto (lib/philsys.ts); empty = off
+  PHILSYS_EVERIFY_URL: ${PHILSYS_EVERIFY_URL:-}
+  PHILSYS_CLIENT_ID: ${PHILSYS_CLIENT_ID:-}
+  PHILSYS_CLIENT_SECRET: ${PHILSYS_CLIENT_SECRET:-}
   DOCUMENT_CHECK_MODEL: ${DOCUMENT_CHECK_MODEL:-}
   # Cloudflare Turnstile on sign-up and login (optional: without the secret, it's off)
   TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}

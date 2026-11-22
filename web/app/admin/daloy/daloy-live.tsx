@@ -8,7 +8,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SwitchField } from "@/components/ui/switch-field";
 import { TABLE, TBODY, TD, TH, THEAD, TR } from "@/components/ui/table";
-import { timeAgo } from "@/lib/format";
+import { formatPeso, timeAgo } from "@/lib/format";
 
 type CellState = "normal" | "slow" | "very-slow" | "no-usual";
 type Area = { cell: string; area: string; kmh: number; seconds: number; usualKmh?: number | null; state?: CellState; ring: [number, number][]; center: { lat: number; lng: number } };
@@ -22,6 +22,8 @@ type Data = {
   rain: { on: boolean; by: "admin" | "riders" | null; reports: number };
   today: { rides: number; km: number; movingKmh: number | null; overallKmh: number | null; stoppedShare: number | null; estimated: number; overEstimate: number };
   progress: { realRides: number; demoRides: number; needed: number };
+  pace: { now: number; fallback: number; learned: boolean; hoursLearned: number; ridesThisHour: number; needed: number };
+  uses: { feeOn: boolean; feePerMinute: number; feeMax: number; bonusOn: boolean; feesToday: number; feeOrdersToday: number; bonusesToday: number; bonusOrdersToday: number };
   trips: Trip[];
 };
 
@@ -223,11 +225,33 @@ export function DaloyLive() {
 
       <section aria-labelledby="next-title" className={card}>
         <h2 id="next-title" className="font-semibold text-ink">
-          Before Daloy uses this
+          How Daloy is used
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          Real rides so far: <span className="font-semibold text-ink tabular-nums">{realRides}</span> of about {needed}. With enough of them, step 2 sets the ETAs from these speeds, then step 3 adds a slow-road fee
-          that goes in full to the rider. Until then fees use only orders waiting against free riders, and the rain.
+        <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl bg-canvas p-3">
+            <dt className="text-sm text-muted">ETA pace now</dt>
+            <dd className="text-xl font-bold text-ink tabular-nums">{data.pace.now.toFixed(1)} min/km</dd>
+            <dd className="text-xs text-muted">
+              {data.pace.learned
+                ? `Learned from ${data.pace.ridesThisHour} real rides at this hour.`
+                : `Feasto's ${data.pace.fallback} min/km until ${data.pace.needed} real rides at this hour (${data.pace.ridesThisHour} so far).`}
+            </dd>
+          </div>
+          <div className="rounded-2xl bg-canvas p-3">
+            <dt className="text-sm text-muted">Slow-road add-ons today</dt>
+            <dd className="text-xl font-bold text-ink tabular-nums">{formatPeso(data.uses.feesToday)}</dd>
+            <dd className="text-xs text-muted">
+              {data.uses.feeOn ? `${data.uses.feeOrdersToday} orders · ₱${data.uses.feePerMinute} a slow minute, at most ₱${data.uses.feeMax}. All to the riders.` : "Off in Admin › Settings."}
+            </dd>
+          </div>
+          <div className="rounded-2xl bg-canvas p-3">
+            <dt className="text-sm text-muted">Delay bonuses today</dt>
+            <dd className="text-xl font-bold text-ink tabular-nums">{formatPeso(data.uses.bonusesToday)}</dd>
+            <dd className="text-xs text-muted">{data.uses.bonusOn ? `${data.uses.bonusOrdersToday} rides. Paid by Feasto with the riders' payouts.` : "Off in Admin › Settings."}</dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-sm text-muted">
+          Real rides so far: <span className="font-semibold text-ink tabular-nums">{realRides}</span>. The add-on needs a recent ride and a usual for at least half the squares on the way, so with little data it adds nothing.
         </p>
         <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-canvas" role="progressbar" aria-label="Real rides logged" aria-valuemin={0} aria-valuemax={needed} aria-valuenow={Math.min(realRides, needed)}>
           <div className="h-full rounded-full bg-brand-600" style={{ width: `${Math.min(100, (realRides / needed) * 100)}%` }} />

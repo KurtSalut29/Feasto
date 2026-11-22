@@ -1,5 +1,8 @@
 import { Prisma, type Promo } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
+import { lockPoints, pointsBalance, pointsFor, tierOf } from "./loyalty.js";
+import { activePlus, lockPlus, plusUses } from "./plus.js";
+import { getSettings } from "./settings.js";
 
 /**
  * The promo engine: what comes off a checkout, worked out here on the server only and to the
@@ -16,11 +19,18 @@ import { prisma } from "./db.js";
  *
  * A voucher's uses and budget are counted from the orders that are still alive, so a cancelled,
  * declined or unpaid order gives the voucher back by itself.
+ *
+ * A Feasto Plus member's free delivery (lib/plus.ts) comes on by itself when no delivery voucher is
+ * used, up to the month's number, like a delivery voucher Feasto pays for.
+ *
+ * Last come Suki points (lib/loyalty.ts): spent on what's left of the food, at most half of it, paid
+ * by Feasto. They're the resident's own reward, so they go with a Senior/PWD discount too. Each order
+ * also gets the points it will earn once it arrives.
  */
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-export type DiscountKind = "DEAL" | "VOUCHER" | "DELIVERY" | "FIRST_ORDER" | "SENIOR";
+export type DiscountKind = "DEAL" | "VOUCHER" | "DELIVERY" | "FIRST_ORDER" | "SENIOR" | "POINTS" | "PLUS";
 export type DiscountLine = { kind: DiscountKind; label: string; amount: number; store: number; feasto: number; promoId?: string };
 
 export type PromoGroup = {
@@ -40,6 +50,24 @@ export type GroupPricing = {
   feastoDiscount: number;
   discount: number;
   senior: boolean;
+  /** Suki points spent on this order, and earned once it arrives */
+  pointsUsed: number;
+  pointsEarned: number;
+};
+
+export type PointsState = {
+  on: boolean;
+  balance: number;
+  pointValue: number;
+  minRedeem: number;
+  requested: boolean;
+  /** Points spent, and the pesos they take off */
+  used: number;
+  amount: number;
+  /** Points this checkout earns once it arrives */
+  earn: number;
+  tier: string;
+  message: string | null;
 };
 
 export type VoucherState = { code: string; title: string; applied: boolean; message: string | null; amount: number };
@@ -50,6 +78,8 @@ export type Pricing = {
   voucher: VoucherState | null;
   deliveryVoucher: VoucherState | null;
   senior: { eligible: boolean; kind: "SENIOR" | "PWD" | null; requested: boolean; applied: boolean; message: string | null };
+  points: PointsState;
+  plus: { member: boolean; applied: boolean; amount: number; left: number; message: string | null };
 };
 
 const c = (n: number) => Math.round(n * 100) / 100;
@@ -150,6 +180,8 @@ export type PriceInput = {
   voucherCode?: string | null;
   deliveryCode?: string | null;
   senior?: boolean;
+  /** Spend Suki points too */
+  usePoints?: boolean;
   at?: Date;
   deviceHash?: string | null;
   /** In the checkout's transaction: hold each voucher while its uses are counted */
@@ -202,6 +234,8 @@ export async function pricePromos(db: Db, input: PriceInput): Promise<Pricing> {
 
   // 2. The vouchers
   const user = await db.user.findUniqueOrThrow({ where: { id: input.userId }, select: { idType: true, idStatus: true } });
+  const plusMonth = await activePlus(db, input.userId, at);
+  const settings = await getSettings();
   const vouchers: { state: VoucherState; promo: WithCampaign | null; amounts: number[] }[] = [];
   for (const [slot, code] of [["items", input.voucherCode], ["delivery", input.deliveryCode]] as const) {
     if (!code?.trim()) continue;
@@ -240,6 +274,10 @@ export async function pricePromos(db: Db, input: PriceInput): Promise<Pricing> {
     const spend = withDeals.reduce((n, w, i) => n + (applies[i] ? w.base : 0), 0);
     if (spend + 0.001 < num(promo.minSpend)) {
       fail(`Add ${peso(c(num(promo.minSpend) - spend))} more${promo.vendorId ? ` from ${promo.vendor?.name}` : ""} to use this voucher (minimum ${peso(num(promo.minSpend))}).`);
+      continue;
+    }
+    if (promo.audience === "PLUS" && !plusMonth) {
+      fail("This voucher is for Feasto Plus members.");
       continue;
     }
     if (promo.audience === "FIRST_ORDER") {
@@ -317,7 +355,72 @@ export async function pricePromos(db: Db, input: PriceInput): Promise<Pricing> {
     }
   }
 
+  // 4. Feasto Plus: a free delivery, when no delivery voucher is used
+  const foodOff = (g: GroupPricing) => g.lines.filter((l) => l.kind !== "DELIVERY" && l.kind !== "PLUS").reduce((n, l) => n + l.amount, 0);
+  const plus: Pricing["plus"] = { member: Boolean(plusMonth), applied: false, amount: 0, left: 0, message: null };
+  if (plusMonth && delivery) {
+    if (input.lock) await lockPlus(db, input.userId);
+    plus.left = Math.max(0, settings.plusFreeDeliveries - (await plusUses(db, input.userId, plusMonth)));
+    const food = chosen.reduce((n, g, i) => n + Math.max(0, input.groups[i]!.subtotal - foodOff(g)), 0);
+    const fees = input.groups.map((g) => g.deliveryFee);
+    if (chosen.some((g) => g.lines.some((l) => l.kind === "DELIVERY"))) plus.message = "Your delivery voucher is used, so this doesn't count as a Plus free delivery.";
+    else if (plus.left <= 0) plus.message = `You've used ${settings.plusFreeDeliveries === 1 ? "your Plus free delivery" : `all ${settings.plusFreeDeliveries} Plus free deliveries`} this month.`;
+    else if (food + 0.001 < settings.plusMinSpend) plus.message = `Add ${peso(c(settings.plusMinSpend - food))} more food for a Plus free delivery (from ${peso(settings.plusMinSpend)}).`;
+    else if (fees.reduce((a, b) => a + b, 0) > 0) {
+      const amount = c(Math.min(fees.reduce((a, b) => a + b, 0), settings.plusDeliveryMax));
+      const parts = split(amount, fees);
+      chosen = chosen.map((g, i) =>
+        parts[i] ? { ...total({ storeId: g.storeId, itemDiscounts: g.itemDiscounts, lines: [...g.lines, { kind: "PLUS", label: "Feasto Plus free delivery", amount: parts[i]!, store: 0, feasto: parts[i]! }], senior: g.senior }) } : g,
+      );
+      Object.assign(plus, { applied: true, amount, left: plus.left - 1 });
+    }
+  }
+
+  // 5. Suki points: spent on what's left of the food (at most half), then what each order earns
+  const tier = settings.loyaltyOn ? await tierOf(db, input.userId, at) : { name: "Bronze", multiplier: 1 };
+  const points: PointsState = { on: settings.loyaltyOn, balance: 0, pointValue: settings.pointValue, minRedeem: settings.pointsMinRedeem, requested: Boolean(input.usePoints), used: 0, amount: 0, earn: 0, tier: tier.name, message: null };
+  let foodLeft = chosen.map((g, i) => Math.max(0, c(input.groups[i]!.subtotal - foodOff(g))));
+  if (settings.loyaltyOn) {
+    if (input.lock && input.usePoints) await lockPoints(db, input.userId);
+    points.balance = (await pointsBalance(db, input.userId)).balance;
+    if (input.usePoints) {
+      const cap = c(foodLeft.reduce((a, b) => a + b, 0) / 2);
+      const usable = Math.min(points.balance, Math.floor(cap / settings.pointValue + 1e-9));
+      if (user.idStatus !== "VERIFIED") points.message = "Using points needs a verified ID on your account.";
+      else if (points.balance < settings.pointsMinRedeem) points.message = `You need at least ${settings.pointsMinRedeem} points. You have ${points.balance}.`;
+      else if (usable < settings.pointsMinRedeem) points.message = `Points can take off up to half the food. Add a little more to use ${settings.pointsMinRedeem} points.`;
+      else {
+        const pesos = c(usable * settings.pointValue);
+        const pesoParts = split(pesos, foodLeft);
+        // Whole points per order, the last order with food left taking what's left (so every point
+        // spent is on an order that shows it)
+        const food = foodLeft.reduce((a, b) => a + b, 0);
+        const last = foodLeft.reduce((at, w, i) => (w > 0 ? i : at), -1);
+        let leftPoints = usable;
+        const pointParts = foodLeft.map((w, i) => {
+          if (w <= 0) return 0;
+          if (i === last) return leftPoints;
+          const part = Math.floor((usable * w) / food);
+          leftPoints -= part;
+          return part;
+        });
+        chosen = chosen.map((g, i) => {
+          if (!pesoParts[i] && !pointParts[i]) return g;
+          const line: DiscountLine = { kind: "POINTS", label: `Suki points (${pointParts[i]})`, amount: pesoParts[i]!, store: 0, feasto: pesoParts[i]! };
+          return { ...total({ storeId: g.storeId, itemDiscounts: g.itemDiscounts, lines: [...g.lines, line], senior: g.senior }), pointsUsed: pointParts[i]! };
+        });
+        points.used = usable;
+        points.amount = pesos;
+        foodLeft = chosen.map((g, i) => Math.max(0, c(input.groups[i]!.subtotal - foodOff(g))));
+      }
+    }
+    chosen = chosen.map((g, i) => ({ ...g, pointsEarned: pointsFor(foodLeft[i]!, tier.multiplier, settings) }));
+    points.earn = chosen.reduce((n, g) => n + g.pointsEarned, 0);
+  }
+
   return {
+    points,
+    plus,
     groups: chosen,
     discount: c(chosen.reduce((n, g) => n + g.discount, 0)),
     voucher: vouchers.find((v) => v.state.code === input.voucherCode?.trim().toUpperCase())?.state ?? null,
@@ -329,7 +432,7 @@ export async function pricePromos(db: Db, input: PriceInput): Promise<Pricing> {
 function total(g: { storeId: string; itemDiscounts: Record<string, number>; lines: DiscountLine[]; senior: boolean }): GroupPricing {
   const store = c(g.lines.reduce((n, l) => n + l.store, 0));
   const feasto = c(g.lines.reduce((n, l) => n + l.feasto, 0));
-  return { ...g, storeDiscount: store, feastoDiscount: feasto, discount: c(store + feasto) };
+  return { ...g, storeDiscount: store, feastoDiscount: feasto, discount: c(store + feasto), pointsUsed: 0, pointsEarned: 0 };
 }
 
 /** The vouchers a resident can see in "My vouchers" and at checkout, with whether each works for them now */
@@ -340,6 +443,7 @@ export async function vouchersFor(userId: string, at = new Date()) {
     orderBy: [{ startsAt: "asc" }],
     take: 60,
   });
+  const member = Boolean(await activePlus(prisma, userId, at));
   const out = [];
   for (const p of promos) {
     if (p.campaign && p.campaign.endsAt <= at) continue;
@@ -363,7 +467,8 @@ export async function vouchersFor(userId: string, at = new Date()) {
       firstOrder: p.audience === "FIRST_ORDER",
       usesLeft: Math.max(0, p.perUserLimit - mine),
       /** Why it can't be used now, or null */
-      problem: usedUp ? "Used" : gone ? "Used up" : (first ?? (timing && !timing.startsWith("This voucher starts") ? timing : null)),
+      plusOnly: p.audience === "PLUS",
+      problem: usedUp ? "Used" : gone ? "Used up" : p.audience === "PLUS" && !member ? "For Feasto Plus members" : (first ?? (timing && !timing.startsWith("This voucher starts") ? timing : null)),
       upcoming: Boolean(timing?.startsWith("This voucher starts")),
     });
   }
@@ -373,8 +478,8 @@ export async function vouchersFor(userId: string, at = new Date()) {
 /** The lines and amounts kept on an order and its items, from one group's pricing */
 export const orderDiscountData = (g: GroupPricing | undefined) =>
   g
-    ? { storeDiscount: g.storeDiscount, feastoDiscount: g.feastoDiscount, discounts: g.lines as unknown as Prisma.InputJsonValue, seniorDiscount: g.senior }
-    : { storeDiscount: 0, feastoDiscount: 0, discounts: [] as unknown as Prisma.InputJsonValue, seniorDiscount: false };
+    ? { storeDiscount: g.storeDiscount, feastoDiscount: g.feastoDiscount, discounts: g.lines as unknown as Prisma.InputJsonValue, seniorDiscount: g.senior, pointsUsed: g.pointsUsed, pointsEarned: g.pointsEarned }
+    : { storeDiscount: 0, feastoDiscount: 0, discounts: [] as unknown as Prisma.InputJsonValue, seniorDiscount: false, pointsUsed: 0, pointsEarned: 0 };
 
 /** What the resident pays for one order */
 export const orderTotal = (o: { subtotal: unknown; deliveryFee: unknown; storeDiscount?: unknown; feastoDiscount?: unknown; tip?: unknown }) =>

@@ -84,7 +84,7 @@ function PhotoBox({ label, photo, onPhoto, disabled }: { label: string; photo: s
  * and the receipt's total (never more than the budget; the customer can raise it); at the door,
  * the ID check when alcohol or cigarettes were bought, then the delivery photo.
  */
-export function ErrandSteps({ id, status, budget, fee, feeMax, adultBought }: { id: string; status: "ACCEPTED" | "BOUGHT"; budget: number; fee: number; feeMax: number; adultBought: boolean }) {
+export function ErrandSteps({ id, status, budget, fee, feeMax, adultBought, prepaid = false }: { id: string; status: "ACCEPTED" | "BOUGHT"; budget: number; fee: number; feeMax: number; adultBought: boolean; prepaid?: boolean }) {
   const router = useRouter();
   const [receipt, setReceipt] = useState<string | null>(null);
   const [goods, setGoods] = useState<string | null>(null);
@@ -104,9 +104,11 @@ export function ErrandSteps({ id, status, budget, fee, feeMax, adultBought }: { 
     if (!result.ok) return setError(result.fieldErrors?.receiptTotal?.[0] ?? result.fieldErrors?.receiptPhotoUrl?.[0] ?? result.fieldErrors?.itemsPhotoUrl?.[0] ?? result.error);
     toast.success(
       "Receipt sent",
-      result.data.fromGps
-        ? `Your fee from here to the customer is ${formatPeso(result.data.fee)}. Bring it over and collect ${formatPeso(result.data.collect)}.`
-        : `Your location wasn't shared, so the lowest fee applies (${formatPeso(result.data.fee)}). Collect ${formatPeso(result.data.collect)}.`,
+      prepaid
+        ? `Your fee is ${formatPeso(result.data.fee)}. It's paid online: collect nothing, Feasto pays you back after you deliver.`
+        : result.data.fromGps
+          ? `Your fee from here to the customer is ${formatPeso(result.data.fee)}. Bring it over and collect ${formatPeso(result.data.collect)}.`
+          : `Your location wasn't shared, so the lowest fee applies (${formatPeso(result.data.fee)}). Collect ${formatPeso(result.data.collect)}.`,
     );
     router.refresh();
   }
@@ -114,10 +116,15 @@ export function ErrandSteps({ id, status, budget, fee, feeMax, adultBought }: { 
   async function delivered(photoUrl: string) {
     if (adultBought && !idChecked) return void toast.error("Check their ID first", "Alcohol and cigarettes are only for 18 and older.");
     setBusy(true);
-    const result = await apiRequest<{ earned: number; collect: number }>(`/rider/errands/${id}/delivered`, { method: "POST", body: { photoUrl, idChecked: adultBought ? idChecked : undefined } });
+    const result = await apiRequest<{ earned: number; collect: number; paidBack: string | null }>(`/rider/errands/${id}/delivered`, { method: "POST", body: { photoUrl, idChecked: adultBought ? idChecked : undefined } });
     setBusy(false);
     if (!result.ok) return void toast.error("Couldn't finish the Pabili", result.error);
-    celebrate({ title: "Pabili delivered!", message: `You collected ${formatPeso(result.data.collect)}. ${formatPeso(result.data.earned)} of it is your fee.` });
+    celebrate({
+      title: "Pabili delivered!",
+      message: result.data.paidBack
+        ? `Feasto is sending you ${formatPeso(result.data.paidBack)}: what you spent plus your ${formatPeso(result.data.earned)} fee.`
+        : `You collected ${formatPeso(result.data.collect)}. ${formatPeso(result.data.earned)} of it is your fee.`,
+    });
     router.refresh();
   }
 
@@ -172,7 +179,7 @@ export function ErrandSteps({ id, status, budget, fee, feeMax, adultBought }: { 
         onChange={(e) => setTotal(e.target.value)}
         placeholder="0.00"
         error={over ? `That's over the ${formatPeso(budget)} budget. Call the customer: they can raise it in the app.` : undefined}
-        hint={amount ? `You collect the receipt plus your fee, at most ${formatPeso(amount + feeMax)} in cash.` : undefined}
+        hint={amount ? (prepaid ? "Paid online: Feasto pays you back the receipt plus your fee after you deliver." : `You collect the receipt plus your fee, at most ${formatPeso(amount + feeMax)} in cash.`) : undefined}
       />
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <Button className="mt-3 w-full" loading={busy} disabled={!receipt || !goods || !amount || over} onClick={bought}>

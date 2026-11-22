@@ -192,6 +192,12 @@ export function PromoForm({
             checked={f.audience === "FIRST_ORDER"}
             onChange={(v) => setF((x) => ({ ...x, audience: v ? "FIRST_ORDER" : "EVERYONE", perUserLimit: v ? "1" : x.perUserLimit }))}
           />
+          <SwitchField
+            label="Feasto Plus members only"
+            description="Only residents with Feasto Plus this month can use it. Others see it with a note to join."
+            checked={f.audience === "PLUS"}
+            onChange={(v) => setF((x) => ({ ...x, audience: v ? "PLUS" : "EVERYONE" }))}
+          />
         </>
       )}
 

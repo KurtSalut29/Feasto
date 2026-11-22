@@ -247,7 +247,7 @@ export function MarshallingPanel() {
             })}
             {filtered.length > shown && (
               <li className="px-5 py-3">
-                <button type="button" onClick={() => setShown(shown + PAGE)} className="text-sm font-semibold text-brand-700 hover:underline">
+                <button type="button" onClick={() => setShown(shown + PAGE)} className="tap text-sm font-semibold text-brand-700 hover:underline">
                   Show {Math.min(PAGE, filtered.length - shown)} more
                 </button>
               </li>

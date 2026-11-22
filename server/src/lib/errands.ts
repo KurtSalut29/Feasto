@@ -1,3 +1,4 @@
+import { refundPabili } from "./pabiliPay.js";
 import { prisma } from "./db.js";
 import { availableRider, nearestRiders, PREFERRED_RIDER_SECONDS, riderDistances } from "./dispatch.js";
 import { HttpError } from "./http.js";
@@ -122,19 +123,30 @@ export async function runErrandTimers(log: Log) {
     log(`pabili ${errand.id.slice(-6)}: opened to ${reached} rider(s) nearby`);
   }
 
-  const expired = await prisma.$queryRaw<{ id: string; residentId: string; shopName: string }[]>`
+  // The wait starts when it's sent, or for one paid online first, when it's paid
+  const expired = await prisma.$queryRaw<{ id: string; residentId: string; shopName: string; prepaid: boolean }[]>`
     UPDATE "Errand" SET status = 'CANCELLED', "cancelReason" = 'No rider took it in time', "finishedAt" = NOW()
-    WHERE status = 'REQUESTED' AND "createdAt" < NOW() - make_interval(mins => ${ERRAND_WAIT_MINUTES})
-    RETURNING id, "residentId", "shopName"`;
+    WHERE status = 'REQUESTED' AND (NOT prepaid OR "paymentStatus" = 'PAID')
+      AND COALESCE("paidAt", "createdAt") < NOW() - make_interval(mins => ${ERRAND_WAIT_MINUTES})
+    RETURNING id, "residentId", "shopName", prepaid`;
   for (const errand of expired) {
     await notify(errand.residentId, {
       title: "No rider took your Pabili",
-      body: `Nobody was free to buy at ${errand.shopName} in ${ERRAND_WAIT_MINUTES} minutes, so it was cancelled. You paid nothing; try again in a while.`,
+      body: `Nobody was free to buy at ${errand.shopName} in ${ERRAND_WAIT_MINUTES} minutes, so it was cancelled. ${errand.prepaid ? "All you paid is coming back." : "You paid nothing;"} Try again in a while.`,
       link: `/resident/pabili/${errand.id}`,
     });
+    if (errand.prepaid) await refundPabili(errand.id, Number.MAX_SAFE_INTEGER, "No rider took your Pabili.", log);
     await broadcastErrand({ ...errand, status: "CANCELLED" });
     log(`pabili ${errand.id.slice(-6)}: cancelled, no rider in ${ERRAND_WAIT_MINUTES} min`);
   }
 }
 
 export { PREFERRED_RIDER_SECONDS };
+
+/** A Pabili paid online first that was never paid (Xendit unreachable for its whole page time) */
+export async function closeUnpaidPabili() {
+  await prisma.errand.updateMany({
+    where: { status: "REQUESTED", prepaid: true, paymentStatus: "PENDING", createdAt: { lt: new Date(Date.now() - 30 * 60_000) } },
+    data: { status: "CANCELLED", paymentStatus: "FAILED", cancelReason: "Not paid in time", finishedAt: new Date() },
+  });
+}

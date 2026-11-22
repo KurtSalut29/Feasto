@@ -116,7 +116,7 @@ const adminVoucher = z.object({
   ...promoFields,
   code,
   vendorId: z.string().min(1).nullish().transform((v) => v ?? null),
-  audience: z.enum(["EVERYONE", "FIRST_ORDER"]).optional().default("EVERYONE"),
+  audience: z.enum(["EVERYONE", "FIRST_ORDER", "PLUS"]).optional().default("EVERYONE"),
   budget: z.number().positive("Enter more than ₱0.").max(10_000_000).nullish().transform((v) => v ?? null),
 });
 

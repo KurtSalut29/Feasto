@@ -15,6 +15,7 @@ import { serverApi } from "@/lib/server-api";
 import type { JobsPage, RiderDelivery } from "@/lib/types";
 import type { Verification } from "@/lib/verification-fields";
 import { JobsPreview } from "./jobs-preview";
+import { TripAlong } from "./trip-along";
 import { PabiliRequests } from "./pabili-requests";
 import { RainReport } from "./rain-report";
 import { RiderHero, type Totals } from "./rider-hero";
@@ -76,6 +77,7 @@ async function RiderHome() {
       <ExpiryNotice date={profile?.licenseExpiresAt} documentName="driver's license" href="/rider/license" blocked="You can't go online until your renewed license is approved. Tap to send it." />
 
       {active && <CurrentDelivery order={active} />}
+      {active && active.status !== "PICKED_UP" && !profile?.vendor && <TripAlong />}
       {errand && <CurrentPabili errand={errand} />}
 
       {/* Free riders can also run a Pabili: buying at a shop that isn't on Feasto */}

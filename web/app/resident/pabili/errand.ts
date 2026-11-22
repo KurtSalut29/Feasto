@@ -23,6 +23,12 @@ export type Errand = {
   feeMax: string | null;
   receiptTotal: string | null;
   receiptPhotoUrl: string | null;
+  /** Paid online first: what was paid and what came back */
+  prepaid?: boolean;
+  paymentStatus?: "PENDING" | "PAID" | "FAILED" | "REFUNDED" | null;
+  paymentUrl?: string | null;
+  paidAmount?: string | null;
+  refundedAmount?: string;
   deliveryPhotoUrl: string | null;
   cancelReason: string | null;
   exclusiveUntil: string | null;

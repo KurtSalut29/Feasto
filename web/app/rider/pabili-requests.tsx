@@ -25,6 +25,8 @@ type Request = {
   exclusiveUntil: string | null;
   distanceKm: number | null;
   needsPrescription: boolean;
+  /** Paid online first: Feasto pays the rider back after delivery */
+  prepaid?: boolean;
   adultCheck: boolean;
   handling: string[];
 };
@@ -89,6 +91,7 @@ export function PabiliRequests({ busy }: { busy: boolean }) {
               </span>
             </div>
             <p className="mt-2 text-sm text-ink">
+              {r.prepaid && <span className="mr-1.5 inline-block rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-bold text-emerald-800">Paid online</span>}
               {r.itemCount} {r.itemCount === 1 ? "thing" : "things"} to buy, up to <span className="font-semibold">{formatPeso(r.budget)}</span>
             </p>
             {careOf(r).length > 0 && (

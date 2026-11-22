@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgePercent, Banknote, Bike, DoorOpen, PackageCheck, UserX, CalendarHeart, Clock, CloudRain, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, TimerOff, TrafficCone, UserPlus, Wallet } from "lucide-react";
+import { BadgePercent, Banknote, Bike, Coins, DoorOpen, PackageCheck, UserX, CalendarHeart, Clock, CloudRain, Hourglass, Percent, Route, ShieldCheck, ShoppingBag, Store, TimerOff, TrafficCone, UserPlus, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -53,8 +53,31 @@ export type PlatformSettings = {
   require2faRiders: boolean;
   /** The admin logs in with a code and a passkey */
   require3faAdmin: boolean;
+  /** Suki points */
+  loyaltyOn: boolean;
+  pointsEarnPer: number;
+  pointValue: number;
+  pointsMinRedeem: number;
+  referralPoints: number;
+  birthdayPoints: number;
+  daloyFeeOn: boolean;
+  delayBonusOn: boolean;
+  plusOn: boolean;
+  batchingOn: boolean;
+  daloyPerMinute: number;
+  daloyFeeMax: number;
+  delayBonusPerMinute: number;
+  delayBonusMax: number;
+  plusPrice: number;
+  plusFreeDeliveries: number;
+  plusDeliveryMax: number;
+  plusMinSpend: number;
+  pabiliPrepaidMax: number;
+  batchPickupMeters: number;
+  batchDropKm: number;
 };
-type Key = Exclude<keyof PlatformSettings, "require2fa" | "require2faRiders" | "require3faAdmin">;
+type Switches = "require2fa" | "require2faRiders" | "require3faAdmin" | "loyaltyOn" | "daloyFeeOn" | "delayBonusOn" | "plusOn" | "batchingOn";
+type Key = Exclude<keyof PlatformSettings, Switches>;
 
 const whenInWords = (seconds: number) => (seconds < 60 ? `${seconds} s` : seconds % 60 === 0 ? `${seconds / 60} min` : `${Math.floor(seconds / 60)} min ${seconds % 60} s`);
 
@@ -164,7 +187,29 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
     codMaxAmount: String(initial.codMaxAmount),
     noShowStrikes: String(initial.noShowStrikes),
     doorWaitMinutes: String(initial.doorWaitMinutes),
+    pointsEarnPer: String(initial.pointsEarnPer),
+    pointValue: String(initial.pointValue),
+    pointsMinRedeem: String(initial.pointsMinRedeem),
+    referralPoints: String(initial.referralPoints),
+    birthdayPoints: String(initial.birthdayPoints),
+    daloyPerMinute: String(initial.daloyPerMinute),
+    daloyFeeMax: String(initial.daloyFeeMax),
+    delayBonusPerMinute: String(initial.delayBonusPerMinute),
+    delayBonusMax: String(initial.delayBonusMax),
+    plusPrice: String(initial.plusPrice),
+    plusFreeDeliveries: String(initial.plusFreeDeliveries),
+    plusDeliveryMax: String(initial.plusDeliveryMax),
+    plusMinSpend: String(initial.plusMinSpend),
+    pabiliPrepaidMax: String(initial.pabiliPrepaidMax),
+    batchPickupMeters: String(initial.batchPickupMeters),
+    batchDropKm: String(initial.batchDropKm),
   });
+  const [loyaltyOn, setLoyaltyOn] = useState(initial.loyaltyOn);
+  const [switches, setSwitches] = useState({ daloyFeeOn: initial.daloyFeeOn, delayBonusOn: initial.delayBonusOn, plusOn: initial.plusOn, batchingOn: initial.batchingOn });
+  const flip = (key: keyof typeof switches) => (v: boolean) => {
+    setSaved(false);
+    setSwitches((current) => ({ ...current, [key]: v }));
+  };
   const [require2fa, setRequire2fa] = useState(initial.require2fa);
   const [require2faRiders, setRequire2faRiders] = useState(initial.require2faRiders);
   const [require3faAdmin, setRequire3faAdmin] = useState(initial.require3faAdmin);
@@ -219,6 +264,24 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
         require2fa,
         require2faRiders,
         require3faAdmin,
+        loyaltyOn,
+        pointsEarnPer: number("pointsEarnPer"),
+        pointValue: number("pointValue"),
+        pointsMinRedeem: number("pointsMinRedeem"),
+        referralPoints: number("referralPoints"),
+        birthdayPoints: number("birthdayPoints"),
+        ...switches,
+        daloyPerMinute: number("daloyPerMinute"),
+        daloyFeeMax: number("daloyFeeMax"),
+        delayBonusPerMinute: number("delayBonusPerMinute"),
+        delayBonusMax: number("delayBonusMax"),
+        plusPrice: number("plusPrice"),
+        plusFreeDeliveries: number("plusFreeDeliveries"),
+        plusDeliveryMax: number("plusDeliveryMax"),
+        plusMinSpend: number("plusMinSpend"),
+        pabiliPrepaidMax: number("pabiliPrepaidMax"),
+        batchPickupMeters: number("batchPickupMeters"),
+        batchDropKm: number("batchDropKm"),
       },
     });
     setSaving(false);
@@ -394,6 +457,99 @@ export function SettingsForm({ initial }: { initial: PlatformSettings }) {
           <p className="text-sm text-muted">
             A Pabili already sent keeps its budget. A resident can still raise theirs up to this limit until the rider has bought everything.
           </p>
+          <TextField
+            label="Most budget when paid online first (₱)"
+            min="100"
+            step="100"
+            icon={Wallet}
+            hint="₱100 to ₱50,000. Above the cash limit the resident pays online before a rider is asked; Feasto pays the rider back and refunds what's left."
+            {...field("pabiliPrepaidMax")}
+          />
+        </div>
+      </Card>
+
+      <Card
+        title="Suki points"
+        Icon={Coins}
+        description="Points on delivered orders, spent at checkout. Feasto pays for them, so stores still get their full price. Missions are in Admin › Promos."
+      >
+        <div className="space-y-4 p-5">
+          <SwitchField
+            label="Suki points are on"
+            description="Off: nobody earns or spends points, and the Suki page says so. Points already earned are kept."
+            checked={loyaltyOn}
+            onChange={(v) => {
+              setSaved(false);
+              setLoyaltyOn(v);
+            }}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="One point for every (₱ of food)" min="1" step="1" icon={Coins} hint="₱1 to ₱1,000. Silver earns 1.25×, Gold 1.5×." {...field("pointsEarnPer")} />
+            <TextField label="One point takes off (₱)" min="0.01" step="0.01" icon={Coins} hint={`₱0.01 to ₱5. Now ${Number(values.pointsMinRedeem) || 0} points = ₱${(((Number(values.pointsMinRedeem) || 0) * (Number(values.pointValue) || 0)) || 0).toFixed(2)}.`} {...field("pointValue")} inputMode="decimal" />
+            <TextField label="Fewest points used at once" min="1" step="1" icon={Coins} hint="Points take off at most half the food." {...field("pointsMinRedeem")} />
+            <TextField label="Points for inviting a friend" min="0" step="10" icon={UserPlus} hint="Both get them once the friend's first order arrives. 0 = off." {...field("referralPoints")} />
+            <TextField label="Birthday points" min="0" step="10" icon={Coins} hint="In the resident's birthday week, with a verified ID. 0 = off." {...field("birthdayPoints")} />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="Daloy: slow roads"
+        Icon={TrafficCone}
+        description="From the riders' own speeds (Admin › Daloy). Nothing is added until there's enough data for that road and hour, and all of it goes to the rider."
+      >
+        <div className="space-y-4 p-5">
+          <SwitchField
+            label="Add a slow-road fee"
+            description="When riders on the way are much slower now than usual at this hour, the delivery fee shows why and goes up, within the limit. It can't go up for 10 minutes while the resident looks."
+            checked={switches.daloyFeeOn}
+            onChange={flip("daloyFeeOn")}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Per slow minute (₱)" min="0" step="0.5" icon={TrafficCone} hint="₱0 to ₱20 for each minute slower than usual." {...field("daloyPerMinute")} inputMode="decimal" />
+            <TextField label="Most it adds (₱)" min="0" step="1" icon={TrafficCone} hint="₱0 to ₱200." {...field("daloyFeeMax")} inputMode="decimal" />
+          </div>
+          <SwitchField
+            label="Delay bonus for riders"
+            description="When a real ride (not the demo) took much longer than Feasto estimated and the GPS shows a slow road, Feasto adds a bonus to the rider's payout. Paid by Feasto, never the resident."
+            checked={switches.delayBonusOn}
+            onChange={flip("delayBonusOn")}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Bonus per late minute (₱)" min="0" step="0.5" icon={Bike} hint="₱0 to ₱20." {...field("delayBonusPerMinute")} inputMode="decimal" />
+            <TextField label="Most bonus per ride (₱)" min="0" step="1" icon={Bike} hint="₱0 to ₱200." {...field("delayBonusMax")} inputMode="decimal" />
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        title="Feasto Plus"
+        Icon={BadgePercent}
+        description="A monthly membership, paid online: free deliveries and members-only vouchers. Feasto pays the free deliveries, so riders still get their full fee."
+      >
+        <div className="space-y-4 p-5">
+          <SwitchField label="Residents can join Feasto Plus" description="Off: nobody new can join. Members keep their month." checked={switches.plusOn} onChange={flip("plusOn")} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Price a month (₱)" min="1" step="1" icon={Wallet} hint="₱1 to ₱2,000." {...field("plusPrice")} inputMode="decimal" />
+            <TextField label="Free deliveries a month" min="0" step="1" icon={Bike} hint="0 to 100." {...field("plusFreeDeliveries")} />
+            <TextField label="Each free delivery up to (₱)" min="0" step="5" icon={Bike} hint="Above this, the resident pays the rest." {...field("plusDeliveryMax")} inputMode="decimal" />
+            <TextField label="On food of at least (₱)" min="0" step="10" icon={ShoppingBag} hint="After discounts." {...field("plusMinSpend")} inputMode="decimal" />
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Two orders per rider" Icon={Route} description="A rider on a delivery can take a second order when both stores and both doors are close, so two residents get theirs from one trip.">
+        <div className="space-y-4 p-5">
+          <SwitchField
+            label="Let riders take a second order"
+            description="Only before the first is picked up, and only when the second store is near the first and the doors are near each other."
+            checked={switches.batchingOn}
+            onChange={flip("batchingOn")}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Stores within (m)" min="50" step="50" icon={Store} hint="50 to 3,000 m apart." {...field("batchPickupMeters")} />
+            <TextField label="Doors within (km)" min="0.2" step="0.1" icon={Route} hint="0.2 to 10 km apart." {...field("batchDropKm")} inputMode="decimal" />
+          </div>
         </div>
       </Card>
 

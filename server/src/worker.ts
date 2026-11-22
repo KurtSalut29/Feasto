@@ -16,7 +16,10 @@ import { refundInvoice, XenditError } from "./lib/xendit.js";
 import { relayOutbox } from "./lib/outbox.js";
 import { startHeartbeat, WORKER_JOBS_KEY } from "./lib/heartbeat.js";
 import { runMonitors } from "./lib/monitor.js";
-import { runErrandTimers } from "./lib/errands.js";
+import { checkWaitingPlus } from "./lib/plus.js";
+import { checkWaitingPabili } from "./lib/pabiliPay.js";
+import { startPaceRefresh } from "./lib/daloy.js";
+import { closeUnpaidPabili, runErrandTimers } from "./lib/errands.js";
 import { autoCancelStaleOrders } from "./lib/autoCancel.js";
 import { clockWords, sendDueScheduledOrders } from "./lib/schedule.js";
 import { connectQueue, publish, QUEUES, type QueueName } from "./lib/rabbitmq.js";
@@ -307,6 +310,9 @@ const paymentsTimer = setInterval(async () => {
       await checkWaitingPayments(log);
       await expireUnsentTransfers(log);
       await checkWaitingFeastoPayments(log);
+      await checkWaitingPlus(log);
+      await checkWaitingPabili(log);
+      await closeUnpaidPabili();
       await checkPayouts(log);
     }
   } catch (error) {
@@ -331,6 +337,8 @@ async function monitor() {
   }
 }
 const monitorTimer = setInterval(monitor, 60_000);
+// Daloy step 2: the worker's ETAs (e.g. in notifications) use the learned pace too
+const paceTimer = startPaceRefresh();
 void monitor();
 
 // How many workers were started and on how many CPUs (set by workers.ts), for the System page
@@ -345,6 +353,7 @@ async function shutdown() {
   clearInterval(dispatchTimer);
   clearInterval(autoCancelTimer);
   clearInterval(monitorTimer);
+  clearInterval(paceTimer);
   clearInterval(paymentsTimer);
   stopHeartbeat();
   await channel.close();

@@ -6,7 +6,8 @@
  * - When the store accepts, it says how long it will take (the estimate is picked for it), and
  *   that becomes the order's readyBy. If it runs late it says so, and readyBy moves.
  * - The arrival is readyBy (or the moment the rider picked it up) plus the ride: about 3 minutes
- *   per km by motorcycle in town, plus a few minutes to park and hand it over.
+ *   per km by motorcycle in town (or what the riders' own rides show for this hour, once there are
+ *   enough of them: Daloy step 2), plus a few minutes to park and hand it over.
  */
 
 /** Minutes per km by motorcycle in Naval, and to park and hand it over */
@@ -27,8 +28,18 @@ export function prepEstimate(store: PrepSettings, items: number, now = new Date(
   return store.prepMinutes + extraSets * store.prepPer5Items + busyMinutes(store, now);
 }
 
+/**
+ * Daloy step 2: minutes per km learned from the riders' real rides to the door, by hour of the day in
+ * Manila (lib/daloy.ts refreshes it). An hour without enough rides uses MINUTES_PER_KM.
+ */
+let learnedPace: Record<number, number> = {};
+export const setLearnedPace = (pace: Record<number, number>) => {
+  learnedPace = pace;
+};
+export const paceNow = (at = new Date()) => learnedPace[(at.getUTCHours() + 8) % 24] ?? MINUTES_PER_KM;
+
 /** The ride from the store to the door */
-export const rideMinutes = (km: number | null | undefined) => (km == null ? UNKNOWN_RIDE_MINUTES : Math.round(km * MINUTES_PER_KM + HANDOVER_MINUTES));
+export const rideMinutes = (km: number | null | undefined) => (km == null ? UNKNOWN_RIDE_MINUTES : Math.round(km * paceNow() + HANDOVER_MINUTES));
 
 /** The times one order should be ready and arrive, from what's known now; null before the store accepts */
 export function etaOf(order: {

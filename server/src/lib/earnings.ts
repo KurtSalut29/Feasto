@@ -202,7 +202,7 @@ export async function riderBalances(db: Prisma.TransactionClient = prisma, rider
         UNION ALL
         SELECT e."riderId", e."feastoCut", 1
         FROM "Errand" e
-        WHERE e.status = 'DELIVERED' AND e."riderId" IS NOT NULL AND e."feastoCut" > 0 ${only(Prisma.sql`e."riderId"`, riderId)}
+        WHERE e.status = 'DELIVERED' AND e."riderId" IS NOT NULL AND e."feastoCut" > 0 AND NOT e.prepaid ${only(Prisma.sql`e."riderId"`, riderId)}
       ) owed
       GROUP BY 1`,
     db.$queryRaw<Settled[]>(settledBy(Prisma.sql`"riderId"`, riderId)),

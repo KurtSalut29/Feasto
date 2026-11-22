@@ -3,6 +3,7 @@ import { distanceKm, type LatLng } from "./geo.js";
 import { redis } from "./redis.js";
 import { NO_ADD_ONS, type AddOns } from "./feeAddOns.js";
 import type { Settings } from "./settings.js";
+import { slowRoadFor } from "./daloy.js";
 
 /**
  * The delivery fee follows the distance, the way food apps in the Philippines price it:
@@ -74,16 +75,22 @@ export function priceDelivery(km: number | null, settings: Pick<Settings, "deliv
   const { deliveryFee: base, deliveryBaseKm: baseKm, deliveryPerKm: perKm } = settings;
   const extraKm = km === null ? 0 : Math.max(0, Math.ceil(round1(km - baseKm)));
   const distanceFee = money(extraKm * perKm);
-  return { fee: money(base + distanceFee + addOns.busyFee + addOns.rainFee), km, base, baseKm, extraKm, perKm, distanceFee, ...addOns };
+  return { fee: money(base + distanceFee + addOns.busyFee + addOns.rainFee + (addOns.daloyFee ?? 0)), km, base, baseKm, extraKm, perKm, distanceFee, ...addOns };
 }
 
 type Pin = { latitude: number | null; longitude: number | null };
 const pinOf = (p: Pin): LatLng | null => (p.latitude != null && p.longitude != null ? { lat: p.latitude, lng: p.longitude } : null);
 
-/** The fee from a store to an address. Without both pins, it's the base fee (plus any add-on). */
-export async function quoteDelivery(store: Pin, address: Pin, settings: Settings, addOns: AddOns = NO_ADD_ONS): Promise<DeliveryQuote> {
+/**
+ * The fee from a store to an address. Without both pins, it's the base fee (plus any add-on).
+ * With `forUser` (a live order, not a scheduled one), the Daloy slow-road add-on for this way is
+ * added too, held for that resident for 10 minutes like the others.
+ */
+export async function quoteDelivery(store: Pin, address: Pin, settings: Settings, addOns: AddOns = NO_ADD_ONS, forUser?: string): Promise<DeliveryQuote> {
   const from = pinOf(store);
   const to = pinOf(address);
   const route = from && to ? await roadKm(from, to) : null;
-  return { ...priceDelivery(route?.km ?? null, settings, addOns), byRoad: route?.byRoad ?? false };
+  const slow = forUser && from && to && route ? await slowRoadFor(forUser, from, to, route.km, settings) : null;
+  const withSlow: AddOns = slow ? { ...addOns, daloyFee: slow.fee, daloy: slow.reason } : addOns;
+  return { ...priceDelivery(route?.km ?? null, settings, withSlow), byRoad: route?.byRoad ?? false };
 }

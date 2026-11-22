@@ -1,3 +1,4 @@
+import { inviterOf } from "../lib/loyalty.js";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { Prisma } from "../generated/prisma/client.js";
@@ -49,7 +50,13 @@ const accountFields = {
 // Admin accounts are never self-registered; they come from the seed step.
 const registerSchema = z.discriminatedUnion("role", [
   // A resident also says which valid ID they're uploading (the photo goes up right after the account is made)
-  z.object({ role: z.literal("RESIDENT"), ...accountFields, idType: z.enum(ID_TYPES, "Choose the kind of ID you're uploading.") }),
+  z.object({
+    role: z.literal("RESIDENT"),
+    ...accountFields,
+    idType: z.enum(ID_TYPES, "Choose the kind of ID you're uploading."),
+    // A friend's Suki code (optional): both get points when this resident's first order arrives
+    referralCode: z.string().trim().max(20).optional().transform((v) => v || undefined),
+  }),
   z.object({ role: z.literal("RIDER"), ...accountFields, ...riderFields }),
   z.object({
     role: z.literal("VENDOR"),
@@ -222,6 +229,9 @@ authRouter.post("/register", async (req, res) => {
   if (wait) tooMany(res, wait, "A lot of accounts were just made from this network.");
   // A rider joining a store needs its code to be right before anything is saved
   const riderStore = input.role === "RIDER" && input.storeCode ? await storeForCode(input.storeCode) : null;
+  // A friend's code, checked before anything is saved
+  const inviter = input.role === "RESIDENT" && input.referralCode ? await inviterOf(input.referralCode) : null;
+  if (input.role === "RESIDENT" && input.referralCode && !inviter) throw new ValidationError({ referralCode: ["There's no Feasto account with that code. Check the spelling, or leave it empty."] });
 
   try {
     const user = await prisma.user.create({
@@ -231,7 +241,7 @@ authRouter.post("/register", async (req, res) => {
         middleName: input.middleName,
         lastName: input.lastName,
         suffix: input.suffix,
-        ...(input.role === "RESIDENT" && { idType: input.idType }),
+        ...(input.role === "RESIDENT" && { idType: input.idType, ...(inviter && { referredById: inviter.id }) }),
         email: input.email,
         phone: input.phone,
         role: input.role,

@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  LoaderCircle,
+  ScanText,
   Apple,
   ArrowRight,
   Banknote,
@@ -37,6 +39,7 @@ import { useApiData } from "@/components/app/use-api-data";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SelectField } from "@/components/ui/select-field";
+import { SwitchField } from "@/components/ui/switch-field";
 import { TextField } from "@/components/ui/text-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { toast } from "@/components/ui/toast";
@@ -61,7 +64,8 @@ import type { Address } from "@/lib/types";
 
 type Item = { key: number; name: string; quantity: string; unit: Unit; note: string; estimate: string; ifMissing: IfMissing; replacement: string; prescription: boolean };
 type Shop = { id: string; name: string; category: ShopCategory; barangay: string | null; landmark: string; hours: string | null; onFeasto: { id: string; name: string } | null };
-type Rules = { terms: Term[]; liquorBan: boolean; categories: Record<ShopCategory, string>; me: { idVerified: boolean; hasBirthDate: boolean; adult: boolean | null } };
+type Rules = { terms: Term[]; liquorBan: boolean; categories: Record<ShopCategory, string>; me: { idVerified: boolean; hasBirthDate: boolean; adult: boolean | null }; listReader?: boolean };
+type ReadLine = { name: string; quantity: number; unit: Unit; note: string | null; estimate: number | null };
 
 let nextKey = 1;
 const blankItem = (unit: Unit = "pc"): Item => ({ key: nextKey++, name: "", quantity: "1", unit, note: "", estimate: "", ifMissing: "CALL", replacement: "", prescription: false });
@@ -127,7 +131,7 @@ const money = (v: string) => (Number(v) > 0 ? Number(v) : 0);
  * while typing; medicine with a prescription needs its photo, and alcohol or cigarettes a
  * verified adult.
  */
-export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: Address[]; budgetMax: number; waitMinutes: number }) {
+export function PabiliForm({ addresses, budgetMax, prepaidMax, waitMinutes }: { addresses: Address[]; budgetMax: number; prepaidMax: number; waitMinutes: number }) {
   const router = useRouter();
   const { data: rules } = useApiData<Rules>("/errands/rules");
   const [category, setCategory] = useState<ShopCategory | null>(null);
@@ -139,6 +143,8 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const [notes, setNotes] = useState("");
   const [budget, setBudget] = useState("");
   const [budgetTouched, setBudgetTouched] = useState(false);
+  // Paid online first: needed above the cash limit, or chosen
+  const [chosePayOnline, setChosePayOnline] = useState(false);
   const [prescription, setPrescription] = useState<File | null>(null);
   const [birthDate, setBirthDate] = useState("");
   const [addressId, setAddressId] = useState(addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? "");
@@ -179,7 +185,13 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
   const shownBudget = budgetTouched ? budget : estimate > 0 ? String(Math.ceil(estimate / 10) * 10) : budget;
   const spend = Number(shownBudget) || 0;
   const most = `₱${budgetMax.toLocaleString("en-PH")}`;
-  const overLimit = spend > budgetMax ? `${most} is the most for one Pabili, because the rider pays at the shop with their own money. Lower the budget, or split your list into two Pabili.` : undefined;
+  const mostOnline = `₱${prepaidMax.toLocaleString("en-PH")}`;
+  const mustPayOnline = spend > budgetMax && spend <= prepaidMax;
+  const payOnline = chosePayOnline || mustPayOnline;
+  const overLimit =
+    spend > prepaidMax
+      ? `${prepaidMax > budgetMax ? mostOnline : most} is the most for one Pabili${prepaidMax > budgetMax ? ", paid online" : ", because the rider pays at the shop with their own money"}. Lower the budget, or split your list into two Pabili.`
+      : undefined;
   const underEstimate = estimate > 0 && spend > 0 && spend < estimate ? `Your estimates add up to ${formatPeso(estimate)}. Raise the budget to at least that.` : undefined;
 
   const update = (key: number, change: Partial<Item>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...change } : i)));
@@ -191,6 +203,29 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
     // Empty lines take the usual unit of this kind of shop (kg at the palengke)
     setItems((list) => list.map((i) => (i.name.trim() ? i : { ...i, unit: DEFAULT_UNIT[next] })));
     setFieldErrors((e) => ({ ...e, shopId: undefined, shopCategory: undefined }));
+  }
+
+  // A list read from a photo, PDF or Word file: its lines go in the form, to check before sending
+  const [readingList, setReadingList] = useState(false);
+  const [listNote, setListNote] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  async function readListFile(file: File) {
+    setReadingList(true);
+    setListNote(null);
+    try {
+      const docx = file.name.toLowerCase().endsWith(".docx");
+      const pdf = file.type === "application/pdf";
+      const body = docx || pdf ? file : await documentBody(file);
+      const type = docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : pdf ? "application/pdf" : "image/jpeg";
+      const response = await fetch("/api/errands/read-list", { method: "POST", headers: { "Content-Type": type }, body });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) return setListNote({ tone: "error", text: data?.error ?? "The list couldn't be read. Type the items instead." });
+      const read = (data.items as ReadLine[]).map((l) => ({ ...blankItem(l.unit), name: l.name, quantity: String(l.quantity), note: l.note ?? "", estimate: l.estimate ? String(l.estimate) : "" }));
+      setItems((list) => [...list.filter((i) => i.name.trim()), ...read].slice(0, 20));
+      const missed = (data.unreadable as string[]).length;
+      setListNote({ tone: "ok", text: `${read.length} ${read.length === 1 ? "item" : "items"} read from your list. Check each one (name, amount, unit) before sending.${missed ? ` ${missed} ${missed === 1 ? "line" : "lines"} couldn't be read: add ${missed === 1 ? "it" : "them"} yourself.` : ""}` });
+    } finally {
+      setReadingList(false);
+    }
   }
 
   async function uploadPrescription(): Promise<string> {
@@ -235,7 +270,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
       setSending(false);
       return setFieldErrors({ prescription: [e instanceof Error ? e.message : "The prescription didn't upload."] });
     }
-    const result = await apiRequest<{ errand: { id: string } }>("/errands", {
+    const result = await apiRequest<{ errand: { id: string }; paymentUrl?: string | null }>("/errands", {
       method: "POST",
       body: {
         ...(typed ? { shopName, shopAddress, shopCategory: category } : { shopId }),
@@ -251,6 +286,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
         })),
         notes: notes || undefined,
         budget: spend,
+        payOnline,
         addressId,
         preferredRiderId: rider?.id,
         expectedFee: quote?.min,
@@ -269,6 +305,11 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
       }
       setError(result.fieldErrors ? undefined : result.error);
       setFieldErrors(mapped);
+      return;
+    }
+    if (result.data.paymentUrl) {
+      // Paid online first: riders see it once Xendit says it's paid
+      window.location.href = result.data.paymentUrl;
       return;
     }
     toast.success("Pabili sent", rider ? `${rider.name} gets it first. We'll tell you when a rider takes it.` : "The riders nearby can see it now. We'll tell you when one takes it.");
@@ -390,6 +431,31 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
       </Section>
 
       <Section n={2} title="What to buy">
+        {rules?.listReader && (
+          <div className="mb-3">
+            <label
+              className={`flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-300 bg-brand-50/50 px-4 py-3 text-sm font-semibold text-brand-800 transition hover:bg-brand-50 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand-500 ${readingList ? "pointer-events-none opacity-70" : ""}`}
+            >
+              {readingList ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : <ScanText className="size-4" aria-hidden />}
+              {readingList ? "Reading your list…" : "Upload a photo of your list (or a PDF or Word file)"}
+              <input
+                type="file"
+                accept="image/*,application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (file) void readListFile(file);
+                }}
+              />
+            </label>
+            {listNote && (
+              <p role="status" className={`mt-2 rounded-xl px-3 py-2 text-sm ${listNote.tone === "ok" ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-800"}`}>
+                {listNote.text}
+              </p>
+            )}
+          </div>
+        )}
         <ul className="space-y-3">
           {items.map((item, index) => {
             const f = flags[index]!;
@@ -542,7 +608,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           inputMode="decimal"
           icon={Banknote}
           min={20}
-          max={budgetMax}
+          max={prepaidMax}
           value={shownBudget}
           onChange={(e) => {
             setBudgetTouched(true);
@@ -554,9 +620,23 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
           hint={
             estimate > 0
               ? `Your estimates add up to ${formatPeso(estimate)}${budgetTouched ? "" : ", rounded up here"}. Add a little in case prices are higher. The most is ${most}.`
-              : `₱20 to ${most}. The rider pays at the shop and shows you the receipt; you pay them back in cash, plus the delivery fee.`
+              : `₱20 to ${most} in cash${prepaidMax > budgetMax ? `, or up to ${mostOnline} paid online first` : ""}. The rider pays at the shop and shows you the receipt.`
           }
         />
+        {prepaidMax > budgetMax && (
+          <div className="mt-3 rounded-2xl border border-line p-1">
+            <SwitchField
+              label="Pay online first"
+              description={
+                mustPayOnline
+                  ? `Above ${most}, a Pabili is paid online first: the rider can't lend that much. What isn't used comes back to you once they buy.`
+                  : "Pay the budget and the most fee now (GCash, Maya or card). Nothing to pay at the door; what isn't used comes back once the rider buys."
+              }
+              checked={payOnline}
+              onChange={(v) => setChosePayOnline(v)}
+            />
+          </div>
+        )}
       </Section>
 
       <Section n={4} title="Deliver to">
@@ -594,7 +674,7 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
             <dd className="font-semibold text-ink tabular-nums">{quote ? `${formatPeso(quote.min)} to ${formatPeso(quote.max)}` : "…"}</dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-line pt-1 text-[0.9375rem] font-bold text-ink">
-            <dt>Cash to have ready, at most</dt>
+            <dt>{payOnline ? "Paid online now, at most" : "Cash to have ready, at most"}</dt>
             <dd className="tabular-nums">{spend && quote ? formatPeso(spend + quote.max) : "—"}</dd>
           </div>
         </dl>
@@ -604,13 +684,13 @@ export function PabiliForm({ addresses, budgetMax, waitMinutes }: { addresses: A
               It includes {formatPeso(quote.busyFee + quote.rainFee)} for the rider {quote.busyFee > 0 && quote.rainFee > 0 ? "because riders are busy and it's raining" : quote.busyFee > 0 ? `because riders are busy (${quote.busy})` : "because it's raining"}.{" "}
             </>
           )}
-          The delivery fee is set when the rider buys, from where the shop is to you, and never more than {quote ? formatPeso(quote.max) : "the most shown"}. You pay what the receipt says, not the whole budget. If no rider takes it in {waitMinutes} minutes, it&apos;s cancelled and you pay nothing.
+          The delivery fee is set when the rider buys, from where the shop is to you, and never more than {quote ? formatPeso(quote.max) : "the most shown"}. You pay what the receipt says, not the whole budget{payOnline ? ": the rest comes back to you" : ""}. If no rider takes it in {waitMinutes} minutes, it&apos;s cancelled and {payOnline ? "all of it comes back" : "you pay nothing"}.
         </p>
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
       <Button type="submit" className="w-full" loading={sending}>
-        Send Pabili
+        {payOnline ? "Pay and send Pabili" : "Send Pabili"}
       </Button>
     </form>
   );

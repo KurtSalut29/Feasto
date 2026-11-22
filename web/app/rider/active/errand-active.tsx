@@ -32,6 +32,8 @@ export type RiderErrand = {
   deliveryFee: string;
   feeMax: string | null;
   receiptTotal: string | null;
+  /** Paid online first: nothing to collect; Feasto pays the rider back after delivery */
+  prepaid?: boolean;
   resident: { name: string; phone: string | null };
 };
 
@@ -85,13 +87,23 @@ export function ErrandActive({ errand }: { errand: RiderErrand }) {
 
       <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0 lg:[&>*:first-child]:sticky lg:[&>*:first-child]:top-6 lg:[&>*:first-child]:row-span-[12] lg:[&>*:not(:first-child)]:col-start-2">
         <RiderTripMap store={shop} home={home} homeAddress={errand.deliveryAddress} status={bought ? "PICKED_UP" : "ACCEPTED"} />
-        <ErrandSteps id={errand.id} status={errand.status} budget={Number(errand.budget)} fee={fee} feeMax={feeMax} adultBought={adultBought} />
+        <ErrandSteps id={errand.id} status={errand.status} budget={Number(errand.budget)} fee={fee} feeMax={feeMax} adultBought={adultBought} prepaid={Boolean(errand.prepaid)} />
         <LocationSharer orderId={errand.id} heading={bought ? "home" : "store"} store={demoShop} home={home} />
 
         <div className="flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-amber-900">
           <Banknote className="size-6 shrink-0" aria-hidden />
           <p className="text-sm">
-            {bought ? (
+            {errand.prepaid ? (
+              bought ? (
+                <>
+                  <span className="font-bold">Paid online: collect nothing.</span> Feasto sends you {formatPeso(Number(errand.receiptTotal ?? 0) + fee)} (the receipt plus your fee, less Feasto&apos;s share) right after you deliver.
+                </>
+              ) : (
+                <>
+                  <span className="font-bold">Paid online.</span> Pay at the shop (up to {formatPeso(errand.budget)}); Feasto pays you back with your fee right after you deliver. Collect nothing from {first}.
+                </>
+              )
+            ) : bought ? (
               <>
                 Collect <span className="text-base font-bold">{formatPeso(Number(errand.receiptTotal ?? 0) + fee)}</span> in cash: the receipt plus your fee.
               </>

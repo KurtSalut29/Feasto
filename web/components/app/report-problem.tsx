@@ -83,6 +83,8 @@ export function ReportProblem({
   };
   // One button on a page asks right away (so it can say "Reported"); rows in a list ask when tapped
   useEffect(() => {
+    // The state is set once the request answers, not while the effect runs
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!compact) void loadDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, compact]);

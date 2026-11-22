@@ -1,3 +1,4 @@
+import { checkRewardsQuietly } from "../lib/loyalty.js";
 import { Router } from "express";
 import { orderTotal, type DiscountLine } from "../lib/promos.js";
 import { z } from "zod";
@@ -369,6 +370,8 @@ vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
       storeDiscount: true,
       feastoDiscount: true,
       discounts: true,
+      pointsUsed: true,
+      pointsEarned: true,
       checkout: { select: { ifUnavailable: true, residentId: true, paymentMethod: true, paymentStatus: true } },
       items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true, discount: true } },
       vendor: { select: { name: true } },
@@ -403,7 +406,13 @@ vendorRouter.post("/orders/:id/items/:itemId/unavailable", async (req, res) => {
   await prisma.$transaction(async (tx) => {
     const { count } = await tx.orderItem.updateMany({ where: { id: itemId, orderId: id, removedAt: null }, data: { removedAt: new Date() } });
     if (count === 0) throw new HttpError(409, "That item was already taken off.");
-    await tx.order.update({ where: { id }, data: { subtotal, commission, storeDiscount: money.storeDiscount, feastoDiscount: money.feastoDiscount, discounts: money.lines as unknown as Prisma.InputJsonValue } });
+    // Suki points shrink with the food too: fewer spent (the rest go back to the resident) and fewer earned
+    const pointsBefore = ((order.discounts as DiscountLine[]) ?? []).find((l) => l.kind === "POINTS")?.amount ?? 0;
+    const pointsLine = money.lines.find((l) => l.kind === "POINTS");
+    const pointsUsed = pointsBefore > 0 ? Math.round((order.pointsUsed * (pointsLine?.amount ?? 0)) / pointsBefore) : order.pointsUsed;
+    if (pointsLine) pointsLine.label = `Suki points (${pointsUsed})`;
+    const pointsEarned = Number(order.subtotal) > 0 ? Math.floor((order.pointsEarned * subtotal) / Number(order.subtotal)) : 0;
+    await tx.order.update({ where: { id }, data: { subtotal, commission, storeDiscount: money.storeDiscount, feastoDiscount: money.feastoDiscount, discounts: money.lines as unknown as Prisma.InputJsonValue, pointsUsed, pointsEarned } });
     for (const l of money.lines) if (l.promoId) await tx.promoUse.updateMany({ where: { orderId: id, promoId: l.promoId }, data: { amount: l.amount, feastoAmount: l.feasto, storeAmount: l.store } });
     await tx.checkout.update({ where: { id: order.checkoutId }, data: { total: { decrement: line }, discount: { decrement: Math.round((Number(order.storeDiscount) + Number(order.feastoDiscount) - money.storeDiscount - money.feastoDiscount) * 100) / 100 } } });
     if (paidOnline) await enqueue(tx, QUEUES.refundRequested, { orderId: id, itemId, amount: line });
@@ -436,7 +445,7 @@ function withoutLine(
   const dishLines = lines.filter((l) => l.kind === "DEAL" || l.kind === "SENIOR");
   const dishTotal = dishLines.reduce((n, l) => n + l.amount, 0);
   for (const l of lines) {
-    const cut = l.kind === "DEAL" || l.kind === "SENIOR" ? (dishTotal > 0 ? (own * l.amount) / dishTotal : 0) : l.kind === "DELIVERY" ? 0 : l.amount * share;
+    const cut = l.kind === "DEAL" || l.kind === "SENIOR" ? (dishTotal > 0 ? (own * l.amount) / dishTotal : 0) : l.kind === "DELIVERY" || l.kind === "PLUS" ? 0 : l.amount * share;
     const next = c(Math.max(0, l.amount - cut));
     const ratio = l.amount > 0 ? next / l.amount : 0;
     const store = c(l.store * ratio);
@@ -525,6 +534,9 @@ vendorRouter.post("/orders/:id/ready", async (req, res) => {
 /** Pickup orders: the resident collected it at the counter. */
 vendorRouter.post("/orders/:id/complete", async (req, res) => {
   await vendorStep(req.session!.userId, String(req.params.id), ["READY"], "COMPLETED", { finishedAt: new Date() }, { pickupOnly: true });
+  // Suki: points, missions and an inviter's reward can be due now
+  const done = await prisma.order.findUnique({ where: { id: String(req.params.id) }, select: { checkout: { select: { residentId: true } } } });
+  if (done) void checkRewardsQuietly(done.checkout.residentId);
   // An online payment is split now: the store's part goes to it right away
   res.json({ ok: true, payout: (await payoutWords(String(req.params.id))).store });
 });

@@ -21,7 +21,7 @@ async function Daloy() {
       <PageHeader
         eyebrow="Insights"
         title="Daloy: live roads"
-        description="Where the riders are, and how fast Naval's roads are moving now against the usual, measured from the riders' own rides. This first step only records: fees and ETAs don't use it yet."
+        description="Where the riders are, and how fast Naval's roads are moving now against the usual, measured from the riders' own rides. The ETAs, the slow-road add-on and the riders' delay bonus come from it."
       />
       <DaloyLive />
     </>

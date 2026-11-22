@@ -1,4 +1,4 @@
-import { Accessibility, Bell, CalendarDays, CreditCard, Heart, KeyRound, MapPin, ReceiptText, UserPen, TicketPercent } from "lucide-react";
+import { Accessibility, Bell, CalendarDays, Coins, CreditCard, Crown, IdCard, Heart, KeyRound, MapPin, ReceiptText, UserPen, TicketPercent } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NowCard, Tile } from "@/components/app/account-tiles";
@@ -82,10 +82,13 @@ async function ResidentAccount() {
           <Row Icon={MapPin} label={home ? `Deliver to ${home.label}` : "Add a delivery address"} value={home ? `${addresses.length} saved` : undefined} href="/resident/addresses" />
           <Row Icon={CreditCard} label="Payment methods" value="GCash, Maya and cards" href="/resident/payment-methods" />
           <Row Icon={TicketPercent} label="My vouchers" value="Sale days, first order, free delivery" href="/resident/vouchers" />
+          <Row Icon={Coins} label="Suki points" value="Points, missions, invite friends" href="/resident/suki" />
+          <Row Icon={Crown} label="Feasto Plus" value="Free deliveries every month" href="/resident/plus" />
         </RowGroup>
         <InstallAppRow />
         <RowGroup title="Settings">
           <Row Icon={UserPen} label="Edit profile" value="Name and phone" href="/resident/profile" />
+          <Row Icon={IdCard} label="Your ID" value="ID check and PhilSys QR" href="/resident/id" />
           <Row Icon={KeyRound} label="Change password" href="/resident/password" />
           <Row Icon={Accessibility} label="Display & accessibility" value="Text size, contrast, motion" href="/resident/display" />
         </RowGroup>

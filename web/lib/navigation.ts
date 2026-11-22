@@ -14,7 +14,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/resident/map", label: "Map", Icon: MapIcon },
     { href: "/resident/orders", label: "Orders", Icon: ReceiptText },
     { href: "/resident/bookings", label: "Bookings", Icon: CalendarDays },
-    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications", "/resident/display", "/resident/payment-methods", "/resident/vouchers"] },
+    { href: "/resident/account", label: "Account", Icon: User, also: ["/resident/addresses", "/resident/profile", "/resident/password", "/resident/saved", "/resident/notifications", "/resident/display", "/resident/payment-methods", "/resident/vouchers", "/resident/suki", "/resident/plus", "/resident/id"] },
   ],
   RIDER: [
     { href: "/rider", label: "Home", Icon: House },

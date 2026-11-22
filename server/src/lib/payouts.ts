@@ -57,18 +57,30 @@ const centavos = (n: number) => Math.round(n * 100) / 100;
 export async function queuePayouts(tx: Tx, checkoutId: string) {
   const orders = await tx.order.findMany({
     where: { checkoutId, status: { in: ["DELIVERED", "COMPLETED"] }, checkout: { paymentMethod: "ONLINE", paymentStatus: "PAID" } },
-    select: { id: true, vendorId: true, riderId: true, subtotal: true, commission: true, deliveryFee: true, riderCut: true, fulfillment: true, storeDiscount: true },
+    select: { id: true, vendorId: true, riderId: true, subtotal: true, commission: true, deliveryFee: true, riderCut: true, riderBonus: true, fulfillment: true, storeDiscount: true },
   });
   const data: Prisma.PayoutCreateManyInput[] = [];
   for (const o of orders) {
     // The food minus the discounts the store gave and the commission; Feasto's discounts are Feasto's cost
     const store = centavos(Number(o.subtotal) - Number(o.storeDiscount) - Number(o.commission));
-    const rider = centavos(Number(o.deliveryFee) - Number(o.riderCut));
+    // The rider's fee, plus Feasto's delay bonus when the road was slow
+    const rider = centavos(Number(o.deliveryFee) - Number(o.riderCut) + Number(o.riderBonus));
     if (store > 0) data.push({ orderId: o.id, party: "STORE", vendorId: o.vendorId, amount: store });
     if (o.fulfillment === "DELIVERY" && o.riderId && rider > 0) data.push({ orderId: o.id, party: "RIDER", riderId: o.riderId, amount: rider });
   }
   if (!data.length) return;
   const created = await tx.payout.createManyAndReturn({ data, skipDuplicates: true, select: { id: true } });
+  for (const p of created) await enqueue(tx, QUEUES.payoutRequested, { payoutId: p.id });
+}
+
+/**
+ * A cash order's delay bonus: the rider kept the cash fee, so Feasto sends just the bonus. (On an online
+ * order it's in the rider's payout already.)
+ */
+export async function queueBonusPayout(tx: Tx, orderId: string) {
+  const o = await tx.order.findUnique({ where: { id: orderId }, select: { riderId: true, riderBonus: true, status: true, checkout: { select: { paymentMethod: true } } } });
+  if (!o?.riderId || o.status !== "DELIVERED" || o.checkout.paymentMethod !== "COD" || Number(o.riderBonus) <= 0) return;
+  const created = await tx.payout.createManyAndReturn({ data: [{ orderId, party: "RIDER", riderId: o.riderId, amount: centavos(Number(o.riderBonus)) }], skipDuplicates: true, select: { id: true } });
   for (const p of created) await enqueue(tx, QUEUES.payoutRequested, { payoutId: p.id });
 }
 
@@ -99,7 +111,7 @@ export async function sendPayout(payoutId: string, log: Log) {
     if (count) {
       await notify(ownerOf(p), {
         title: `Add where to send your ${peso(amount)}`,
-        body: `Feasto is holding your share of ${orderCode(p.orderId)}. Add your GCash, Maya or bank account in ${settingsOf(p.party)}, under Money sent to you, and it's sent right away.`,
+        body: `Feasto is holding your share of ${orderCode(p.orderId ?? p.errandId!)}. Add your GCash, Maya or bank account in ${settingsOf(p.party)}, under Money sent to you, and it's sent right away.`,
         link: `${pageOf(p.party)}#payout`,
       });
       log(`payout ${p.id.slice(-6)} waits for ${nameOf(p)}'s account`);
@@ -134,7 +146,7 @@ async function submit(payoutId: string, log: Log) {
       channel: p.channel,
       accountName: p.accountName,
       accountNumber: p.accountNumber,
-      description: `Feasto ${orderCode(p.orderId)}: ${p.party === "STORE" ? "food sales" : "delivery fee"}`,
+      description: `Feasto ${orderCode(p.orderId ?? p.errandId!)}: ${p.party === "STORE" ? "food sales" : p.errandId ? "Pabili paid back" : "delivery fee"}`,
     });
     await finish(p, x, log);
   } catch (error) {
@@ -192,7 +204,7 @@ async function finish(p: Loaded, x: Pick<XenditPayout, "status" | "failure_code"
     if (count) {
       await notify(ownerOf(p), {
         title: `${peso(amount)} sent to your ${to}`,
-        body: `Your share of ${orderCode(p.orderId)}${config.payments === "xendit" ? ", through Xendit (test money)" : " (simulated)"}.`,
+        body: `Your share of ${orderCode(p.orderId ?? p.errandId!)}${config.payments === "xendit" ? ", through Xendit (test money)" : " (simulated)"}.`,
         link: pageOf(p.party),
       });
       log(`payout ${p.id.slice(-6)}: ${peso(amount)} sent to ${nameOf(p)}`);
@@ -202,8 +214,8 @@ async function finish(p: Loaded, x: Pick<XenditPayout, "status" | "failure_code"
   const failure = failureWords(x.failure_code, p.channel, x.message);
   const { count } = await prisma.payout.updateMany({ where: { id: p.id, status: "SENDING" }, data: { status: "FAILED", failure, ...(x.id && { xenditId: x.id }) } });
   if (count) {
-    await notify(ownerOf(p), { title: `We couldn't send your ${peso(amount)}`, body: `${orderCode(p.orderId)}: ${failure}`, link: pageOf(p.party) });
-    await notifyAdmin({ title: `Payout to ${nameOf(p)} failed`, body: `${peso(amount)} for ${orderCode(p.orderId)}: ${failure}`, link: "/admin/earnings#payouts" });
+    await notify(ownerOf(p), { title: `We couldn't send your ${peso(amount)}`, body: `${orderCode(p.orderId ?? p.errandId!)}: ${failure}`, link: pageOf(p.party) });
+    await notifyAdmin({ title: `Payout to ${nameOf(p)} failed`, body: `${peso(amount)} for ${orderCode(p.orderId ?? p.errandId!)}: ${failure}`, link: "/admin/earnings#payouts" });
     log(`payout ${p.id.slice(-6)} failed: ${failure}`);
   }
 }
@@ -266,6 +278,7 @@ export async function requeuePayouts(where: Prisma.PayoutWhereInput) {
 export const payoutSelect = {
   id: true,
   orderId: true,
+  errandId: true,
   party: true,
   amount: true,
   status: true,
@@ -286,7 +299,8 @@ export function payoutView(p: Row) {
   return {
     id: p.id,
     orderId: p.orderId,
-    orderCode: orderCode(p.orderId),
+    errandId: p.errandId,
+    orderCode: orderCode(p.orderId ?? p.errandId!),
     party: p.party,
     to: p.party === "STORE" ? (p.vendor?.name ?? "Store") : (p.rider?.name ?? "Rider"),
     amount: Number(p.amount),

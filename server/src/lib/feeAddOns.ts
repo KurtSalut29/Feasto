@@ -22,9 +22,13 @@ export type AddOns = {
   busy: string | null;
   rainFee: number;
   rain: boolean;
+  /** Daloy: the way is slower now than usual (lib/daloy.ts), worked out per store and address */
+  daloyFee: number;
+  /** Why, e.g. "14 min on the road now instead of the usual 8" */
+  daloy: string | null;
 };
 
-export const NO_ADD_ONS: AddOns = { busyFee: 0, busy: null, rainFee: 0, rain: false };
+export const NO_ADD_ONS: AddOns = { busyFee: 0, busy: null, rainFee: 0, rain: false, daloyFee: 0, daloy: null };
 
 const DEMAND_KEY = "demand:now";
 const RAIN_KEY = "weather:rain";
@@ -123,7 +127,7 @@ export async function addOnsNow(settings: Pick<Settings, "busyFeeMax" | "rainFee
   const [demand, rain] = await Promise.all([demandNow(), rainNow()]);
   const busy = busyFeeFor(demand, settings.busyFeeMax);
   const rainFee = rain.on ? settings.rainFee : 0;
-  return { busyFee: busy.fee, busy: busy.reason, rainFee, rain: rain.on && rainFee > 0 };
+  return { busyFee: busy.fee, busy: busy.reason, rainFee, rain: rain.on && rainFee > 0, daloyFee: 0, daloy: null };
 }
 
 /**
@@ -144,6 +148,8 @@ export async function addOnsFor(userId: string, settings: Pick<Settings, "busyFe
     busy: shown.busyFee <= now.busyFee ? shown.busy : now.busy,
     rainFee: Math.min(shown.rainFee, now.rainFee),
     rain: shown.rainFee <= now.rainFee ? shown.rain : now.rain,
+    daloyFee: 0,
+    daloy: null,
   };
   if (lower.busyFee !== shown.busyFee || lower.rainFee !== shown.rainFee) {
     await redis.set(key, JSON.stringify(lower), "KEEPTTL").catch(() => undefined);
@@ -153,8 +159,8 @@ export async function addOnsFor(userId: string, settings: Pick<Settings, "busyFe
 
 /** "Busy: 6 orders waiting for 2 free riders · Rain", for the order's record; null when nothing was added */
 export function addOnNote(a: AddOns) {
-  const parts = [a.busyFee > 0 && `Busy +₱${a.busyFee}: ${a.busy}`, a.rainFee > 0 && `Rain +₱${a.rainFee}`].filter(Boolean);
+  const parts = [a.busyFee > 0 && `Busy +₱${a.busyFee}: ${a.busy}`, a.rainFee > 0 && `Rain +₱${a.rainFee}`, a.daloyFee > 0 && `Slow road +₱${a.daloyFee}: ${a.daloy}`].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;
 }
 
-export const addOnTotal = (a: AddOns) => a.busyFee + a.rainFee;
+export const addOnTotal = (a: AddOns) => a.busyFee + a.rainFee + (a.daloyFee ?? 0);

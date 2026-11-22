@@ -1,3 +1,4 @@
+import { SelfieReview } from "./selfie-review";
 import { Bike, Building2, Cake, CalendarCheck, CalendarClock, FileBadge, HeartPulse, House, Mail, MapPin, Phone, ShieldCheck, Star, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
@@ -292,6 +293,7 @@ async function Approvals({ searchParams }: Pick<PageProps<"/admin/approvals">, "
             : "New stores and free riders can't start until you approve them. Stores review their own riders."
         }
       />
+      <SelfieReview />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <LinkTabs

@@ -1,15 +1,25 @@
 import { randomUUID } from "node:crypto";
 import type { TripLegKind } from "../generated/prisma/client.js";
 import { prisma } from "./db.js";
-import { MINUTES_PER_KM } from "./eta.js";
+import { paceNow, setLearnedPace } from "./eta.js";
+import { notify } from "./liveUpdates.js";
+import { getSettings, type Settings } from "./settings.js";
 import { distanceKm, type LatLng } from "./geo.js";
 import { marshal, unmarshal } from "./marshalling.js";
 import { redis } from "./redis.js";
 
 /**
- * Daloy, step 1: learn how fast riders really move in Naval, from the positions their phones
- * already send on a job (every few seconds, for the customer's live map). Nothing here changes a
- * fee or an ETA yet: it only records, so later steps have real data to stand on.
+ * Daloy: learn how fast riders really move in Naval, from the positions their phones already send on
+ * a job (every few seconds, for the customer's live map), then use it.
+ *
+ * - Step 1 records (below).
+ * - Step 2: the ETA's minutes per km come from the real rides to the door at that hour, once there
+ *   are enough of them (learnPace); until then, Feasto's 3 minutes a km.
+ * - Step 3: a slow-road add-on on the delivery fee (slowRoad) when the squares on the way are much
+ *   slower now than usual at this hour. Without enough data for the way, nothing is added. All of it
+ *   goes to the rider, and it can't go up for 10 minutes while the resident looks.
+ * - The rider's delay bonus: when a real ride to the door took much longer than estimated and the GPS
+ *   shows the road was slow, Feasto (not the resident) adds a bonus to the rider's payout.
  *
  * Two things are kept:
  * - Each ride of a job (to the store, to the door, to the Pabili shop) as a TripLeg: how long it
@@ -117,9 +127,10 @@ async function addSample(at: LatLng, t: number, meters: number, seconds: number,
 
 /** Feasto's estimate for the ride, as the ETA counts it today: 3 minutes a km (no time to park) */
 function estimateOf(ride: Ride, straightKm: number) {
-  if (ride.leg === "TO_DOOR" && ride.pricedKm != null) return Math.max(1, Math.round(ride.pricedKm * MINUTES_PER_KM));
+  const pace = paceNow(new Date(ride.startedAt));
+  if (ride.leg === "TO_DOOR" && ride.pricedKm != null) return Math.max(1, Math.round(ride.pricedKm * pace));
   // No priced distance: the straight line times 1.3, as the delivery fee guesses a road
-  if (ride.destination) return Math.max(1, Math.round(straightKm * 1.3 * MINUTES_PER_KM));
+  if (ride.destination) return Math.max(1, Math.round(straightKm * 1.3 * pace));
   return null;
 }
 
@@ -128,7 +139,8 @@ async function logRide(jobId: string, ride: Ride) {
   const seconds = ride.moving + ride.stopped;
   if (ride.points < 3 || seconds < 20) return false;
   const straightKm = distanceKm(ride.start, ride.last);
-  await prisma.tripLeg.createMany({
+  const expectedMinutes = estimateOf(ride, straightKm);
+  const { count } = await prisma.tripLeg.createMany({
     data: [
       {
         ...(ride.kind === "ORDER" ? { orderId: jobId } : { errandId: jobId }),
@@ -140,7 +152,7 @@ async function logRide(jobId: string, ride: Ride) {
         straightKm: Math.min(straightKm, 9999).toFixed(2),
         movingSeconds: Math.round(ride.moving),
         stoppedSeconds: Math.round(ride.stopped),
-        expectedMinutes: estimateOf(ride, straightKm),
+        expectedMinutes,
         points: ride.points,
         demo: ride.demo,
       },
@@ -148,7 +160,34 @@ async function logRide(jobId: string, ride: Ride) {
     // A ride is logged once, even if two API copies end it at the same moment
     skipDuplicates: true,
   });
+  if (count && ride.kind === "ORDER" && ride.leg === "TO_DOOR" && !ride.demo && expectedMinutes) await delayBonus(jobId, ride, expectedMinutes);
   return true;
+}
+
+/** Late beyond this share of the estimate, plus a couple of minutes, before a bonus is owed */
+const BONUS_GRACE = 1.25;
+const BONUS_GRACE_MINUTES = 2;
+/** Moving slower than this on average, or stopped this long, is a slow road (not a detour or a snack) */
+const SLOW_KMH = 15;
+const SLOW_STOPPED_S = 120;
+
+/** Works out the rider's delay bonus for one real ride to the door, and puts it on the order */
+export function bonusFor(ride: { moving: number; stopped: number; meters: number }, expectedMinutes: number, settings: Pick<Settings, "delayBonusOn" | "delayBonusPerMinute" | "delayBonusMax">) {
+  if (!settings.delayBonusOn || settings.delayBonusPerMinute <= 0 || settings.delayBonusMax <= 0) return null;
+  const minutes = (ride.moving + ride.stopped) / 60;
+  const late = minutes - expectedMinutes * BONUS_GRACE - BONUS_GRACE_MINUTES;
+  const movingKmh = ride.moving > 0 ? ride.meters / 1000 / (ride.moving / 3600) : 0;
+  const slowRoad = ride.stopped >= SLOW_STOPPED_S || (ride.moving > 0 && movingKmh < SLOW_KMH);
+  if (late < 1 || !slowRoad) return null;
+  const amount = Math.min(settings.delayBonusMax, Math.ceil(late) * settings.delayBonusPerMinute);
+  return { amount: Math.round(amount * 100) / 100, note: `${Math.round(minutes)} min on a slow road, estimated ${expectedMinutes}` };
+}
+
+async function delayBonus(orderId: string, ride: Ride, expectedMinutes: number) {
+  const bonus = bonusFor(ride, expectedMinutes, await getSettings());
+  if (!bonus) return;
+  const { count } = await prisma.order.updateMany({ where: { id: orderId, riderBonus: 0 }, data: { riderBonus: bonus.amount, riderBonusNote: bonus.note } });
+  if (count) await notify(ride.riderId, { title: `Delay bonus: ₱${bonus.amount.toFixed(2)}`, body: `The road was slow (${bonus.note}). Feasto adds it to your payout.`, link: "/rider/history" });
 }
 
 /**
@@ -308,3 +347,133 @@ export async function cellsWeek(withDemo: boolean, now = new Date()): Promise<Ce
 
 /** About this many real rides before the ETA can lean on them (step 2) */
 export const RIDES_FOR_ETA = 200;
+
+// ---------- Step 2: the ETA's pace ----------
+
+/** Real rides to the door at an hour (with the hours either side) before that hour's pace is used */
+export const PACE_MIN_RIDES = 20;
+const PACE_KEY = "daloy:pace";
+
+/** Minutes per km by Manila hour, from the last 28 days of real rides to the door */
+export async function learnPace() {
+  const rows = await prisma.$queryRaw<{ h: number; minutes: number; km: number; n: bigint }[]>`
+    SELECT EXTRACT(HOUR FROM "startedAt" + INTERVAL '8 hours')::int AS h,
+           sum("movingSeconds" + "stoppedSeconds")::float8 / 60 AS minutes, sum("riddenKm")::float8 AS km, count(*) AS n
+    FROM "TripLeg"
+    WHERE NOT demo AND kind = 'TO_DOOR' AND "endedAt" >= now() - INTERVAL '28 days' AND "riddenKm" >= 0.3
+    GROUP BY 1`;
+  const byHour = new Map(rows.map((r) => [r.h, r]));
+  const pace: Record<number, number> = {};
+  const rides: Record<number, number> = {};
+  for (let h = 0; h < 24; h++) {
+    const near = [(h + 23) % 24, h, (h + 1) % 24].map((x) => byHour.get(x)).filter(Boolean) as typeof rows;
+    const n = near.reduce((a, r) => a + Number(r.n), 0);
+    const km = near.reduce((a, r) => a + r.km, 0);
+    rides[h] = n;
+    if (n >= PACE_MIN_RIDES && km > 0) pace[h] = Math.round(Math.min(8, Math.max(1.5, near.reduce((a, r) => a + r.minutes, 0) / km)) * 100) / 100;
+  }
+  return { pace, rides };
+}
+
+/** Keeps every API copy's ETA pace fresh: worked out once every 5 minutes, shared through Redis */
+export async function refreshPace() {
+  try {
+    const hit = await redis.get(PACE_KEY);
+    const learned = hit ? (JSON.parse(hit) as Awaited<ReturnType<typeof learnPace>>) : await learnPace();
+    if (!hit) await redis.set(PACE_KEY, JSON.stringify(learned), "EX", 300);
+    setLearnedPace(learned.pace);
+    return learned;
+  } catch (error) {
+    console.error("Daloy couldn't learn the pace", error);
+    return null;
+  }
+}
+
+export function startPaceRefresh() {
+  void refreshPace();
+  return setInterval(() => void refreshPace(), 5 * 60_000);
+}
+
+// ---------- Step 3: the slow-road add-on ----------
+
+/** Points along the way are this far apart, each counted in its square */
+const STEP_M = 150;
+/** Slower than usual by less than this share is normal traffic */
+const SLOW_RATIO = 1.15;
+/** Fewer extra minutes than this isn't worth a fee */
+const MIN_EXTRA_MINUTES = 3;
+
+export type SlowRoad = { fee: number; reason: string; extraMinutes: number; usualMinutes: number; nowMinutes: number };
+
+/**
+ * How much slower the way from the store to the door is now than usual at this hour, from the riders'
+ * real rides (demo rides never count). Null when it isn't slow, or there isn't enough data: at least
+ * half the squares on the way need a recent ride and a usual for this hour.
+ */
+export async function slowRoad(from: LatLng, to: LatLng, km: number, settings: Pick<Settings, "daloyFeeOn" | "daloyPerMinute" | "daloyFeeMax">, now = new Date()): Promise<SlowRoad | null> {
+  if (!settings.daloyFeeOn || settings.daloyPerMinute <= 0 || settings.daloyFeeMax <= 0 || km <= 0) return null;
+  const steps = Math.max(2, Math.ceil((distanceKm(from, to) * 1000) / STEP_M));
+  const weight = new Map<string, number>();
+  for (let i = 0; i <= steps; i++) {
+    const cell = cellOf({ lat: from.lat + ((to.lat - from.lat) * i) / steps, lng: from.lng + ((to.lng - from.lng) * i) / steps });
+    weight.set(cell, (weight.get(cell) ?? 0) + 1);
+  }
+  const cells = [...weight.keys()];
+  const since = new Date(now.getTime() - NOW_WINDOW_MS);
+  const hour = (now.getUTCHours() + 8) % 24;
+  const rows = await prisma.$queryRaw<{ cell: string; m: number | null; s: number | null; um: number | null; us: number | null }[]>`
+    SELECT c.cell,
+      (SELECT sum(meters) FROM "TravelSample" t WHERE t.cell = c.cell AND NOT t.demo AND t.bucket >= ${bucketOf(since.getTime())})::float8 AS m,
+      (SELECT sum(seconds) FROM "TravelSample" t WHERE t.cell = c.cell AND NOT t.demo AND t.bucket >= ${bucketOf(since.getTime())})::float8 AS s,
+      (SELECT sum(meters) FROM "TravelSample" t WHERE t.cell = c.cell AND NOT t.demo AND t.bucket >= ${new Date(now.getTime() - 28 * 86_400_000)} AND t.bucket < ${bucketOf(since.getTime())}
+         AND (EXTRACT(HOUR FROM t.bucket + INTERVAL '8 hours')::int - ${hour}::int + 24) % 24 IN (0, 1, 23))::float8 AS um,
+      (SELECT sum(seconds) FROM "TravelSample" t WHERE t.cell = c.cell AND NOT t.demo AND t.bucket >= ${new Date(now.getTime() - 28 * 86_400_000)} AND t.bucket < ${bucketOf(since.getTime())}
+         AND (EXTRACT(HOUR FROM t.bucket + INTERVAL '8 hours')::int - ${hour}::int + 24) % 24 IN (0, 1, 23))::float8 AS us
+    FROM unnest(${cells}::text[]) AS c(cell)`;
+  let nowTime = 0;
+  let usualTime = 0;
+  let covered = 0;
+  for (const r of rows) {
+    if (!r.s || !r.us || !r.m || !r.um || r.s < NOW_MIN_SECONDS || r.us < USUAL_MIN_SECONDS) continue;
+    const w = weight.get(r.cell) ?? 0;
+    covered += w;
+    nowTime += w / (r.m / r.s);
+    usualTime += w / (r.um / r.us);
+  }
+  const total = [...weight.values()].reduce((a, b) => a + b, 0);
+  if (covered === 0 || covered < total / 2 || usualTime <= 0) return null;
+  const ratio = nowTime / usualTime;
+  if (ratio < SLOW_RATIO) return null;
+  const usualMinutes = km * paceNow(now);
+  const extraMinutes = usualMinutes * (ratio - 1);
+  if (extraMinutes < MIN_EXTRA_MINUTES) return null;
+  const fee = Math.min(settings.daloyFeeMax, Math.ceil(extraMinutes) * settings.daloyPerMinute);
+  return {
+    fee: Math.round(fee * 100) / 100,
+    extraMinutes: Math.round(extraMinutes),
+    usualMinutes: Math.round(usualMinutes),
+    nowMinutes: Math.round(usualMinutes + extraMinutes),
+    reason: `${Math.round(usualMinutes + extraMinutes)} min on the road now instead of the usual ${Math.round(usualMinutes)}`,
+  };
+}
+
+const LOCK_SECONDS = 10 * 60;
+
+/**
+ * The slow-road add-on one resident sees for one way: never more than what they were shown in the last
+ * 10 minutes (it can go down), like the busy and rain add-ons.
+ */
+export async function slowRoadFor(userId: string, from: LatLng, to: LatLng, km: number, settings: Settings) {
+  const key = `daloylock:${userId}:${from.lat.toFixed(4)},${from.lng.toFixed(4)}:${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
+  const [now, shownRaw] = await Promise.all([slowRoad(from, to, km, settings).catch(() => null), redis.get(key).catch(() => null)]);
+  const shown = shownRaw ? (JSON.parse(shownRaw) as SlowRoad | { fee: 0 }) : null;
+  if (!shown) {
+    await redis.set(key, JSON.stringify(now ?? { fee: 0 }), "EX", LOCK_SECONDS).catch(() => undefined);
+    return now;
+  }
+  if (!now || now.fee <= shown.fee) {
+    if ((now?.fee ?? 0) < shown.fee) await redis.set(key, JSON.stringify(now ?? { fee: 0 }), "KEEPTTL").catch(() => undefined);
+    return now;
+  }
+  return shown.fee > 0 ? (shown as SlowRoad) : null;
+}

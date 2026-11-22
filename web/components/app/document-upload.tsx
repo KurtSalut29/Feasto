@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, FileCheck2, Upload } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useMemo } from "react";
 import { resizePhoto } from "@/components/ui/image-upload";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -62,13 +62,13 @@ export function DocumentPicker({
   const input = useRef<HTMLInputElement>(null);
   const shoot = useRef<HTMLInputElement>(null);
   // A small look at the photo picked, so the person can see it's readable
-  const [preview, setPreview] = useState<string | null>(null);
-  useEffect(() => {
-    if (!camera || !file || !file.type.startsWith("image/")) return setPreview(null);
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [camera, file]);
+  const preview = useMemo(() => (camera && file && file.type.startsWith("image/") ? URL.createObjectURL(file) : null), [camera, file]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview],
+  );
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-ink">

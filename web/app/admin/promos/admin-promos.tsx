@@ -4,6 +4,8 @@ import { CalendarDays, Plus, Sparkles, TicketPercent } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { PromoForm, type Campaign } from "@/components/app/promo-form";
 import { PromoList, type PromoRow } from "@/components/app/promo-list";
+import { PlusAdmin } from "./plus-admin";
+import { SukiAdmin } from "./suki-admin";
 import { useApiData } from "@/components/app/use-api-data";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -164,6 +166,9 @@ export function AdminPromos() {
           </div>
         )}
       </section>
+
+      <SukiAdmin />
+      <PlusAdmin />
 
       <Dialog open={voucherOpen} onClose={() => setVoucherOpen(false)} title="New voucher" description="Feasto pays for it. Stores still get their full price, and riders their full fee." wide>
         {voucherOpen && <PromoForm mode="admin" stores={data.stores} campaigns={data.campaigns.filter((c) => new Date(c.endsAt) > now)} onCancel={() => setVoucherOpen(false)} onDone={() => (setVoucherOpen(false), again())} />}

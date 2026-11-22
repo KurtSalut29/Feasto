@@ -13,6 +13,7 @@ export function feeParts(quote: DeliveryQuote) {
   if (quote.extraKm > 0) parts.push(`${formatPeso(quote.distanceFee)} for ${quote.extraKm} more km (${formatPeso(quote.perKm)} each)`);
   if (quote.busyFee > 0) parts.push(`${formatPeso(quote.busyFee)} because riders are busy${quote.busy ? ` (${quote.busy})` : ""}`);
   if (quote.rainFee > 0) parts.push(`${formatPeso(quote.rainFee)} because it's raining`);
+  if (quote.daloyFee) parts.push(`${formatPeso(quote.daloyFee)} because the road is slow now${quote.daloy ? ` (${quote.daloy})` : ""}`);
   return parts;
 }
 
@@ -28,7 +29,7 @@ export function DeliveryFeeLine({ storeName, quote }: { storeName?: string; quot
         <span className="shrink-0 text-ink tabular-nums">{formatPeso(quote.fee)}</span>
       </div>
       <p className="mt-0.5 text-xs text-gray-500">{feeParts(quote).join(" + ")}</p>
-      {quote.busyFee + quote.rainFee > 0 && <p className="mt-0.5 text-xs text-gray-500">All of the add-on goes to your rider. It won&apos;t go up for the next 10 minutes.</p>}
+      {quote.busyFee + quote.rainFee + (quote.daloyFee ?? 0) > 0 && <p className="mt-0.5 text-xs text-gray-500">All of the add-on goes to your rider. It won&apos;t go up for the next 10 minutes.</p>}
     </div>
   );
 }

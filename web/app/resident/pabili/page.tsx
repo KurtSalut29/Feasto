@@ -30,9 +30,9 @@ export default function PabiliPage() {
  */
 async function Pabili() {
   const user = await requireRole("RESIDENT");
-  const [{ addresses }, { errands, budgetMax, waitMinutes }] = await Promise.all([
+  const [{ addresses }, { errands, budgetMax, prepaidMax, waitMinutes }] = await Promise.all([
     serverApi<{ addresses: Address[] }>("/me/addresses"),
-    serverApi<{ errands: (Errand & { rider: { name: string } | null })[]; budgetMax: number; waitMinutes: number }>("/errands"),
+    serverApi<{ errands: (Errand & { rider: { name: string } | null })[]; budgetMax: number; prepaidMax: number; waitMinutes: number }>("/errands"),
   ]);
 
   return (
@@ -45,7 +45,7 @@ async function Pabili() {
             <IdNotice user={user} />
           </div>
         ) : (
-          <PabiliForm addresses={addresses} budgetMax={budgetMax} waitMinutes={waitMinutes} />
+          <PabiliForm addresses={addresses} budgetMax={budgetMax} prepaidMax={prepaidMax ?? budgetMax} waitMinutes={waitMinutes} />
         )}
 
         <section aria-labelledby="my-pabili" className="mt-6 lg:sticky lg:top-24 lg:mt-0">

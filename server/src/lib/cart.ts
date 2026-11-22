@@ -168,7 +168,7 @@ export async function buildCart(userId: string, addressId?: string, /** A schedu
   const address = await deliveryAddress(userId, addressId);
   if (address) {
     const addOns = at ? NO_ADD_ONS : await addOnsFor(userId, settings);
-    const quotes = await Promise.all(list.map((g) => quoteDelivery(g.pin, address, settings, addOns)));
+    const quotes = await Promise.all(list.map((g) => quoteDelivery(g.pin, address, settings, addOns, at ? undefined : userId)));
     list.forEach((g, i) => {
       g.delivery = quotes[i]!;
       const km = quotes[i]!.km;

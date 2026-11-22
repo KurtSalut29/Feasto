@@ -17,12 +17,15 @@ import { perAccount } from "../lib/rateLimit.js";
 import { getSettings } from "../lib/settings.js";
 import { averageOf, shortName } from "../lib/riderRatings.js";
 import { payoutWords } from "../lib/earnings.js";
+import { queueBonusPayout } from "../lib/payouts.js";
 import { manilaStartOfDay } from "../lib/storeHours.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { shareErrandLocation } from "./errands.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
 import { endRide, recordPosition } from "../lib/daloy.js";
+import { checkRewardsQuietly } from "../lib/loyalty.js";
+import { tripJobs, tripProblem } from "../lib/batching.js";
 
 export const riderRouter = Router();
 riderRouter.use(requireAuth, requireRole("RIDER"));
@@ -166,7 +169,11 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
   const lock = `lock:rider:${userId}`;
   if ((await redis.set(lock, "1", "EX", 10, "NX")) !== "OK") throw new HttpError(429, "Hold on, still accepting your last job.");
   try {
-    if (await riderIsBusy(userId)) throw new HttpError(409, "Finish your current delivery first.");
+    // One delivery at a time, unless this one fits on the same trip (lib/batching.ts)
+    if (await riderIsBusy(userId)) {
+      const problem = await tripProblem(userId, orderId);
+      if (problem) throw new HttpError(409, problem);
+    }
 
     // The claim itself: only succeeds if nobody has taken the job yet. When several riders
     // tap at once, the database lets exactly one UPDATE through.
@@ -196,9 +203,25 @@ riderRouter.post("/jobs/:id/accept", async (req, res) => {
 
 // ---------- The rider's current delivery ----------
 
+/** Open jobs the rider could add to the delivery they're on (two orders, one trip) */
+riderRouter.get("/jobs/along", async (req, res) => {
+  const userId = req.session!.userId;
+  const profile = await approvedRider(userId);
+  if (!profile.isOnline) return void res.json({ base: null, jobs: [] });
+  res.json(await tripJobs(userId, profile));
+});
+
 riderRouter.get("/active", async (req, res) => {
+  const userId = req.session!.userId;
+  // Two orders on one trip: ?id= picks which one the page shows; the trip lists both
+  const trip = await prisma.order.findMany({
+    where: { riderId: userId, status: { in: BUSY } },
+    orderBy: { acceptedAt: "asc" },
+    select: { id: true, status: true, vendor: { select: { name: true } }, checkout: { select: { deliveryAddress: true } } },
+  });
+  const wanted = typeof req.query.id === "string" && trip.some((t) => t.id === req.query.id) ? req.query.id : trip[0]?.id;
   const order = await prisma.order.findFirst({
-    where: { riderId: req.session!.userId, status: { in: BUSY } },
+    where: { id: wanted ?? "-", riderId: userId, status: { in: BUSY } },
     include: {
       vendor: { select: { name: true, address: true, latitude: true, longitude: true, imageUrl: true, owner: { select: { phone: true } } } },
       items: { select: { id: true, name: true, quantity: true, unitPrice: true, removedAt: true } },
@@ -217,7 +240,11 @@ riderRouter.get("/active", async (req, res) => {
     },
   });
   // How long to wait at the door before "Not received" opens
-  res.json({ order: order && { ...order, eta: etaOf(order) }, doorWaitMinutes: (await getSettings()).doorWaitMinutes });
+  res.json({
+    order: order && { ...order, eta: etaOf(order) },
+    trip: trip.length > 1 ? trip.map((t) => ({ id: t.id, code: orderCode(t.id), status: t.status, store: t.vendor.name, address: t.checkout.deliveryAddress })) : [],
+    doorWaitMinutes: (await getSettings()).doorWaitMinutes,
+  });
 });
 
 /** The rider is at the door: the resident is told, and the wait before "Not received" starts */
@@ -314,15 +341,20 @@ const deliveredSchema = z.object({
 riderRouter.post("/active/:id/delivered", async (req, res) => {
   const id = String(req.params.id);
   const { photoUrl } = parseBody(deliveredSchema, req.body);
-  const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId }, select: { checkoutId: true, vendor: { select: { ownerId: true } } } });
+  const order = await prisma.order.findFirst({ where: { id, riderId: req.session!.userId }, select: { checkoutId: true, vendor: { select: { ownerId: true } }, checkout: { select: { residentId: true } } } });
   if (!order) throw new HttpError(404, "We couldn't find this order. It may have been removed.");
+  // Daloy: the ride to the door ends here (if "at the door" wasn't tapped), so a delay bonus is on the order before the payout
+  await endRide(id);
   await prisma.$transaction(async (tx) => {
     await transition(tx, id, ["PICKED_UP"], "DELIVERED", { finishedAt: new Date(), deliveryPhotoUrl: photoUrl }, { riderId: req.session!.userId });
     await settlePayment(tx, order.checkoutId); // cash collected by the rider
+    await queueBonusPayout(tx, id);
   });
   await redis.del(locationKey(id));
   await endRide(id, { forget: true });
   await notifyResident(id);
+  // Suki: points, missions and an inviter's reward can be due now
+  void checkRewardsQuietly(order.checkout.residentId);
   // Online payments are split now: the store's and the rider's parts go to them right away
   const payout = await payoutWords(id);
   await notify(order.vendor.ownerId, { title: `${orderCode(id)} was delivered`, body: `The rider handed it over. ${payout.store}`, link: "/vendor/orders?tab=done" });
@@ -387,6 +419,13 @@ riderRouter.post("/location", async (req, res) => {
   // The customer follows the rider to their door; the store sees them coming for the pickup
   const event = { type: "rider.location", orderId, lat, lng, at } as const;
   await Promise.all([publish(CHANNELS.user(order.checkout.residentId), event), publish(CHANNELS.user(order.vendor.ownerId), event)]);
+  // Two orders on one trip: the other customer and store follow the same rider
+  const others = await prisma.order.findMany({ where: { riderId, status: { in: BUSY }, id: { not: orderId } }, select: { id: true, checkout: { select: { residentId: true } }, vendor: { select: { ownerId: true } } } });
+  for (const o of others) {
+    await redis.set(locationKey(o.id), marshal({ lat, lng, at }, { transport: "redis", channel: locationKey(o.id), kind: "rider location" }), "EX", 3600);
+    const e = { type: "rider.location", orderId: o.id, lat, lng, at } as const;
+    await Promise.all([publish(CHANNELS.user(o.checkout.residentId), e), publish(CHANNELS.user(o.vendor.ownerId), e)]);
+  }
   res.status(204).end();
 });
 
@@ -405,6 +444,8 @@ riderRouter.get("/history", async (req, res) => {
         finishedAt: true,
         deliveryFee: true,
         riderCut: true,
+        riderBonus: true,
+        riderBonusNote: true,
         tip: true,
         subtotal: true, storeDiscount: true, feastoDiscount: true,
         vendor: { select: { name: true, imageUrl: true } },
@@ -413,19 +454,19 @@ riderRouter.get("/history", async (req, res) => {
         riderRating: { select: { rating: true } },
       },
     }),
-    prisma.order.aggregate({ where: delivered, _sum: { deliveryFee: true, riderCut: true, tip: true }, _count: true }),
-    prisma.order.aggregate({ where: { ...delivered, finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true, riderCut: true, tip: true }, _count: true }),
+    prisma.order.aggregate({ where: delivered, _sum: { deliveryFee: true, riderCut: true, tip: true, riderBonus: true }, _count: true }),
+    prisma.order.aggregate({ where: { ...delivered, finishedAt: { gte: manilaStartOfDay() } }, _sum: { deliveryFee: true, riderCut: true, tip: true, riderBonus: true }, _count: true }),
     prisma.riderProfile.findUnique({ where: { userId }, select: { ratingSum: true, ratingCount: true } }),
   ]);
-  // Earnings are the delivery fees after Feasto's share, plus every tip, which all go to the rider
-  const earned = (sum: { deliveryFee: Prisma.Decimal | null; riderCut: Prisma.Decimal | null; tip: Prisma.Decimal | null }) =>
-    Math.round((Number(sum.deliveryFee ?? 0) - Number(sum.riderCut ?? 0) + Number(sum.tip ?? 0)) * 100) / 100;
+  // Earnings are the delivery fees after Feasto's share, plus every tip and delay bonus, which all go to the rider
+  const earned = (sum: { deliveryFee: Prisma.Decimal | null; riderCut: Prisma.Decimal | null; tip: Prisma.Decimal | null; riderBonus: Prisma.Decimal | null }) =>
+    Math.round((Number(sum.deliveryFee ?? 0) - Number(sum.riderCut ?? 0) + Number(sum.tip ?? 0) + Number(sum.riderBonus ?? 0)) * 100) / 100;
   res.json({
     deliveries,
     today: new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10),
     totals: {
-      today: { count: today._count, earnings: earned(today._sum), tips: Number(today._sum.tip ?? 0), feastoShare: Number(today._sum.riderCut ?? 0) },
-      allTime: { count: all._count, earnings: earned(all._sum), tips: Number(all._sum.tip ?? 0), feastoShare: Number(all._sum.riderCut ?? 0) },
+      today: { count: today._count, earnings: earned(today._sum), tips: Number(today._sum.tip ?? 0), bonuses: Number(today._sum.riderBonus ?? 0), feastoShare: Number(today._sum.riderCut ?? 0) },
+      allTime: { count: all._count, earnings: earned(all._sum), tips: Number(all._sum.tip ?? 0), bonuses: Number(all._sum.riderBonus ?? 0), feastoShare: Number(all._sum.riderCut ?? 0) },
     },
     rating: { average: averageOf(profile?.ratingSum ?? 0, profile?.ratingCount ?? 0), count: profile?.ratingCount ?? 0 },
   });

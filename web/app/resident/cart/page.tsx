@@ -209,7 +209,7 @@ async function ResidentCart() {
           </div>
         </dl>
         <p className="mt-2 text-xs text-muted">
-          The delivery fee depends on the distance by road{cart.groups.some((g) => g.delivery && g.delivery.busyFee + g.delivery.rainFee > 0) ? ", plus a small add-on for the rider while riders are busy or it's raining" : ""}. Pickup is free: choose it at checkout to pay{" "}
+          The delivery fee depends on the distance by road{cart.groups.some((g) => g.delivery && g.delivery.busyFee + g.delivery.rainFee + (g.delivery.daloyFee ?? 0) > 0) ? ", plus a small add-on for the rider while riders are busy, it's raining or the road is slow" : ""}. Pickup is free: choose it at checkout to pay{" "}
           {formatPeso(cart.itemsTotal)} only.
         </p>
       </section>

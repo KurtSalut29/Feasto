@@ -1,5 +1,5 @@
 /** A line taken off an order, as the server worked it out (server/src/lib/promos.ts) */
-export type DiscountLine = { kind: "DEAL" | "VOUCHER" | "DELIVERY" | "FIRST_ORDER" | "SENIOR"; label: string; amount: number; store: number; feasto: number; promoId?: string };
+export type DiscountLine = { kind: "DEAL" | "VOUCHER" | "DELIVERY" | "FIRST_ORDER" | "SENIOR" | "POINTS" | "PLUS"; label: string; amount: number; store: number; feasto: number; promoId?: string };
 
 const c = (n: number) => Math.round(n * 100) / 100;
 

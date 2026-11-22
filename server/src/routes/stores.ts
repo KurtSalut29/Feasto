@@ -271,7 +271,7 @@ storesRouter.get("/:id", async (req, res) => {
     }),
   ]);
   // What delivery from this store to the resident's address costs now
-  const delivery = home ? { ...(await quoteDelivery(store, home, settings, await addOnsFor(req.session!.userId, settings))), addressLabel: home.label } : null;
+  const delivery = home ? { ...(await quoteDelivery(store, home, settings, await addOnsFor(req.session!.userId, settings), req.session!.userId)), addressLabel: home.label } : null;
   res.json({
     store: {
       ...withRating(rest),

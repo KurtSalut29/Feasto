@@ -28,6 +28,9 @@ type Delivery = {
   riderCut?: string;
   /** What the resident tipped, after it arrived */
   tip: string;
+  /** Feasto's delay bonus for a slow road */
+  riderBonus?: string;
+  riderBonusNote?: string | null;
   subtotal: string;
   vendor: { name: string; imageUrl: string | null };
   items: { quantity: number }[];
@@ -66,7 +69,7 @@ const manilaDay = (iso: string) => new Date(new Date(iso).getTime() + 8 * 3600_0
 const dayBefore = (day: string, n: number) => new Date(new Date(`${day}T12:00:00Z`).getTime() - n * 86400_000).toISOString().slice(0, 10);
 const plural = (n: number) => `${n} ${n === 1 ? "delivery" : "deliveries"}`;
 /** A delivery's pay: its fee minus Feasto's share, plus any tip, all of which goes to the rider */
-const pay = (d: Delivery) => riderEarns(d) + Number(d.tip ?? 0);
+const pay = (d: Delivery) => riderEarns(d) + Number(d.tip ?? 0) + Number(d.riderBonus ?? 0);
 const sum = (list: Delivery[]) => list.reduce((n, d) => n + pay(d), 0);
 const itemCount = (d: Delivery) => (d.items ?? []).reduce((n, i) => n + i.quantity, 0);
 
@@ -219,6 +222,11 @@ async function RiderHistory() {
                       </p>
                     )}
                     {Number(d.tip) > 0 && <p className="text-[0.6875rem] font-medium text-emerald-700 tabular-nums">+ {formatPeso(d.tip)} tip</p>}
+                    {Number(d.riderBonus) > 0 && (
+                      <p className="text-[0.6875rem] font-medium text-emerald-700 tabular-nums" title={d.riderBonusNote ?? undefined}>
+                        + {formatPeso(d.riderBonus!)} slow-road bonus
+                      </p>
+                    )}
                     <ReportProblem
                       compact
                       className="-mr-2"
@@ -271,7 +279,7 @@ function BalanceCard({ earnings, feastoShare }: { earnings: RiderEarnings; feast
       <dl className="space-y-2 border-t border-line bg-canvas/40 px-4 py-3 text-[0.8125rem]">
         <div>
           <dt className="font-semibold text-ink">Food deliveries</dt>
-          <dd className="text-muted">The whole delivery fee is yours, busy and rain add-ons included, and every tip. Paid online, it&apos;s sent to your GCash, Maya or bank as soon as you deliver.</dd>
+          <dd className="text-muted">The whole delivery fee is yours, busy, rain and slow-road add-ons included, every tip, and Feasto&apos;s bonus when a slow road made you late. Paid online, it&apos;s sent to your GCash, Maya or bank as soon as you deliver.</dd>
         </div>
         <div>
           <dt className="font-semibold text-ink">Pabili</dt>

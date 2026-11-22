@@ -227,6 +227,21 @@ model User {
   shopSuggestions PabiliShopSuggestion[]
   passkeys      Passkey[]
   promoUses     PromoUse[]
+  pointsGrants  PointsGrant[]
+  plusMemberships PlusMembership[]
+  /// PhilSys QR (Level 2): a hash of the card number (never the number itself), to stop one card on two accounts
+  pcnHash           String?   @unique
+  /// When the QR on the National ID was read, and what matched the account (name, birthday)
+  philsysQrAt       DateTime?
+  philsysMatch      Json?
+  /// Confirmed by PhilSys eVerify (only once Feasto is approved and connected)
+  philsysVerifiedAt DateTime?
+  /// Suki: the code friends type when they sign up
+  referralCode  String?        @unique
+  /// Who invited this resident (their referral code at sign-up)
+  referredById  String?
+  referredBy    User?          @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals     User[]         @relation("Referrals")
   errandRuns    Errand[]       @relation("RiderErrands")
   errandAsks    Errand[]       @relation("PreferredErrandRider")
   /// Reports this person sent, and reports about them
@@ -373,6 +388,13 @@ model RiderProfile {
   reviewedAt       DateTime?
   /// Only the admin can lift a suspension the admin made, not the rider's store
   suspendedByAdmin Boolean        @default(false)
+  /// Level 3: a selfie doing what Feasto asked (e.g. "hold up 3 fingers"), next to the license, for the admin
+  selfieFile        String?
+  selfieChallenge   String?
+  selfieAt          DateTime?
+  livenessStatus    IdCheck?
+  livenessNote      String?
+  livenessCheckedAt DateTime?
   isOnline         Boolean        @default(false)
   /// Running totals of residents' ratings of this rider, updated with each new rating
   ratingSum        Int            @default(0)
@@ -480,6 +502,38 @@ model PlatformSettings {
   require2faRiders        Boolean @default(true)
   /// The admin logs in with three steps: password, a code and a passkey
   require3faAdmin         Boolean @default(false)
+  /// Suki points: on or off for everyone
+  loyaltyOn               Boolean @default(true)
+  /// One point for every this many pesos of food paid
+  pointsEarnPer           Decimal @default(20) @db.Decimal(8, 2)
+  /// What one point takes off, in pesos
+  pointValue              Decimal @default(0.20) @db.Decimal(6, 2)
+  /// The fewest points that can be used at once
+  pointsMinRedeem         Int     @default(100)
+  /// Points for both friends when an invited friend's first order arrives
+  referralPoints          Int     @default(250)
+  /// Points in the resident's birthday week
+  birthdayPoints          Int     @default(250)
+  /// Daloy: a slow-road add-on from the riders' own speeds (nothing without enough data); all of it is the rider's
+  daloyFeeOn              Boolean @default(true)
+  daloyPerMinute          Decimal @default(2) @db.Decimal(6, 2)
+  daloyFeeMax             Decimal @default(30) @db.Decimal(8, 2)
+  /// A bonus from Feasto when a ride took much longer than estimated because the road was slow (seen on GPS)
+  delayBonusOn            Boolean @default(true)
+  delayBonusPerMinute     Decimal @default(1) @db.Decimal(6, 2)
+  delayBonusMax           Decimal @default(20) @db.Decimal(8, 2)
+  /// Feasto Plus: a month of free deliveries and members-only vouchers
+  plusOn                  Boolean @default(true)
+  plusPrice               Decimal @default(99) @db.Decimal(8, 2)
+  plusFreeDeliveries      Int     @default(8)
+  plusDeliveryMax         Decimal @default(50) @db.Decimal(8, 2)
+  plusMinSpend            Decimal @default(150) @db.Decimal(8, 2)
+  /// A Pabili paid online first can have a budget up to this (above the cash limit)
+  pabiliPrepaidMax        Int     @default(5000)
+  /// One rider takes two orders at once when the stores and the doors are close
+  batchingOn              Boolean @default(true)
+  batchPickupMeters       Int     @default(300)
+  batchDropKm             Decimal @default(1.5) @db.Decimal(4, 1)
   updatedAt         DateTime @updatedAt
 }
 
@@ -651,6 +705,15 @@ model Order {
   discounts        Json        @default("[]")
   /// The Senior Citizen or PWD discount was given (by law, the store's)
   seniorDiscount   Boolean     @default(false)
+  /// Suki points this order earns, counted once it's delivered or collected
+  pointsEarned     Int         @default(0)
+  /// Suki points spent on it (Feasto pays them, inside feastoDiscount); given back if it's cancelled
+  pointsUsed       Int         @default(0)
+  /// Daloy: the slow-road part of the delivery fee (in deliveryFee and extraFee; all of it is the rider's)
+  daloyFee         Decimal     @default(0) @db.Decimal(10, 2)
+  /// From Feasto when the ride took much longer than estimated on a slow road (paid with the rider's payouts)
+  riderBonus       Decimal     @default(0) @db.Decimal(10, 2)
+  riderBonusNote   String?
   promoUses        PromoUse[]
   tripLegs         TripLeg[]
   /// Ordered for later: when the resident wants it delivered (or ready for pickup). Null means as soon as possible.
@@ -764,8 +827,11 @@ model FeastoPayment {
 /// Sent through Xendit Payouts (test mode) to the e-wallet or bank they chose.
 model Payout {
   id            String        @id @default(cuid())
-  orderId       String
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  /// The order it's for; or, for a Pabili paid online first, the errand (the rider is paid back by Feasto)
+  orderId       String?
+  order         Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  errandId      String?
+  errand        Errand?       @relation(fields: [errandId], references: [id], onDelete: Restrict)
   party         PayoutParty
   /// Exactly one of these, matching the party
   vendorId      String?
@@ -789,6 +855,7 @@ model Payout {
   updatedAt     DateTime      @updatedAt
 
   @@unique([orderId, party])
+  @@unique([errandId, party])
   @@index([vendorId, createdAt])
   @@index([riderId, createdAt])
   @@index([status])
@@ -1020,6 +1087,17 @@ model Errand {
   /// Feasto's share of the fee, without the extra: the percent, copied when it's sent, and what it came to
   feastoCutRate    Decimal      @default(0) @db.Decimal(4, 1)
   feastoCut        Decimal      @default(0) @db.Decimal(10, 2)
+  /// Paid online first (a budget above the cash limit, or by choice): the rider is paid back by Feasto, and what's
+  /// left of the budget and the most fee is refunded once the receipt is in
+  prepaid          Boolean        @default(false)
+  paymentStatus    PaymentStatus?
+  paymentRef       String?        @unique
+  paymentUrl       String?
+  paidAmount       Decimal?       @db.Decimal(10, 2)
+  paidChannel      String?
+  /// When Xendit said it was paid: the wait for a rider starts then
+  paidAt           DateTime?
+  refundedAmount   Decimal        @default(0) @db.Decimal(10, 2)
   /// What the shop's receipt says, and its photo; the resident pays this plus the fee
   receiptTotal     Decimal?     @db.Decimal(10, 2)
   receiptPhotoUrl  String?
@@ -1054,6 +1132,7 @@ model Errand {
 
   reports Report[]
   tripLegs TripLeg[]
+  payouts  Payout[]
 
   @@index([status, createdAt])
   @@index([riderId, status])
@@ -1310,6 +1389,8 @@ enum PromoAudience {
   EVERYONE
   /// A verified account's first order (one per account, phone and device)
   FIRST_ORDER
+  /// Feasto Plus members only
+  PLUS
 }
 
 /// A sale day or season (11.11, 12.12, payday): a banner on Home, with its own vouchers
@@ -1447,4 +1528,78 @@ model TravelSample {
 
   @@unique([cell, bucket, demo])
   @@index([bucket])
+}
+
+/// Suki points given for something other than an order: a mission done, a friend invited, a birthday
+enum PointsReason {
+  MISSION
+  REFERRAL
+  BIRTHDAY
+  ADMIN
+}
+
+/// Points given once for one thing. The key makes it once: "mission:<id>:WEEK:2026-11-16",
+/// "birthday:2026", "referral:<friend's id>", "referred:<inviter's id>".
+model PointsGrant {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points    Int
+  reason    PointsReason
+  key       String
+  note      String
+  createdAt DateTime     @default(now())
+
+  @@unique([userId, key])
+  @@index([userId, createdAt])
+}
+
+enum MissionKind {
+  /// Orders delivered or collected
+  ORDERS
+  /// Stores never ordered from before
+  NEW_STORES
+  /// Pesos of food paid
+  SPEND
+}
+
+enum MissionPeriod {
+  WEEK
+  MONTH
+}
+
+/// A Suki mission, e.g. "Order 3 times this week: 250 points". Progress is counted from the orders.
+model Mission {
+  id           String        @id @default(cuid())
+  title        String
+  kind         MissionKind
+  target       Int
+  period       MissionPeriod
+  rewardPoints Int
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+}
+
+enum PlusStatus {
+  /// Waiting for the payment
+  PENDING
+  ACTIVE
+  FAILED
+}
+
+/// One month of Feasto Plus, paid online. A new month bought before the last ends starts when it ends.
+model PlusMembership {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status     PlusStatus @default(PENDING)
+  amount     Decimal    @db.Decimal(8, 2)
+  startsAt   DateTime?
+  endsAt     DateTime?
+  paymentRef String?    @unique
+  paymentUrl String?
+  paidChannel String?
+  createdAt  DateTime   @default(now())
+
+  @@index([userId, status, endsAt])
 }

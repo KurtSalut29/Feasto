@@ -15,6 +15,7 @@ import { ErrandActions } from "./errand-actions";
 import { ConfirmReceived } from "./confirm-received";
 import { PabiliList } from "../pabili-list";
 import { ReportProblem } from "@/components/app/report-problem";
+import { PrepaidState } from "./prepaid-state";
 
 export const metadata: Metadata = { title: "Pabili" };
 
@@ -178,8 +179,9 @@ async function PabiliDetail({ params }: { params: Promise<{ id: string }> }) {
           <section aria-labelledby="pabili-pay" className="rounded-2xl border border-line p-4">
             <h2 id="pabili-pay" className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
               <Banknote className="size-4 text-brand-600" aria-hidden />
-              What you pay, in cash
+              {errand.prepaid ? "Paid online" : "What you pay, in cash"}
             </h2>
+            {errand.prepaid && <PrepaidState errand={errand} />}
             <dl className="space-y-1 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">{errand.receiptTotal ? "Items (the receipt)" : "Items, at most"}</dt>

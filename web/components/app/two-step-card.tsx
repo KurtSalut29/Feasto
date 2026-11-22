@@ -184,7 +184,7 @@ export function TwoStepCard({ className = "" }: { className?: string }) {
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-ink">Where you&apos;re logged in</p>
             {data.devices.some((d) => d.trustedUntil && new Date(d.trustedUntil) > new Date()) && (
-              <button type="button" onClick={forget} className="text-sm font-semibold text-brand-700 hover:underline">
+              <button type="button" onClick={forget} className="tap text-sm font-semibold text-brand-700 hover:underline">
                 Forget remembered devices
               </button>
             )}

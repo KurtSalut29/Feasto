@@ -1,6 +1,7 @@
 "use client";
 
-import { BadgePercent, Check, HeartHandshake, TicketPercent, Truck } from "lucide-react";
+import { BadgePercent, Check, Coins, Crown, HeartHandshake, TicketPercent, Truck } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { useApiData } from "@/components/app/use-api-data";
 import { SwitchField } from "@/components/ui/switch-field";
@@ -14,6 +15,8 @@ export type PromoQuote = {
   voucher: { code: string; title: string; applied: boolean; message: string | null; amount: number } | null;
   deliveryVoucher: { code: string; title: string; applied: boolean; message: string | null; amount: number } | null;
   senior: { eligible: boolean; kind: "SENIOR" | "PWD" | null; requested: boolean; applied: boolean; message: string | null };
+  plus: { member: boolean; applied: boolean; amount: number; left: number; message: string | null };
+  points: { on: boolean; balance: number; pointValue: number; minRedeem: number; requested: boolean; used: number; amount: number; earn: number; tier: string; message: string | null };
   stores: { id: string; name: string }[];
 };
 
@@ -31,6 +34,8 @@ export function VoucherPicker({
   onVoucher,
   onDelivery,
   onSenior,
+  usePoints,
+  onPoints,
 }: {
   quote: PromoQuote | null;
   voucherCode: string | null;
@@ -40,6 +45,8 @@ export function VoucherPicker({
   onVoucher: (code: string | null) => void;
   onDelivery: (code: string | null) => void;
   onSenior: (on: boolean) => void;
+  usePoints: boolean;
+  onPoints: (on: boolean) => void;
 }) {
   const { data } = useApiData<{ vouchers: VoucherCard[] }>("/promos/vouchers");
   const [typed, setTyped] = useState("");
@@ -162,6 +169,52 @@ export function VoucherPicker({
               {quote.senior.message}
             </p>
           )}
+        </div>
+      )}
+
+      {quote?.plus && delivery && (quote.plus.member ? (
+        <p role="status" className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${quote.plus.applied ? "bg-emerald-50 text-emerald-900" : "bg-canvas text-muted"}`}>
+          <Crown className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {quote.plus.applied ? `Feasto Plus: ${formatPeso(quote.plus.amount)} off the delivery. ${quote.plus.left} free ${quote.plus.left === 1 ? "delivery" : "deliveries"} left this month.` : (quote.plus.message ?? "Feasto Plus")}
+        </p>
+      ) : (
+        <p className="flex items-start gap-2 rounded-xl bg-canvas px-3 py-2.5 text-sm text-muted">
+          <Crown className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+          <span>
+            Free deliveries every month with{" "}
+            <Link href="/resident/plus" className="tap font-semibold text-brand-700 hover:underline">
+              Feasto Plus
+            </Link>
+            .
+          </span>
+        </p>
+      ))}
+
+      {quote?.points.on && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-1">
+          {quote.points.balance > 0 ? (
+            <SwitchField
+              label="Use my Suki points"
+              description={`You have ${quote.points.balance.toLocaleString("en-PH")} points, worth ${formatPeso(Math.round(quote.points.balance * quote.points.pointValue * 100) / 100)}. They take off up to half the food.`}
+              checked={usePoints}
+              onChange={onPoints}
+            />
+          ) : (
+            <p className="px-3 pt-2 text-sm font-medium text-ink">Suki points</p>
+          )}
+          {usePoints && quote.points.message && <p className="px-3 pb-1 text-sm text-amber-900">{quote.points.message}</p>}
+          {usePoints && quote.points.used > 0 && (
+            <p role="status" className="flex items-center gap-2 px-3 pb-1 text-sm font-semibold text-emerald-800">
+              <Coins className="size-4" aria-hidden />
+              {quote.points.used.toLocaleString("en-PH")} points: {formatPeso(quote.points.amount)} off
+            </p>
+          )}
+          <p className="px-3 pb-2 text-sm text-muted">
+            {quote.points.earn > 0 ? `This order earns ${quote.points.earn.toLocaleString("en-PH")} points once it arrives (${quote.points.tier}). ` : ""}
+            <Link href="/resident/suki" className="tap font-semibold text-brand-700 hover:underline">
+              See Suki
+            </Link>
+          </p>
         </div>
       )}
     </div>

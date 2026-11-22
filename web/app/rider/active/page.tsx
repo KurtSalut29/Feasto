@@ -1,6 +1,7 @@
 import { Banknote, CalendarClock, Check, CreditCard, Map as MapIcon, MapPin, MessageSquareText, Phone, Store, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { StepBar } from "@/components/app/step-bar";
@@ -25,13 +26,15 @@ import { orderTotal } from "@/lib/promos";
 
 export const metadata: Metadata = { title: "Active delivery" };
 
-export default function RiderActivePage() {
+export default function RiderActivePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   return (
     <Suspense fallback={<MobileSkeleton />}>
-      <RiderActive />
+      <RiderActive searchParams={searchParams} />
     </Suspense>
   );
 }
+
+type TripStop = { id: string; code: string; status: string; store: string; address: string };
 
 const pill =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-line px-3.5 text-sm font-semibold text-ink hover:bg-canvas focus-visible:outline-2 focus-visible:outline-brand-500";
@@ -121,10 +124,11 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
  * the way to the next stop, the next button to press, whether to collect cash, then the route
  * and the order itself with its prices.
  */
-async function RiderActive() {
+async function RiderActive({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
   await requireRole("RIDER");
-  const [{ order, doorWaitMinutes }, { errand }] = await Promise.all([
-    serverApi<{ order: RiderDelivery | null; doorWaitMinutes?: number }>("/rider/active"),
+  const { id } = await searchParams;
+  const [{ order, doorWaitMinutes, trip = [] }, { errand }] = await Promise.all([
+    serverApi<{ order: RiderDelivery | null; doorWaitMinutes?: number; trip?: TripStop[] }>(`/rider/active${id ? `?id=${encodeURIComponent(id)}` : ""}`),
     serverApi<{ errand: RiderErrand | null }>("/rider/errands/active"),
   ]);
 
@@ -163,6 +167,26 @@ async function RiderActive() {
 
   return (
     <>
+      {trip.length > 1 && (
+        <nav aria-label="Orders on this trip" className="mb-3 rounded-2xl border border-line bg-white p-2">
+          <p className="px-2 pt-1 pb-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">Two orders on this trip</p>
+          <div className="grid grid-cols-2 gap-2">
+            {trip.map((t) => (
+              <Link
+                key={t.id}
+                href={`/rider/active?id=${t.id}`}
+                aria-current={t.id === order.id ? "page" : undefined}
+                className={`min-w-0 rounded-xl px-3 py-2 text-sm transition focus-visible:outline-2 focus-visible:outline-brand-500 ${t.id === order.id ? "bg-brand-600 text-white" : "bg-canvas text-ink hover:bg-brand-50"}`}
+              >
+                <span className="block font-bold">{t.code}</span>
+                <span className={`block truncate text-xs ${t.id === order.id ? "text-white/85" : "text-muted"}`}>
+                  {t.store} · {t.status === "PICKED_UP" ? "picked up" : "to pick up"}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
       <section aria-label="Delivery progress" className="mb-3 rounded-2xl border border-brand-100 bg-gradient-to-b from-brand-50 to-white p-4">
         <div className="flex items-start gap-3">
           <StoreCover imageUrl={order.vendor.imageUrl} className="size-12 shrink-0 rounded-xl" eager />

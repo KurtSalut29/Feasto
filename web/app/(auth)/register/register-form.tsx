@@ -72,7 +72,7 @@ const STEP_TEXT: Record<Exclude<Step, "account">, { title: string; subtitle: str
 const STEP_FIELDS: Record<Step, string[]> = {
   account: ["firstName", "middleName", "lastName", "suffix", "email", "phone", "password"],
   verify: ["emailCode"],
-  identity: ["idType"],
+  identity: ["idType", "referralCode"],
   store: ["storeName", "storeAddress", "storeType"],
   location: ["latitude", "longitude"],
   permit: PERMIT_FIELDS.map((f) => f.name),
@@ -86,6 +86,7 @@ const emptyValues: Record<string, string> = {
   lastName: "",
   suffix: "",
   idType: "",
+  referralCode: "",
   emailCode: "",
   email: "",
   phone: "",
@@ -330,7 +331,7 @@ export function RegisterForm() {
       };
     }
     if (role === "RIDER") return { ...account, ...pick([...RIDER_PERSONAL_FIELDS, ...RIDER_LICENSE_FIELDS, STORE_CODE_FIELD]) };
-    return { ...account, idType: values.idType };
+    return { ...account, idType: values.idType, referralCode: values.referralCode.trim() || undefined };
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -615,6 +616,19 @@ export function RegisterForm() {
                 The name on the ID must match <span className="font-semibold text-ink">{[values.firstName, values.middleName, values.lastName, values.suffix].filter((x) => x.trim()).join(" ")}</span>. You can order right away while the admin checks it.
               </span>
             </p>
+            <TextField
+              label="A friend's Suki code (optional)"
+              name="referralCode"
+              value={values.referralCode}
+              onChange={(e) => {
+                setValues((current) => ({ ...current, referralCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20) }));
+                clearError("referralCode");
+              }}
+              placeholder="e.g. ROSA7K2P"
+              autoComplete="off"
+              hint="You both get points when your first order arrives."
+              error={fieldError("referralCode")}
+            />
           </>
         )}
         {step === "personal" && fieldBoxes(RIDER_PERSONAL_FIELDS)}

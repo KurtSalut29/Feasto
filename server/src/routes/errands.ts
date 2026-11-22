@@ -29,6 +29,10 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 import { UPLOADED_PHOTO } from "./uploads.js";
 import { refuseWithoutId } from "../lib/identity.js";
 import { refuseIfSuspended } from "../lib/userReports.js";
+import { listReaderOn, readList } from "../lib/listReader.js";
+import { payRiderBack, prepaidAmount, refundPabili, startPabiliPayment, syncPabiliPayment } from "../lib/pabiliPay.js";
+import { expireInvoice } from "../lib/xendit.js";
+import { originOf } from "./checkout.js";
 
 const peso = (n: unknown) => Math.round(Number(n) * 100) / 100;
 const locationKey = (id: string) => `rider-location:${id}`;
@@ -87,17 +91,30 @@ const errandSchema = z.object({
   preferredRiderId: z.string().min(1).optional(),
   /** The lowest fee the resident saw; if it changed in the meantime, they're asked to look again */
   expectedFee: z.number().optional(),
+  /** Pay the budget and the most fee online first (needed above the cash limit): nothing is paid at the door */
+  payOnline: z.boolean().optional().default(false),
+  onlineMethod: z.enum(["GCASH", "MAYA", "GRABPAY", "SHOPEEPAY", "COINS", "VISA", "MASTERCARD", "JCB", "AMEX"]).optional(),
 });
 
 const budgetMax = async () => (await getSettings()).pabiliBudgetMax;
 
-/** The rider pays at the shop with their own money, so a Pabili stays within what the admin set */
-async function withinBudgetLimit(budget: number) {
-  const max = await budgetMax();
-  if (budget > max) {
-    const most = `₱${max.toLocaleString("en-PH")}`;
+/**
+ * Paid in cash, the rider lends the money at the shop, so the budget stays within the admin's cash
+ * limit. Paid online first, it can go up to the prepaid limit.
+ */
+async function withinBudgetLimit(budget: number, payOnline = false) {
+  const settings = await getSettings();
+  const cash = settings.pabiliBudgetMax;
+  const prepaid = Math.max(cash, settings.pabiliPrepaidMax);
+  const php = (n: number) => `₱${n.toLocaleString("en-PH")}`;
+  if (payOnline && budget > prepaid) throw new ValidationError({ budget: [`${php(prepaid)} is the most for one Pabili paid online. Lower the budget, or split your list into two Pabili.`] });
+  if (!payOnline && budget > cash) {
     throw new ValidationError({
-      budget: [`${most} is the most for one Pabili, because the rider pays at the shop with their own money. Lower the budget, or split your list into two Pabili.`],
+      budget: [
+        prepaid > cash
+          ? `Above ${php(cash)}, pay online first (up to ${php(prepaid)}): the rider can't lend that much in cash.`
+          : `${php(cash)} is the most for one Pabili, because the rider pays at the shop with their own money. Lower the budget, or split your list into two Pabili.`,
+      ],
     });
   }
 }
@@ -231,6 +248,28 @@ errandsRouter.put(
   },
 );
 
+const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+/**
+ * A shopping list read for the resident (photo, PDF or Word file): the lines come back for the form,
+ * to check and change before sending. Nothing is kept: the file is read and dropped.
+ */
+errandsRouter.post(
+  "/read-list",
+  perAccount("list-read", 12, 3600, "You've read a lot of lists just now. Type the items, or try again later."),
+  express.raw({ type: [...Object.values(CONTENT_TYPE), DOCX], limit: MAX_BYTES }),
+  async (req, res) => {
+    const data = req.body;
+    if (!Buffer.isBuffer(data) || data.length === 0) throw new HttpError(400, "Choose a photo, PDF or Word file of your list.");
+    const isZip = data.readUInt32LE(0) === 0x04034b50;
+    const kind = isZip ? "docx" : detectDocumentType(data);
+    if (!kind) throw new HttpError(400, "That file isn't a photo (JPG, PNG, WebP), a PDF or a Word file.");
+    const result = await readList(data, kind);
+    if (result.problem && !result.items.length) throw new HttpError(422, result.problem);
+    res.json(result);
+  },
+);
+
 /** The rules the form checks as the resident types (the server checks again on sending) */
 errandsRouter.get("/rules", async (req, res) => {
   const { liquorBan } = await getSettings();
@@ -242,6 +281,8 @@ errandsRouter.get("/rules", async (req, res) => {
     units: UNITS,
     // Alcohol and cigarettes: whether a birth date is still needed, and whether the ID is verified
     me: { idVerified: me.idStatus === "VERIFIED", hasBirthDate: Boolean(me.birthDate), adult: me.birthDate ? ageOn(me.birthDate) >= 18 : null },
+    // Whether a list can be read from a photo or file (Claude, with ANTHROPIC_API_KEY)
+    listReader: listReaderOn(),
   });
 });
 
@@ -277,7 +318,7 @@ errandsRouter.post("/shops/suggest", perAccount("shop-suggest", 10, 3600, "You'v
 
 errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of Pabili just now."), async (req, res) => {
   const input = parseBody(errandSchema, req.body);
-  await withinBudgetLimit(input.budget);
+  await withinBudgetLimit(input.budget, input.payOnline);
   const userId = req.session!.userId;
   await refuseIfSuspended(userId, "pabili");
   await refuseWithoutId(userId, "pabili");
@@ -297,7 +338,9 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
     data: {
       residentId: userId,
       preferredRiderId: rider?.id ?? null,
-      exclusiveUntil: rider ? new Date(Date.now() + PREFERRED_RIDER_SECONDS * 1000) : null,
+      // Paid online first: the asked rider's moment starts once it's paid
+      exclusiveUntil: rider && !input.payOnline ? new Date(Date.now() + PREFERRED_RIDER_SECONDS * 1000) : null,
+      ...(input.payOnline && { prepaid: true, paymentStatus: "PENDING" as const }),
       shopId: shop.id,
       shopName: shop.name,
       shopAddress: shop.address,
@@ -321,6 +364,15 @@ errandsRouter.post("/", perAccount("pabili", 6, 600, "You've asked for a lot of 
     },
     select: { id: true, residentId: true, status: true, shopName: true, deliveryLat: true, deliveryLng: true },
   });
+  // Paid online first: riders hear about it once Xendit says it's paid (lib/pabiliPay.ts)
+  if (input.payOnline) {
+    const me = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true } });
+    const paymentUrl = await startPabiliPayment(errand.id, originOf(req), input.onlineMethod ?? null, me.email).catch(() => {
+      throw new HttpError(502, "The payment page couldn't be opened, so the Pabili wasn't sent. Try again in a minute, or pay in cash.");
+    });
+    await broadcastErrand(errand);
+    return void res.status(201).json({ errand: { id: errand.id }, paymentUrl });
+  }
   const resident = req.session!.name.split(" ")[0];
   if (rider) {
     await notify(rider.id, {
@@ -363,6 +415,11 @@ const errandView = {
   priceFlag: true,
   idCheckedAt: true,
   confirmedAt: true,
+  prepaid: true,
+  paymentStatus: true,
+  paymentUrl: true,
+  paidAmount: true,
+  refundedAmount: true,
   createdAt: true,
   acceptedAt: true,
   boughtAt: true,
@@ -376,7 +433,8 @@ errandsRouter.get("/", async (req, res) => {
     take: 20,
     select: { ...errandView, rider: { select: { name: true } } },
   });
-  res.json({ errands, budgetMax: await budgetMax(), waitMinutes: ERRAND_WAIT_MINUTES });
+  const settings = await getSettings();
+  res.json({ errands, budgetMax: settings.pabiliBudgetMax, prepaidMax: Math.max(settings.pabiliBudgetMax, settings.pabiliPrepaidMax), waitMinutes: ERRAND_WAIT_MINUTES });
 });
 
 errandsRouter.get("/:id", async (req, res) => {
@@ -412,24 +470,38 @@ errandsRouter.get("/:id", async (req, res) => {
 /** Only before a rider takes it: once they're on the way, they may already be buying */
 errandsRouter.post("/:id/cancel", async (req, res) => {
   const id = String(req.params.id);
-  const errand = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId }, select: { preferredRiderId: true, exclusiveUntil: true } });
+  const errand = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId }, select: { preferredRiderId: true, exclusiveUntil: true, prepaid: true, paymentStatus: true, paymentRef: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
+  // Still waiting for the payment: close the page first, so it can't be paid after the cancel
+  if (errand.prepaid && errand.paymentStatus === "PENDING") {
+    if ((await syncPabiliPayment(id).catch(() => "PENDING")) === "PENDING" && errand.paymentRef) await expireInvoice(errand.paymentRef).catch(() => null);
+  }
   const { count } = await prisma.errand.updateMany({
     where: { id, residentId: req.session!.userId, status: "REQUESTED" },
     data: { status: "CANCELLED", cancelReason: "Cancelled by you", finishedAt: new Date() },
   });
   if (count === 0) throw new HttpError(409, "A rider already took this Pabili, so it can't be cancelled. Call them instead.");
+  const refunded = await refundPabili(id, Number.MAX_SAFE_INTEGER, "You cancelled your Pabili.");
   await broadcastErrand({ id, residentId: req.session!.userId, status: "CANCELLED" });
-  res.json({ ok: true });
+  res.json({ ok: true, refunded });
+});
+
+/** Back from Xendit's page: how the payment went (asks Xendit, so it works without the webhook) */
+errandsRouter.get("/:id/payment", async (req, res) => {
+  const id = String(req.params.id);
+  const mine = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId, prepaid: true }, select: { id: true } });
+  if (!mine) throw new HttpError(404, "We couldn't find this Pabili.");
+  res.json({ status: await syncPabiliPayment(id).catch(() => null) });
 });
 
 /** Raise what the rider may spend (something cost more than expected), until they've bought it */
 errandsRouter.post("/:id/budget", async (req, res) => {
   const id = String(req.params.id);
   const { budget } = parseBody(z.object({ budget: errandSchema.shape.budget }), req.body);
-  await withinBudgetLimit(budget);
-  const errand = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId }, select: { budget: true, riderId: true } });
+  const errand = await prisma.errand.findFirst({ where: { id, residentId: req.session!.userId }, select: { budget: true, riderId: true, prepaid: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
+  if (errand.prepaid) throw new HttpError(409, "This Pabili was paid online, so its budget can't go up. Call the rider: they can skip something, or buy less.");
+  await withinBudgetLimit(budget);
   if (budget < Number(errand.budget)) throw new ValidationError({ budget: ["The budget can only go up once it's sent. Enter more than it is now."] });
   const { count } = await prisma.errand.updateMany({ where: { id, residentId: req.session!.userId, status: { in: ["REQUESTED", "ACCEPTED"] } }, data: { budget } });
   if (count === 0) throw new HttpError(409, "The rider already bought everything, so the budget can't change.");
@@ -462,7 +534,7 @@ riderErrandsRouter.use(requireAuth, requireRole("RIDER"));
 /** A Pabili this rider may take: asked for them, or open to everyone after the asked rider's moment */
 const visibleTo = (userId: string) => ({
   status: "REQUESTED" as const,
-  OR: [{ preferredRiderId: userId }, { exclusiveUntil: null }, { exclusiveUntil: { lt: new Date() } }],
+  AND: [{ OR: [{ preferredRiderId: userId }, { exclusiveUntil: null }, { exclusiveUntil: { lt: new Date() } }] }, { OR: [{ prepaid: false }, { paymentStatus: "PAID" as const }] }],
 });
 
 async function freeRiderProfile(userId: string) {
@@ -498,6 +570,7 @@ riderErrandsRouter.get("/errands", async (req, res) => {
       adultCheck: true,
       handling: true,
       prescriptionFile: true,
+      prepaid: true,
       resident: { select: { name: true } },
     },
   });
@@ -537,10 +610,12 @@ riderErrandsRouter.post("/errands/:id/accept", async (req, res) => {
   } finally {
     await redis.del(lock);
   }
-  const errand = await prisma.errand.findUniqueOrThrow({ where: { id }, select: { id: true, residentId: true, status: true, shopName: true } });
+  const errand = await prisma.errand.findUniqueOrThrow({ where: { id }, select: { id: true, residentId: true, status: true, shopName: true, prepaid: true } });
   await notify(errand.residentId, {
     title: `${req.session!.name.split(" ")[0]} took your Pabili`,
-    body: `They're on the way to ${errand.shopName}. You pay what the receipt says, plus the delivery fee, in cash when it arrives.`,
+    body: errand.prepaid
+      ? `They're on the way to ${errand.shopName}. It's paid online: what isn't used comes back to you once they buy.`
+      : `They're on the way to ${errand.shopName}. You pay what the receipt says, plus the delivery fee, in cash when it arrives.`,
     link: `/resident/pabili/${id}`,
   });
   await broadcastErrand(errand);
@@ -597,6 +672,7 @@ riderErrandsRouter.post("/errands/:id/nothing-bought", async (req, res) => {
   if (count === 0) throw new HttpError(409, "This Pabili isn't being bought now.");
   await redis.del(locationKey(id));
   await notify(errand.residentId, { title: "Your Pabili couldn't be bought", body: `Nothing on your list could be bought at ${errand.shopName} (${NOT_BOUGHT_LABEL[reason]}). You pay nothing.`, link: `/resident/pabili/${id}` });
+  await refundPabili(id, Number.MAX_SAFE_INTEGER, "Nothing on your list could be bought.");
   await broadcastErrand({ id, residentId: errand.residentId, status: "CANCELLED" });
   res.json({ ok: true });
 });
@@ -625,7 +701,7 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const input = parseBody(boughtSchema, req.body);
   const errand = await prisma.errand.findFirst({
     where: { id, riderId: userId },
-    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true, extraFee: true, feastoCutRate: true, items: true },
+    select: { budget: true, residentId: true, deliveryFee: true, feeMax: true, deliveryLat: true, deliveryLng: true, extraFee: true, feastoCutRate: true, items: true, prepaid: true, paymentStatus: true },
   });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   if (input.receiptTotal > Number(errand.budget) + 0.001) {
@@ -662,12 +738,19 @@ riderErrandsRouter.post("/errands/:id/bought", async (req, res) => {
   const total = peso(input.receiptTotal + fee);
   await notify(errand.residentId, {
     title: "Your Pabili was bought",
-    body: `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.${priceFlag ? ` ${priceFlag}` : ""}`,
+    body: errand.prepaid
+      ? `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}. It's paid online: nothing to pay at the door.${priceFlag ? ` ${priceFlag}` : ""}`
+      : `The receipt says ₱${peso(input.receiptTotal)}, and the delivery fee is ₱${peso(fee)}${at ? ", from where the rider bought to you" : ""}. Have ₱${total} ready in cash.${priceFlag ? ` ${priceFlag}` : ""}`,
     link: `/resident/pabili/${id}`,
   });
+  // Paid online first: what wasn't used comes back now
+  if (errand.prepaid) {
+    const paid = prepaidAmount(errand);
+    await refundPabili(id, Math.round((paid - input.receiptTotal - fee) * 100) / 100, `Your Pabili cost ₱${total} (receipt and fee) of the ₱${peso(paid)} you paid.`);
+  }
   await endRide(id);
   await broadcastErrand({ id, residentId: errand.residentId, status: "BOUGHT" });
-  res.json({ ok: true, fee: peso(fee), collect: total, fromGps: Boolean(at) });
+  res.json({ ok: true, fee: peso(fee), collect: errand.prepaid ? "0.00" : total, prepaid: errand.prepaid, fromGps: Boolean(at) });
 });
 
 riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
@@ -677,7 +760,7 @@ riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
     z.object({ photoUrl: z.string("Take a photo of the handed-over items first.").regex(UPLOADED_PHOTO, "Take a photo of the handed-over items first."), idChecked: z.boolean().optional() }),
     req.body,
   );
-  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true, feastoCut: true, adultCheck: true, items: true } });
+  const errand = await prisma.errand.findFirst({ where: { id, riderId: userId }, select: { residentId: true, receiptTotal: true, deliveryFee: true, feastoCut: true, adultCheck: true, items: true, prepaid: true } });
   if (!errand) throw new HttpError(404, "We couldn't find this Pabili.");
   // Alcohol or cigarettes bought: the rider looks at the ID at the door, as the law asks
   const adultBought = errand.adultCheck && (errand.items as (PabiliItem & { flags?: string[] })[]).some((i) => !i.notBought && (i.flags ?? []).some((f) => f === "ALCOHOL" || f === "TOBACCO"));
@@ -687,11 +770,19 @@ riderErrandsRouter.post("/errands/:id/delivered", async (req, res) => {
     data: { status: "DELIVERED", finishedAt: new Date(), deliveryPhotoUrl: photoUrl, ...(adultBought && { idCheckedAt: new Date() }) },
   });
   if (count === 0) throw new HttpError(409, "Upload the receipt first, then finish the delivery.");
+  // Paid online first: Feasto pays the rider back what they spent, with their fee
+  const paidBack = errand.prepaid ? await prisma.$transaction((tx) => payRiderBack(tx, id)) : null;
   await redis.del(locationKey(id));
   await endRide(id, { forget: true });
   await notify(errand.residentId, { title: "Your Pabili arrived", body: "Thanks for using Feasto Pabili!", link: `/resident/pabili/${id}` });
   await broadcastErrand({ id, residentId: errand.residentId, status: "DELIVERED" });
-  res.json({ ok: true, earned: peso(Number(errand.deliveryFee) - Number(errand.feastoCut)), feastoCut: peso(errand.feastoCut), collect: peso(Number(errand.receiptTotal ?? 0) + Number(errand.deliveryFee)) });
+  res.json({
+    ok: true,
+    earned: peso(Number(errand.deliveryFee) - Number(errand.feastoCut)),
+    feastoCut: peso(errand.feastoCut),
+    collect: errand.prepaid ? "0.00" : peso(Number(errand.receiptTotal ?? 0) + Number(errand.deliveryFee)),
+    paidBack: paidBack == null ? null : peso(paidBack),
+  });
 });
 
 /**

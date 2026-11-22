@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MobileHeading, MobileSkeleton } from "@/components/app/mobile-shell";
 import { RenewalPanel } from "@/components/app/renewal-panel";
+import { SelfieCheck } from "@/components/app/selfie-check";
 import { requireRole } from "@/lib/auth";
 import { serverApi } from "@/lib/server-api";
 import type { RenewalInfo } from "@/lib/verification-fields";
@@ -23,6 +24,7 @@ async function RiderLicense() {
     <>
       <MobileHeading title="Driver's license" subtitle="Keep it valid so you can keep taking jobs." />
       <RenewalPanel data={data} />
+      <SelfieCheck />
     </>
   );
 }

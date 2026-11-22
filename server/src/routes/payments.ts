@@ -3,6 +3,8 @@ import { z } from "zod";
 import { config } from "../config.js";
 import { prisma } from "../lib/db.js";
 import { EXTERNAL_PREFIX, syncFeastoPayment } from "../lib/feastoPayments.js";
+import { PLUS_EXTERNAL_PREFIX, syncPlus } from "../lib/plus.js";
+import { PABILI_EXTERNAL_PREFIX, syncPabiliPayment } from "../lib/pabiliPay.js";
 import { syncPayment } from "../lib/paymentFlow.js";
 import { syncPayout } from "../lib/payouts.js";
 import { isFromXendit } from "../lib/xendit.js";
@@ -39,8 +41,26 @@ paymentsRouter.post("/xendit", async (req, res) => {
     res.status(400).json({ error: "Not an invoice event." });
     return;
   }
-  // A store or rider paying Feasto its share of their cash orders
   const external = event.data.external_id;
+  // A month of Feasto Plus
+  const plus = await prisma.plusMembership.findFirst({
+    where: { OR: [{ paymentRef: event.data.id }, ...(external?.startsWith(PLUS_EXTERNAL_PREFIX) ? [{ id: external.slice(PLUS_EXTERNAL_PREFIX.length) }] : [])] },
+    select: { id: true },
+  });
+  if (plus) {
+    res.json({ ok: true, status: await syncPlus(plus.id) });
+    return;
+  }
+  // A Pabili paid online first
+  const errand = await prisma.errand.findFirst({
+    where: { OR: [{ paymentRef: event.data.id }, ...(external?.startsWith(PABILI_EXTERNAL_PREFIX) ? [{ id: external.slice(PABILI_EXTERNAL_PREFIX.length) }] : [])] },
+    select: { id: true },
+  });
+  if (errand) {
+    res.json({ ok: true, status: await syncPabiliPayment(errand.id) });
+    return;
+  }
+  // A store or rider paying Feasto its share of their cash orders
   const feastoPayment = await prisma.feastoPayment.findFirst({
     where: { OR: [{ invoiceId: event.data.id }, ...(external?.startsWith(EXTERNAL_PREFIX) ? [{ id: external.slice(EXTERNAL_PREFIX.length) }] : [])] },
     select: { id: true },

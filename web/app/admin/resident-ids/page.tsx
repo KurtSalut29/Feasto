@@ -34,6 +34,10 @@ type Resident = {
   disabledAt: string | null;
   document: "image" | "pdf" | null;
   check?: DocCheckResult;
+  /** PhilSys QR (Level 2): what matched the account; eVerify only once Feasto is approved */
+  philsysQrAt?: string | null;
+  philsysMatch?: { nameMatches: boolean; birthDateMatches: boolean | null; signed: boolean; everify: boolean | null } | null;
+  philsysVerifiedAt?: string | null;
 };
 type Response = { status: Status; page: number; pageSize: number; total: number; counts: Record<Status, number>; notUploaded: number; residents: Resident[] };
 
@@ -121,6 +125,13 @@ async function ResidentIds({ searchParams }: { searchParams: Promise<Record<stri
                   </p>
                   <DocumentPreview href={`/api/documents/resident/${r.id}`} kind={r.document} label={idTypeLabel(r.idType)} />
                   {r.document && <DocCheck check={r.check} />}
+                  {r.philsysMatch && (
+                    <p className={`mt-2 rounded-xl px-3 py-2 text-sm ${r.philsysMatch.nameMatches && r.philsysMatch.birthDateMatches !== false ? "bg-emerald-50 text-emerald-900" : "bg-amber-50 text-amber-900"}`}>
+                      <span className="font-semibold">PhilSys QR scanned{r.philsysQrAt ? ` ${timeAgo(r.philsysQrAt)}` : ""}:</span> name {r.philsysMatch.nameMatches ? "matches" : "is different"}
+                      {r.philsysMatch.birthDateMatches === null ? "" : `, birthday ${r.philsysMatch.birthDateMatches ? "matches" : "is different"}`}.{" "}
+                      {r.philsysVerifiedAt ? "Confirmed by PhilSys eVerify." : "Not confirmed with PhilSys yet (eVerify isn't connected), so compare with the photo."}
+                    </p>
+                  )}
                 </div>
                 <footer className="border-t border-line bg-canvas/40 px-5 py-3">
                   {r.idStatus === "PENDING" ? (

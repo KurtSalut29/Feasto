@@ -169,6 +169,10 @@ export type DeliveryQuote = {
   /** Added while it rains; all of it is the rider's */
   rainFee: number;
   rain: boolean;
+  /** Daloy: added because the road there is slower now than usual; all of it is the rider's */
+  daloyFee?: number;
+  /** Why, e.g. "14 min on the road now instead of the usual 8" */
+  daloy?: string | null;
 };
 
 export type Cart = {
@@ -242,6 +246,9 @@ type OrderBase = {
   /** The lines on the receipt */
   discounts?: import("./promos").DiscountLine[];
   seniorDiscount?: boolean;
+  /** Suki points: earned once it arrives, and spent on it */
+  pointsEarned?: number;
+  pointsUsed?: number;
   /** When the store said it would be ready, and how often it said it needs more time */
   readyBy?: string | null;
   delays?: number;

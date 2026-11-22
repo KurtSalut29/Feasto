@@ -9,7 +9,7 @@ import { buildCart, clearCart } from "../lib/cart.js";
 import { chosenRider } from "../lib/errands.js";
 import { prisma } from "../lib/db.js";
 import { feastoShare } from "../lib/earnings.js";
-import { addOnNote } from "../lib/feeAddOns.js";
+import { addOnTotal, addOnNote } from "../lib/feeAddOns.js";
 import { HttpError, parseBody } from "../lib/http.js";
 import { enqueue } from "../lib/outbox.js";
 import { startOnlinePayment, syncPayment } from "../lib/paymentFlow.js";
@@ -56,9 +56,11 @@ const checkoutSchema = z
     /** What the store does if an item runs out after the order is placed */
     ifUnavailable: z.enum(["REMOVE", "CALL", "CANCEL"]).optional().default("REMOVE"),
     /** One voucher for the food, one for the delivery, and the Senior Citizen or PWD discount */
-    voucherCode: z.string().trim().max(30).optional().transform((v) => v || null),
-    deliveryCode: z.string().trim().max(30).optional().transform((v) => v || null),
+    voucherCode: z.string().trim().max(30).nullish().transform((v) => v || null),
+    deliveryCode: z.string().trim().max(30).nullish().transform((v) => v || null),
     senior: z.boolean().optional().default(false),
+    /** Spend Suki points too */
+    usePoints: z.boolean().optional().default(false),
     /** The discount the page showed; if it changed (a voucher ran out), the resident sees the new total first */
     expectedDiscount: z.number().optional(),
   })
@@ -158,7 +160,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
   const feeOf = (group: (typeof cart.groups)[number]) => (delivery ? (group.delivery?.fee ?? cart.delivery.baseFee) : 0);
   const deliveryTotal = Math.round(cart.groups.reduce((n, g) => n + feeOf(g), 0) * 100) / 100;
   if (delivery && input.expectedDeliveryFee !== undefined && Math.abs(input.expectedDeliveryFee - deliveryTotal) > 0.001) {
-    const why = cart.groups.some((g) => g.delivery?.busyFee || g.delivery?.rainFee) ? " Riders are busy or it's raining, so an add-on for the rider applies." : "";
+    const why = cart.groups.some((g) => g.delivery?.busyFee || g.delivery?.rainFee || g.delivery?.daloyFee) ? " Riders are busy, it's raining or the road is slow now, so an add-on for the rider applies." : "";
     throw new HttpError(409, `The delivery fee changed to ₱${deliveryTotal}.${why} Check the new total, then place your order again.`);
   }
   // The promos, worked out the same way as the checkout page did (and again, held, when saving)
@@ -169,7 +171,7 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     subtotal: g.subtotal,
     deliveryFee: feeOf(g),
   }));
-  const promoInput = { userId, groups: promoGroups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, deviceHash: deviceOf(req, res) };
+  const promoInput = { userId, groups: promoGroups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, usePoints: input.usePoints, deviceHash: deviceOf(req, res) };
   const pricing = await pricePromos(prisma, promoInput);
   const refused = [pricing.voucher, pricing.deliveryVoucher].find((v) => v && !v.applied && v.message && !v.message.startsWith("Not used"));
   if (refused) throw new HttpError(409, `${refused.code}: ${refused.message}`);
@@ -200,15 +202,15 @@ checkoutRouter.post("/", perAccount("checkout", 10, 300, "You've placed a lot of
     const store = storeOf.get(group.store.id);
     return feastoShare({ fulfillment: input.fulfillment, subtotal: Math.max(0, group.subtotal - storeDiscount), commissionFreeUntil: store?.commissionFreeUntil ?? null }, rates, store);
   };
-  // The busy or rain add-on in each store's fee, kept on the order with the reason
+  // The busy, rain or slow-road add-on in each store's fee, kept on the order with the reason
   const addOnOf = (group: (typeof cart.groups)[number]) =>
-    delivery && group.delivery ? { extraFee: group.delivery.busyFee + group.delivery.rainFee, extraFeeNote: addOnNote(group.delivery) } : {};
+    delivery && group.delivery ? { extraFee: addOnTotal(group.delivery), extraFeeNote: addOnNote(group.delivery), daloyFee: group.delivery.daloyFee ?? 0 } : {};
 
   try {
     const checkout = await prisma.$transaction(async (tx) => {
       // Each voucher held while its uses are counted, so two checkouts can't share its last use
       const held = await pricePromos(tx, { ...promoInput, lock: true });
-      if (Math.abs(held.discount - pricing.discount) > 0.001) throw new HttpError(409, "A voucher just ran out. Check your total, then place your order again.");
+      if (Math.abs(held.discount - pricing.discount) > 0.001) throw new HttpError(409, "Your discounts just changed (a voucher ran out or your points were used). Check your total, then place your order again.");
       const priceOf = new Map(held.groups.map((g) => [g.storeId, g]));
       // Reserve stock with a conditional update: it only succeeds while enough is left,
       // so two residents can't both buy the last plate, even through different API copies.
@@ -320,9 +322,10 @@ checkoutRouter.post("/quote", async (req, res) => {
       fulfillment: z.enum(["DELIVERY", "PICKUP"]),
       addressId: z.string().optional(),
       scheduledFor: z.iso.datetime({ offset: true }).optional(),
-      voucherCode: z.string().trim().max(30).optional().transform((v) => v || null),
-      deliveryCode: z.string().trim().max(30).optional().transform((v) => v || null),
+      voucherCode: z.string().trim().max(30).nullish().transform((v) => v || null),
+      deliveryCode: z.string().trim().max(30).nullish().transform((v) => v || null),
       senior: z.boolean().optional().default(false),
+      usePoints: z.boolean().optional().default(false),
     }),
     req.body,
   );
@@ -336,7 +339,7 @@ checkoutRouter.post("/quote", async (req, res) => {
     subtotal: g.subtotal,
     deliveryFee: delivery ? (g.delivery?.fee ?? cart.delivery.baseFee) : 0,
   }));
-  const pricing = await pricePromos(prisma, { userId, groups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, deviceHash: deviceOf(req, res) });
+  const pricing = await pricePromos(prisma, { userId, groups, fulfillment: input.fulfillment, voucherCode: input.voucherCode, deliveryCode: input.deliveryCode, senior: input.senior, usePoints: input.usePoints, deviceHash: deviceOf(req, res) });
   const deliveryTotal = Math.round(groups.reduce((n, g) => n + g.deliveryFee, 0) * 100) / 100;
   res.json({
     ...pricing,

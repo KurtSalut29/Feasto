@@ -23,6 +23,11 @@ import { uploadsRouter } from "./routes/uploads.js";
 import { adminToolsRouter } from "./routes/adminTools.js";
 import { adminPabiliRouter } from "./routes/adminPabili.js";
 import { adminDaloyRouter } from "./routes/adminDaloy.js";
+import { startPaceRefresh } from "./lib/daloy.js";
+import { adminLoyaltyRouter, loyaltyRouter } from "./routes/loyalty.js";
+import { adminPlusRouter, plusRouter } from "./routes/plus.js";
+import { philsysRouter } from "./routes/philsys.js";
+import { adminSelfieRouter, riderSelfieRouter } from "./routes/riderSelfie.js";
 import { adminPromosRouter, residentPromosRouter, vendorPromosRouter } from "./routes/promos.js";
 import { adminEarningsRouter, riderEarningsRouter, vendorEarningsRouter } from "./routes/earnings.js";
 import { paymentsRouter } from "./routes/payments.js";
@@ -80,6 +85,13 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/pabili", adminPabiliRouter);
 app.use("/api/admin/daloy", adminDaloyRouter);
+app.use("/api/admin/loyalty", adminLoyaltyRouter);
+app.use("/api/loyalty", loyaltyRouter);
+app.use("/api/plus", plusRouter);
+app.use("/api/philsys", philsysRouter);
+app.use("/api/rider/selfie", riderSelfieRouter);
+app.use("/api/admin/rider-selfies", adminSelfieRouter);
+app.use("/api/admin/plus", adminPlusRouter);
 app.use("/api/admin/promos", adminPromosRouter);
 app.use("/api/admin", adminToolsRouter);
 app.use("/api/admin", adminReportsRouter);
@@ -121,10 +133,13 @@ const server = app.listen(config.port, () => {
   console.log(`[${config.instanceId}] API listening on port ${config.port}`);
 });
 const stopHeartbeat = startHeartbeat("api", () => ({ liveConnections: liveConnectionCount() }));
+// Daloy step 2: each copy keeps the ETA's learned pace fresh
+const paceTimer = startPaceRefresh();
 
 async function shutdown() {
   console.log(`[${config.instanceId}] shutting down`);
   stopHeartbeat();
+  clearInterval(paceTimer);
   server.close();
   await Promise.allSettled([prisma.$disconnect(), redis.quit(), closeSubscriber()]);
   process.exit(0);

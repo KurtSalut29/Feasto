@@ -171,14 +171,15 @@ export function CheckoutForm({
   const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
   const [senior, setSenior] = useState(false);
-  const promoKey = JSON.stringify([fulfillment, fulfillment === "DELIVERY" ? addressId : null, scheduledFor, voucherCode, deliveryCode, senior, quoteKey]);
+  const [usePoints, setUsePoints] = useState(false);
+  const promoKey = JSON.stringify([fulfillment, fulfillment === "DELIVERY" ? addressId : null, scheduledFor, voucherCode, deliveryCode, senior, usePoints, quoteKey]);
   const [promo, setPromo] = useState<{ key: string; quote: PromoQuote } | null>(null);
   useEffect(() => {
     let gone = false;
-    const [f, a, at, v, d, sr] = JSON.parse(promoKey) as [Fulfillment, string | null, string | null, string | null, string | null, boolean];
+    const [f, a, at, v, d, sr, pts] = JSON.parse(promoKey) as [Fulfillment, string | null, string | null, string | null, string | null, boolean, boolean];
     void apiRequest<PromoQuote>("/checkout/quote", {
       method: "POST",
-      body: { fulfillment: f, addressId: a ?? undefined, scheduledFor: at ?? undefined, voucherCode: v ?? undefined, deliveryCode: d ?? undefined, senior: sr },
+      body: { fulfillment: f, addressId: a ?? undefined, scheduledFor: at ?? undefined, voucherCode: v ?? undefined, deliveryCode: d ?? undefined, senior: sr, usePoints: pts },
     }).then((r) => {
       if (!gone && r.ok) setPromo({ key: promoKey, quote: r.data });
     });
@@ -209,6 +210,7 @@ export function CheckoutForm({
         voucherCode: voucherCode ?? undefined,
         deliveryCode: fulfillment === "DELIVERY" ? (deliveryCode ?? undefined) : undefined,
         senior,
+        usePoints,
         expectedDiscount: discount,
         ifUnavailable,
         preferredRiderId: fulfillment === "DELIVERY" && stores === 1 ? rider?.id : undefined,
@@ -367,6 +369,8 @@ export function CheckoutForm({
           onVoucher={setVoucherCode}
           onDelivery={setDeliveryCode}
           onSenior={setSenior}
+          usePoints={usePoints}
+          onPoints={setUsePoints}
         />
       </Step>
 

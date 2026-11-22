@@ -47,6 +47,38 @@ export const DEFAULT_SETTINGS = {
   require2faRiders: true,
   /** The admin logs in with three steps: password, a code and a passkey (needs a passkey first) */
   require3faAdmin: false,
+  /** Suki points (earned on delivered orders, spent at checkout; Feasto pays them) */
+  loyaltyOn: true,
+  /** One point for every this many pesos of food paid */
+  pointsEarnPer: 20,
+  /** What one point takes off, in pesos (₱0.20: 100 points = ₱20, about 1% back) */
+  pointValue: 0.2,
+  /** The fewest points used at once */
+  pointsMinRedeem: 100,
+  /** Points for both friends when an invited friend's first order arrives */
+  referralPoints: 250,
+  /** Points in the resident's birthday week */
+  birthdayPoints: 250,
+  /** Daloy: an add-on when the riders' own speeds show the road is slow now (nothing without enough data) */
+  daloyFeeOn: true,
+  daloyPerMinute: 2,
+  daloyFeeMax: 30,
+  /** A bonus from Feasto when a ride took much longer than estimated on a slow road */
+  delayBonusOn: true,
+  delayBonusPerMinute: 1,
+  delayBonusMax: 20,
+  /** Feasto Plus: a month of free deliveries (up to a peso amount each, over a minimum) and members-only vouchers */
+  plusOn: true,
+  plusPrice: 99,
+  plusFreeDeliveries: 8,
+  plusDeliveryMax: 50,
+  plusMinSpend: 150,
+  /** A Pabili paid online first can have a budget up to this */
+  pabiliPrepaidMax: 5000,
+  /** One rider takes two orders at once when the stores are this close and the doors this close */
+  batchingOn: true,
+  batchPickupMeters: 300,
+  batchDropKm: 1.5,
 };
 
 export type Settings = typeof DEFAULT_SETTINGS;
@@ -109,6 +141,31 @@ export const settingsSchema = z.object({
   require2fa: z.boolean(),
   require2faRiders: z.boolean(),
   require3faAdmin: z.boolean(),
+  loyaltyOn: z.boolean(),
+  pointsEarnPer: z.number("Enter ₱1 to ₱1,000.").min(1, "Enter ₱1 to ₱1,000.").max(1000, "Enter ₱1 to ₱1,000."),
+  pointValue: z.number("Enter ₱0.01 to ₱5.").min(0.01, "Enter ₱0.01 to ₱5.").max(5, "Enter ₱0.01 to ₱5.").refine((v) => Number.isInteger(Math.round(v * 1e6) / 1e4), "Use at most two decimal places."),
+  pointsMinRedeem: whole(1, 10000, "points"),
+  referralPoints: whole(0, 10000, "points"),
+  birthdayPoints: whole(0, 10000, "points"),
+  daloyFeeOn: z.boolean(),
+  daloyPerMinute: peso(20),
+  daloyFeeMax: peso(200),
+  delayBonusOn: z.boolean(),
+  delayBonusPerMinute: peso(20),
+  delayBonusMax: peso(200),
+  plusOn: z.boolean(),
+  plusPrice: peso(2000).refine((v) => v >= 1, "Enter ₱1 to ₱2000."),
+  plusFreeDeliveries: whole(0, 100, "deliveries"),
+  plusDeliveryMax: peso(500),
+  plusMinSpend: peso(5000),
+  pabiliPrepaidMax: z.number("Enter ₱100 to ₱50,000.").int("Enter whole pesos, like 5000.").min(100, "Enter ₱100 to ₱50,000.").max(50000, "Enter ₱100 to ₱50,000."),
+  batchingOn: z.boolean(),
+  batchPickupMeters: whole(50, 3000, "metres"),
+  batchDropKm: z
+    .number("Enter 0.2 to 10 km.")
+    .min(0.2, "Enter 0.2 to 10 km.")
+    .max(10, "Enter 0.2 to 10 km.")
+    .refine((value) => Number.isInteger(Math.round(value * 1e4) / 1e3), "Use at most one decimal place, e.g. 1.5."),
 });
 
 /**
@@ -145,6 +202,27 @@ export function getSettings(): Promise<Settings> {
       liquorBan: row.liquorBan,
       require2faRiders: row.require2faRiders,
       require3faAdmin: row.require3faAdmin,
+      loyaltyOn: row.loyaltyOn,
+      pointsEarnPer: Number(row.pointsEarnPer),
+      pointValue: Number(row.pointValue),
+      pointsMinRedeem: row.pointsMinRedeem,
+      referralPoints: row.referralPoints,
+      birthdayPoints: row.birthdayPoints,
+      daloyFeeOn: row.daloyFeeOn,
+      daloyPerMinute: Number(row.daloyPerMinute),
+      daloyFeeMax: Number(row.daloyFeeMax),
+      delayBonusOn: row.delayBonusOn,
+      delayBonusPerMinute: Number(row.delayBonusPerMinute),
+      delayBonusMax: Number(row.delayBonusMax),
+      plusOn: row.plusOn,
+      plusPrice: Number(row.plusPrice),
+      plusFreeDeliveries: row.plusFreeDeliveries,
+      plusDeliveryMax: Number(row.plusDeliveryMax),
+      plusMinSpend: Number(row.plusMinSpend),
+      pabiliPrepaidMax: row.pabiliPrepaidMax,
+      batchingOn: row.batchingOn,
+      batchPickupMeters: row.batchPickupMeters,
+      batchDropKm: Number(row.batchDropKm),
     };
   });
 }

@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/db.js";
-import { cellShape, cellsNow, cellsWeek, RIDES_FOR_ETA } from "../lib/daloy.js";
+import { cellShape, cellsNow, cellsWeek, PACE_MIN_RIDES, refreshPace, RIDES_FOR_ETA } from "../lib/daloy.js";
+import { MINUTES_PER_KM, paceNow } from "../lib/eta.js";
+import { getSettings } from "../lib/settings.js";
 import { BUSY, BUSY_ERRAND, riderPositions } from "../lib/dispatch.js";
 import { demandNow, rainNow } from "../lib/feeAddOns.js";
 import { distanceKm } from "../lib/geo.js";
@@ -11,7 +13,8 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 
 /**
  * Admin › Daloy: the live map of riders and of how fast Naval's roads are going now, against the
- * usual, from Daloy step 1's records. Nothing on this page changes a fee or an ETA yet.
+ * usual, from the riders' own rides; and how that's used: the ETA's pace, the slow-road add-on and
+ * the riders' delay bonuses.
  */
 export const adminDaloyRouter = Router();
 adminDaloyRouter.use(requireAuth, requireRole("ADMIN"));
@@ -30,6 +33,15 @@ adminDaloyRouter.get("/", async (req, res) => {
   const demoFilter = withDemo ? {} : { demo: false };
   const today = manilaStartOfDay();
 
+  const [learned, settings, money] = await Promise.all([
+    refreshPace(),
+    getSettings(),
+    prisma.order.aggregate({ where: { finishedAt: { gte: today }, status: { in: ["DELIVERED", "COMPLETED"] } }, _sum: { daloyFee: true, riderBonus: true }, _count: { _all: true } }),
+  ]);
+  const [daloyOrders, bonusOrders] = await Promise.all([
+    prisma.order.count({ where: { finishedAt: { gte: today }, daloyFee: { gt: 0 } } }),
+    prisma.order.count({ where: { finishedAt: { gte: today }, riderBonus: { gt: 0 } } }),
+  ]);
   const [positions, cells, stores, demand, rain, trips, todayLegs, realRides, demoRides] = await Promise.all([
     riderPositions(),
     view === "now" ? cellsNow(withDemo) : cellsWeek(withDemo),
@@ -111,6 +123,24 @@ adminDaloyRouter.get("/", async (req, res) => {
       overEstimate,
     },
     progress: { realRides, demoRides, needed: RIDES_FOR_ETA },
+    pace: {
+      now: paceNow(),
+      fallback: MINUTES_PER_KM,
+      learned: paceNow() !== MINUTES_PER_KM || Boolean(learned?.pace[(new Date().getUTCHours() + 8) % 24]),
+      hoursLearned: Object.keys(learned?.pace ?? {}).length,
+      ridesThisHour: learned?.rides[(new Date().getUTCHours() + 8) % 24] ?? 0,
+      needed: PACE_MIN_RIDES,
+    },
+    uses: {
+      feeOn: settings.daloyFeeOn,
+      feePerMinute: settings.daloyPerMinute,
+      feeMax: settings.daloyFeeMax,
+      bonusOn: settings.delayBonusOn,
+      feesToday: Number(money._sum.daloyFee ?? 0),
+      feeOrdersToday: daloyOrders,
+      bonusesToday: Number(money._sum.riderBonus ?? 0),
+      bonusOrdersToday: bonusOrders,
+    },
     trips: trips.map((t) => {
       const seconds = t.movingSeconds + t.stoppedSeconds;
       return {

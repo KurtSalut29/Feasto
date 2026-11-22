@@ -1,4 +1,4 @@
-import { Bike, CalendarClock, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
+import { Bike, CalendarClock, Coins, HandCoins, LoaderCircle, MapPin, Phone, ReceiptText, Star, Store, TimerReset } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -326,6 +326,12 @@ async function OrderDetail({ params }: Pick<PageProps<"/resident/orders/[id]">, 
             <p className="text-sm text-muted">
               {paymentName(order.checkout)} · {paymentStatusLabel(order.checkout.paymentMethod, order.checkout.paymentStatus)}
             </p>
+            {Boolean(order.pointsEarned) && !["CANCELLED", "REJECTED"].includes(order.status) && (
+              <p className="flex items-center gap-1.5 text-sm font-medium text-amber-900">
+                <Coins className="size-4" aria-hidden />
+                {["DELIVERED", "COMPLETED"].includes(order.status) ? `You earned ${order.pointsEarned} Suki points` : `Earns ${order.pointsEarned} Suki points once it arrives`}
+              </p>
+            )}
             {/* Paid on its own after the delivery, so it isn't part of the order's total */}
             {tip > 0 && (
               <p className="flex items-center justify-between gap-3 pt-1 text-[0.9375rem]">

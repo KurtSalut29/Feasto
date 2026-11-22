@@ -241,7 +241,7 @@ export function PabiliAdmin() {
                   {words.map((w) => (
                     <li key={w.id} className={`inline-flex items-center gap-1 rounded-full py-0.5 pr-1 pl-2.5 text-sm font-medium ${r.tone}`}>
                       {w.term}
-                      <button type="button" onClick={() => removeTerm(w.id, w.term)} aria-label={`Remove “${w.term}”`} className="flex size-5 items-center justify-center rounded-full hover:bg-black/10">
+                      <button type="button" onClick={() => removeTerm(w.id, w.term)} aria-label={`Remove “${w.term}”`} className="flex size-6 items-center justify-center rounded-full hover:bg-black/10">
                         <X className="size-3.5" aria-hidden />
                       </button>
                     </li>

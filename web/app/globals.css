@@ -61,9 +61,12 @@
   --color-brand-50: #fff5ee;
   --color-brand-100: #ffe6d5;
   --color-brand-200: #ffcbab;
+  --color-brand-300: #ffa26b;
   --color-brand-500: #fe5502;
   --color-brand-600: #d24600;
   --color-brand-700: #b23a00;
+  --color-brand-800: #8f2f00;
+  --color-brand-900: #6b2300;
 
   /* Text and surfaces */
   --color-ink: #1f2d3d;
@@ -740,6 +743,8 @@ html[data-contrast="more"] {
   --color-brand-500: #c24100;
   --color-brand-600: #a83800;
   --color-brand-700: #8a2e00;
+  --color-brand-800: #702400;
+  --color-brand-900: #561c00;
   --color-emerald-700: #035e43;
   --color-red-600: #b42318;
   --color-amber-700: #8a4b05;
