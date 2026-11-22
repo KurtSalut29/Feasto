@@ -20,7 +20,8 @@ export type PromoRow = {
   endsAt: string | null;
   hours: string | null;
   isActive: boolean;
-  audience?: "EVERYONE" | "FIRST_ORDER";
+  audience?: "EVERYONE" | "FIRST_ORDER" | "PLUS" | "SELECTED";
+  _count?: { recipients: number };
   vendor?: { name: string } | null;
   campaign?: { name: string } | null;
   menuItemIds?: string[];
@@ -49,6 +50,7 @@ export function PromoList({ rows, onToggle, who }: { rows: PromoRow[]; onToggle:
                 {p.code && <span className="rounded-md bg-canvas px-1.5 py-0.5 font-mono text-xs tracking-wider">{p.code}</span>}
                 {!p.isActive ? <Badge tone="neutral">Paused</Badge> : ended ? <Badge tone="neutral">Ended</Badge> : <Badge tone="success">On</Badge>}
                 {p.audience === "FIRST_ORDER" && <Badge tone="brand">First order</Badge>}
+                {p.audience === "SELECTED" && <Badge tone="brand">For {p._count?.recipients ?? 0} picked {p._count?.recipients === 1 ? "customer" : "customers"}</Badge>}
                 {p.campaign && <Badge tone="brand">{p.campaign.name}</Badge>}
               </p>
               <p className="text-sm text-muted">

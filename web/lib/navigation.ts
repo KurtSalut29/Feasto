@@ -1,4 +1,4 @@
-import { Accessibility, BadgePercent, TicketPercent, BarChart3, Gauge, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, ShoppingBasket, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { Accessibility, BadgePercent, HeartHandshake, TicketPercent, BarChart3, Gauge, Bike, CalendarDays, ClipboardList, FileClock, Flag, HandCoins, History, Hourglass, House, IdCard, LayoutDashboard, Map as MapIcon, ReceiptText, ScrollText, Send, Server, Settings, ShieldCheck, ShoppingBasket, Store, User, Users, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import type { Role } from "./types";
 
 /**
@@ -29,6 +29,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/vendor/reservations", label: "Reservations", Icon: CalendarDays, group: "Today" },
     { href: "/vendor/menu", label: "Menu", Icon: UtensilsCrossed, group: "Your store" },
     { href: "/vendor/deals", label: "Deals", Icon: BadgePercent, group: "Your store" },
+    { href: "/vendor/customers", label: "Customers", Icon: HeartHandshake, group: "Your store" },
     { href: "/vendor/riders", label: "Riders", Icon: Bike, group: "Your store" },
     { href: "/vendor/reports", label: "Reports", Icon: BarChart3, group: "Your store" },
     { href: "/vendor/store", label: "Store settings", short: "Store", Icon: Store, group: "Your store" },
@@ -45,6 +46,7 @@ export const NAVIGATION: Record<Role, NavItem[]> = {
     { href: "/admin/stuck", label: "Stuck orders", short: "Stuck", Icon: Hourglass, group: "Manage" },
     { href: "/admin/orders", label: "Orders", Icon: ClipboardList, group: "Manage" },
     { href: "/admin/users", label: "Users", Icon: Users, group: "Manage" },
+    { href: "/admin/customers", label: "Customers", Icon: HeartHandshake, group: "Manage" },
     { href: "/admin/user-reports", label: "User reports", short: "Reports", Icon: Flag, group: "Manage" },
     { href: "/admin/reports", label: "Reports", Icon: BarChart3, group: "Insights" },
     { href: "/admin/earnings", label: "Earnings", Icon: HandCoins, group: "Insights" },

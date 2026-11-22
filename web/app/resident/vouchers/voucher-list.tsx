@@ -10,12 +10,14 @@ import { type VoucherCard } from "@/lib/promos";
 export function VoucherList() {
   const { data } = useApiData<{ vouchers: VoucherCard[] }>("/promos/vouchers");
   if (!data) return <div className="h-48 animate-pulse rounded-2xl bg-canvas" />;
-  const now = data.vouchers.filter((v) => !v.problem && !v.upcoming);
+  const given = data.vouchers.filter((v) => v.forYou && !v.problem && !v.upcoming);
+  const now = data.vouchers.filter((v) => !v.forYou && !v.problem && !v.upcoming);
   const soon = data.vouchers.filter((v) => v.upcoming);
   const done = data.vouchers.filter((v) => v.problem && !v.upcoming);
   if (!data.vouchers.length) return <EmptyState Icon={TicketPercent} title="No vouchers right now" text="Vouchers for sale days and your first order show up here." />;
   return (
     <div className="space-y-6">
+      {given.length > 0 && <Group title="Just for you" list={given} />}
       {now.length > 0 && <Group title="Ready to use" list={now} />}
       {soon.length > 0 && <Group title="Coming on sale days" list={soon} />}
       {done.length > 0 && <Group title="Used or not for you now" list={done} muted />}

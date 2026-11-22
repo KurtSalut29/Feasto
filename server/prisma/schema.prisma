@@ -227,6 +227,8 @@ model User {
   shopSuggestions PabiliShopSuggestion[]
   passkeys      Passkey[]
   promoUses     PromoUse[]
+  /// Vouchers a store or the admin gave this resident (Customers page)
+  givenVouchers PromoRecipient[]
   pointsGrants  PointsGrant[]
   plusMemberships PlusMembership[]
   /// PhilSys QR (Level 2): a hash of the card number (never the number itself), to stop one card on two accounts
@@ -1411,6 +1413,8 @@ enum PromoAudience {
   FIRST_ORDER
   /// Feasto Plus members only
   PLUS
+  /// Only the customers a store or the admin picked (Customers page), listed in PromoRecipient
+  SELECTED
 }
 
 /// A sale day or season (11.11, 12.12, payday): a banner on Home, with its own vouchers
@@ -1466,6 +1470,7 @@ model Promo {
   createdById  String?
   createdAt    DateTime      @default(now())
   uses         PromoUse[]
+  recipients   PromoRecipient[]
 
   @@index([vendorId, kind, isActive])
   @@index([kind, isActive])
@@ -1674,4 +1679,17 @@ model OrderIssue {
 
   @@index([orderId])
   @@index([status, createdAt])
+}
+
+/// A voucher given to one customer (audience SELECTED): picked by a store from its customers, or by
+/// the admin from all of Feasto's. Only they see it in My vouchers and can use it.
+model PromoRecipient {
+  promoId   String
+  promo     Promo    @relation(fields: [promoId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([promoId, userId])
+  @@index([userId])
 }

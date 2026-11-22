@@ -280,6 +280,10 @@ export async function pricePromos(db: Db, input: PriceInput): Promise<Pricing> {
       fail("This voucher is for Feasto Plus members.");
       continue;
     }
+    if (promo.audience === "SELECTED" && !(await db.promoRecipient.findUnique({ where: { promoId_userId: { promoId: promo.id, userId: input.userId } }, select: { userId: true } }))) {
+      fail("This voucher was given to other customers only.");
+      continue;
+    }
     if (promo.audience === "FIRST_ORDER") {
       const problem = await firstOrderProblem(db, input.userId, input.deviceHash ?? null);
       if (problem) {
@@ -438,7 +442,15 @@ function total(g: { storeId: string; itemDiscounts: Record<string, number>; line
 /** The vouchers a resident can see in "My vouchers" and at checkout, with whether each works for them now */
 export async function vouchersFor(userId: string, at = new Date()) {
   const promos = await prisma.promo.findMany({
-    where: { kind: "VOUCHER", isPublic: true, isActive: true, OR: [{ endsAt: null }, { endsAt: { gt: at } }] },
+    where: {
+      kind: "VOUCHER",
+      isActive: true,
+      AND: [
+        { OR: [{ endsAt: null }, { endsAt: { gt: at } }] },
+        // Everyone's public vouchers, and the ones a store or Feasto gave this resident
+        { OR: [{ isPublic: true, audience: { not: "SELECTED" } }, { audience: "SELECTED", recipients: { some: { userId } } }] },
+      ],
+    },
     include: { ...promoInclude, vendor: { select: { id: true, name: true } } },
     orderBy: [{ startsAt: "asc" }],
     take: 60,
@@ -468,6 +480,8 @@ export async function vouchersFor(userId: string, at = new Date()) {
       usesLeft: Math.max(0, p.perUserLimit - mine),
       /** Why it can't be used now, or null */
       plusOnly: p.audience === "PLUS",
+      /** Given to this resident by a store or Feasto (Customers page) */
+      forYou: p.audience === "SELECTED",
       problem: usedUp ? "Used" : gone ? "Used up" : p.audience === "PLUS" && !member ? "For Feasto Plus members" : (first ?? (timing && !timing.startsWith("This voucher starts") ? timing : null)),
       upcoming: Boolean(timing?.startsWith("This voucher starts")),
     });

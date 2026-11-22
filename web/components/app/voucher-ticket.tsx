@@ -59,7 +59,7 @@ export function VoucherTicket({ voucher: v, compact = false, muted = false, fill
             <Image src="/Logo/feasto-mascot.png" alt="" width={44} height={44} className={`${compact ? "size-9" : "size-11"} object-contain drop-shadow`} />
           )}
           <span className="block w-full truncate text-[0.625rem] leading-none font-extrabold tracking-[0.16em] uppercase">{v.store ? "Store" : "Feasto"}</span>
-          <span className="block text-[0.5625rem] leading-none font-semibold tracking-[0.18em] text-white/80 uppercase">Voucher</span>
+          <span className="block text-[0.5625rem] leading-none font-semibold tracking-[0.18em] text-white/80 uppercase">{v.forYou ? "For you" : "Voucher"}</span>
         </div>
 
         {/* The tear line */}

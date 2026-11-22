@@ -98,7 +98,7 @@ adminPromosRouter.use(requireAuth, requireRole("ADMIN"));
 
 adminPromosRouter.get("/", async (_req, res) => {
   const [promos, campaigns, storeDeals] = await Promise.all([
-    prisma.promo.findMany({ where: { kind: "VOUCHER" }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }], include: { vendor: { select: { name: true } }, campaign: { select: { name: true } } } }),
+    prisma.promo.findMany({ where: { kind: "VOUCHER" }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }], include: { vendor: { select: { name: true } }, campaign: { select: { name: true } }, _count: { select: { recipients: true } } } }),
     prisma.campaign.findMany({ orderBy: { startsAt: "desc" }, take: 30, include: { _count: { select: { promos: true } } } }),
     prisma.promo.count({ where: { kind: "DEAL", isActive: true } }),
   ]);
@@ -176,7 +176,7 @@ vendorPromosRouter.use(requireAuth, requireRole("VENDOR"));
 vendorPromosRouter.get("/promos", async (req, res) => {
   const vendorId = await myVendorId(req.session!.userId);
   const [promos, menu, campaigns] = await Promise.all([
-    prisma.promo.findMany({ where: { vendorId }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }], include: { campaign: { select: { name: true } } } }),
+    prisma.promo.findMany({ where: { vendorId }, orderBy: [{ isActive: "desc" }, { createdAt: "desc" }], include: { campaign: { select: { name: true } }, _count: { select: { recipients: true } } } }),
     prisma.menuItem.findMany({ where: { vendorId, deletedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true, price: true } }),
     prisma.campaign.findMany({ where: { endsAt: { gt: new Date() } }, orderBy: { startsAt: "asc" }, select: { id: true, name: true, startsAt: true, endsAt: true } }),
   ]);

@@ -26,6 +26,8 @@ export type VoucherCard = {
   usesLeft: number;
   problem: string | null;
   upcoming: boolean;
+  /** Given to this resident by a store or Feasto (their Customers page) */
+  forYou?: boolean;
 };
 
 const peso = (n: number) => `₱${n.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
