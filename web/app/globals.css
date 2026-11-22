@@ -138,6 +138,38 @@ body {
   color: var(--color-ink);
 }
 
+/* ---- Feasto scrollbar ----------------------------------------------------------------------
+   A slim peach pill on no track, so it sits quietly on white and turns Feasto orange when held.
+   Chrome, Edge and Safari use the ::-webkit-scrollbar parts. Firefox only knows the two standard
+   properties, which are kept to Firefox: in Chrome they would switch the pill styling off.
+   Rows that hide their bar ([scrollbar-width:none]) stay hidden. */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--color-brand-200) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background-color: var(--color-brand-300);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--color-brand-500);
+}
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--color-brand-200) transparent;
+  }
+}
+
 /* ---- Motion: page changes, chef Feasto's pop-up, the printed receipt -------------------------
    Everything here only moves for people who haven't asked their phone to reduce motion;
    otherwise the same things simply appear. */
@@ -756,6 +788,10 @@ html[data-contrast="more"] :focus-visible {
 }
 html[data-contrast="more"] ::placeholder {
   color: var(--color-gray-500);
+}
+/* The peach scrollbar is too faint here: the deeper orange instead */
+html[data-contrast="more"] ::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-500);
 }
 /* Links in running text are underlined, so they don't rely on colour alone */
 html[data-contrast="more"] :is(p, dd) a:not([class*="rounded"]):not([class*="after:"]) {
